@@ -2,6 +2,7 @@
 import { useRef } from 'react'
 import { useEditorStore } from '../state/editorStore'
 import { countPapersUsingReason } from '../screening/reasonUsage'
+import { tp, rich, useT } from '../i18n'
 
 /**
  * The one authorable part of a screening project's schema: the exclusion
@@ -10,6 +11,7 @@ import { countPapersUsingReason } from '../screening/reasonUsage'
  * — there is no schema to build, only this short, ordered list.
  */
 export function ScreeningReasonsEditor() {
+  const t = useT()
   const screening = useEditorStore((s) => s.screening)
   const papers = useEditorStore((s) => s.papers)
   const setScreeningReasons = useEditorStore((s) => s.setScreeningReasons)
@@ -45,20 +47,11 @@ export function ScreeningReasonsEditor() {
     if (from === undefined || from === to) return
     const count = countPapersUsingReason(papers, from)
     if (count === 0) return
-    const many = count === 1 ? '1 paper' : `${count} papers`
     if (to.trim() === '') {
-      window.alert(
-        `${many} still record "${from}" as their exclusion reason, which you have now removed from ` +
-          `the list — those decisions no longer point at a listed reason. Give the reason a name, or ` +
-          `re-screen those papers.`,
-      )
+      window.alert(tp('editor.screeningReasons.removedAlert', count, { from }))
       return
     }
-    const migrate = window.confirm(
-      `${many} record "${from}" as their exclusion reason. Rename it to "${to}" for those papers too?\n\n` +
-        `OK: update ${count === 1 ? 'that decision' : 'those decisions'} to "${to}".\n` +
-        `Cancel: leave them pointing at "${from}", which is no longer in the list.`,
-    )
+    const migrate = window.confirm(tp('editor.screeningReasons.renameConfirm', count, { from, to }))
     if (migrate) migrateScreeningReason(from, to)
   }
   // [impl->req~scr-270~1]
@@ -73,12 +66,7 @@ export function ScreeningReasonsEditor() {
     const label = reasons[i]
     const count = label.trim() === '' ? 0 : countPapersUsingReason(papers, label)
     if (count > 0) {
-      const many = count === 1 ? '1 paper' : `${count} papers`
-      const ok = window.confirm(
-        `${many} record "${label}" as their exclusion reason. Remove it anyway?\n\n` +
-          `Those ${count === 1 ? 'decision' : 'decisions'} will no longer point at a listed reason ` +
-          `(Validate will flag them); the papers keep their excluded state but lose the reason.`,
-      )
+      const ok = window.confirm(tp('editor.screeningReasons.removeConfirm', count, { label }))
       if (!ok) return
     }
     setScreeningReasons(reasons.filter((_, j) => j !== i))
@@ -96,10 +84,7 @@ export function ScreeningReasonsEditor() {
 
   return (
     <div className="screening-reasons">
-      <p className="editor-hint">
-        The reviewer's <kbd>1</kbd>-<kbd>9</kbd> keys exclude with the corresponding reason in one
-        press, in this order — put the common reasons near the top.
-      </p>
+      <p className="editor-hint">{rich('editor.screeningReasons.hint')}</p>
       <ul className="screening-reasons-list">
         {reasons.map((reason, i) => (
           <li key={i} className="screening-reasons-row">
@@ -108,7 +93,7 @@ export function ScreeningReasonsEditor() {
               type="text"
               className="screening-reasons-input"
               value={reason}
-              placeholder="Reason"
+              placeholder={t('editor.screeningReasons.placeholder')}
               onFocus={() => {
                 editingFrom.current[i] = reason
               }}
@@ -118,8 +103,8 @@ export function ScreeningReasonsEditor() {
             <button
               type="button"
               className="icon-btn"
-              title="Move up"
-              aria-label={`Move "${reason || 'this reason'}" up`}
+              title={t('editor.screeningReasons.moveUpTitle')}
+              aria-label={t('editor.screeningReasons.moveUp', { name: reason || t('editor.screeningReasons.thisReason') })}
               disabled={i === 0}
               onClick={() => move(i, -1)}
             >
@@ -128,8 +113,8 @@ export function ScreeningReasonsEditor() {
             <button
               type="button"
               className="icon-btn"
-              title="Move down"
-              aria-label={`Move "${reason || 'this reason'}" down`}
+              title={t('editor.screeningReasons.moveDownTitle')}
+              aria-label={t('editor.screeningReasons.moveDown', { name: reason || t('editor.screeningReasons.thisReason') })}
               disabled={i === reasons.length - 1}
               onClick={() => move(i, 1)}
             >
@@ -138,8 +123,8 @@ export function ScreeningReasonsEditor() {
             <button
               type="button"
               className="remove-btn"
-              title="Remove this reason"
-              aria-label={`Remove "${reason || 'this reason'}"`}
+              title={t('editor.screeningReasons.removeTitle')}
+              aria-label={t('editor.screeningReasons.remove', { name: reason || t('editor.screeningReasons.thisReason') })}
               onClick={() => remove(i)}
             >
               ×
@@ -147,8 +132,8 @@ export function ScreeningReasonsEditor() {
           </li>
         ))}
       </ul>
-      <button type="button" onClick={add} title="Add a new exclusion reason">
-        + Add reason
+      <button type="button" onClick={add} title={t('editor.screeningReasons.addTitle')}>
+        {t('editor.screeningReasons.add')}
       </button>
     </div>
   )

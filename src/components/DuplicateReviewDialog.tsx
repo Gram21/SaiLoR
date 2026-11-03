@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useEditorStore, type DuplicateDecision, type DuplicateReviewDraft, type EditorPaper } from '../state/editorStore'
 import type { DupReason, DupVerdict } from '../model/duplicates'
+import { rich, t, tp, useT } from '../i18n'
 import '../styles/duplicates.css'
 
 /**
@@ -18,6 +19,7 @@ import '../styles/duplicates.css'
  * twice" — matching `GitMergeDialog`'s "Finish merge" gate on `decidedCount`.
  */
 export function DuplicateReviewDialog() {
+  const t = useT()
   const draft = useEditorStore((s) => s.duplicateReview)
   const papers = useEditorStore((s) => s.papers)
   const setDuplicateDecision = useEditorStore((s) => s.setDuplicateDecision)
@@ -52,21 +54,21 @@ export function DuplicateReviewDialog() {
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Possible duplicates"
+        aria-label={t('editor.duplicates.dialogLabel')}
       >
         <div className="modal-head">
           <strong>
-            Possible duplicates in {draft.sourceName}
+            {t('editor.duplicates.heading', { source: draft.sourceName })}
             <span className="dup-review-progress">
-              {decidedCount} of {rows.length} decided
+              {t('editor.duplicates.progress', { decided: decidedCount, total: rows.length })}
             </span>
           </strong>
           <button
             type="button"
             className="icon-btn"
-            title="Cancel the import"
+            title={t('editor.duplicates.cancelImportTitle')}
             onClick={() => resolveDuplicateReview('cancel')}
-            aria-label="Close"
+            aria-label={t('common.close')}
           >
             ×
           </button>
@@ -74,26 +76,25 @@ export function DuplicateReviewDialog() {
 
         <div className="modal-body">
           <p>
-            {rows.length} of {draft.entries.length} reference{draft.entries.length === 1 ? '' : 's'} in this file
-            look like a duplicate of something already here — a paper already in the project, or another entry in
-            the same file. Nothing has been imported yet. Mark each one <strong>Duplicate</strong> to merge it
-            into the match shown, or <strong>Different</strong> to add it as its own paper anyway.
+            {rich(draft.entries.length === 1 ? 'editor.duplicates.intro_one' : 'editor.duplicates.intro_other', {
+              rows: rows.length,
+              count: draft.entries.length,
+            })}
           </p>
-
           <div className="dup-review-bulk">
             <button
               type="button"
-              title="Mark every possible duplicate below to be merged into its match"
+              title={t('editor.duplicates.markAllMergeTitle')}
               onClick={() => setAllDuplicateDecisions('merge')}
             >
-              Mark all as duplicates
+              {t('editor.duplicates.markAllMerge')}
             </button>
             <button
               type="button"
-              title="Mark every possible duplicate below to be added as its own paper"
+              title={t('editor.duplicates.markAllSeparateTitle')}
               onClick={() => setAllDuplicateDecisions('separate')}
             >
-              Mark all as different papers
+              {t('editor.duplicates.markAllSeparate')}
             </button>
           </div>
 
@@ -114,19 +115,19 @@ export function DuplicateReviewDialog() {
         <div className="dup-review-footer">
           <button
             type="button"
-            title="Discard this import; nothing gets added"
+            title={t('editor.duplicates.discardTitle')}
             onClick={() => resolveDuplicateReview('cancel')}
           >
-            Cancel import
+            {t('editor.duplicates.cancelImport')}
           </button>
           <button
             type="button"
             className="primary"
             disabled={!allDecided}
-            title={allDecided ? 'Import these references with the decisions above' : 'Decide every possible duplicate above before importing'}
+            title={allDecided ? t('editor.duplicates.importTitle') : t('editor.duplicates.importBlockedTitle')}
             onClick={() => resolveDuplicateReview('apply')}
           >
-            Import {draft.entries.length} reference{draft.entries.length === 1 ? '' : 's'}
+            {tp('editor.duplicates.importButton', draft.entries.length)}
           </button>
         </div>
       </div>
@@ -157,25 +158,30 @@ function targetOf(
     const uid = draft.existingUids[verdict.target.index]
     const paper = papers.find((p) => p.uid === uid)
     if (!paper) return null
-    return { title: paper.title, authors: paper.authors, doi: paper.doi, where: 'already in the project' }
+    return { title: paper.title, authors: paper.authors, doi: paper.doi, where: t('editor.duplicates.whereExisting') }
   }
   const entry = draft.entries[verdict.target.index]
-  return { title: entry.title, authors: entry.authors.join(', '), doi: entry.doi ?? '', where: 'earlier in this file' }
+  return { title: entry.title, authors: entry.authors.join(', '), doi: entry.doi ?? '', where: t('editor.duplicates.whereBatch') }
 }
 
 function reasonLabel(reason: DupReason): string {
-  if (reason.via === 'doi') return 'Same DOI'
+  if (reason.via === 'doi') return t('editor.duplicates.reasonDoi')
   if (reason.via === 'title') {
     // A `probable` (not `certain`) exact-title match only ever happens when
     // the two sides' DOIs actively disagree — see `duplicates.ts`'s
     // `classifyPair` — so a score of 1 here always means that, not a fuzzy tie.
-    return reason.score >= 1 ? 'Same title, but different DOIs' : `Titles ${Math.round(reason.score * 100)}% alike`
+    return reason.score >= 1
+      ? t('editor.duplicates.reasonTitleDoi')
+      : t('editor.duplicates.reasonTitleAlike', { pct: Math.round(reason.score * 100) })
   }
-  return `Same main title (${Math.round(reason.score * 100)}%), authors ${Math.round(reason.authors * 100)}% alike`
+  return t('editor.duplicates.reasonMainTitle', {
+    pct: Math.round(reason.score * 100),
+    authors: Math.round(reason.authors * 100),
+  })
 }
 
 function formatValue(value: string | undefined): string {
-  if (!value || !value.trim()) return '— empty —'
+  if (!value || !value.trim()) return t('editor.duplicates.empty')
   return value
 }
 
@@ -197,15 +203,15 @@ function DuplicateRow({
       <div className="dup-row-head">
         <span className="dup-row-reason">{reasonLabel(verdict.reason)}</span>
         {target && <span className="dup-row-where">{target.where}</span>}
-        {!decision && <span className="dup-row-undecided-badge">not decided yet</span>}
+        {!decision && <span className="dup-row-undecided-badge">{t('editor.duplicates.undecided')}</span>}
       </div>
       <div className="dup-row-body">
-        <div className="dup-row-side" title="This import">
+        <div className="dup-row-side" title={t('editor.duplicates.thisImport')}>
           <div className="dup-row-title">{formatValue(entry.title)}</div>
           <div className="dup-row-meta">{formatValue(entry.authors.join(', '))}</div>
           <div className="dup-row-meta">{formatValue(entry.doi)}</div>
         </div>
-        <div className="dup-row-side" title="The possible match">
+        <div className="dup-row-side" title={t('editor.duplicates.possibleMatch')}>
           <div className="dup-row-title">{formatValue(target?.title)}</div>
           <div className="dup-row-meta">{formatValue(target?.authors)}</div>
           <div className="dup-row-meta">{formatValue(target?.doi)}</div>
@@ -215,18 +221,18 @@ function DuplicateRow({
         <button
           type="button"
           className={`dup-decision-btn${decision === 'merge' ? ' active' : ''}`}
-          title="Merge this reference into the match shown, rather than adding a new row"
+          title={t('editor.duplicates.mergeTitle')}
           onClick={() => onSet('merge')}
         >
-          Duplicate
+          {t('editor.duplicates.merge')}
         </button>
         <button
           type="button"
           className={`dup-decision-btn${decision === 'separate' ? ' active' : ''}`}
-          title="Add this reference as its own paper anyway"
+          title={t('editor.duplicates.separateTitle')}
           onClick={() => onSet('separate')}
         >
-          Different
+          {t('editor.duplicates.separate')}
         </button>
       </div>
     </li>

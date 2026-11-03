@@ -2,6 +2,7 @@ import { useMemo, useRef, useState, type DragEvent } from 'react'
 import { useEditorStore, type EditorPaper } from '../state/editorStore'
 import { getPlatform } from '../platform'
 import { paperIdProblem, paperIdKey, type PaperIdIssue } from '../model/paperId'
+import { t, useT } from '../i18n'
 import '../styles/papers-editor.css'
 
 /** A short label for `idProblem.reason`, for the same spot the duplicate flag
@@ -10,14 +11,14 @@ function idProblemLabel(reason: PaperIdIssue['reason']): string {
   switch (reason) {
     case 'illegal-char':
     case 'control-char':
-      return 'invalid character'
+      return t('editor.papers.problem.invalidChar')
     case 'reserved-name':
-      return 'reserved name'
+      return t('editor.papers.problem.reservedName')
     case 'trailing-dot-or-space':
-      return 'trailing space/dot'
+      return t('editor.papers.problem.trailingDotOrSpace')
     case 'dot':
     case 'empty':
-      return 'invalid id'
+      return t('editor.papers.problem.invalidId')
   }
 }
 
@@ -67,6 +68,7 @@ interface DropTarget {
 
 /** Papers section of the project editor: the PDFs a project references. */
 export function PapersEditor() {
+  const t = useT()
   const papers = useEditorStore((s) => s.papers)
   const location = useEditorStore((s) => s.location)
   const busy = useEditorStore((s) => s.busy)
@@ -88,7 +90,7 @@ export function PapersEditor() {
 
   const isBrowser = getPlatform().kind === 'browser'
   // [impl->req~edt-50~1]
-  const jsonName = location?.name ?? 'the project JSON'
+  const jsonName = location?.name ?? t('editor.papers.jsonFallback')
 
   // Live here so a reviewer sees an id collision the moment they cause it,
   // not only after clicking Save.
@@ -133,11 +135,8 @@ export function PapersEditor() {
     const a = paper.annotations
     const hasAnswers = !!a && typeof a === 'object' && Object.keys(a).length > 0
     if (hasAnswers) {
-      const name = paper.title || 'This paper'
-      const ok = window.confirm(
-        `"${name}" has recorded annotations. Removing it will discard them — including every ` +
-          'reviewer\'s own — the next time the project is saved, and it cannot be undone afterwards.\n\nContinue?',
-      )
+      const name = paper.title || t('editor.papers.thisPaper')
+      const ok = window.confirm(t('editor.papers.removeConfirm', { name }))
       if (!ok) return
     }
     removePaper(paper.uid)
@@ -154,12 +153,7 @@ export function PapersEditor() {
     const a = paper.annotations
     const hasAnswers = !!a && typeof a === 'object' && Object.keys(a).length > 0
     if (!hasAnswers) return true
-    return window.confirm(
-      `"${from}" already has recorded annotations, which are stored in a folder named after the id. ` +
-        'Renaming it moves this copy of them, but leaves the old folder behind, and any reviewer whose ' +
-        'answers you have not pulled yet is still writing under the old id — theirs will not follow.' +
-        '\n\nRename it anyway?',
-    )
+    return window.confirm(t('editor.papers.idChangeConfirm', { from }))
   }
 
   const actionButtons = (
@@ -167,27 +161,27 @@ export function PapersEditor() {
       <button
         type="button"
         className="primary"
-        title="Pick one or more PDFs to add to this project"
+        title={t('editor.papers.addPdfsTitle')}
         disabled={busy}
         onClick={() => void addPdfs()}
       >
-        + Add PDFs…
+        {t('editor.papers.addPdfs')}
       </button>
       <button
         type="button"
-        title="Add every PDF in a folder, including sub-folders"
+        title={t('editor.papers.addFolderTitle')}
         disabled={busy}
         onClick={() => void addPdfFolder()}
       >
-        + Add folder…
+        {t('editor.papers.addFolder')}
       </button>
       <button
         type="button"
-        title="Import titles, authors and DOIs from a BibTeX, RIS or CSL-JSON reference export"
+        title={t('editor.papers.importReferencesTitle')}
         disabled={busy}
         onClick={() => void importReferences()}
       >
-        Import references…
+        {t('editor.papers.importReferences')}
       </button>
       {/* In-place import into an open screening project stays blocked — not
           because it is meaningless (a carried row is well-defined: undecided
@@ -198,11 +192,11 @@ export function PapersEditor() {
       {!screening && (
         <button
           type="button"
-          title="Open a screening project and carry its included (and not-yet-screened) papers into a new project"
+          title={t('editor.papers.importFromScreeningTitle')}
           disabled={busy}
           onClick={() => void importFromScreening()}
         >
-          Import from screening…
+          {t('editor.papers.importFromScreening')}
         </button>
       )}
     </div>
@@ -212,25 +206,22 @@ export function PapersEditor() {
     <section className="papers-editor">
       <header className="papers-head">
         <h3 className="papers-title">
-          Papers <span className="papers-count">({papers.length})</span>
+          {t('editor.papers.title')} <span className="papers-count">({papers.length})</span>
         </h3>
         {papers.length > 0 && actionButtons}
       </header>
 
       {isBrowser && (
         <p className="papers-hint">
-          In the browser, added PDFs are stored by file name only — keep them next to {jsonName} or
-          fix the relative path below.
+          {t('editor.papers.browserHint', { jsonName })}
         </p>
       )}
 
       {papers.length === 0 ? (
         <div className="papers-empty">
-          <p>No papers yet.</p>
+          <p>{t('editor.papers.empty')}</p>
           <p className="papers-empty-note">
-            {screening
-              ? 'Screening is usually decided on title and abstract, so a PDF is optional here — a reference manager export brings in the metadata, and a PDF can be attached later for the papers that reach the next phase.'
-              : `PDFs are referenced by a path relative to ${jsonName}, so the project stays portable as long as the PDFs travel with it. A reference manager export can fill in the details — attach matching PDFs afterward.`}
+            {screening ? t('editor.papers.emptyNoteScreening') : t('editor.papers.emptyNote', { jsonName })}
           </p>
           {actionButtons}
         </div>
@@ -254,7 +245,7 @@ export function PapersEditor() {
             >
               <span
                 className="papers-handle"
-                title="Drag to reorder"
+                title={t('editor.papers.dragTitle')}
                 aria-hidden="true"
                 onPointerDown={() => setArmedUid(paper.uid)}
                 onPointerUp={() => setArmedUid(null)}
@@ -311,6 +302,7 @@ interface PaperFieldsProps {
 
 /** The editable fields of one paper. */
 function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onIdChange }: PaperFieldsProps) {
+  const t = useT()
   // Confirmed on blur, not per keystroke — the same "ask once the new name is
   // settled" shape `SchemaTreeEditor`'s rename guard uses.
   const idOnFocus = useRef<string | null>(null)
@@ -321,7 +313,7 @@ function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onId
     <div className="papers-fields">
       <div className="papers-field-row">
         <label className="papers-field grow">
-          <span className="papers-label">Title</span>
+          <span className="papers-label">{t('editor.papers.titleLabel')}</span>
           <input
             type="text"
             className="papers-input"
@@ -333,8 +325,8 @@ function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onId
         <button
           type="button"
           className="remove-btn papers-remove"
-          title="Remove this paper"
-          aria-label="Remove this paper"
+          title={t('editor.papers.removeTitle')}
+          aria-label={t('editor.papers.removeTitle')}
           onClick={onRemove}
         >
           ×
@@ -344,10 +336,12 @@ function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onId
       <div className="papers-field-row">
         <label className="papers-field">
           <span className="papers-label">
-            id <span className="papers-note">unique</span>
-            {duplicateId && <span className="papers-field-warning"> — duplicate</span>}
+            {t('editor.papers.id')} <span className="papers-note">{t('editor.papers.unique')}</span>
+            {duplicateId && <span className="papers-field-warning">{t('editor.papers.duplicateSuffix')}</span>}
             {!duplicateId && idProblem && (
-              <span className="papers-field-warning"> — {idProblemLabel(idProblem.reason)}</span>
+              <span className="papers-field-warning">
+                {t('editor.papers.idProblemSuffix', { label: idProblemLabel(idProblem.reason) })}
+              </span>
             )}
           </span>
           <input
@@ -357,9 +351,9 @@ function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onId
             aria-invalid={duplicateId || Boolean(idProblem)}
             title={
               duplicateId
-                ? 'Another paper already uses this id — ids must be unique.'
+                ? t('editor.papers.duplicateIdTitle')
                 : idProblem
-                  ? `This id can't be used as a folder name — ${idProblem.detail}.`
+                  ? t('editor.papers.idProblemTitle', { detail: idProblem.detail })
                   : undefined
             }
             onFocus={() => {
@@ -388,7 +382,7 @@ function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onId
         </label>
         <label className="papers-field">
           <span className="papers-label">
-            DOI <span className="papers-note">optional</span>
+            {t('editor.papers.doi')} <span className="papers-note">{t('editor.project.optional')}</span>
           </span>
           <input
             type="text"
@@ -399,7 +393,7 @@ function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onId
           />
         </label>
         <label className="papers-field grow">
-          <span className="papers-label">Authors</span>
+          <span className="papers-label">{t('editor.papers.authors')}</span>
           <input
             type="text"
             className="papers-input"
@@ -414,7 +408,7 @@ function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onId
       <div className="papers-field-row">
         <label className="papers-field">
           <span className="papers-label">
-            Year <span className="papers-note">optional</span>
+            {t('editor.papers.year')} <span className="papers-note">{t('editor.project.optional')}</span>
           </span>
           <input
             type="text"
@@ -427,7 +421,7 @@ function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onId
         </label>
         <label className="papers-field grow">
           <span className="papers-label">
-            Venue <span className="papers-note">journal, conference, or publisher — optional</span>
+            {t('editor.papers.venue')} <span className="papers-note">{t('editor.papers.venueNote')}</span>
           </span>
           <input
             type="text"
@@ -441,7 +435,7 @@ function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onId
 
       <label className="papers-field">
         <span className="papers-label">
-          Abstract <span className="papers-note">what screening reads when there is no PDF</span>
+          {t('editor.papers.abstract')} <span className="papers-note">{t('editor.papers.abstractNote')}</span>
         </span>
         <textarea
           className="papers-input papers-abstract"
@@ -453,7 +447,7 @@ function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onId
       </label>
 
       <label className="papers-field">
-        <span className="papers-label">PDF (relative to the JSON)</span>
+        <span className="papers-label">{t('editor.papers.pdf')}</span>
         <input
           type="text"
           className="papers-input mono"

@@ -4,6 +4,7 @@
 import { useEditorStore } from '../state/editorStore'
 import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
 import { getPlatform } from '../platform'
+import { getLanguage, rich, tp, useT } from '../i18n'
 import { SchemaTreeEditor } from './SchemaTreeEditor'
 import { ScreeningReasonsEditor } from './ScreeningReasonsEditor'
 import { ProtocolEditor } from './ProtocolEditor'
@@ -36,6 +37,7 @@ const ISSUE_DISPLAY_LIMIT = 12
  * For a screening draft it reads "Allow AI-assisted screening".
  */
 export function ProjectEditor() {
+  const t = useT()
   const open = useEditorStore((s) => s.open)
   const mode = useEditorStore((s) => s.mode)
   const location = useEditorStore((s) => s.location)
@@ -74,7 +76,7 @@ export function ProjectEditor() {
   if (!open) return null
 
   const onClose = () => {
-    if (dirty && !window.confirm('Discard the unsaved changes to this project JSON?')) return
+    if (dirty && !window.confirm(t('editor.project.discardConfirm'))) return
     close()
   }
 
@@ -88,54 +90,59 @@ export function ProjectEditor() {
   }
 
   // The full path is the useful bit on the desktop; in the browser only a name exists.
-  const locationLabel = location ? (location.path ?? location.name) : 'Not set'
+  const locationLabel = location ? (location.path ?? location.name) : t('editor.project.notSet')
   const multiReviewer = reviewers > 1
+  const mod = MOD === 'Ctrl' ? t('editor.project.ctrl') : MOD
 
   return (
     <div className="editor">
       <div className="editor-head">
         <div className="editor-title">
-          <strong>{mode === 'new' ? 'New annotation JSON' : 'Edit annotation JSON'}</strong>
-          {dirty && <span className="editor-dirty" title="Unsaved changes">●</span>}
+          <strong>{mode === 'new' ? t('editor.project.newTitle') : t('editor.project.editTitle')}</strong>
+          {dirty && (
+            <span className="editor-dirty" title={t('editor.project.dirtyTitle')}>
+              ●
+            </span>
+          )}
         </div>
         <div className="editor-actions">
-          <button type="button" onClick={onClose} disabled={busy} title="Discard changes and close this editor">
-            Cancel
+          <button type="button" onClick={onClose} disabled={busy} title={t('editor.project.cancelTitle')}>
+            {t('common.cancel')}
           </button>
-          <button type="button" onClick={() => void save()} disabled={busy} title={`Save (${MOD}+S)`}>
-            {busy ? 'Saving…' : 'Save JSON'}
+          <button type="button" onClick={() => void save()} disabled={busy} title={t('editor.project.saveTitle', { mod })}>
+            {busy ? t('editor.project.saving') : t('editor.project.saveJson')}
           </button>
           <button
             type="button"
             className="primary"
             onClick={() => void saveAndAnnotate()}
             disabled={busy}
-            title="Save this project JSON and start annotating"
+            title={t('editor.project.saveAndAnnotateTitle')}
           >
-            Save JSON &amp; Begin Annotating
+            {t('editor.project.saveAndAnnotate')}
           </button>
         </div>
       </div>
 
       <div className="editor-location">
-        <span className="editor-location-label">JSON file</span>
+        <span className="editor-location-label">{t('editor.project.jsonFile')}</span>
         <code className="editor-location-path" title={locationLabel}>
           {locationLabel}
         </code>
-        <button type="button" onClick={() => void changeLocation()} disabled={busy} title="Change where this project JSON is saved">
-          Change…
+        <button type="button" onClick={() => void changeLocation()} disabled={busy} title={t('editor.project.changeLocationTitle')}>
+          {t('editor.project.change')}
         </button>
       </div>
 
       <div className="editor-location">
-        <span className="editor-location-label">Annotations folder</span>
+        <span className="editor-location-label">{t('editor.project.annotationsFolder')}</span>
         <input
           className="editor-title-input"
           type="text"
           value={annotationsDir}
           onChange={(e) => setAnnotationsDir(e.target.value)}
-          placeholder={`${DEFAULT_ANNOTATIONS_DIR} — a folder next to the JSON file`}
-          title="Where this project's answers are kept: one folder directly next to the JSON file, not shared with another project of the same kind that lists the same papers"
+          placeholder={t('editor.project.annotationsDirPlaceholder', { dir: DEFAULT_ANNOTATIONS_DIR })}
+          title={t('editor.project.annotationsDirTitle')}
           disabled={busy}
           aria-invalid={annotationsDirIssue !== null}
         />
@@ -145,54 +152,43 @@ export function ProjectEditor() {
       {provenance && <ProvenanceNote provenance={provenance} />}
 
       <div className="editor-location">
-        <span className="editor-location-label">Project title</span>
+        <span className="editor-location-label">{t('editor.project.projectTitle')}</span>
         <input
           className="editor-title-input"
           type="text"
           value={title}
           onChange={(e) => setTitle(e.target.value)}
-          placeholder={`Optional — shown instead of "${location?.name ?? 'the file name'}"`}
+          placeholder={t('editor.project.titlePlaceholder', {
+            name: location?.name ?? t('editor.project.fileNameFallback'),
+          })}
           disabled={busy}
         />
       </div>
 
       <div className="editor-location">
-        <span className="editor-location-label">Screening</span>
-        <label
-          className="editor-ai-toggle"
-          title="A screening project records one include/exclude decision per paper instead of an annotation schema. Writes config.screening into the JSON."
-        >
+        <span className="editor-location-label">{t('editor.project.screening')}</span>
+        <label className="editor-ai-toggle" title={t('editor.project.screeningTitle')}>
           <input
             type="checkbox"
             checked={screening !== null}
             onChange={(e) => setScreening(e.target.checked)}
             disabled={busy}
           />
-          <span>This is a screening project</span>
+          <span>{t('editor.project.screeningToggle')}</span>
         </label>
       </div>
-      {screening && (
-        <p className="editor-hint editor-screening-hint">
-          Screening records one <strong>Include / Exclude</strong> decision per paper — a two-option
-          choice, not a checkbox, because the app also has to be able to say "not screened yet". The
-          exclusion reasons below are fixed up front, the way a review protocol pre-registers them, so
-          the counts can be reported per reason.
-        </p>
-      )}
+      {screening && <p className="editor-hint editor-screening-hint">{rich('editor.project.screeningHint')}</p>}
 
       <div className="editor-location">
-        <span className="editor-location-label">Reviewers</span>
-        <label
-          className="editor-ai-toggle"
-          title="Enable to have multiple people annotate every paper independently, then reconcile disagreements into one final answer."
-        >
+        <span className="editor-location-label">{t('editor.project.reviewers')}</span>
+        <label className="editor-ai-toggle" title={t('editor.project.reviewersTitle')}>
           <input
             type="checkbox"
             checked={multiReviewer}
             onChange={(e) => setReviewers(e.target.checked ? 2 : 1)}
             disabled={busy}
           />
-          <span>Multiple independent reviewers</span>
+          <span>{t('editor.project.multiReviewers')}</span>
         </label>
         {multiReviewer && (
           <input
@@ -207,23 +203,14 @@ export function ProjectEditor() {
         )}
       </div>
       {multiReviewer && (
-        <p className="editor-hint editor-reviewers-hint">
-          Each of the {reviewers} reviewers annotates independently and only sees their own
-          work. In addition to them, there is always one extra <strong>Consolidation</strong>{' '}
-          reviewer, who compares everyone's answers and records the final, agreed result — that
-          consolidated result is what the project's saved output actually contains.
-        </p>
+        <p className="editor-hint editor-reviewers-hint">{rich('editor.project.reviewersHint', { reviewers })}</p>
       )}
 
       <div className="editor-location">
-        <span className="editor-location-label">AI</span>
+        <span className="editor-location-label">{t('editor.project.aiLabel')}</span>
         <label
           className="editor-ai-toggle"
-          title={
-            screening
-              ? 'Lets reviewers ask an LLM to propose include/exclude decisions for undecided papers, for review before anything is written.'
-              : "Lets reviewers ask an LLM to propose values for a paper's still-empty fields, for review before anything is written."
-          }
+          title={screening ? t('editor.project.aiTitleScreening') : t('editor.project.aiTitleAnnotation')}
         >
           <input
             type="checkbox"
@@ -231,7 +218,7 @@ export function ProjectEditor() {
             onChange={(e) => setAiEnabled(e.target.checked)}
             disabled={busy}
           />
-          <span>{screening ? 'Allow AI-assisted screening' : 'Allow AI-assisted annotation'}</span>
+          <span>{screening ? t('editor.project.allowAiScreening') : t('editor.project.allowAiAnnotation')}</span>
         </label>
       </div>
       {/* Only meaningful with AI use allowed and at least one other, human,
@@ -239,15 +226,15 @@ export function ProjectEditor() {
           rather than hidden, so turning either on reveals a control that
           already exists rather than a surprise new one. */}
       <div className="editor-location">
-        <span className="editor-location-label">AI seat</span>
+        <span className="editor-location-label">{t('editor.project.aiSeatLabel')}</span>
         <label
           className="editor-ai-toggle"
           title={
             !aiEnabled
-              ? 'Requires AI-assisted annotation to be allowed for this project'
+              ? t('editor.project.aiSeatNeedsAi')
               : !multiReviewer
-                ? 'Requires at least 2 reviewers'
-                : `The AI annotates as reviewer ${reviewers} — its own independent seat, compared against the others in Consolidation like any other reviewer.`
+                ? t('editor.project.aiSeatNeedsReviewers')
+                : t('editor.project.aiSeatTitle', { n: reviewers })
           }
         >
           <input
@@ -256,13 +243,10 @@ export function ProjectEditor() {
             onChange={(e) => setAiSeat(e.target.checked)}
             disabled={busy || !aiEnabled || !multiReviewer}
           />
-          <span>AI takes one reviewer seat (Reviewer {reviewers})</span>
+          <span>{t('editor.project.aiSeatToggle', { n: reviewers })}</span>
         </label>
         {aiSeat && aiEnabled && multiReviewer && (
-          <p className="editor-hint editor-reviewers-hint">
-            The AI's answers are recorded into Reviewer {reviewers}'s seat and compared with the
-            human reviewers' in Consolidation like any other reviewer.
-          </p>
+          <p className="editor-hint editor-reviewers-hint">{t('editor.project.aiSeatHint', { n: reviewers })}</p>
         )}
       </div>
 
@@ -272,43 +256,30 @@ export function ProjectEditor() {
       {!screening && (
         <>
           <div className="editor-location">
-            <span className="editor-location-label">Finishing</span>
-            <label
-              className="editor-ai-toggle"
-              title="When on, a paper only counts as finished once a reviewer ticks it off by hand. When off, a fulfilled schema is enough."
-            >
+            <span className="editor-location-label">{t('editor.project.finishing')}</span>
+            <label className="editor-ai-toggle" title={t('editor.project.finishingTitle')}>
               <input
                 type="checkbox"
                 checked={finishCheckbox}
                 onChange={(e) => setFinishCheckbox(e.target.checked)}
                 disabled={busy}
               />
-              <span>Reviewers mark papers as finished</span>
+              <span>{t('editor.project.finishingToggle')}</span>
             </label>
           </div>
           <p className="editor-hint editor-reviewers-hint">
             {finishCheckbox ? (
               <>
-                An <strong>Annotation finished</strong> checkbox appears at the top of the
-                annotation panel, and only ticking it turns a paper's dot green — so "done" is a
-                judgement a reviewer made, not something inferred from the fields being non-empty.
-                A paper ticked while a <em>required</em> field is empty shows red until the two
-                agree.
+                {rich('editor.project.finishedHintOn')}
                 {multiReviewer && (
                   <>
                     {' '}
-                    Every seat gets its own box and its own green dot, including{' '}
-                    <strong>Consolidation</strong>, which signs the consolidated result off the same
-                    way.
+                    {rich('editor.project.finishedHintOnMulti')}
                   </>
                 )}
               </>
             ) : (
-              <>
-                No checkbox: a paper counts as finished as soon as its schema is fulfilled — every{' '}
-                <em>required</em> field filled, or every field if nothing is marked required. Ticks
-                already recorded stay in the file, so turning this back on restores them.
-              </>
+              rich('editor.project.finishedHintOff')
             )}
           </p>
         </>
@@ -318,7 +289,13 @@ export function ProjectEditor() {
         <div className="editor-error" role="alert">
           <div className="editor-error-head">
             <strong>{error.message}</strong>
-            <button type="button" className="icon-btn" onClick={clearError} aria-label="Dismiss" title="Dismiss this error">
+            <button
+              type="button"
+              className="icon-btn"
+              onClick={clearError}
+              aria-label={t('editor.project.dismiss')}
+              title={t('editor.project.dismissErrorTitle')}
+            >
               ×
             </button>
           </div>
@@ -334,7 +311,7 @@ export function ProjectEditor() {
 
       {issues.length > 0 && (
         <div className="editor-issues" role="alert">
-          <strong>Fix these before saving:</strong>
+          <strong>{t('editor.project.fixBeforeSaving')}</strong>
           <ul>
             {issues.slice(0, ISSUE_DISPLAY_LIMIT).map((issue, i) => {
               const m = ISSUE_PAPER_PREFIX.exec(issue)
@@ -345,7 +322,7 @@ export function ProjectEditor() {
                       type="button"
                       className="editor-issue-jump"
                       onClick={() => jumpToPaper(Number(m[1]) - 1)}
-                      title="Jump to this paper in the list below"
+                      title={t('editor.project.issueJumpTitle')}
                     >
                       {issue}
                     </button>
@@ -357,7 +334,9 @@ export function ProjectEditor() {
             })}
           </ul>
           {issues.length > ISSUE_DISPLAY_LIMIT && (
-            <p className="editor-issues-more">…and {issues.length - ISSUE_DISPLAY_LIMIT} more.</p>
+            <p className="editor-issues-more">
+              {t('editor.project.issuesMore', { count: issues.length - ISSUE_DISPLAY_LIMIT })}
+            </p>
           )}
         </div>
       )}
@@ -371,16 +350,12 @@ export function ProjectEditor() {
               expand. */}
           <details className="editor-protocol-details" open={protocol !== null}>
             <summary>
-              <h2>Review protocol</h2>
+              <h2>{t('editor.project.protocolTitle')}</h2>
               <span className="editor-protocol-summary-hint">
-                {protocol ? 'recorded' : 'optional'}
+                {protocol ? t('editor.project.recorded') : t('editor.project.optional')}
               </span>
             </summary>
-            <p className="editor-hint">
-              The review's research questions, the search behind it, and its inclusion/exclusion
-              criteria — recorded inside the project so a pre-registered protocol travels with the
-              data it produced. Every field is optional.
-            </p>
+            <p className="editor-hint">{t('editor.project.protocolHint')}</p>
             <ProtocolEditor />
           </details>
         </section>
@@ -390,21 +365,17 @@ export function ProjectEditor() {
               above, for the same reason. */}
           <details className="editor-protocol-details" open={schemaInfo !== null}>
             <summary>
-              <h2>Schema info</h2>
+              <h2>{t('editor.project.schemaInfoTitle')}</h2>
               <span className="editor-protocol-summary-hint">
-                {schemaInfo ? 'recorded' : 'optional'}
+                {schemaInfo ? t('editor.project.recorded') : t('editor.project.optional')}
               </span>
             </summary>
-            <p className="editor-hint">
-              A free-text note shown to reviewers via an ⓘ button on the annotation panel — what the
-              fields mean as a whole, how to use them, anything worth reading before annotating. Opens
-              automatically the first time a reviewer loads this project.
-            </p>
+            <p className="editor-hint">{rich('editor.project.schemaInfoHint')}</p>
             <textarea
               className="protocol-textarea"
               rows={4}
               value={schemaInfo ?? ''}
-              placeholder="E.g. how to interpret ambiguous cases, or a link to the coding guide"
+              placeholder={t('editor.project.schemaInfoPlaceholder')}
               onChange={(e) => setSchemaInfo(e.target.value.trim() === '' ? null : e.target.value)}
             />
           </details>
@@ -412,20 +383,14 @@ export function ProjectEditor() {
 
         {screening ? (
           <section className="editor-section">
-            <h2>Exclusion reasons</h2>
-            <p className="editor-hint">
-              Why a paper is excluded. Reviewers pick one of these when they exclude a paper — there is
-              no free-text option, so the counts this project reports per reason stay meaningful.
-            </p>
+            <h2>{t('editor.project.exclusionReasonsTitle')}</h2>
+            <p className="editor-hint">{t('editor.project.exclusionReasonsHint')}</p>
             <ScreeningReasonsEditor />
           </section>
         ) : (
           <section className="editor-section">
-            <h2>Annotation schema</h2>
-            <p className="editor-hint">
-              The fields reviewers fill in for each paper. A <em>Group</em> holds nested fields; set
-              an unbounded maximum to let a field repeat. Drag rows to reorder or to nest them.
-            </p>
+            <h2>{t('editor.project.schemaTitle')}</h2>
+            <p className="editor-hint">{rich('editor.project.schemaHint')}</p>
             <SchemaTreeEditor />
           </section>
         )}
@@ -433,23 +398,25 @@ export function ProjectEditor() {
         {multiReviewer && !screening && <StrictModeEditor />}
 
         <section className="editor-section">
-          <h2>Papers</h2>
-          <p className="editor-hint">
-            PDFs are referenced relative to the JSON file, so moving the JSON re-derives their
-            paths. A PDF already in the project is not added twice, and the title and authors are
-            read from the PDF where possible.
-          </p>
+          <h2>{t('editor.project.papersTitle')}</h2>
+          <p className="editor-hint">{t('editor.project.papersHint')}</p>
           {notice && (
             <div className="editor-notice">
               <span>{notice}</span>
-              <button type="button" className="icon-btn" onClick={clearNotice} aria-label="Dismiss" title="Dismiss this notice">
+              <button
+                type="button"
+                className="icon-btn"
+                onClick={clearNotice}
+                aria-label={t('editor.project.dismiss')}
+                title={t('editor.project.dismissNoticeTitle')}
+              >
                 ×
               </button>
             </div>
           )}
           {extracting > 0 && (
             <p className="editor-hint" role="status">
-              Reading {extracting} PDF{extracting === 1 ? '' : 's'} for title and authors…
+              {tp('editor.project.readingPdfs', extracting)}
             </p>
           )}
           <PapersEditor />
@@ -464,6 +431,7 @@ export function ProjectEditor() {
  *  nowhere. Not editable: it is a durable record of a past event, not a
  *  setting, so the reviewer sees it but cannot rewrite history from here. */
 function ProvenanceNote({ provenance }: { provenance: ProjectProvenance }) {
+  const t = useT()
   const when = formatImportedAt(provenance.importedAt)
   const from = provenance.source.title
     ? `${provenance.source.title} (${provenance.source.file})`
@@ -471,15 +439,14 @@ function ProvenanceNote({ provenance }: { provenance: ProjectProvenance }) {
   const { included, undecided, excluded, carried } = provenance.counts
   return (
     <div className="editor-provenance" role="note">
-      <span className="editor-provenance-label">Imported from</span>
+      <span className="editor-provenance-label">{t('editor.project.importedFrom')}</span>
       <div className="editor-provenance-body">
         <div>
           <strong>{from}</strong>
           {when && <span className="editor-provenance-when"> · {when}</span>}
         </div>
         <div className="editor-provenance-counts">
-          {carried} paper{carried === 1 ? '' : 's'} carried over ({included} included, {undecided}{' '}
-          undecided) · {excluded} excluded in screening, left behind
+          {tp('editor.project.provenanceCounts', carried, { included, undecided, excluded })}
         </div>
       </div>
     </div>
@@ -490,5 +457,5 @@ function ProvenanceNote({ provenance }: { provenance: ProjectProvenance }) {
  *  hand-edited file could hold anything, and a bad date must not throw. */
 function formatImportedAt(iso: string): string {
   const d = new Date(iso)
-  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString()
+  return Number.isNaN(d.getTime()) ? '' : d.toLocaleDateString(getLanguage())
 }

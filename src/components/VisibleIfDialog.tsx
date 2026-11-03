@@ -6,25 +6,26 @@ import {
   type VisibleIfEntry,
   type VisibleIfSpec,
 } from '../model/schema'
+import { t, tp, useT } from '../i18n'
 
 /** One condition's gate text, e.g. `"Relevant" = Yes` or `"Study type" has
  *  any answer`. No schema lookup needed: `equals` already carries the real
  *  booleans or option strings. */
 function describeCondition(cond: VisibleCondition): string {
   const values = cond.equals ?? []
-  if (values.length === 0) return `"${cond.field}" has any answer`
-  const shown = values.map((v) => (v === true ? 'Yes' : v === false ? 'No' : v))
-  return `"${cond.field}" = ${shown.join(' or ')}`
+  if (values.length === 0) return t('editor.visibleIf.hasAnyAnswerOf', { field: cond.field })
+  const shown = values.map((v) => (v === true ? t('editor.visibleIf.yes') : v === false ? t('editor.visibleIf.no') : v))
+  return t('editor.visibleIf.equals', { field: cond.field, values: shown.join(t('editor.visibleIf.orJoin')) })
 }
 
 /** One entry spelled out; a nested group is parenthesised so its AND/OR
  *  precedence is unambiguous. `top` skips the brackets for the root group. */
 function describeEntry(entry: VisibleIfEntry, top = false): string {
   if (!isConditionGroup(entry)) return describeCondition(entry)
-  if (entry.conditions.length === 0) return '(no conditions yet)'
+  if (entry.conditions.length === 0) return t('editor.visibleIf.noConditions')
   const inner = entry.conditions
     .map((e) => describeEntry(e))
-    .join(entry.mode === 'all' ? ' and ' : ' or ')
+    .join(entry.mode === 'all' ? t('editor.visibleIf.andJoin') : t('editor.visibleIf.orJoin'))
   return top ? inner : `(${inner})`
 }
 
@@ -32,21 +33,26 @@ function describeEntry(entry: VisibleIfEntry, top = false): string {
  *  button. Deliberately short — more than one entry is only counted, the
  *  full text lives in {@link describeVisibleIfFull}'s tooltip. */
 export function describeVisibleIf(spec: VisibleIfSpec | null): string {
-  if (!spec || spec.conditions.length === 0) return 'Always visible'
+  if (!spec || spec.conditions.length === 0) return t('editor.visibleIf.always')
   if (spec.conditions.length === 1) {
     const only = spec.conditions[0]
     // A lone group adds no meaning of its own — describe what is inside it.
-    return isConditionGroup(only) ? describeVisibleIf(only) : `If ${describeCondition(only)}`
+    return isConditionGroup(only)
+      ? describeVisibleIf(only)
+      : t('editor.visibleIf.ifCondition', { condition: describeCondition(only) })
   }
-  return `If ${spec.mode === 'all' ? 'all' : 'any'} of ${spec.conditions.length} conditions`
+  return t('editor.visibleIf.ifMany', {
+    mode: spec.mode === 'all' ? t('editor.visibleIf.modeAll') : t('editor.visibleIf.modeAny'),
+    count: spec.conditions.length,
+  })
 }
 
 /** The same gate spelled out in full, for the button's `title`. */
 export function describeVisibleIfFull(spec: VisibleIfSpec | null): string {
   if (!spec || spec.conditions.length === 0) {
-    return 'Always visible — this field/group is never hidden.'
+    return t('editor.visibleIf.alwaysFull')
   }
-  return `Only shown if ${describeEntry(spec, true)}.`
+  return t('editor.visibleIf.onlyIf', { condition: describeEntry(spec, true) })
 }
 
 /** The values a condition on this field may match, if any. Free text/number/
@@ -59,28 +65,45 @@ function optionsOf(field: EditorNode | undefined): string[] {
 
 /** What kind of answer a watchable field holds, in the reviewer's words. */
 export function kindLabel(field: EditorNode | undefined): string {
-  if (!field) return 'unknown field'
+  if (!field) return t('editor.visibleIf.kind.unknown')
   switch (field.kind) {
     case 'boolean':
-      return 'Yes/No'
+      return t('editor.visibleIf.kind.yesNo')
     case 'number':
-      return 'Number'
+      return t('editor.visibleIf.kind.number')
     case 'year':
-      return 'Year'
+      return t('editor.visibleIf.kind.year')
     case 'group':
-      return 'Group'
+      return t('editor.visibleIf.kind.group')
     default: {
       const count = optionsOf(field).length
-      return count > 0 ? `Text, ${count} fixed choice${count === 1 ? '' : 's'}` : 'Free text'
+      return count > 0 ? tp('editor.visibleIf.textChoices', count) : t('editor.visibleIf.kind.freeText')
     }
+  }
+}
+
+/** The kind of a field as a lowercase phrase inside a sentence. */
+function kindPhrase(field: EditorNode | undefined): string {
+  if (!field) return t('editor.visibleIf.phrase.unknown')
+  switch (field.kind) {
+    case 'boolean':
+      return t('editor.visibleIf.phrase.yesNo')
+    case 'number':
+      return t('editor.visibleIf.phrase.number')
+    case 'year':
+      return t('editor.visibleIf.phrase.year')
+    case 'group':
+      return t('editor.visibleIf.phrase.group')
+    default:
+      return t('editor.visibleIf.phrase.freeText')
   }
 }
 
 /** Where a watchable field lives, relative to the node being gated. */
 export function whereLabel(levelsUp: number, container: string | null): string {
-  if (levelsUp === 0) return 'Same level'
-  const base = levelsUp === 1 ? '1 level up (parent)' : `${levelsUp} levels up`
-  return container ? `${base}, in "${container}"` : base
+  if (levelsUp === 0) return t('editor.visibleIf.sameLevel')
+  const base = tp('editor.visibleIf.levelsUp', levelsUp)
+  return container ? t('editor.visibleIf.inContainer', { base, container }) : base
 }
 
 /** Which of the three ranks a target belongs to — the picker's list order,
@@ -165,11 +188,15 @@ export function buildTargets(
 
 /** One option's text: where the field lives, and what kind of answer it holds.
  *  A cross-branch target shows its whole path to disambiguate same-named fields. */
-export function targetLabel(t: GateTarget): string {
-  if (t.group === 'elsewhere') {
-    return `${t.path.join(' / ')} — elsewhere in the schema · ${kindLabel(t.node)}`
+export function targetLabel(target: GateTarget): string {
+  if (target.group === 'elsewhere') {
+    return t('editor.visibleIf.elsewhereTarget', { path: target.path.join(' / '), kind: kindLabel(target.node) })
   }
-  return `${t.node.name} — ${whereLabel(t.levelsUp, t.container)} · ${kindLabel(t.node)}`
+  return t('editor.visibleIf.targetLabel', {
+    name: target.node.name,
+    where: whereLabel(target.levelsUp, target.container),
+    kind: kindLabel(target.node),
+  })
 }
 
 /** Rewrite the group at `path` (empty = root) through `fn`, leaving every
@@ -409,7 +436,7 @@ function useEntryDrag(
     /** On the `⠿` span: arms the drag, and nothing else. */
     handle: {
       className: 'schema-handle',
-      title: 'Drag to move into another group, or to reorder',
+      title: t('editor.visibleIf.handleTitle'),
       'aria-hidden': true as const,
       onPointerDown: () => setArmed(true),
       onPointerUp: () => setArmed(false),
@@ -477,14 +504,27 @@ function EntryTools({
   what: 'condition' | 'group'
   actions: GateActions
 }) {
+  const t = useT()
   const i = path[path.length - 1]
+  const names =
+    what === 'condition'
+      ? {
+          up: t('editor.visibleIf.moveUpCondition'),
+          down: t('editor.visibleIf.moveDownCondition'),
+          remove: t('editor.visibleIf.removeCondition'),
+        }
+      : {
+          up: t('editor.visibleIf.moveUpGroup'),
+          down: t('editor.visibleIf.moveDownGroup'),
+          remove: t('editor.visibleIf.removeGroup'),
+        }
   return (
     <div className="visible-if-tools">
       <button
         type="button"
         className="icon-btn"
-        title={`Move this ${what} up`}
-        aria-label={`Move this ${what} up`}
+        title={names.up}
+        aria-label={names.up}
         disabled={i === 0}
         onClick={() => actions.move(path, -1)}
       >
@@ -493,8 +533,8 @@ function EntryTools({
       <button
         type="button"
         className="icon-btn"
-        title={`Move this ${what} down`}
-        aria-label={`Move this ${what} down`}
+        title={names.down}
+        aria-label={names.down}
         disabled={i >= count - 1}
         onClick={() => actions.move(path, 1)}
       >
@@ -503,8 +543,8 @@ function EntryTools({
       <button
         type="button"
         className="remove-btn"
-        title={`Remove this ${what}`}
-        aria-label={`Remove this ${what}`}
+        title={names.remove}
+        aria-label={names.remove}
         onClick={() => actions.remove(path)}
       >
         ×
@@ -514,11 +554,13 @@ function EntryTools({
 }
 
 /** The field picker's three ranks, in the order the reviewer reads them. */
-const TARGET_GROUPS: Array<[GateTargetGroup, string]> = [
-  ['same', 'Same level'],
-  ['ancestor', 'Ancestors'],
-  ['elsewhere', 'Elsewhere in the schema'],
-]
+function targetGroups(): Array<[GateTargetGroup, string]> {
+  return [
+    ['same', t('editor.visibleIf.sameLevel')],
+    ['ancestor', t('editor.visibleIf.ancestors')],
+    ['elsewhere', t('editor.visibleIf.elsewhereGroup')],
+  ]
+}
 
 /** One leaf condition: which field, then how its answer must match. */
 function ConditionRow({
@@ -536,7 +578,8 @@ function ConditionRow({
   actions: GateActions
   drag: GateDrag
 }) {
-  const target = targets.find((t) => t.value === cond.field)
+  const t = useT()
+  const target = targets.find((x) => x.value === cond.field)
   const values = optionsOf(target?.node)
   const isBoolean = target?.node.kind === 'boolean'
   // Only a boolean or an option list has a closed set of values to match; on
@@ -559,14 +602,14 @@ function ConditionRow({
           // the field that is no longer watched.
           onChange={(e) => actions.setEntry(path, { field: e.target.value })}
         >
-          {TARGET_GROUPS.map(([group, label]) => {
-            const inGroup = targets.filter((t) => t.group === group)
+          {targetGroups().map(([group, label]) => {
+            const inGroup = targets.filter((x) => x.group === group)
             if (inGroup.length === 0) return null
             return (
               <optgroup key={group} label={label}>
-                {inGroup.map((t) => (
-                  <option key={t.node.uid} value={t.value}>
-                    {targetLabel(t)}
+                {inGroup.map((x) => (
+                  <option key={x.node.uid} value={x.value}>
+                    {targetLabel(x)}
                   </option>
                 ))}
               </optgroup>
@@ -575,11 +618,7 @@ function ConditionRow({
         </select>
         {/* Level/kind are already in the select's options; only the "no
             longer a legal target" case needs saying here. */}
-        {!target && (
-          <span className="schema-hint">
-            This field is no longer at a level that can be watched.
-          </span>
-        )}
+        {!target && <span className="schema-hint">{t('editor.visibleIf.noLongerWatchable')}</span>}
       </div>
 
       <div className="visible-if-match">
@@ -590,13 +629,9 @@ function ConditionRow({
             checked={!valueMode}
             onChange={() => actions.setEntry(path, { field: cond.field })}
           />
-          <span>has any answer</span>
+          <span>{t('editor.visibleIf.anyAnswer')}</span>
         </label>
-        <label
-          title={
-            canMatchValues ? undefined : 'Only yes/no fields and option lists have values to match'
-          }
-        >
+        <label title={canMatchValues ? undefined : t('editor.visibleIf.onlyYesNoTitle')}>
           <input
             type="radio"
             name={name}
@@ -609,7 +644,7 @@ function ConditionRow({
               })
             }
           />
-          <span>has a specific value</span>
+          <span>{t('editor.visibleIf.specificValue')}</span>
         </label>
 
         {valueMode && isBoolean && (
@@ -623,8 +658,8 @@ function ConditionRow({
               })
             }
           >
-            <option value="yes">Yes</option>
-            <option value="no">No</option>
+            <option value="yes">{t('editor.visibleIf.yes')}</option>
+            <option value="no">{t('editor.visibleIf.no')}</option>
           </select>
         )}
 
@@ -653,17 +688,15 @@ function ConditionRow({
                 </label>
               )
             })}
-            <span className="schema-hint">Any one of the ticked values counts.</span>
+            <span className="schema-hint">{t('editor.visibleIf.anyTicked')}</span>
           </div>
         )}
 
         {!valueMode && (
           <span className="schema-hint">
-            {isBoolean
-              ? '"Has any answer" on a Yes/No field means the box is ticked — pick a specific value to match No.'
-              : '"Has any answer" means any non-empty value.'}
+            {isBoolean ? t('editor.visibleIf.anyAnswerYesNoHint') : t('editor.visibleIf.anyAnswerTextHint')}
             {!canMatchValues &&
-              ` A ${kindLabel(target?.node).toLowerCase()} field has no fixed set of values, so this is the only test available.`}
+              ` ${t('editor.visibleIf.noFixedValues', { kind: kindPhrase(target?.node) })}`}
           </span>
         )}
       </div>
@@ -691,6 +724,7 @@ function ConditionGroup({
   actions: GateActions
   drag: GateDrag
 }) {
+  const t = useT()
   const isRoot = path.length === 0
   // A group is a drop target in its own right: the point of the gesture is
   // moving a condition *into* another group.
@@ -715,14 +749,16 @@ function ConditionGroup({
       {(!isRoot || group.conditions.length > 1) && (
         <div className="visible-if-mode">
           {!isRoot && <span {...handle}>⠿</span>}
-          <span className="visible-if-mode-label">{isRoot ? 'Show when' : 'Group —'}</span>
+          <span className="visible-if-mode-label">
+            {isRoot ? t('editor.visibleIf.showWhen') : t('editor.visibleIf.groupLabel')}
+          </span>
           <select
             className="schema-input"
             value={group.mode}
             onChange={(e) => actions.setMode(path, e.target.value === 'any' ? 'any' : 'all')}
           >
-            <option value="all">all of these must hold (AND)</option>
-            <option value="any">any of these may hold (OR)</option>
+            <option value="all">{t('editor.visibleIf.modeAllOption')}</option>
+            <option value="any">{t('editor.visibleIf.modeAnyOption')}</option>
           </select>
           {!isRoot && (
             <EntryTools path={path} count={siblingCount} what="group" actions={actions} />
@@ -733,7 +769,9 @@ function ConditionGroup({
       {group.conditions.map((entry, i) => (
         <div className="visible-if-entry" key={i}>
           {i > 0 && (
-            <span className="visible-if-joiner">{group.mode === 'all' ? 'and' : 'or'}</span>
+            <span className="visible-if-joiner">
+              {group.mode === 'all' ? t('editor.visibleIf.joinerAnd') : t('editor.visibleIf.joinerOr')}
+            </span>
           )}
           {isConditionGroup(entry) ? (
             <ConditionGroup
@@ -758,31 +796,25 @@ function ConditionGroup({
       ))}
 
       {group.conditions.length === 0 && (
-        <span className="schema-hint">
-          Empty group — add a condition to it below, drag one into it, or it is dropped.
-        </span>
+        <span className="schema-hint">{t('editor.visibleIf.emptyGroup')}</span>
       )}
 
       <div className="visible-if-group-foot">
         {/* Nested group's add buttons sit close to the parent's; label
             clarifies which one a click lands in. */}
-        {!isRoot && <span className="visible-if-mode-label">Add to this group:</span>}
+        {!isRoot && <span className="visible-if-mode-label">{t('editor.visibleIf.addToGroup')}</span>}
         <button
           type="button"
           className="add-btn"
-          title={isRoot ? 'Add a condition' : 'Add a condition to this group'}
+          title={isRoot ? t('editor.visibleIf.addConditionTitle') : t('editor.visibleIf.addConditionGroupTitle')}
           onClick={() => actions.add(path, { field: targets[0].value })}
         >
-          + Add condition
+          {t('editor.visibleIf.addCondition')}
         </button>
         <button
           type="button"
           className="add-btn"
-          title={
-            isRoot
-              ? 'A group with its own AND/OR, nested inside this rule'
-              : 'A group with its own AND/OR, nested inside this group'
-          }
+          title={isRoot ? t('editor.visibleIf.addGroupRootTitle') : t('editor.visibleIf.addGroupNestedTitle')}
           onClick={() =>
             actions.add(path, {
               mode: group.mode === 'all' ? 'any' : 'all',
@@ -790,7 +822,7 @@ function ConditionGroup({
             })
           }
         >
-          + Add group
+          {t('editor.visibleIf.addGroup')}
         </button>
       </div>
     </div>
@@ -817,6 +849,7 @@ export function VisibleIfDialog({
   nodes,
   onClose,
 }: VisibleIfDialogProps) {
+  const t = useT()
   const updateNode = useEditorStore((s) => s.updateNode)
   const [draft, setDraft] = useState<VisibleIfSpec | null>(node.visibleIf)
 
@@ -867,11 +900,17 @@ export function VisibleIfDialog({
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="When to show this field"
+        aria-label={t('editor.visibleIf.dialogLabel')}
       >
         <div className="modal-head">
-          <strong>When to show "{node.name || 'this field'}"</strong>
-          <button type="button" className="icon-btn" onClick={onClose} aria-label="Close" title="Close without saving">
+          <strong>{t('editor.visibleIf.heading', { name: node.name || t('editor.visibleIf.thisField') })}</strong>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={onClose}
+            aria-label={t('common.close')}
+            title={t('editor.visibleIf.closeTitle')}
+          >
             ×
           </button>
         </div>
@@ -882,9 +921,7 @@ export function VisibleIfDialog({
           </p>
 
           {targets.length === 0 ? (
-            <p className="schema-hint">
-              Nothing to gate on: the schema holds no other field that records an answer.
-            </p>
+            <p className="schema-hint">{t('editor.visibleIf.nothingToGate')}</p>
           ) : (
             <>
               <ConditionGroup
@@ -897,10 +934,7 @@ export function VisibleIfDialog({
               />
 
               {usesElsewhere(root, targets) && (
-                <p className="schema-hint visible-if-elsewhere-note">
-                  A field from elsewhere in the schema is read from the first entry of any
-                  repeatable group on its way there.
-                </p>
+                <p className="schema-hint visible-if-elsewhere-note">{t('editor.visibleIf.elsewhereNote')}</p>
               )}
 
               <p className="visible-if-summary">{describeVisibleIfFull(pruneEmptyGroups(draft))}</p>
@@ -915,21 +949,19 @@ export function VisibleIfDialog({
               type="button"
               onClick={() => setDraft(null)}
               disabled={draft === null}
-              title="Remove every condition — this field/group is then always shown"
+              title={t('editor.visibleIf.clearTitle')}
             >
-              Always visible
+              {t('editor.visibleIf.always')}
             </button>
             <span className="schema-hint">
-              {draft === null
-                ? 'No conditions: this field/group is always shown.'
-                : 'Removes every condition above — the field/group is then always shown.'}
+              {draft === null ? t('editor.visibleIf.clearHintNone') : t('editor.visibleIf.clearHint')}
             </span>
           </div>
-          <button type="button" onClick={onClose} title="Discard changes and close without saving">
-            Cancel
+          <button type="button" onClick={onClose} title={t('editor.visibleIf.cancelTitle')}>
+            {t('common.cancel')}
           </button>
-          <button type="button" className="primary" onClick={save} title="Save this visibility gate">
-            Save
+          <button type="button" className="primary" onClick={save} title={t('editor.visibleIf.saveTitle')}>
+            {t('common.save')}
           </button>
         </div>
       </div>

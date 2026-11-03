@@ -14,6 +14,7 @@ import {
 import { countPapersUsingField, countLinksUsingField } from '../model/fieldUsage'
 import { useGitStore } from '../state/gitStore'
 import { VisibleIfDialog, describeVisibleIf, describeVisibleIfFull } from './VisibleIfDialog'
+import { t, tp, useT } from '../i18n'
 import '../styles/schema-editor.css'
 
 // [impl->req~edt-60~1]
@@ -23,16 +24,19 @@ interface DropTarget {
   position: DropPosition
 }
 
-const KIND_LABELS: Array<[EditorNodeKind, string]> = [
-  ['group', 'Group (no value)'],
-  ['string', 'Text'],
-  ['number', 'Number'],
-  ['year', 'Year'],
-  ['boolean', 'Yes/no'],
-]
+function kindLabels(): Array<[EditorNodeKind, string]> {
+  return [
+    ['group', t('editor.schema.kind.group')],
+    ['string', t('editor.schema.kind.text')],
+    ['number', t('editor.schema.kind.number')],
+    ['year', t('editor.schema.kind.year')],
+    ['boolean', t('editor.schema.kind.yesNo')],
+  ]
+}
 
 /** Visual editor for the annotation schema: a nested, drag-reorderable field tree. */
 export function SchemaTreeEditor() {
+  const t = useT()
   const nodes = useEditorStore((s) => s.nodes)
   const addNode = useEditorStore((s) => s.addNode)
 
@@ -54,9 +58,9 @@ export function SchemaTreeEditor() {
     return (
       <div className="schema-editor">
         <div className="schema-empty">
-          <p>No fields yet — add one to describe what you want to record per paper.</p>
-          <button type="button" className="add-btn" onClick={() => addNode(null)} title="Add a new top-level field">
-            + Add field
+          <p>{t('editor.schema.empty')}</p>
+          <button type="button" className="add-btn" onClick={() => addNode(null)} title={t('editor.schema.addRootTitle')}>
+            {t('editor.schema.addField')}
           </button>
         </div>
       </div>
@@ -81,8 +85,8 @@ export function SchemaTreeEditor() {
           />
         ))}
       </div>
-      <button type="button" className="add-btn schema-add-root" onClick={() => addNode(null)} title="Add a new top-level field">
-        + Add field
+      <button type="button" className="add-btn schema-add-root" onClick={() => addNode(null)} title={t('editor.schema.addRootTitle')}>
+        {t('editor.schema.addField')}
       </button>
     </div>
   )
@@ -116,6 +120,7 @@ function SchemaNodeRow({
   onDragOverRow,
   onDragLeaveRow,
 }: SchemaNodeRowProps) {
+  const t = useT()
   const addNode = useEditorStore((s) => s.addNode)
   const updateNode = useEditorStore((s) => s.updateNode)
   const removeNode = useEditorStore((s) => s.removeNode)
@@ -156,10 +161,7 @@ function SchemaNodeRow({
    * not "nothing there".
    */
   const unpulledNote = (): string =>
-    behind && behind > 0
-      ? ` In fact this branch is ${behind} commit${behind === 1 ? '' : 's'} behind its upstream ` +
-        `as of your last fetch — pull first and the count above may well be higher.`
-      : ''
+    behind && behind > 0 ? ` ${tp('editor.schema.behindUpstream', behind)}` : ''
 
   // The field's name when the input gained focus, so a *committed* rename (on
   // blur) can be checked against what papers actually record — rather than
@@ -192,22 +194,12 @@ function SchemaNodeRow({
       if (count + links > worst.count + worst.links) worst = { name: candidate, count, links }
     }
     if (worst.count === 0 && worst.links === 0) return true
-    const verb = what === 'rename' ? 'Renaming' : 'Removing'
-    const parts: string[] = []
-    if (worst.count > 0) {
-      parts.push(`${worst.count === 1 ? '1 paper records an answer' : `${worst.count} papers record answers`}`)
-    }
-    if (worst.links > 0) {
-      parts.push(
-        `${worst.links === 1 ? '1 paper has a PDF highlight/note linked' : `${worst.links} papers have PDF highlights/notes linked`}`,
-      )
-    }
     return window.confirm(
-      `${parts.join(', and ')} under "${worst.name}". ${verb} it hides that — including every ` +
-        `reviewer's own — from every screen and export. The answers stay in the files and come back ` +
-        `if the name does.\n\nThis count covers only the papers in this copy of the project; ` +
-        `reviewers whose work you have not pulled yet may have recorded more.${unpulledNote()}` +
-        `\n\nContinue?`,
+      t(what === 'rename' ? 'editor.schema.renameConfirm' : 'editor.schema.removeConfirm', {
+        parts: answerParts(worst.count, worst.links).join(t('editor.schema.partsJoin')),
+        name: worst.name,
+        note: unpulledNote(),
+      }),
     )
   }
 
@@ -317,19 +309,12 @@ function SchemaNodeRow({
     const count = countPapersUsingField(papers, path)
     const links = countLinksUsingField(papers, path)
     if (count === 0 && links === 0) return true
-    const parts: string[] = []
-    if (count > 0) parts.push(`${count === 1 ? '1 paper records an answer' : `${count} papers record answers`}`)
-    if (links > 0) {
-      parts.push(
-        `${links === 1 ? '1 paper has a PDF highlight/note linked' : `${links} papers have PDF highlights/notes linked`}`,
-      )
-    }
     return window.confirm(
-      `${parts.join(', and ')} under "${path.join(' / ')}". Moving it changes where that belongs, so ` +
-        `it is hidden — including every reviewer's own — from every screen and export. The answers ` +
-        `stay in the files and come back if the node returns to where it was.\n\nThis count covers ` +
-        `only the papers in this copy of the project; reviewers whose work you have not pulled yet ` +
-        `may have recorded more.${unpulledNote()}\n\nContinue?`,
+      t('editor.schema.moveConfirm', {
+        parts: answerParts(count, links).join(t('editor.schema.partsJoin')),
+        path: path.join(' / '),
+        note: unpulledNote(),
+      }),
     )
   }
 
@@ -376,7 +361,7 @@ function SchemaNodeRow({
       >
         <span
           className="schema-handle"
-          title="Drag to reorder or nest"
+          title={t('editor.schema.dragTitle')}
           aria-hidden="true"
           onPointerDown={() => setArmed(true)}
           onPointerUp={() => setArmed(false)}
@@ -388,7 +373,7 @@ function SchemaNodeRow({
           <button
             type="button"
             className="icon-btn schema-caret"
-            title={node.collapsed ? 'Expand children' : 'Collapse children'}
+            title={node.collapsed ? t('editor.schema.expandTitle') : t('editor.schema.collapseTitle')}
             aria-expanded={!node.collapsed}
             onClick={() => toggleCollapsed(node.uid)}
           >
@@ -400,7 +385,7 @@ function SchemaNodeRow({
 
         <input
           className="schema-input schema-name"
-          placeholder="Field name"
+          placeholder={t('editor.schema.fieldNamePlaceholder')}
           value={node.name}
           onFocus={() => {
             nameOnFocus.current = node.name
@@ -412,18 +397,18 @@ function SchemaNodeRow({
         <select
           className="schema-input schema-kind"
           value={node.kind}
-          title="What kind of value this field holds"
+          title={t('editor.schema.kindTitle')}
           onChange={(e) => updateNode(node.uid, { kind: e.target.value as EditorNodeKind })}
         >
-          {KIND_LABELS.map(([kind, label]) => (
+          {kindLabels().map(([kind, label]) => (
             <option key={kind} value={kind}>
               {label}
             </option>
           ))}
         </select>
 
-        <label className="schema-bound" title="Minimum number of entries (0 = optional)">
-          <span className="schema-bound-label">min</span>
+        <label className="schema-bound" title={t('editor.schema.minTitle')}>
+          <span className="schema-bound-label">{t('editor.schema.min')}</span>
           <input
             type="number"
             min={0}
@@ -434,8 +419,8 @@ function SchemaNodeRow({
           />
         </label>
 
-        <label className="schema-bound" title="Maximum number of entries">
-          <span className="schema-bound-label">max</span>
+        <label className="schema-bound" title={t('editor.schema.maxTitle')}>
+          <span className="schema-bound-label">{t('editor.schema.max')}</span>
           <input
             type="number"
             min={1}
@@ -447,7 +432,7 @@ function SchemaNodeRow({
           />
         </label>
 
-        <label className="schema-unbounded" title="Allow any number of entries">
+        <label className="schema-unbounded" title={t('editor.schema.unboundedTitle')}>
           <input
             type="checkbox"
             checked={unbounded}
@@ -463,30 +448,30 @@ function SchemaNodeRow({
             (`false`), so a boolean is never "empty" and "required" on one can
             never fire — see `resolveSchema`, which drops the flag on load too. */}
         {node.kind !== 'group' && node.kind !== 'boolean' && (
-          <label className="schema-required" title="The reviewer must fill this field in">
+          <label className="schema-required" title={t('editor.schema.requiredTitle')}>
             <input
               type="checkbox"
               checked={node.required}
               onChange={(e) => updateNode(node.uid, { required: e.target.checked })}
             />
-            <span>Required</span>
+            <span>{t('editor.schema.required')}</span>
           </label>
         )}
 
         {node.max !== 1 && (
-          <label className="schema-required" title="Each entry may appear only once">
+          <label className="schema-required" title={t('editor.schema.uniqueTitle')}>
             <input
               type="checkbox"
               checked={node.unique ?? false}
               onChange={(e) => updateNode(node.uid, { unique: e.target.checked })}
             />
-            <span>Unique</span>
+            <span>{t('editor.schema.unique')}</span>
           </label>
         )}
 
         <input
           className="schema-input schema-desc"
-          placeholder="Description (shown on hover)"
+          placeholder={t('editor.schema.descriptionPlaceholder')}
           value={node.description}
           onChange={(e) => updateNode(node.uid, { description: e.target.value })}
         />
@@ -506,15 +491,15 @@ function SchemaNodeRow({
         <button
           type="button"
           className="add-btn schema-add-child"
-          title="Add a nested field under this one"
+          title={t('editor.schema.addChildTitle')}
           onClick={() => addNode(node.uid)}
         >
-          + Child
+          {t('editor.schema.addChild')}
         </button>
         <button
           type="button"
           className="remove-btn"
-          title="Remove this field and its children"
+          title={t('editor.schema.removeTitle')}
           onClick={() => {
             if (confirmDestructive('remove', node.name, nameOnFocus.current)) removeNode(node.uid)
           }}
@@ -525,7 +510,7 @@ function SchemaNodeRow({
 
       {node.unique && node.max !== 1 && hasChildren && (
         <fieldset className="schema-unique-by">
-          <legend>Compare entries by (none ticked: all fields)</legend>
+          <legend>{t('editor.schema.compareBy')}</legend>
           {node.children.map((c) => (
             <label key={c.uid}>
               <input
@@ -539,7 +524,7 @@ function SchemaNodeRow({
                   })
                 }
               />
-              <span>{c.name.trim() || 'Unnamed field'}</span>
+              <span>{c.name.trim() || t('editor.schema.unnamedField')}</span>
             </label>
           ))}
         </fieldset>
@@ -549,27 +534,20 @@ function SchemaNodeRow({
         <p className="schema-move-note" role="status">
           {pendingMove.carried && !pendingMove.kept ? (
             <>
-              {pendingMove.count === 1 ? '1 paper has' : `${pendingMove.count} papers have`} answers under “
-              {pendingMove.from.join(' › ')}”. They move here when you save, and answers other reviewers
-              recorded there follow once their work arrives.{' '}
+              {tp('editor.schema.carriedAnswers', pendingMove.count, { path: pendingMove.from.join(' › ') })}{' '}
               <button type="button" className="schema-move-toggle" onClick={() => setKeepHidden(node.uid, true)}>
-                Keep them hidden instead
+                {t('editor.schema.keepHidden')}
               </button>
             </>
           ) : pendingMove.kept ? (
             <>
-              Answers under “{pendingMove.from.join(' › ')}” will stay hidden; they come back if the field
-              returns there.{' '}
+              {t('editor.schema.keptAnswers', { path: pendingMove.from.join(' › ') })}{' '}
               <button type="button" className="schema-move-toggle" onClick={() => setKeepHidden(node.uid, false)}>
-                Move them here after all
+                {t('editor.schema.moveAfterAll')}
               </button>
             </>
           ) : (
-            <>
-              {pendingMove.count === 1 ? '1 paper has' : `${pendingMove.count} papers have`} answers under “
-              {pendingMove.from.join(' › ')}”. They can&apos;t follow through a repeated group — which entry
-              would they belong to? — so they will be hidden.
-            </>
+            <>{tp('editor.schema.repeatedAnswers', pendingMove.count, { path: pendingMove.from.join(' › ') })}</>
           )}
         </p>
       )}
@@ -595,14 +573,14 @@ function SchemaNodeRow({
             <div className="schema-option" key={i}>
               <input
                 className="schema-input"
-                placeholder={`Option ${i + 1}`}
+                placeholder={t('editor.schema.optionPlaceholder', { n: i + 1 })}
                 value={option}
                 onChange={(e) => setOption(i, e.target.value)}
               />
               <button
                 type="button"
                 className="remove-btn"
-                title="Remove this option"
+                title={t('editor.schema.removeOptionTitle')}
                 onClick={() =>
                   updateNode(node.uid, { options: node.options.filter((_, j) => j !== i) })
                 }
@@ -615,15 +593,13 @@ function SchemaNodeRow({
             <button
               type="button"
               className="add-btn"
-              title="Add another option to this field"
+              title={t('editor.schema.addOptionTitle')}
               onClick={() => updateNode(node.uid, { options: [...node.options, ''] })}
             >
-              + Add option
+              {t('editor.schema.addOption')}
             </button>
             <span className="schema-hint">
-              {node.options.length === 0
-                ? 'No options: free text.'
-                : 'With options: a dropdown of these values.'}
+              {node.options.length === 0 ? t('editor.schema.noOptionsHint') : t('editor.schema.optionsHint')}
             </span>
           </div>
         </div>
@@ -649,6 +625,13 @@ function SchemaNodeRow({
       )}
     </div>
   )
+}
+
+function answerParts(papers: number, links: number): string[] {
+  const parts: string[] = []
+  if (papers > 0) parts.push(tp('editor.schema.answersRecorded', papers))
+  if (links > 0) parts.push(tp('editor.schema.linksRecorded', links))
+  return parts
 }
 
 /** Parse an integer field, falling back while the input is empty or mid-edit. */

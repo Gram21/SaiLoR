@@ -3,9 +3,7 @@ import { useState } from 'react'
 import { editorSeatFinished, useEditorStore } from '../state/editorStore'
 import { aiSeatId } from '../model/project'
 import { personCounts } from '../model/strict'
-
-export const STRICT_DISCLAIMER =
-  'Strict mode is a workflow aid, not security. Anyone can pick a different person or edit the files.'
+import { useT } from '../i18n'
 
 // [impl->req~edt-130~1]
 // [impl->req~edt-140~1]
@@ -13,6 +11,7 @@ export const STRICT_DISCLAIMER =
 // [impl->req~edt-170~1]
 /** Persons, their paper assignments and their finished work, for strict mode. */
 export function StrictModeEditor() {
+  const t = useT()
   const strict = useEditorStore((s) => s.strict)
   const papers = useEditorStore((s) => s.papers)
   const reviewers = useEditorStore((s) => s.reviewers)
@@ -42,15 +41,14 @@ export function StrictModeEditor() {
     <section className="editor-section strict-editor">
       <details className="editor-protocol-details" open={strict?.enabled === true}>
         <summary>
-          <h2>Strict mode</h2>
-          <span className="editor-protocol-summary-hint">{strict?.enabled ? 'on' : 'optional'}</span>
+          <h2>{t('editor.strict.title')}</h2>
+          <span className="editor-protocol-summary-hint">
+            {strict?.enabled ? t('editor.strict.on') : t('editor.project.optional')}
+          </span>
         </summary>
-        <p className="editor-hint">
-          Each person sees only the papers assigned to them, on a fixed seat. Consolidation of a paper opens when
-          every assigned person has finished it.
-        </p>
+        <p className="editor-hint">{t('editor.strict.hint')}</p>
         <p className="editor-hint" role="note">
-          <strong>Note:</strong> {STRICT_DISCLAIMER}
+          <strong>{t('editor.strict.note')}</strong> {t('editor.strict.disclaimer')}
         </p>
         <label className="editor-ai-toggle">
           <input
@@ -59,44 +57,44 @@ export function StrictModeEditor() {
             disabled={busy}
             onChange={(e) => setStrictEnabled(e.target.checked)}
           />
-          <span>Use strict mode</span>
+          <span>{t('editor.strict.useToggle')}</span>
         </label>
 
-        <h3>Persons</h3>
+        <h3>{t('editor.strict.persons')}</h3>
         <ul className="strict-persons">
           {persons.map((p) => (
             <li key={p.id} className="strict-person">
               <input
                 className="protocol-input"
-                aria-label={`Name of person ${p.id}`}
+                aria-label={t('editor.strict.personName', { id: p.id })}
                 value={p.name}
                 disabled={busy}
                 onChange={(e) => renamePerson(p.id, e.target.value)}
               />
               <span className="editor-hint">
-                {counts[p.id]?.assigned ?? 0} assigned, {counts[p.id]?.finished ?? 0} finished
+                {t('editor.strict.counts', { assigned: counts[p.id]?.assigned ?? 0, finished: counts[p.id]?.finished ?? 0 })}
               </span>
               <button
                 type="button"
                 disabled={busy}
-                title="Remove this person. Refused if the person has finished work."
+                title={t('editor.strict.removePersonTitle')}
                 onClick={() => removePerson(p.id)}
               >
-                Remove
+                {t('common.remove')}
               </button>
             </li>
           ))}
         </ul>
         <button type="button" disabled={busy} onClick={addPerson}>
-          Add person
+          {t('editor.strict.addPerson')}
         </button>
 
         {persons.length > 0 && papers.length > 0 && (
           <>
-            <h3>Assignments</h3>
+            <h3>{t('editor.strict.assignments')}</h3>
             <div className="strict-bulk">
               <label>
-                Persons per paper{' '}
+                {t('editor.strict.personsPerPaper')}{' '}
                 <input
                   type="number"
                   min={1}
@@ -108,37 +106,39 @@ export function StrictModeEditor() {
               <button
                 type="button"
                 disabled={busy}
-                title="Assign persons in turn to every paper that has no assignment yet. The AI seat is not used."
+                title={t('editor.strict.assignTitle')}
                 onClick={() => bulkAssignStrict(Math.min(perPaper, maxPerPaper))}
               >
-                Assign papers without persons
+                {t('editor.strict.assignButton')}
               </button>
             </div>
             <table className="strict-assignments">
               <thead>
                 <tr>
-                  <th>Paper</th>
+                  <th>{t('editor.strict.paper')}</th>
                   {seats.map((n) => (
-                    <th key={n}>{String(n) === ai ? `AI (Reviewer ${n})` : `Reviewer ${n}`}</th>
+                    <th key={n}>
+                      {String(n) === ai ? t('editor.strict.aiSeatHeader', { n }) : t('editor.strict.seatHeader', { n })}
+                    </th>
                   ))}
                 </tr>
               </thead>
               <tbody>
                 {papers.map((paper) => (
                   <tr key={paper.uid}>
-                    <td title={paper.title}>{paper.id || paper.title || '(no id)'}</td>
+                    <td title={paper.title}>{paper.id || paper.title || t('editor.strict.noId')}</td>
                     {seats.map((n) => {
                       const current = strict?.assignments[paper.uid]?.find((a) => a.seat === n)
                       const finished = current !== undefined && editorSeatFinished(paper, n)
                       return (
                         <td key={n}>
                           <select
-                            aria-label={`Person for ${paper.id} seat ${n}`}
+                            aria-label={t('editor.strict.personForSeat', { id: paper.id, n })}
                             value={current?.person ?? ''}
                             disabled={busy || finished}
                             onChange={(e) => setAssignment(paper.uid, n, e.target.value || null)}
                           >
-                            <option value="">None</option>
+                            <option value="">{t('editor.strict.none')}</option>
                             {persons.map((p) => (
                               <option key={p.id} value={p.id}>
                                 {p.name}
@@ -149,10 +149,10 @@ export function StrictModeEditor() {
                             <button
                               type="button"
                               disabled={busy}
-                              title="Remove the finished flag so the person can work on this paper again."
+                              title={t('editor.strict.reopenTitle')}
                               onClick={() => reopenWork(paper.uid, n)}
                             >
-                              Reopen
+                              {t('editor.strict.reopen')}
                             </button>
                           )}
                         </td>

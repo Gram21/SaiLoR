@@ -38,6 +38,7 @@ import { screeningReason, screeningStatus } from '../screening/status'
 import { pendingUnanimousDecisions } from '../screening/counts'
 import { renameReasonInPapers } from '../screening/reasonUsage'
 import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR, defaultSplitDirName } from '../model/annotationsDir'
+import { t, tp } from '../i18n'
 import {
   amendVersion,
   newSchemaVersionId,
@@ -579,10 +580,10 @@ function fillFromRef(match: EditorPaper, entry: RefEntry): boolean {
 
 function summarizeImport(total: number, updated: number, unchanged: number): string {
   const parts: string[] = []
-  if (updated > 0) parts.push(`${updated} updated existing paper${updated === 1 ? '' : 's'}`)
-  if (unchanged > 0) parts.push(`${unchanged} already complete`)
-  const detail = parts.length > 0 ? ` (${parts.join(', ')})` : ''
-  return `Imported ${total} reference${total === 1 ? '' : 's'}${detail}.`
+  if (updated > 0) parts.push(tp('editor.store.updatedExisting', updated))
+  if (unchanged > 0) parts.push(t('editor.store.alreadyComplete', { count: unchanged }))
+  const detail = parts.length > 0 ? t('editor.store.importDetail', { parts: parts.join(', ') }) : ''
+  return tp('editor.store.imported', total, { detail })
 }
 
 /** `'merge'` fills `entry` into whatever paper the verdict points at (never
@@ -837,29 +838,29 @@ export function validateDraft(state: {
     // A screening draft has no authored nodes at all — the schema-building
     // section doesn't even render — so these checks are meaningless there.
     if (state.nodes.length === 0) {
-      errors.push('The annotation schema needs at least one field.')
+      errors.push(t('editor.store.schemaNeedsField'))
     }
     const unnamed = countUnnamed(state.nodes)
-    if (unnamed > 0) errors.push(`${unnamed} schema field(s) have no name.`)
+    if (unnamed > 0) errors.push(t('editor.store.unnamedFields', { count: unnamed }))
   } else if (screening.reasons.filter((r) => r.trim()).length === 0) {
-    errors.push('Screening needs at least one exclusion reason.')
+    errors.push(t('editor.store.screeningNeedsReason'))
   }
 
   state.papers.forEach((p, i) => {
     const id = p.id.trim()
     if (!id) {
-      errors.push(`Paper ${i + 1}: missing id.`)
+      errors.push(t('editor.store.paperMissingId', { n: i + 1 }))
     } else {
       // The id becomes a directory name verbatim (`splitProjectFiles` in
       // `src/model/project.ts`) — reject anything that would break, or
       // silently mismatch, on some teammate's checkout.
       const problem = paperIdProblem(id)
-      if (problem) errors.push(`Paper ${i + 1}: id "${id}" cannot be a folder name — ${problem.detail}.`)
+      if (problem) errors.push(t('editor.store.paperIdProblem', { n: i + 1, id, detail: problem.detail }))
     }
-    if (!p.title.trim()) errors.push(`Paper ${i + 1}: missing title.`)
+    if (!p.title.trim()) errors.push(t('editor.store.paperMissingTitle', { n: i + 1 }))
     // Screening runs on title + abstract from a reference-manager export with
     // no PDFs at all, so a PDF is only required outside of screening.
-    if (!p.pdf.trim() && !screening) errors.push(`Paper ${i + 1} has no PDF attached.`)
+    if (!p.pdf.trim() && !screening) errors.push(t('editor.store.paperNoPdf', { n: i + 1 }))
   })
   const ids = state.papers.map((p) => p.id.trim()).filter(Boolean)
   // Not just an exact string match: a case-only or Unicode-normalisation-only
@@ -869,7 +870,7 @@ export function validateDraft(state: {
   ids.forEach((id, i) => {
     if (ids.some((other, j) => j !== i && paperIdsCollide(id, other))) collidingIds.add(id)
   })
-  if (collidingIds.size > 0) errors.push(`Duplicate paper id(s): ${[...collidingIds].join(', ')}.`)
+  if (collidingIds.size > 0) errors.push(t('editor.store.duplicateIds', { ids: [...collidingIds].join(', ') }))
 
   // Only run the structural validators once the basics hold, so their messages
   // don't pile on top of the friendlier ones above.
@@ -1023,8 +1024,8 @@ async function pickScreeningProject(
   if (project.screening === null) {
     set((s) => {
       s.error = {
-        message: 'That project is not a screening project.',
-        details: ['Pick the JSON of a screening project — one whose config has a "screening" section.'],
+        message: t('editor.store.notScreening'),
+        details: [t('editor.store.notScreeningDetail')],
       }
     })
     return null
@@ -1333,7 +1334,7 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
   }
   const parsedStrict = parseStrictConfig(data.config, new Set(papers.map((p) => p.id)))
   if (parsedStrict.problems.length > 0) {
-    throw new Error(`The strict mode settings are invalid: ${parsedStrict.problems.join(' ')}`)
+    throw new Error(t('editor.store.strictInvalid', { problems: parsedStrict.problems.join(' ') }))
   }
   const uidOf = new Map(papers.map((p) => [p.id, p.uid]))
   const strict: StrictConfig | null = parsedStrict.strict
@@ -1445,7 +1446,7 @@ function openError(err: unknown): EditorError {
     err instanceof z.ZodError
       ? err.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`)
       : [String(err)]
-  return { message: 'That file could not be opened for editing.', details }
+  return { message: t('editor.store.openFailed'), details }
 }
 
 export const useEditorStore = create<EditorState>()(
@@ -1489,7 +1490,7 @@ export const useEditorStore = create<EditorState>()(
         if (fresh.length > 0) s.dirty = true
         s.notice =
           skipped.length > 0
-            ? `Already in the project, skipped: ${skipped.join(', ')}`
+            ? t('editor.store.alreadySkipped', { list: skipped.join(', ') })
             : null
         s.extracting += fresh.length
       })
@@ -1658,8 +1659,8 @@ export const useEditorStore = create<EditorState>()(
         useStore.setState({
           recents: cur.recents.map((r) => (r.id === id ? { ...r, available: false } : r)),
           loadError: {
-            message: 'That project could not be opened.',
-            details: ['It may have been moved, renamed, or deleted.'],
+            message: t('editor.store.loadFailed'),
+            details: [t('editor.store.loadMovedHint')],
           },
         })
         return
@@ -1888,8 +1889,8 @@ export const useEditorStore = create<EditorState>()(
       if (finished.length > 0) {
         set((s) => {
           s.error = {
-            message: 'This person has finished work and cannot be removed.',
-            details: [`Reopen the work first on: ${finished.map((p) => p.id).join(', ')}.`],
+            message: t('editor.store.personFinished'),
+            details: [t('editor.store.personFinishedDetail', { ids: finished.map((p) => p.id).join(', ') })],
           }
         })
         return
@@ -1917,8 +1918,8 @@ export const useEditorStore = create<EditorState>()(
       if (replaced.some((a) => editorSeatFinished(paper, a.seat))) {
         set((s) => {
           s.error = {
-            message: 'This assignment has finished work and cannot be changed.',
-            details: ['Reopen the work first.'],
+            message: t('editor.store.assignmentFinished'),
+            details: [t('editor.store.assignmentFinishedDetail')],
           }
         })
         return
@@ -2091,7 +2092,7 @@ export const useEditorStore = create<EditorState>()(
       const entries = parseReferences(picked.text, picked.name)
       if (entries.length === 0) {
         set((s) => {
-          s.notice = `No references could be read from ${picked.name}.`
+          s.notice = t('editor.store.noReferences', { name: picked.name })
         })
         return
       }
@@ -2386,7 +2387,7 @@ export const useEditorStore = create<EditorState>()(
           s.dirty = true
           s.error = null
           s.issues = []
-          s.notice = `Imported ${rows.length} paper${rows.length === 1 ? '' : 's'} from ${draft.sourceName}.`
+          s.notice = `${tp('editor.store.importedFrom', rows.length, { source: draft.sourceName })}.`
           s.extracting = 0
           s.justAdded = Object.fromEntries(rows.map((r) => [r.uid, true as const]))
           s.past = []
@@ -2463,8 +2464,8 @@ export const useEditorStore = create<EditorState>()(
             s.dirty = true
           }
           s.notice =
-            `Imported ${toAdd.length} paper${toAdd.length === 1 ? '' : 's'} from ${draft.sourceName}` +
-            (skipped > 0 ? ` (${skipped} already in the project, skipped).` : '.')
+            tp('editor.store.importedFrom', toAdd.length, { source: draft.sourceName }) +
+            (skipped > 0 ? t('editor.store.skippedSuffix', { count: skipped }) : '.')
         }
 
         s.screeningImport = null
@@ -2551,23 +2552,19 @@ export const useEditorStore = create<EditorState>()(
       const st = get()
       if (!st.location) {
         set((s) => {
-          s.error = { message: 'Choose where the JSON should be stored first.', details: [] }
+          s.error = { message: t('editor.store.chooseLocation'), details: [] }
         })
         return false
       }
       const issues = validateDraft(st)
       const folder = st.annotationsDir.trim() || DEFAULT_ANNOTATIONS_DIR
       const folderProblem = st.annotationsDir.trim() ? annotationsDirProblem(folder) : null
-      if (folderProblem) issues.push(`Annotations folder "${folder}": ${folderProblem}.`)
+      if (folderProblem) issues.push(t('editor.store.folderProblem', { folder, problem: folderProblem }))
       else if (st.location.path) {
         const ids = st.papers.map((p) => p.id.trim())
         const users = (await getPlatform().annotationsDirUsers?.(st.location.path, folder, ids, st.screening !== null).catch(() => [])) ?? []
         if (users.length > 0) {
-          issues.push(
-            `Annotations folder "${folder}" is also used by ${users.join(', ')} next to this file, a project of the ` +
-              'same kind that lists some of the same papers — the two would write the same files there. ' +
-              'Choose another folder name.',
-          )
+          issues.push(t('editor.store.folderShared', { folder, users: users.join(', ') }))
         }
       }
       if (issues.length > 0) {
@@ -2608,7 +2605,7 @@ export const useEditorStore = create<EditorState>()(
           s.dirty = false
           if (s.location) s.location.handle = handle
           // Saving only writes the file — the user stays in the editor.
-          s.notice = `Saved to ${st.location?.name ?? 'the project file'}`
+          s.notice = t('editor.store.savedTo', { name: st.location?.name ?? t('editor.store.projectFile') })
           s.justAdded = {}
         })
         // The project's title may have just changed, and the recents list shows
@@ -2618,7 +2615,7 @@ export const useEditorStore = create<EditorState>()(
       } catch (err) {
         set((s) => {
           s.busy = false
-          s.error = { message: 'Failed to save the project JSON.', details: [String(err)] }
+          s.error = { message: t('editor.store.saveFailed'), details: [String(err)] }
         })
         return false
       }

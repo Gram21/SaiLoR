@@ -1,3 +1,5 @@
+import { getLanguage, t, tp } from '../i18n'
+
 /**
  * Is this string safe to use, verbatim, as a directory name on every
  * platform the team might check the repository out on?
@@ -49,33 +51,33 @@ const RESERVED_NAMES = /^(CON|PRN|AUX|NUL|COM[1-9]|LPT[1-9])$/i
 
 /** `null` when `id` is acceptable, otherwise why it is not. Expects `id` already trimmed. */
 export function paperIdProblem(id: string): PaperIdIssue | null {
-  if (!id) return { reason: 'empty', detail: 'the id is empty' }
+  if (!id) return { reason: 'empty', detail: t('editor.paperId.empty') }
   // Control characters, before anything else: a newline or NUL in a folder
   // name is never legitimate and can corrupt whatever the path is spliced into.
-  if (/[\x00-\x1f]/.test(id)) return { reason: 'control-char', detail: 'it contains a control character' }
+  if (/[\x00-\x1f]/.test(id)) return { reason: 'control-char', detail: t('editor.paperId.controlChar') }
   // `.` and `..` are valid path segments, just never the *paper's own*
   // directory — one means "here", the other means "the parent of annotations/".
-  if (id === '.' || id === '..') return { reason: 'dot', detail: `"${id}" is not a valid folder name` }
+  if (id === '.' || id === '..') return { reason: 'dot', detail: t('editor.paperId.notValid', { id }) }
 
   const illegal = [...new Set(id.match(ILLEGAL_CHARS) ?? [])]
   if (illegal.length > 0) {
-    const list = new Intl.ListFormat('en', { type: 'conjunction' }).format(illegal.map((c) => `"${c}"`))
-    return { reason: 'illegal-char', detail: `${list} ${illegal.length === 1 ? 'is' : 'are'} not allowed in file names on Windows` }
+    const list = new Intl.ListFormat(getLanguage(), { type: 'conjunction' }).format(illegal.map((c) => `"${c}"`))
+    return { reason: 'illegal-char', detail: tp('editor.paperId.illegal', illegal.length, { list }) }
   }
 
   // Windows silently strips a trailing dot or space when it creates the
   // directory, so `Smith. ` on disk becomes `Smith` — a mismatch the id on
   // screen never reveals until a teammate's checkout can't find the folder.
-  if (/[. ]$/.test(id)) return { reason: 'trailing-dot-or-space', detail: 'a trailing dot or space is stripped by Windows, so the id would not match the folder it creates' }
+  if (/[. ]$/.test(id)) return { reason: 'trailing-dot-or-space', detail: t('editor.paperId.trailingDotOrSpace') }
 
   // Reserved even with an extension: `CON.json` still opens the CON device.
   const base = id.split('.')[0]
   if (RESERVED_NAMES.test(base)) {
-    return { reason: 'reserved-name', detail: `"${base.toUpperCase()}" is a reserved device name on Windows` }
+    return { reason: 'reserved-name', detail: t('editor.paperId.reservedName', { name: base.toUpperCase() }) }
   }
 
   if (paperIdKey(id) === FEEDBACK_DIR) {
-    return { reason: 'reserved-name', detail: `"${FEEDBACK_DIR}" is the folder for AI feedback files inside the annotations folder` }
+    return { reason: 'reserved-name', detail: t('editor.paperId.feedbackDir', { dir: FEEDBACK_DIR }) }
   }
 
   return null

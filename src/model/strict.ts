@@ -1,4 +1,5 @@
 import type { Paper, Project } from './project'
+import { t } from '../i18n'
 
 export interface Person {
   id: string
@@ -40,31 +41,31 @@ export function parseStrictConfig(
   const c = isRecord(config) ? config : {}
   if (!('strict' in c) && !('persons' in c) && !('assignments' in c)) return { problems }
 
-  if ('strict' in c && typeof c.strict !== 'boolean') problems.push('config.strict must be true or false.')
+  if ('strict' in c && typeof c.strict !== 'boolean') problems.push(t('editor.strictProblem.strictType'))
 
   const persons: Person[] = []
-  if ('persons' in c && !Array.isArray(c.persons)) problems.push('config.persons must be a list.')
+  if ('persons' in c && !Array.isArray(c.persons)) problems.push(t('editor.strictProblem.personsType'))
   const ids = new Set<string>()
   const names = new Set<string>()
   for (const [i, raw] of (Array.isArray(c.persons) ? c.persons : []).entries()) {
     const id = isRecord(raw) && typeof raw.id === 'string' ? raw.id.trim() : ''
     const name = isRecord(raw) && typeof raw.name === 'string' ? raw.name.trim() : ''
     if (!id || !name) {
-      problems.push(`config.persons[${i}] needs a non-empty "id" and "name".`)
+      problems.push(t('editor.strictProblem.personEntry', { i }))
       continue
     }
-    if (ids.has(id)) problems.push(`Person id "${id}" appears more than once.`)
-    if (names.has(name.toLowerCase())) problems.push(`Person name "${name}" appears more than once.`)
+    if (ids.has(id)) problems.push(t('editor.strictProblem.personIdTwice', { id }))
+    if (names.has(name.toLowerCase())) problems.push(t('editor.strictProblem.personNameTwice', { name }))
     ids.add(id)
     names.add(name.toLowerCase())
     persons.push({ id, name })
   }
 
   const assignments: Record<string, Assignment[]> = {}
-  if ('assignments' in c && !isRecord(c.assignments)) problems.push('config.assignments must be an object.')
+  if ('assignments' in c && !isRecord(c.assignments)) problems.push(t('editor.strictProblem.assignmentsType'))
   for (const [paperId, list] of Object.entries(isRecord(c.assignments) ? c.assignments : {})) {
     if (!Array.isArray(list)) {
-      problems.push(`config.assignments["${paperId}"] must be a list.`)
+      problems.push(t('editor.strictProblem.assignmentsList', { paperId }))
       continue
     }
     const entries: Assignment[] = []
@@ -72,16 +73,16 @@ export function parseStrictConfig(
       const person = isRecord(raw) && typeof raw.person === 'string' ? raw.person : ''
       const seat = isRecord(raw) ? raw.seat : undefined
       if (!ids.has(person)) {
-        problems.push(`Paper "${paperId}" is assigned to unknown person "${person}".`)
+        problems.push(t('editor.strictProblem.unknownPerson', { paperId, person }))
         continue
       }
       if (typeof seat !== 'number' || !Number.isInteger(seat) || seat < 1) {
-        problems.push(`Paper "${paperId}" has an assignment whose seat is not a positive whole number.`)
+        problems.push(t('editor.strictProblem.seatInvalid', { paperId }))
         continue
       }
-      if (entries.some((e) => e.seat === seat)) problems.push(`Paper "${paperId}" assigns seat ${seat} twice.`)
+      if (entries.some((e) => e.seat === seat)) problems.push(t('editor.strictProblem.seatTwice', { paperId, seat }))
       else if (entries.some((e) => e.person === person))
-        problems.push(`Paper "${paperId}" assigns person "${person}" twice.`)
+        problems.push(t('editor.strictProblem.personTwice', { paperId, person }))
       else entries.push({ person, seat })
     }
     if (paperIds.has(paperId) && entries.length > 0) assignments[paperId] = entries.sort((a, b) => a.seat - b.seat)

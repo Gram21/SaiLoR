@@ -1,6 +1,7 @@
 import { useEffect, useRef, useState } from 'react'
 import { useEditorStore } from '../state/editorStore'
 import type { ProjectProtocol } from '../model/project'
+import { useT } from '../i18n'
 
 /**
  * Authors the review's protocol — research questions, the search that ran, and
@@ -62,6 +63,7 @@ function assemble(fields: Fields): ProjectProtocol | null {
 }
 
 export function ProtocolEditor() {
+  const t = useT()
   const protocol = useEditorStore((s) => s.protocol)
   const setProtocol = useEditorStore((s) => s.setProtocol)
 
@@ -89,56 +91,56 @@ export function ProtocolEditor() {
   return (
     <div className="protocol-editor">
       <label className="protocol-field">
-        <span className="protocol-field-label">Research questions</span>
+        <span className="protocol-field-label">{t('editor.protocol.researchQuestions')}</span>
         <textarea
           className="protocol-textarea"
           rows={3}
           value={fields.researchQuestions}
-          placeholder="One per line, e.g.&#10;RQ1: Which techniques are used for…?&#10;RQ2: How is effectiveness evaluated?"
+          placeholder={t('editor.protocol.researchQuestionsPlaceholder')}
           onChange={(e) => update({ researchQuestions: e.target.value })}
         />
       </label>
 
       <label className="protocol-field">
-        <span className="protocol-field-label">Search strings</span>
+        <span className="protocol-field-label">{t('editor.protocol.searchStrings')}</span>
         <textarea
           className="protocol-textarea"
           rows={3}
           value={fields.searchStrings}
-          placeholder="One per line — the query used against each database"
+          placeholder={t('editor.protocol.searchStringsPlaceholder')}
           onChange={(e) => update({ searchStrings: e.target.value })}
         />
       </label>
 
       <label className="protocol-field">
-        <span className="protocol-field-label">Databases searched</span>
+        <span className="protocol-field-label">{t('editor.protocol.databases')}</span>
         <textarea
           className="protocol-textarea"
           rows={2}
           value={fields.databases}
-          placeholder="One per line, e.g.&#10;Scopus&#10;IEEE Xplore&#10;ACM Digital Library"
+          placeholder={t('editor.protocol.databasesPlaceholder')}
           onChange={(e) => update({ databases: e.target.value })}
         />
       </label>
 
       <label className="protocol-field">
-        <span className="protocol-field-label">Search date</span>
+        <span className="protocol-field-label">{t('editor.protocol.searchDate')}</span>
         <input
           className="protocol-input"
           type="text"
           value={fields.searchDate}
-          placeholder="When the search ran, e.g. 2024-03 or March–April 2024"
+          placeholder={t('editor.protocol.searchDatePlaceholder')}
           onChange={(e) => update({ searchDate: e.target.value })}
         />
       </label>
 
       <label className="protocol-field">
-        <span className="protocol-field-label">Inclusion / exclusion criteria &amp; notes</span>
+        <span className="protocol-field-label">{t('editor.protocol.notes')}</span>
         <textarea
           className="protocol-textarea"
           rows={4}
           value={fields.notes}
-          placeholder="The criteria a paper had to meet, and any other protocol notes"
+          placeholder={t('editor.protocol.notesPlaceholder')}
           onChange={(e) => update({ notes: e.target.value })}
         />
       </label>
