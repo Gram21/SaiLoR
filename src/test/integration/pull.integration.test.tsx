@@ -121,6 +121,16 @@ const fakeGit: GitPlatform = {
     return { kind: 'merge', ref, base: baseText, ours: oursText!, theirs: theirsText! }
   },
   beginMerge: async () => ({ kind: 'up-to-date' }),
+  previewMerge: async (_root, relPath) => ({
+    kind: 'preview',
+    ref: 'origin/main',
+    fastForward: false,
+    files: [relPath],
+    papers: [],
+    conflicts: [relPath],
+    conflictsElsewhere: [],
+  }),
+  undoMerge: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
   logBegin: async () => ({ commits: [], truncated: false, error: null }),
   logDiff: async () => ({ kind: 'initial' }),
   finishPull: async (root, relPath, working): Promise<GitRun> => {
@@ -317,7 +327,10 @@ describe('pull against a real remote resolves a real conflict', () => {
 
     const pullBtn = screen.getByRole('button', { name: 'Pull' })
     expect(pullBtn).toBeEnabled()
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     await user.click(pullBtn)
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Git expects conflicts in'))
+    confirmSpy.mockRestore()
 
     await screen.findByText('Resolve merge conflicts')
     await user.click(screen.getByTitle('Use your value')) // keep "RCT (committed locally)"

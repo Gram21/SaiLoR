@@ -91,6 +91,16 @@ const fakeGit: GitPlatform = {
     if (!existsSync(join(root, '.git', 'MERGE_HEAD'))) return { kind: 'error', message: 'merge did not start' }
     return { kind: 'merge', ref, base: baseText, ours: oursText!, theirs: theirsText! }
   },
+  previewMerge: async (_root, relPath, ref) => ({
+    kind: 'preview',
+    ref: ref ?? '',
+    fastForward: false,
+    files: [relPath],
+    papers: [],
+    conflicts: [relPath],
+    conflictsElsewhere: [],
+  }),
+  undoMerge: async () => ({ ok: true, code: 0, stdout: '', stderr: '' }),
   logBegin: async () => ({ commits: [], truncated: false, error: null }),
   logDiff: async () => ({ kind: 'initial' }),
   // Writes the resolved content and finishes the real, already-in-progress
@@ -308,7 +318,10 @@ describe('multi-reviewer consolidation and a real merge conflict', () => {
 
     await user.click(screen.getByRole('button', { name: 'Merge branch…' }))
     await user.selectOptions(screen.getByLabelText('Branch to merge'), 'feature-b')
+    const confirmSpy = vi.spyOn(window, 'confirm').mockReturnValue(true)
     await user.click(screen.getByRole('button', { name: 'OK' }))
+    expect(confirmSpy).toHaveBeenCalledWith(expect.stringContaining('Merge feature-b into'))
+    confirmSpy.mockRestore()
 
     await screen.findByText('Resolve merge conflicts')
     expect(screen.getAllByText('0 of 1 decided').length).toBeGreaterThan(0)
