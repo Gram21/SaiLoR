@@ -35,6 +35,7 @@ export type DupVerdict =
 // Exact matching (today's behaviour, widened slightly and given a name)
 // ---------------------------------------------------------------------------
 
+// [impl->req~dat-320~1]
 /** Lowercased, whitespace-collapsed, all punctuation stripped — so titles differing
  *  only in casing/spacing/punctuation (em-dash vs hyphen, colon vs none) collapse
  *  to the same string and reach the exact/certain path rather than the fuzzy one. */
@@ -46,6 +47,7 @@ export function normalizeTitleForMatch(title: string): string {
     .trim()
 }
 
+// [impl->req~dat-320~1]
 /** Lowercased/trimmed with a leading `https://doi.org/`, `http://dx.doi.org/`, or
  *  `doi:` stripped — CSL-JSON often carries the URL form, which would otherwise
  *  miss a match against a bare DOI. */
@@ -183,6 +185,7 @@ function halfSumAbsDiff(a: Map<string, number>, b: Map<string, number>): number 
   return sum / 2
 }
 
+// [impl->req~dat-320~1]
 /**
  * `stringSimilarity`'s score, but only computed (and only returned) when it's
  * at least `threshold` — otherwise `null`.
@@ -242,6 +245,8 @@ interface PairMatch {
   reason: DupReason
 }
 
+// [impl->req~dat-310~1]
+// [impl->req~dat-330~1]
 /**
  * Evaluated in fixed priority order — DOI, exact title, fuzzy title,
  * base-title-plus-authors — each strictly stronger evidence than the next.
@@ -294,6 +299,7 @@ function classifyPair(a: PreparedRecord, b: PreparedRecord): PairMatch | null {
   return null
 }
 
+// [impl->req~dat-330~1]
 /** Ranks candidates: DOI-certain > title-certain > probable-by-score (all
  *  scores are 0..1, comfortably below the certain tiers). */
 function rank(m: PairMatch): number {
@@ -301,6 +307,7 @@ function rank(m: PairMatch): number {
   return (m.reason as { score: number }).score
 }
 
+// [impl->req~dat-310~1]
 /**
  * One verdict per incoming record, index-aligned with `incoming`.
  *

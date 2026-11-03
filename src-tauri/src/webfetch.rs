@@ -23,6 +23,7 @@ pub fn is_blocked_address(address: &str) -> bool {
     address.parse::<IpAddr>().map_or(true, is_blocked_ip)
 }
 
+// [impl->req~llm-400~1]
 pub fn is_blocked_ip(ip: IpAddr) -> bool {
     match ip {
         IpAddr::V4(v4) => is_blocked_v4(v4),
@@ -56,6 +57,7 @@ fn is_blocked_v6(ip: Ipv6Addr) -> bool {
         || first.starts_with("ff")
 }
 
+// [impl->req~llm-400~1]
 /// Local/internal by name alone, before any DNS lookup.
 pub fn is_blocked_hostname(hostname: &str) -> bool {
     let h = hostname.to_lowercase();
@@ -65,6 +67,7 @@ pub fn is_blocked_hostname(hostname: &str) -> bool {
             .any(|s| h.ends_with(s))
 }
 
+// [impl->req~llm-400~1]
 /// Scheme, credential and hostname checks that need no DNS lookup. Re-run on every hop.
 /// Ok carries the hostname (an IP without brackets, or a domain to resolve).
 pub fn validate_fetch_url(raw: &str) -> Result<Host<String>, String> {
@@ -100,6 +103,7 @@ async fn check_public_host(raw: String) -> Result<(), String> {
     resolve_public(&name).await.map(|_| ())
 }
 
+// [impl->req~llm-400~1]
 async fn resolve_public(name: &str) -> Result<Vec<SocketAddr>, String> {
     let addrs: Vec<SocketAddr> = tokio::net::lookup_host((name, 0))
         .await
@@ -285,6 +289,7 @@ where
     r.unwrap_or_else(|_| fail(&url, 0, "This operation was aborted".into(), ""))
 }
 
+// [impl->req~llm-400~1]
 #[tauri::command]
 pub async fn web_fetch(
     app: tauri::AppHandle,
@@ -298,6 +303,7 @@ pub async fn web_fetch(
     Ok(fetch_with(&WEB, check_public_host, &ua, &request_id, url).await)
 }
 
+// [impl->req~llm-400~1]
 #[tauri::command]
 pub async fn web_abort(request_id: String) {
     net::abort(&request_id);
@@ -308,6 +314,7 @@ mod tests {
     use super::*;
     use crate::net::mock::{response, serve};
 
+    // [utest->req~llm-400~1]
     #[test]
     fn blocked_addresses() {
         for ip in [
@@ -360,6 +367,7 @@ mod tests {
         assert!(!is_blocked_hostname("example.com"));
     }
 
+    // [utest->req~llm-400~1]
     #[test]
     fn validate_urls() {
         for u in [
@@ -386,6 +394,7 @@ mod tests {
         );
     }
 
+    // [utest->req~llm-400~1]
     #[test]
     fn content_types() {
         for t in [
@@ -432,6 +441,7 @@ mod tests {
         format!("HTTP/1.1 302 Found\r\nlocation: {to}\r\ncontent-length: 0\r\nconnection: close\r\n\r\n")
     }
 
+    // [utest->req~llm-400~1]
     #[tokio::test]
     async fn redirects_are_rechecked() {
         let s = serve(vec![
@@ -498,6 +508,7 @@ mod tests {
         assert_eq!(r.content_type, "application/pdf");
     }
 
+    // [utest->req~llm-400~1]
     #[tokio::test]
     async fn body_is_capped() {
         let big = "x".repeat(MAX_BYTES + 10);

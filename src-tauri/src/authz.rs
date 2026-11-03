@@ -7,6 +7,7 @@ use std::io;
 use std::path::{Path, PathBuf};
 use std::sync::{Mutex, MutexGuard};
 
+// [impl->req~plt-30~1]
 #[derive(Default)]
 pub struct Session {
     /// Directory PDFs resolve against (`projectDir`).
@@ -60,6 +61,7 @@ pub fn err(e: impl std::fmt::Display) -> String {
     e.to_string()
 }
 
+// [impl->req~plt-135~1]
 pub fn stamp(abs: &Path) -> Option<String> {
     let m = std::fs::metadata(abs).ok()?;
     let t = m
@@ -70,6 +72,7 @@ pub fn stamp(abs: &Path) -> Option<String> {
     Some(format!("{}:{}", t.as_nanos(), m.len()))
 }
 
+// [impl->req~plt-135~1]
 /// `changedTargets` from src/model/fileStamps.ts.
 pub fn changed(known: Option<&String>, now: Option<&String>) -> bool {
     match known {
@@ -78,11 +81,13 @@ pub fn changed(known: Option<&String>, now: Option<&String>) -> bool {
     }
 }
 
+// [impl->req~plt-70~1]
 /// `real` is `base` or below it, component-wise (`x === b || x.startsWith(b + sep)`).
 pub fn within(real: &Path, base: &Path) -> bool {
     real.starts_with(base)
 }
 
+// [impl->req~plt-70~1]
 /// `assertNotSymlink`: a missing file is fine, a link is refused.
 pub fn assert_not_symlink(p: &Path) -> Result<(), String> {
     match std::fs::symlink_metadata(p) {
@@ -99,6 +104,7 @@ pub fn assert_not_symlink(p: &Path) -> Result<(), String> {
 mod tests {
     use super::*;
 
+    // [utest->req~plt-135~1]
     #[test]
     fn changed_targets_rule() {
         let a = "1:2".to_string();

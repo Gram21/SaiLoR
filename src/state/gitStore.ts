@@ -175,6 +175,7 @@ interface PanelState {
   history: HistoryState | null
 }
 
+// [impl->req~git-420~1]
 interface GitState {
   /** null until probed once per launch. */
   probe: GitProbe | null
@@ -372,6 +373,7 @@ function joinPath(parent: string, name: string): string {
  *  through the normal load path (parses, normalizes, refreshes recents)
  *  rather than duplicating any of that. */
 async function reloadOpenProject(): Promise<void> {
+  // [impl->req~git-290~1]
   const path = useStore.getState().saveHandle?.path
   if (path) await useStore.getState().openRecent(path)
 }
@@ -404,6 +406,7 @@ export const useGitStore = create<GitState>()(
       notes: MergeNote[],
     ): Promise<void> {
       const git = getPlatform().getGit()
+      // [impl->req~git-255~1]
       const repo = get().repo
       if (!git || !repo) return
       const resolved = applyResolutions(merged, conflicts, resolutions)
@@ -436,7 +439,9 @@ export const useGitStore = create<GitState>()(
         return
       }
       await reloadOpenProject()
+      // [impl->req~git-210~1]
       const noteText = notes.length > 0 ? ` ${notes.map((n) => n.message).join(' ')}` : ''
+      // [impl->req~git-425~1]
       const notice =
         source.kind === 'pull'
           ? `Merged ${ref}.${noteText} Push when you are ready.`
@@ -514,6 +519,7 @@ export const useGitStore = create<GitState>()(
       return false
     }
 
+    // [impl->req~git-550~1]
     /** Dry-runs the merge and asks `confirm` with its summary. A result that needs no
      *  question (up to date, dirty, refused) is reported the same way the merge reports it. */
     async function previewApproved(
@@ -539,6 +545,7 @@ export const useGitStore = create<GitState>()(
       return false
     }
 
+    // [impl->req~git-560~1]
     /**
      * Everything a merge does once git has classified it — shared by `runPull`
      * and `runMergeBranch`, which differ only in how they name the other side.
@@ -549,6 +556,7 @@ export const useGitStore = create<GitState>()(
       const repo = get().repo
       if (!git || !repo) return
 
+      // [impl->req~git-130~1]
       const fail = (error: string) =>
         set((s) => {
           if (s.panel) {
@@ -628,6 +636,7 @@ export const useGitStore = create<GitState>()(
         return
       }
 
+      // [impl->req~git-200~1]
       const outcome = mergeProjects(base, ours, theirs)
       if (outcome.kind === 'refused') {
         await git.abortPull(repo.root)
@@ -715,6 +724,7 @@ export const useGitStore = create<GitState>()(
         set((s) => {
           if (!s.panel) return
           const validIds = new Set([...changes.fields.map((f) => f.id), ...changes.papers.map((p) => p.id)])
+          // [impl->req~git-100~1]
           const decisions: Record<string, Disposition> = {}
           for (const [id, d] of Object.entries(s.panel.fieldReview?.decisions ?? {})) {
             if (validIds.has(id)) decisions[id] = d
@@ -767,6 +777,7 @@ export const useGitStore = create<GitState>()(
       return false
     }
 
+    // [impl->req~git-411~1]
     const storeApi: GitState = {
       probe: null,
       repo: null,
@@ -820,6 +831,7 @@ export const useGitStore = create<GitState>()(
         const repo = get().repo
         if (!git || !repo) return
         try {
+          // [impl->req~git-440~1]
           const status = await git.repoSetupStatus(repo.root, repo.relPath)
           if (status.upToDate) return
           if (status.needsConsent) {
@@ -842,6 +854,7 @@ export const useGitStore = create<GitState>()(
         })
         if (!accept) return
         const git = getPlatform().getGit()
+        // [impl->req~git-450~1]
         const repo = get().repo
         if (!git || !repo) return
         const r = await git.applyRepoSetup(repo.root, repo.relPath)
@@ -877,6 +890,7 @@ export const useGitStore = create<GitState>()(
 
       runStashPush: async (message) => {
         const git = getPlatform().getGit()
+        // [impl->req~git-460~1]
         const repo = get().repo
         if (!git || !repo || !get().panel) return
         // The stash takes what is on disk; unsaved edits exist only in memory
@@ -1075,6 +1089,7 @@ export const useGitStore = create<GitState>()(
         const git = getPlatform().getGit()
         const clone = get().clone
         if (!git || !clone?.dest) return
+        // [impl->req~git-220~1]
         const p = await git.pickProjectIn(clone.dest)
         if (!p) return
         // `requestOpenRecent`, not `openRecent`: this replaces whatever project
@@ -1288,6 +1303,7 @@ export const useGitStore = create<GitState>()(
         if (!review) return
         // Nothing marked to discard is nothing to do — the button is disabled
         // in that state, this is the belt-and-suspenders match.
+        // [impl->req~git-300~1]
         const hasDiscard = Object.values(review.decisions).some((d) => d === 'discard')
         if (!hasDiscard) return
 
@@ -1373,6 +1389,7 @@ export const useGitStore = create<GitState>()(
         await applyMergeStart(start, { kind: 'pull' }, label)
       },
 
+      // [impl->req~git-540~1]
       runUndoMerge: async () => {
         const git = getPlatform().getGit()
         const repo = get().repo
@@ -1758,6 +1775,7 @@ export const useGitStore = create<GitState>()(
       await get().refreshStatus()
     }
 
+    // [impl->req~git-350~1]
     /**
      * Carries uncommitted project changes into `branch`. Mirrors `runPull`'s
      * merge handling — differs only in where the revisions/mutation come from

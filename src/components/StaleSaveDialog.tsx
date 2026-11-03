@@ -3,6 +3,7 @@ import { seatLabel, type Project } from '../model/project'
 import { DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
 import { ConflictResolutionDialog } from './ConflictResolutionDialog'
 
+// [impl->req~plt-135~1]
 /** How many clashing files the dialog names before it stops counting. */
 const MAX_LISTED = 10
 
@@ -16,6 +17,7 @@ export function describeClash(path: string, project: Project | null): string {
   const paper = project?.papers.find((p) => p.id === id)?.title || id
   const seat = /^(?:reviewer|screening)-(\d+)$/.exec(name)
   const marks = /^(?:screening-)?marks-(\d+)$/.exec(name)
+  // [impl->req~plt-136~1]
   const part = seat
     ? `${project ? seatLabel(project, seat[1]) : `Reviewer ${seat[1]}`}'s answers`
     : marks

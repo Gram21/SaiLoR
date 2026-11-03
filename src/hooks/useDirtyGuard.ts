@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
+// [impl->req~plt-120~1]
 /**
  * Warn before unloading the window (closing tab / navigating) with unsaved
  * changes. The native close dialog for quitting the app lives in Rust (see

@@ -1,3 +1,4 @@
+// [impl->req~llm-470~1]
 import { produce } from 'immer'
 import { isField, type FieldType, type ResolvedDef } from '../model/schema'
 import {
@@ -57,6 +58,7 @@ export type MergeTree =
   | { kind: 'review'; reviewer: string } // one numbered reviewer's own tree
   | { kind: 'schema' } // one node of the annotation schema
 
+// [impl->req~git-280~1]
 export interface FieldConflict {
   /** Stable identity — the resolution map's key and the row's React key. */
   id: string
@@ -104,6 +106,7 @@ export interface MergeNote {
   message: string
 }
 
+// [impl->req~git-240~1]
 export type MergeOutcome =
   | { kind: 'merged'; merged: Project; conflicts: FieldConflict[]; notes: MergeNote[] }
   | { kind: 'refused'; reason: string; details: string[] }
@@ -150,6 +153,7 @@ export function conflictId(paperId: string, tree: MergeTree, canonical: string):
   return JSON.stringify([paperId, treeKey(tree), canonical])
 }
 
+// [impl->req~git-500~1]
 /** What a row says about where the field lives. Blank for a single-reviewer
  *  project's one tree — there is nothing to disambiguate. */
 export function treeLabel(tree: MergeTree, reviewers: number): string {
@@ -201,6 +205,7 @@ function snapshotInstance(def: ResolvedDef, inst: InstanceNode | undefined): unk
 }
 
 function snapshotTree(defs: ResolvedDef[], tree: AnnotationValueTree | undefined): unknown {
+  // [impl->req~git-270~1]
   const out: Record<string, unknown> = {}
   for (const d of defs) out[d.name] = arrOf(tree, d.name).map((inst) => snapshotInstance(d, inst))
   // Answers under names this schema no longer has are carried through the
@@ -420,6 +425,7 @@ function mergeEqual(base: string[] | undefined, ours: string[], theirs: string[]
   const bSet = new Set(base ?? [])
   const oSet = new Set(ours)
   const tSet = new Set(theirs)
+  // [impl->req~git-250~1]
   const all = new Set([...(base ?? []), ...ours, ...theirs])
   const out: string[] = []
   for (const p of all) {
@@ -871,6 +877,7 @@ function describeType(t: FieldType | undefined): string {
   return t ? TYPE_WORDS[t] : 'Group (no value of its own)'
 }
 
+// [impl->req~git-255~1]
 function describeVisibleIf(v: ResolvedDef['visibleIf']): string {
   if (!v) return 'Always shown'
   return JSON.stringify(v)
@@ -1140,6 +1147,7 @@ function collectRemovedDefs(
  *  here would discard. "Non-empty" uses the same absent-vs-empty rule as
  *  `valueAt`: an untouched boolean or unset string is not an answer. */
 function countAnswers(defs: ResolvedDef[], tree: AnnotationValueTree | undefined): number {
+  // [impl->req~git-260~1]
   let n = 0
   for (const def of defs) {
     for (const inst of arrOf(tree, def.name)) {
@@ -1267,6 +1275,7 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
       label,
       ...row,
     })
+  // [impl->req~git-300~1]
   const projectChoice = <T,>(canonical: string, label: string, ov: T, tv: T, describe: (v: T) => string) =>
     conflicts.push({
       id: conflictId('', { kind: 'project' }, canonical),
@@ -1284,6 +1293,7 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
       payload: { ours: ov, theirs: tv },
     })
 
+  // [impl->req~dat-285~1]
   const aiM = merge3<boolean | undefined>(base?.aiEnabled, ours.aiEnabled, theirs.aiEnabled, eqBool)
   if (!aiM) projectRow('aiEnabled', 'AI-assisted annotation enabled', { type: 'boolean', base: base?.aiEnabled ?? null, ours: ours.aiEnabled, theirs: theirs.aiEnabled })
 
@@ -1375,6 +1385,7 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
   const rootExtraKeys = new Set([...Object.keys(base?.extra ?? {}), ...Object.keys(ours.extra), ...Object.keys(theirs.extra)])
   const mergedRootExtra: Record<string, unknown> = {}
   for (const k of rootExtraKeys) {
+    // [impl->req~git-256~1]
     const m = merge3<unknown>(base?.extra[k], ours.extra[k], theirs.extra[k], deepEqualJson)
     if (!m) conflicts.push(extraChoice('', '', { kind: 'project' }, k, ours.extra[k], theirs.extra[k]))
     const value = m ? m.value : ours.extra[k]
@@ -1467,6 +1478,7 @@ function withMoves(project: Project, pending: SchemaMove[]): Project {
   }
 }
 
+// [impl->req~git-257~1]
 /** A field both sides renamed or moved since the base, to different places. */
 interface RenameClash {
   base: string[]

@@ -116,6 +116,7 @@ describe('multi-reviewer: nobody picked yet', () => {
     st().selectPaper('p1')
   })
 
+  // [utest->req~con-20~1]
   it('starts unselected rather than defaulting to Reviewer 1', () => {
     expect(st().currentReviewer).toBeNull()
   })
@@ -146,6 +147,7 @@ describe('multi-reviewer: a numbered reviewer', () => {
     st().selectReviewer('2')
   })
 
+  // [utest->req~con-10~1]
   it('writes into their own paper.reviews[N], leaving annotations and other reviewers untouched', () => {
     st().setFieldValue([], 'Study Type', 0, 'Reviewer 2 says RCT')
     const paper = st().project!.papers[0]
@@ -302,6 +304,7 @@ describe('multi-reviewer: a late reviewer is added to a frozen node (Bug 4)', ()
     expect(st().project!.papers[0].alignment.Findings[0].members).toEqual({ '1': 0, '2': 0 })
   })
 
+  // [utest->req~con-160~1]
   it('places a reviewer who had no slot at all once they finally answer', () => {
     st().selectReviewer('3')
     st().setFieldValue([{ name: 'Findings', index: 0 }], 'Claim', 0, 'Shared finding')
@@ -325,6 +328,7 @@ describe('multi-reviewer: Consolidation', () => {
     st().selectReviewer('consolidation')
   })
 
+  // [utest->req~con-60~1]
   it('reads and writes paper.annotations — the tree that ships', () => {
     const reviewsBefore = st().project!.papers[0].reviews
     st().setFieldValue([], 'Study Type', 0, 'Final answer')
@@ -344,6 +348,7 @@ describe('multi-reviewer: Consolidation', () => {
   // quietly inflating the very statistic this feature exists to report
   // honestly. Only the explicit "these answers mean the same thing" checkbox
   // (`toggleFieldEquality`) may set it now.
+  // [utest->req~con-360~1]
   it('stores a selected reviewer value in one undo step, without marking it agreed', () => {
     st().resolveConsolidationValue([], 'Study Type', 0, 'Reviewer 1 value')
 
@@ -384,6 +389,7 @@ describe('multi-reviewer: Consolidation', () => {
   })
 })
 
+// [utest->req~con-50~1]
 describe('selecting a reviewer is a view switch, not an edit', () => {
   beforeEach(() => {
     st().loadFromText(multiReviewerProject, null, 'test.json')
@@ -407,6 +413,8 @@ describe('selecting a reviewer is a view switch, not an edit', () => {
   })
 })
 
+// [utest->req~con-30~1]
+// [utest->req~con-40~1]
 describe('reviewer selection is persisted per project', () => {
   it('restores the selection when the same project (by save-handle path) is reopened', () => {
     st().loadFromText(multiReviewerProject, handleAt('/reviews/x.json'), 'x.json')
@@ -456,6 +464,7 @@ describe('reviewer selection is persisted per project', () => {
   })
 })
 
+// [utest->req~con-40~1]
 describe('a remembered seat belongs to a project, not to a path', () => {
   const otherPapers = JSON.stringify({
     version: 1,
@@ -665,6 +674,8 @@ describe('switching reviewer breaks undo-coalescing (no cross-reviewer data loss
   })
 })
 
+// [utest->req~con-30~1]
+// [utest->req~con-35~1]
 describe('the seat follows the paper', () => {
   // Six reviewers over sixty papers, two readings each: the same person is
   // Reviewer 1 on some papers and Reviewer 2 on others. One remembered seat

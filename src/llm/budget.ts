@@ -1,6 +1,8 @@
 import { splitPages } from './tools'
 import type { LlmConfig } from './types'
 
+// [impl->req~llm-710~1]
+// [impl->req~llm-712~1]
 /** Conservative for scientific text (symbols, numbers, citations); the one place for this heuristic. */
 export function estimateTokens(text: string, charsPerToken = 3.2): number {
   return Math.ceil(text.length / charsPerToken)
@@ -17,6 +19,7 @@ export interface FittedText {
 // Heading alone on its line, optionally numbered.
 const REFERENCES_HEADING = /^[ \t]*(?:\d+[.)]?[ \t]+)?(?:references|bibliography|literaturverzeichnis)[ \t:]*$/im
 
+// [impl->req~llm-712~1]
 /**
  * Fits `[page N]`-marked paper text into `budgetTokens`: drops the reference
  * list first, then trailing pages, then cuts inside page 1. Never exceeds the
@@ -73,6 +76,7 @@ export function fitPaperText(paperText: string, budgetTokens: number): FittedTex
   return whole(kept.length, total, out, true, droppedReferences)
 }
 
+// [impl->req~llm-710~1]
 /**
  * Tokens left for paper text in a chat request: the model's window minus what
  * the prompt already spends. Null when the window is unknown (callers send

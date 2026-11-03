@@ -1,3 +1,4 @@
+// [impl->req~llm-700~1]
 //! `local:*` (electron/localRuntime.ts, localRuntimeUtil.ts, localRuntimeIpc.ts): finds or
 //! installs llama.cpp's `llama-server`, downloads decision-model files, and runs one server
 //! per model on 127.0.0.1.
@@ -141,6 +142,7 @@ fn is_hex(s: &str, len: usize) -> bool {
     s.len() == len && s.bytes().all(|b| b.is_ascii_hexdigit())
 }
 
+// [impl->req~llm-701~1]
 /// GitHub's `digest` field is `sha256:<hex>`; anything else is treated as missing.
 fn parse_digest(d: Option<&str>) -> Option<String> {
     let d = d?;
@@ -148,6 +150,7 @@ fn parse_digest(d: Option<&str>) -> Option<String> {
     (scheme.eq_ignore_ascii_case("sha256:") && is_hex(hex, 64)).then(|| hex.to_ascii_lowercase())
 }
 
+// [impl->req~llm-701~1]
 /// The `lfs.oid` of a Hugging Face tree entry is the file's SHA-256: (size, sha256).
 fn parse_hf_file(tree: &Value, file: &str) -> Option<(u64, String)> {
     let e = tree
@@ -197,6 +200,7 @@ fn select_asset<'a>(
     })
 }
 
+// [impl->req~llm-701~1]
 /// Where a download restarts, given the bytes already on disk. `0` = start over.
 fn resume_offset(partial: u64, total: u64) -> u64 {
     if partial > 0 && partial <= total {
@@ -210,6 +214,7 @@ fn digits(s: &str) -> bool {
     !s.is_empty() && s.bytes().all(|b| b.is_ascii_digit())
 }
 
+// [impl->req~llm-701~1]
 /// True if a `Content-Range` header confirms the response begins at `start`.
 fn content_range_starts_at(header: Option<&str>, start: u64) -> bool {
     let Some(rest) = header.and_then(|h| h.strip_prefix("bytes ")) else {
@@ -230,6 +235,7 @@ enum Host {
     HuggingFace,
 }
 
+// [impl->req~llm-701~1]
 /// Every hop of a download (first request and each redirect) must pass this. https only.
 fn allowed_download_url(kind: Host, raw: &str) -> bool {
     let Ok(u) = Url::parse(raw) else {
@@ -283,6 +289,7 @@ fn parse_version(out: &str) -> Option<String> {
     })
 }
 
+// [impl->req~llm-702~1]
 /// `llama-server` arguments for a decision model. Batch sizes equal the context: a request's
 /// prompt must fit one micro-batch, else the server answers 500 ("input is too large to
 /// process"). One slot: one request at a time. `-lv 4` logs the offload summary that
@@ -334,6 +341,7 @@ pub struct ServerInfo {
     note: Option<String>,
 }
 
+// [impl->req~llm-702~1]
 /// The real backend, read from the startup log, never from what was asked for:
 /// (backend, usingGpu, layersOffloaded).
 fn parse_server_log(lines: &[String]) -> (&'static str, bool, Option<u32>) {
@@ -545,6 +553,7 @@ fn runtime_root(dir: &Path) -> PathBuf {
     dir.join("local-runtime").join("llama.cpp")
 }
 
+// [impl->req~plt-390~1]
 pub const DATA_DIR_NAME: &str = ".sailor";
 
 fn models_root(dir: &Path) -> PathBuf {
@@ -559,6 +568,7 @@ fn display(p: &Path) -> String {
     p.to_string_lossy().into_owned()
 }
 
+// [impl->req~plt-390~1]
 /// `~/.sailor`: AI provider settings, local runtime and local models.
 pub fn data_dir(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     let dir = app.path().home_dir().map_err(err)?.join(DATA_DIR_NAME);
@@ -658,6 +668,7 @@ struct Download<'a> {
     sha256: &'a str,
 }
 
+// [impl->req~llm-701~1]
 /// Download `url` to `partial` (resuming a previous partial), then verify its SHA-256.
 /// `local_cancel(id)` or 60 s without data stop it and keep the partial.
 async fn download_verified(client: &Client, d: Download<'_>, emit: Emit<'_>) -> Result<(), String> {
@@ -872,6 +883,7 @@ struct Release {
     assets: Vec<GhAsset>,
 }
 
+// [impl->req~llm-701~1]
 async fn runtime_plan(dir: &Path) -> Result<RuntimePlan, String> {
     let hw = crate::hardware::probe(dir).await;
     // `releases/latest` points at an unrelated tag stream; the b<N> builds are the pre-releases listed here.
@@ -953,6 +965,7 @@ async fn install_into(plan: &RuntimePlan, partial: &Path, tmp: &Path) -> Result<
     std::fs::rename(tmp, dest).map_err(err)
 }
 
+// [impl->req~llm-701~1]
 async fn runtime_install(dir: &Path, emit: Emit<'_>) -> Result<RuntimeStatus, String> {
     let plan = state()
         .runtime_plan
@@ -1011,6 +1024,7 @@ async fn disk_free(dir: &Path) -> i64 {
         .unwrap_or(-1)
 }
 
+// [impl->req~llm-701~1]
 async fn model_plan(dir: &Path, id: &str) -> Result<ModelPlan, String> {
     let e = require_available(id)?;
     let info = get_json(
@@ -1057,6 +1071,7 @@ fn partial_of(dest: &Path) -> PathBuf {
     p.into()
 }
 
+// [impl->req~llm-701~1]
 async fn model_install(dir: &Path, id: &str, emit: Emit<'_>) -> Result<InstalledModel, String> {
     let e = require_available(id)?;
     let plan = state()
@@ -1366,6 +1381,7 @@ async fn start_locked(dir: &Path, e: &'static Entry) -> Result<Arc<Running>, Str
     Ok(run)
 }
 
+// [impl->req~llm-702~1]
 async fn start(dir: &Path, id: &str) -> Result<Arc<Running>, String> {
     let e = require_available(id)?;
     if let Some(r) = running(e.id) {
@@ -1521,6 +1537,9 @@ pub async fn local_logs(id: String) -> Result<Vec<String>, String> {
         .unwrap_or_default())
 }
 
+// [utest->req~llm-700~1]
+// [utest->req~llm-701~1]
+// [utest->req~llm-702~1]
 #[cfg(test)]
 mod tests {
     use super::*;

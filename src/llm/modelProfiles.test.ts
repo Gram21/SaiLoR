@@ -1,3 +1,5 @@
+// [utest->req~llm-710~1]
+// [utest->req~llm-742~1]
 import { describe, it, expect } from 'vitest'
 import { optionsBudgetOf, systemOneProfileFor } from './modelProfiles'
 import type { LlmConfig } from './types'

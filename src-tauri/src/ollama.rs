@@ -37,6 +37,7 @@ fn items<'a>(v: &'a Value, key: &str) -> &'a [Value] {
     v[key].as_array().map_or(&[], Vec::as_slice)
 }
 
+// [impl->req~llm-722~1]
 pub fn is_valid_model_tag(tag: &str) -> bool {
     let name_ok = |s: &str| {
         !s.is_empty()
@@ -196,6 +197,7 @@ pub fn parse_pull_line(line: &str) -> Option<serde_json::Map<String, Value>> {
     Some(p)
 }
 
+// [impl->req~llm-723~1]
 pub fn manifest_url(tag: &str) -> Option<String> {
     if !is_valid_model_tag(tag) {
         return None;
@@ -209,6 +211,7 @@ pub fn manifest_url(tag: &str) -> Option<String> {
     Some(format!("{REGISTRY}/v2/{repo}/manifests/{version}"))
 }
 
+// [impl->req~llm-723~1]
 pub fn sum_manifest_bytes(json: &Value) -> Option<f64> {
     let layers = json["layers"].as_array().filter(|l| !l.is_empty())?;
     layers
@@ -277,6 +280,7 @@ pub fn parse_open_ai_models_meta(json: &Value) -> (Vec<LocalServerModel>, bool) 
 
 // ---- Handlers (electron/ollama.ts) ----
 
+// [impl->req~llm-722~1]
 /// Origin and `isLocal` of a renderer-supplied server URL.
 pub fn check_base_url(raw: &str) -> Result<(String, bool), String> {
     let url = Url::parse(raw).map_err(|_| "Invalid server URL.".to_string())?;
@@ -542,6 +546,7 @@ pub async fn pull(
     }
 }
 
+// [impl->req~llm-722~1]
 pub async fn discover(client: &Client, base_url: &str) -> Value {
     let (origin, is_local) = try_!(server(base_url, None));
     let probe = |path: &'static str| {
@@ -627,6 +632,7 @@ pub async fn ollama_delete(base_url: String, model: String) -> Result<Value, Str
     Ok(delete(&net::NO_REDIRECT, &base_url, &model).await)
 }
 
+// [impl->req~llm-723~1]
 #[tauri::command]
 pub async fn ollama_manifest_size(model: String) -> Result<Value, String> {
     match manifest_url(&model) {
@@ -654,6 +660,7 @@ pub async fn ollama_cancel_pull(request_id: String) {
     net::abort(&format!("pull:{request_id}"));
 }
 
+// [impl->req~llm-722~1]
 #[tauri::command]
 pub async fn localserver_discover(base_url: String) -> Result<Value, String> {
     Ok(discover(&net::NO_REDIRECT, &base_url).await)
@@ -677,6 +684,7 @@ mod tests {
         response(200, "application/json", &v.to_string())
     }
 
+    // [utest->req~llm-722~1]
     #[test]
     fn base_urls() {
         assert_eq!(
@@ -705,6 +713,7 @@ mod tests {
         }
     }
 
+    // [utest->req~llm-722~1]
     #[test]
     fn model_tags() {
         for ok in ["qwen3.5:9b", "library/llama3", "hf.co/x/y:q4_k_m"] {
@@ -732,6 +741,7 @@ mod tests {
         );
     }
 
+    // [utest->req~llm-723~1]
     #[test]
     fn parsers() {
         assert_eq!(
@@ -779,6 +789,8 @@ mod tests {
         );
     }
 
+    // [utest->req~llm-722~1]
+    // [utest->req~llm-723~1]
     #[tokio::test]
     async fn handlers() {
         let show_body = json!({ "capabilities": ["tools"], "model_info": {
@@ -847,6 +859,7 @@ mod tests {
         );
     }
 
+    // [utest->req~llm-722~1]
     #[tokio::test]
     async fn pulls() {
         let ok = "{\"status\":\"pulling x\",\"digest\":\"d\",\"total\":10,\"completed\":5}\n{\"status\":\"success\"}\n";
@@ -894,6 +907,7 @@ mod tests {
         );
     }
 
+    // [utest->req~llm-722~1]
     #[tokio::test]
     async fn discovers() {
         let c = client();

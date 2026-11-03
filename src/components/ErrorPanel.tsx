@@ -1,5 +1,6 @@
 import { useStore } from '../state/store'
 
+// [impl->req~ui-60~1]
 /** Modal-ish banner surfacing load/save errors with friendly details. */
 export function ErrorPanel() {
   const error = useStore((s) => s.loadError)

@@ -1,3 +1,4 @@
+// [impl->req~plt-90~1]
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import {
@@ -96,6 +97,7 @@ function readUpdateCache(): UpdateCache | null {
   try {
     const raw = localStorage.getItem(UPDATE_CACHE_KEY)
     if (!raw) return null
+    // [impl->req~llm-230~1]
     const cache = JSON.parse(raw) as UpdateCache
     if (typeof cache.checkedAt !== 'number') return null
     if (Date.now() - cache.checkedAt > CHECK_INTERVAL_MS) return null
@@ -204,6 +206,7 @@ export function alignmentSlotsAt(
   return level[name]
 }
 
+// [impl->req~con-30~1]
 function hasManualSlot(slots: StoredSlot[] | undefined): boolean {
   return !!slots?.some((slot) => slot.manual === true || Object.values(slot.children ?? {}).some(hasManualSlot))
 }
@@ -244,9 +247,11 @@ function reviewerStorageKey(handle: SaveHandle | null): string | null {
   return handle?.path ? `${REVIEWER_KEY_PREFIX}${handle.path}` : null
 }
 
+// [impl->req~lst-70~1]
 /** How many paper ids a remembered seat carries to recognise its project by. */
 const REVIEWER_FINGERPRINT_SAMPLE = 8
 
+// [impl->req~con-40~1]
 /**
  * Paper ids identifying the project a seat was picked in.
  *
@@ -320,6 +325,7 @@ function parseStoredReviewer(raw: string): StoredReviewer | 'legacy' | null {
 function seatFits(seat: string | null | undefined, project: Project): seat is string {
   if (!seat) return false
   if (seat === 'consolidation') return true
+  // [impl->req~pdf-20~1]
   const n = Number(seat)
   return Number.isInteger(n) && n >= 1 && n <= project.reviewers
 }
@@ -349,6 +355,7 @@ function loadRememberedSeats(handle: SaveHandle | null, project: Project): Remem
   // An empty remembered list can only come from a project that had no papers
   // at all, which identifies nothing — treat it as not knowing.
   if (stored.papers.length === 0 || !stored.papers.some((id) => ids.has(id))) return NO_SEATS
+  // [impl->req~con-35~1]
   const perPaper: Record<string, string> = {}
   for (const [id, seat] of Object.entries(stored.perPaper ?? {})) {
     if (ids.has(id) && seatFits(seat, project)) perPaper[id] = seat
@@ -418,6 +425,7 @@ export function activePerson(s: Pick<AppState, 'project' | 'strictPerson'>): str
   return strictActive(s.project) && s.strictPerson !== null && s.strictPerson !== STRICT_MANAGER ? s.strictPerson : null
 }
 
+// [impl->req~con-500~1]
 /** The persons who block consolidation of the current paper; empty when nothing blocks it. */
 export function consolidationGateMissing(
   s: Pick<AppState, 'project' | 'currentPaperId' | 'currentReviewer' | 'consolidationOverrides'>,
@@ -431,6 +439,7 @@ export function consolidationGateMissing(
 
 const READING_POSITION_KEY_PREFIX = 'slr.readingPosition.'
 
+// [impl->req~plt-62~1]
 /** Same per-machine, `localStorage`, keyed-by-path convention as
  *  `reviewerStorageKey` — a local convenience, never written to the shared JSON. */
 function readingPositionKey(handle: SaveHandle | null): string | null {
@@ -587,6 +596,8 @@ let diskProject: Project | null = null
  */
 let projectGeneration = 0
 
+// [impl->req~pdf-110~1]
+// [impl->req~plt-136~1]
 interface AppState {
   project: Project | null
   currentPaperId: string | null
@@ -1288,6 +1299,7 @@ async function adoptAndSave(result: Project): Promise<void> {
   await useStore.getState().save()
 }
 
+// [impl->req~dat-300~1]
 export const useStore = create<AppState>()(
   immer((set, get) => ({
     project: null,
@@ -1298,6 +1310,7 @@ export const useStore = create<AppState>()(
     dirty: false,
     corruptFiles: [],
     loadError: null,
+    // [impl->req~ui-80~1]
     readOnly: false,
     staleSave: null,
     annotationsSplit: null,
@@ -1313,6 +1326,7 @@ export const useStore = create<AppState>()(
     pdfZoom: 1,
     recents: getPlatform().getRecents(),
     helpOpen: false,
+    // [impl->req~ui-90~1]
     userSettingsOpen: false,
     validation: null,
     validationUnannotated: null,
@@ -1328,6 +1342,7 @@ export const useStore = create<AppState>()(
     sessionCreatedMarkIds: [],
     pendingFieldJump: null,
     flashFieldPath: null,
+    // [impl->req~llm-460~1]
     pdfFindRequest: null,
     agreementReturnToOverview: false,
     consolidationOverviewOpen: false,
@@ -1350,6 +1365,7 @@ export const useStore = create<AppState>()(
     deferredConsolidations: {},
     currentReviewer: null,
     strictPerson: null,
+    // [impl->req~con-510~1]
     consolidationOverrides: {},
     consolidationTarget: null,
     consolidationUpdatePrompt: null,
@@ -1554,6 +1570,7 @@ export const useStore = create<AppState>()(
     },
 
     openRecent: async (id) => {
+      // [impl->req~plt-135~1]
       const platform = getPlatform()
       set((s) => {
         s.busy = true
@@ -1618,6 +1635,7 @@ export const useStore = create<AppState>()(
         const savedPosition = loadReadingPosition(handle)
         const savedPaperStillExists =
           !!savedPosition && project.papers.some((p) => p.id === savedPosition.paperId)
+        // [impl->req~con-450~1]
         const strictPerson = loadStrictPerson(handle, project)
         const person = strictPerson !== STRICT_MANAGER ? strictPerson : null
         const ownPapers = person ? personPapers(project, person) : null
@@ -1628,6 +1646,7 @@ export const useStore = create<AppState>()(
           : savedPaperStillExists
             ? savedPosition!.paperId
             : firstUnfinishedPaperId(project, seats.last)
+        // [impl->req~git-255~1]
         const reviewer = person
           ? landingPaperId && assignedSeat(project, landingPaperId, person)
           : project.reviewers > 1
@@ -1944,6 +1963,7 @@ export const useStore = create<AppState>()(
       })
     },
 
+    // [impl->req~pdf-185~1]
     loadScreeningMarks: async () => {
       const { project, saveHandle } = get()
       if (!project || project.screening !== null || project.provenance?.kind !== 'screening-import' || !saveHandle?.path) return
@@ -2146,6 +2166,8 @@ export const useStore = create<AppState>()(
       }
     },
 
+    // [impl->req~con-460~1]
+    // [impl->req~con-470~1]
     selectPaper: (id) => {
       lastFieldKey = null
       const { saveHandle, project, currentReviewer } = get()
@@ -2254,6 +2276,7 @@ export const useStore = create<AppState>()(
         s.helpOpen = open
       }),
 
+    // [impl->req~ui-90~1]
     setUserSettingsOpen: (open) =>
       set((s) => {
         s.userSettingsOpen = open
@@ -2284,6 +2307,7 @@ export const useStore = create<AppState>()(
       // `screeningIssues` does its own seat routing over the *original*
       // project (not the remapped `papers` above), since it reads both the
       // decision and the reason at once rather than a single active tree.
+      // [impl->req~llm-90~1]
       const allIssues = project.screening
         ? [...issues, ...screeningIssues(project, currentReviewer)]
         : issues
@@ -2350,11 +2374,13 @@ export const useStore = create<AppState>()(
         s.flashFieldPath = canonical
       }),
 
+    // [impl->req~llm-460~1]
     requestPdfFind: (paperId, text) =>
       set((s) => {
         s.pdfFindRequest = { paperId, text, nonce: (s.pdfFindRequest?.nonce ?? 0) + 1 }
       }),
 
+    // [impl->req~llm-460~1]
     clearPdfFindRequest: () =>
       set((s) => {
         s.pdfFindRequest = null
@@ -2416,6 +2442,7 @@ export const useStore = create<AppState>()(
           s.update = updateFrom(APP_VERSION, cached.release)
         })
       } else {
+        // [impl->req~llm-240~1]
         const release = await fetchLatestRelease(getPlatform().getOsInfo())
         writeUpdateCache(release)
         set((s) => {
@@ -2466,8 +2493,10 @@ export const useStore = create<AppState>()(
         s.updateProgress = null
       }),
 
+    // [impl->req~dat-410~1]
     setFieldValue: (path, name, index, value) => {
       if (get().readOnly) return null
+      // [impl->req~con-255~1]
       const prev = get()
       if (!prev.project) return null
       // Multi-reviewer, nobody picked yet: nothing to attribute this edit to.
@@ -2486,6 +2515,7 @@ export const useStore = create<AppState>()(
         const tree = currentTree(s.project!, s.currentReviewer, paper, true)
         if (!tree) return
         const container = containerAt(tree, path)
+        // [impl->req~con-257~1]
         const inst = container[name]?.[index]
         if (!inst) return
         if (!coalesce) pushPast(s, snap)
@@ -2659,6 +2689,7 @@ export const useStore = create<AppState>()(
       })
     },
 
+    // [impl->req~con-490~1]
     setAnnotationFinished: (finished) => {
       if (get().readOnly) return
       const prev = get()
@@ -2888,6 +2919,7 @@ export const useStore = create<AppState>()(
     // — nothing here treats that seat specially, and in particular this never
     // ticks `finished`/`reviewsFinished` on its own: a human still has to sign
     // the seat off by hand, same as any other reviewer's.
+    // [impl->req~llm-220~1]
     applyAiSuggestions: (suggestions, usage, target) => {
       if (get().readOnly) return { filled: 0, skipped: suggestions.length }
       const prev = get()
@@ -2910,6 +2942,10 @@ export const useStore = create<AppState>()(
       return { filled: result.filled, skipped: result.skipped }
     },
 
+    // [impl->req~dat-410~1]
+    // [impl->req~llm-220~1]
+    // [impl->req~llm-470~1]
+    // [impl->req~llm-660~1]
     applyAiSuggestionsBatch: (items) => {
       if (get().readOnly) return { filled: 0, skipped: items.reduce((n, it) => n + it.suggestions.length + (it.replacements?.length ?? 0), 0), papers: 0 }
       const prev = get()
@@ -3061,6 +3097,8 @@ export const useStore = create<AppState>()(
       return { filled, skipped, papers: papersWritten, ...(replaced > 0 ? { replaced } : {}) }
     },
 
+    // [impl->req~llm-630~1]
+    // [impl->req~llm-650~1]
     applyAiScreeningBatch: (items) => {
       if (get().readOnly) return { written: 0, skipped: items.length }
       const prev = get()
@@ -3127,11 +3165,13 @@ export const useStore = create<AppState>()(
       })
     },
 
+    // [impl->req~ui-80~1]
     setReadOnly: (readOnly) =>
       set((s) => {
         s.readOnly = readOnly
       }),
 
+    // [impl->req~con-470~1]
     selectReviewer: (reviewer) => {
       if (activePerson(get())) return
       // A view switch, not an edit: no undo step, no dirty flag.
@@ -3151,6 +3191,9 @@ export const useStore = create<AppState>()(
       })
     },
 
+    // [impl->req~con-450~1]
+    // [impl->req~con-470~1]
+    // [impl->req~con-480~1]
     choosePerson: (id) => {
       const { project, dirty, saveHandle, currentPaperId } = get()
       if (dirty || !strictActive(project)) return
@@ -3179,6 +3222,7 @@ export const useStore = create<AppState>()(
       })
     },
 
+    // [impl->req~con-480~1]
     switchPerson: () => {
       if (get().dirty) return
       saveStrictPerson(get().saveHandle, null)
@@ -3187,6 +3231,7 @@ export const useStore = create<AppState>()(
       })
     },
 
+    // [impl->req~con-490~1]
     finishPersonWork: async () => {
       const prev = get()
       const person = activePerson(prev)
@@ -3204,6 +3249,7 @@ export const useStore = create<AppState>()(
       return get().save()
     },
 
+    // [impl->req~con-510~1]
     overrideConsolidationGate: (paperId) => {
       const { project, strictPerson } = get()
       if (!strictActive(project) || strictPerson !== STRICT_MANAGER) return
@@ -3225,6 +3271,7 @@ export const useStore = create<AppState>()(
         s.returnToDisagreements = false
       }),
 
+    // [impl->req~dat-420~1]
     resolveConsolidationValue: (path, name, index, value) => {
       if (get().readOnly) return null
       const prev = get()
@@ -3337,6 +3384,7 @@ export const useStore = create<AppState>()(
       return changed
     },
 
+    // [impl->req~con-420~1]
     remapConsolidationEntry: (paperId, path, name, slotIndex, reviewer, entryIndex) => {
       if (get().readOnly) return
       const prev = get()
@@ -3395,6 +3443,7 @@ export const useStore = create<AppState>()(
       lastFieldKey = null
     },
 
+    // [impl->req~dat-410~1]
     adoptUnanimousValues: (paperId, coalesce) => {
       if (get().readOnly) return 0
       const prev = get()

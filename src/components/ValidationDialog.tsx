@@ -1,7 +1,10 @@
+// [impl->req~dat-420~1]
 import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../state/store'
 import type { IssueKind, ValidationIssue } from '../model/validate'
 
+// [impl->req~ann-140~1]
+// [impl->req~dat-215~1]
 const KIND_LABEL: Record<IssueKind, string> = {
   required: 'Missing',
   type: 'Wrong type',
@@ -166,6 +169,7 @@ export function ValidationDialog() {
   const byPaper = useMemo(() => {
     const groups = new Map<string, { title: string; issues: ValidationIssue[] }>()
     for (const issue of issues ?? []) {
+      // [impl->req~ann-170~1]
       const group = groups.get(issue.paperId) ?? { title: issue.paperTitle, issues: [] }
       group.issues.push(issue)
       groups.set(issue.paperId, group)
@@ -192,6 +196,7 @@ export function ValidationDialog() {
 
   useEffect(() => {
     if (!open) return
+    // [impl->req~ann-160~1]
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') setOpen(false)
     }
@@ -248,6 +253,7 @@ export function ValidationDialog() {
   // panel to that exact field and flashes it — `canonicalPath` is empty only
   // for a screening issue (no annotation-panel field to point at) or a
   // caught structural error, in which case this is the same as `goToPaper`.
+  // [impl->req~ann-150~1]
   const goToIssue = (issue: ValidationIssue) => {
     selectPaper(issue.paperId)
     if (issue.canonicalPath) setPendingFieldJump(issue.canonicalPath)
@@ -276,6 +282,8 @@ export function ValidationDialog() {
   const canGoBack = paperHistory.index > 0
   const canGoForward = paperHistory.index < paperHistory.list.length - 1
   const backTitle = canGoBack ? titleOf(paperHistory.list[paperHistory.index - 1]) : undefined
+  // [impl->req~ann-130~1]
+  // [impl->req~dat-210~1]
   const forwardTitle = canGoForward ? titleOf(paperHistory.list[paperHistory.index + 1]) : undefined
 
   return (

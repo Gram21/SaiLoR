@@ -8,6 +8,7 @@
  * exists for in `project.ts`: a second implementation is a bug waiting.
  */
 
+// [impl->req~dat-70~1]
 /**
  * Static, not `currentYear + N`: a bound that moves with the clock makes
  * tests (and any cached validation result) time-dependent for no real

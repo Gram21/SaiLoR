@@ -1,3 +1,4 @@
+// [impl->req~llm-40~1]
 import type { FieldValue } from '../model/annotations'
 
 /**
@@ -9,6 +10,7 @@ import type { FieldValue } from '../model/annotations'
  * the outgoing request there; the renderer only ever sees `hasKey`.
  */
 
+// [impl->req~llm-10~1]
 export type Provider =
   | 'anthropic'
   | 'openai'
@@ -22,6 +24,7 @@ export type Provider =
   | 'systemone'
   | 'ollama'
 
+// [impl->req~llm-30~1]
 /** How the paper is handed to the model. Text is the default — see `src/model/pdfText.ts`. */
 export type Attach = 'text' | 'pdf'
 
@@ -37,6 +40,7 @@ export interface LlmConfig {
   attach: Attach
   /** True when an API key is stored for this target. The key itself is never sent here. */
   hasKey: boolean
+  // [impl->req~llm-530~1]
   /** True when this target's server needs no API key (e.g. a local Ollama/LM Studio/vLLM). */
   noKey?: boolean
   /**
@@ -47,6 +51,7 @@ export interface LlmConfig {
    * hasn't picked a model yet.
    */
   reasoningEffort?: string
+  // [impl->req~llm-430~1]
   /**
    * User-entered price for this target, USD per 1M tokens. No built-in price
    * table: provider prices go stale faster than this codebase gets updated,
@@ -82,6 +87,7 @@ export interface LlmConfig {
   managed?: { catalogId: string }
 }
 
+// [impl->req~llm-530~1]
 /** Whether a target has what it needs to be called: a stored key, or none required. */
 export function isUsable(config: Pick<LlmConfig, 'hasKey' | 'noKey'>): boolean {
   return config.hasKey || Boolean(config.noKey)
@@ -98,6 +104,7 @@ export interface ModelInfo {
   /** Shown in the picker; falls back to `id` when the provider names nothing else. */
   label: string
   reasoning: ReasoningProfile | null
+  // [impl->req~llm-430~1]
   /** USD per 1M tokens, when the provider's list-models reply states its own
    *  price (e.g. OpenRouter). Absent — never guessed — otherwise. */
   pricing?: { input: number; output: number }
@@ -200,6 +207,7 @@ export interface SkippedField {
   reason: string
 }
 
+// [impl->req~llm-600~1]
 /** Where a schema's wording got in the model's way; feedback for the schema author, never applied. */
 export interface SchemaRemark {
   path: string

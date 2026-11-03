@@ -1,3 +1,4 @@
+// [impl->req~plt-62~1]
 /**
  * Platform abstraction for file I/O and PDF loading, so the same React app
  * runs in the Tauri shell (native dialogs + fs) and in a plain browser (File System
@@ -64,6 +65,7 @@ export interface PickedPdf {
   read?: () => Promise<ArrayBuffer>
 }
 
+// [impl->req~plt-190~1]
 export interface PlatformAdapter {
   /** The desktop shell (`tauri`), or `browser`. */
   readonly kind: 'tauri' | 'browser'

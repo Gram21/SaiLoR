@@ -23,6 +23,7 @@ import { completeness } from '../model/completeness'
  * brief's "report the numbers, including 'it was fine'" instruction.
  */
 
+// [utest->req~lst-60~1]
 const PAPER_COUNT = 2000
 
 // A 30-field schema in the shape a real review would use: several plain

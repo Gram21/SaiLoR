@@ -1,3 +1,4 @@
+// [utest->req~llm-500~1]
 import { describe, it, expect, vi } from 'vitest'
 import { withRetry, runPool, parseRetryAfter } from './retry'
 import type { LlmHttpRequest, LlmHttpResponse } from './types'
@@ -82,6 +83,7 @@ describe('withRetry', () => {
       if (calls < 3) return { ok: false, status: 429, body: '', retryAfterMs: 7 }
       return { ok: true, status: 200, body: '' }
     })
+    // [utest->req~llm-440~1]
     const onRetry = vi.fn()
     await withRetry(callLlm, { sleep, baseDelayMs: 10, onRetry })(req)
     expect(onRetry).toHaveBeenCalledTimes(2)

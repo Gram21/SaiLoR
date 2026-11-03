@@ -1,3 +1,4 @@
+// [impl->req~dat-285~1]
 import { z } from 'zod'
 
 /**
@@ -8,6 +9,7 @@ import { z } from 'zod'
  * also valid on group nodes for repeated sub-trees.
  */
 
+// [impl->req~dat-110~1]
 /**
  * `year` shares `number`'s on-disk shape (a JSON number), needing no new
  * `FieldValue` member or changes to `annotations.ts`. It adds real bounds
@@ -117,6 +119,7 @@ const visibleConditionSchema: z.ZodType<VisibleCondition> = z
   .strict()
 
 // Groups nest, so this is lazy for the same reason `annotationDefSchema` is.
+// [impl->req~dat-60~1]
 const visibleIfSpecSchema: z.ZodType<VisibleIfSpec> = z.lazy(() =>
   z
     .object({
@@ -178,6 +181,7 @@ export const annotationDefSchema: z.ZodType<AnnotationDef> = z.lazy(() =>
     }),
 )
 
+// [impl->req~dat-40~1]
 export const paperSchema = z
   .object({
     id: z.string().min(1),
@@ -211,6 +215,7 @@ export const paperSchema = z
   })
   .passthrough()
 
+// [impl->req~dat-260~1]
 /**
  * A screening project's one authorable setting: the exclusion reasons.
  * `config.screening`'s presence is what makes a project a screening project;
@@ -288,6 +293,7 @@ export const projectSchema = z
   })
 
 export type RawProject = z.infer<typeof projectSchema>
+// [impl->req~dat-120~1]
 export type RawPaper = z.infer<typeof paperSchema>
 
 // ---------------------------------------------------------------------------
@@ -336,11 +342,13 @@ function resolveSpec(
     if (entry.field === def.name) continue
     // Sibling, then ancestor chain, then absolute path (see `AnnotationDef.visibleIf`).
     // Only the path route needs a subtree check — a sibling/ancestor can't be in it.
+    // [impl->req~dat-130~1]
     const target =
       siblings.find((sib) => sib.name === entry.field && sib.type !== undefined) ??
       ancestorFields.find((anc) => anc.name === entry.field) ??
       resolveFieldPath(root, entry.field, selfId)
     if (!target) continue
+    // [impl->req~dat-140~1]
     const equals = resolveEquals(target, entry.equals)
     conditions.push(equals.length > 0 ? { field: entry.field, equals } : { field: entry.field })
   }
@@ -370,6 +378,7 @@ function resolveFieldPath(
   return found && found.type !== undefined ? found : undefined
 }
 
+// [impl->req~dat-150~1]
 /** The subset of `equals` the target field can actually hold; empty means the
  *  condition falls back to "answered". */
 function resolveEquals(
@@ -488,6 +497,7 @@ function resolveDefs(
   })
 }
 
+// [impl->req~dat-400~1]
 function assertUniqueOptions(def: AnnotationDef, id: string, max: number | null): void {
   if (def.unique && max === 1) {
     throw new SchemaError(

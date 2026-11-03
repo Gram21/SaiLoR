@@ -32,6 +32,7 @@ pub fn dir_of(p: &Path) -> &Path {
     p.parent().unwrap_or(p)
 }
 
+// [impl->req~plt-190~1]
 /// Native separators to `/`, like `.split(path.sep).join('/')`.
 pub fn slashed(p: &Path) -> String {
     p.to_string_lossy().replace(MAIN_SEPARATOR_STR, "/")
@@ -47,6 +48,7 @@ fn same(a: &Component, b: &Component) -> bool {
     a == b
 }
 
+// [impl->req~plt-190~1]
 /// Node's `path.relative(from, to)`, `/`-separated. Another drive yields `to` itself.
 pub fn relative(from: &Path, to: &Path) -> String {
     let (from, to) = (normalize(from), normalize(to));
@@ -78,6 +80,7 @@ pub async fn paths_relative(
         .collect())
 }
 
+// [impl->req~plt-80~1]
 #[tauri::command]
 pub async fn paths_rebase(
     from_file: String,
@@ -145,6 +148,7 @@ mod tests {
         assert_eq!(resolve(&root.join("a"), &root.join("z")), root.join("z"));
     }
 
+    // [utest->req~plt-190~1]
     #[test]
     fn relative_matches_node() {
         let r = normalize(Path::new("/"));
@@ -183,6 +187,7 @@ mod tests {
         );
     }
 
+    // [utest->req~plt-190~1]
     #[cfg(windows)]
     #[test]
     fn windows_separators_case_and_drives() {

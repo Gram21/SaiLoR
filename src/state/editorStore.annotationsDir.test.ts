@@ -1,3 +1,5 @@
+// [utest->req~dat-169~1]
+// [utest->req~plt-90~1]
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { SaveHandle } from '../platform/adapter'
 
@@ -51,6 +53,7 @@ describe('the annotations folder in the project editor', () => {
     expect(es().issues.join(' ')).toMatch(/other\.json/)
   })
 
+  // [utest->req~plt-96~1]
   it('moves the folder of an existing project before saving the new name', async () => {
     es().setAnnotationsDir('review-annotations')
     expect(await es().save()).toBe(true)

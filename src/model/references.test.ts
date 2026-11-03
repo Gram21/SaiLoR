@@ -1,3 +1,4 @@
+// [utest->req~dat-360~1]
 import { describe, it, expect } from 'vitest'
 import { parseReferences, pdfHintFileName } from './references'
 
@@ -163,6 +164,7 @@ describe('parseReferences: BibTeX venue (journal/journaltitle/booktitle/publishe
 })
 
 describe('parseReferences: BibTeX LaTeX escapes', () => {
+  // [utest->req~dat-370~1]
   it('unescapes a bare accent command (\\"o)', () => {
     const bib = `@article{k1, title = {T}, author = {Bj\\"orn Test}}`
     const [entry] = parseReferences(bib, 'refs.bib')

@@ -218,6 +218,7 @@ export interface ResolveOptions {
   maxUnboundedIndex?: number
 }
 
+// [impl->req~llm-200~1]
 export function resolvePath(
   schema: ResolvedDef[],
   raw: string,

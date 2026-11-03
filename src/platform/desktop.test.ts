@@ -45,6 +45,7 @@ describe('DesktopAdapter.saveProject', () => {
     expect(p2.text).toBeNull()
   })
 
+  // [utest->req~plt-41~1]
   it('writes only the papers edited since the project was opened', async () => {
     // The whole point of the baseline: opening a project whose schema grew must
     // not rewrite every untouched paper's file into a shared git repository.
@@ -71,6 +72,7 @@ describe('DesktopAdapter.saveProject', () => {
     expect(saveProject.mock.calls[1][1]).toBeNull()
   })
 
+  // [utest->req~plt-43~1]
   it('writes only project.json when a new schema version renames a field nobody edited since', async () => {
     // The rename moves every file's answers on load; that alone must not make
     // each of those files count as edited, or one rename rewrites every
@@ -93,6 +95,7 @@ describe('DesktopAdapter.saveProject', () => {
     expect(files).toEqual([])
   })
 
+  // [utest->req~plt-42~1]
   it('deletes the files of a paper removed since the project was opened', async () => {
     // Nothing else ever revisits `annotations/<gone>/`: git does not notice it,
     // and a paper later given the same id would silently inherit its answers.
@@ -116,6 +119,7 @@ describe('DesktopAdapter.saveProject', () => {
     expect(files.some((f) => f.relPath.startsWith('p2/'))).toBe(false)
   })
 
+  // [utest->req~plt-42~1]
   it('moves a paper\'s files when its id is renamed, leaving nothing behind', async () => {
     const text = makeProjectText()
     const openPath = vi.fn().mockResolvedValue({ path: '/renamed/project.json', text, corrupt: [] })
@@ -135,6 +139,7 @@ describe('DesktopAdapter.saveProject', () => {
     expect(files.find((f) => f.relPath === 'p1/consolidated.json')?.text).toBeNull()
   })
 
+  // [utest->req~plt-41~1]
   it('forgets the baseline when a git call rewrites the working tree', async () => {
     // The baseline describes disk. A flow that rewrites the tree and then
     // forgets to reload would otherwise leave it describing a past that no

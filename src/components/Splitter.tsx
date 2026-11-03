@@ -7,6 +7,7 @@ interface SplitterProps {
   onResizeEnd?: () => void
 }
 
+// [impl->req~ui-40~1]
 /** A vertical drag handle for resizing adjacent panes. */
 export function Splitter({ onResize, onResizeEnd }: SplitterProps) {
   const onPointerDown = (e: ReactPointerEvent) => {

@@ -23,6 +23,7 @@ describe('screeningStatus', () => {
     expect(screeningStatus({})).toBe('undecided')
   })
 
+  // [utest->req~scr-60~1]
   it('reads a hand-edited unknown string as undecided, never as excluded', () => {
     expect(screeningStatus(tree('Maybe'))).toBe('undecided')
   })

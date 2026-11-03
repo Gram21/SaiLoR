@@ -1,3 +1,4 @@
+// [impl->req~llm-170~1]
 import type { ResolvedDef } from '../model/schema'
 import type { FieldValue } from '../model/annotations'
 import type { LlmAnswer, RejectedSuggestion, SchemaRemark, SkippedField, Suggestion } from './types'
@@ -25,6 +26,7 @@ import { oneLine } from './prompt'
 
 /** Evidence is a quote for the reviewer to eyeball, not a document; keep rows readable. */
 const MAX_EVIDENCE_CHARS = 500
+// [impl->req~llm-190~1]
 const MAX_REASON_CHARS = 500
 const MAX_REMARKS = 5
 const MAX_REMARK_CHARS = 300
@@ -111,6 +113,7 @@ export function extractObject(raw: unknown): Record<string, unknown> | null {
 
   const fenced = FENCE.exec(text)?.[1]?.trim()
   if (fenced) {
+    // [impl->req~llm-180~1]
     const obj = tryParseObject(fenced) ?? scanForObject(fenced)
     if (obj) return obj
   }
@@ -195,6 +198,7 @@ function toYear(raw: unknown): Coerced {
   return isPlausibleYear(n.value) ? n : { ok: false, reason: 'not a plausible publication year' }
 }
 
+// [impl->req~llm-580~1]
 /** Same coercion `parseAnswer` applies to a model's answer, exported so a
  *  reviewer's hand-typed edit to a proposal (AiDialog's Edit affordance) is
  *  held to the identical rules rather than a second, drifting copy of them. */
@@ -261,6 +265,7 @@ function schemaNames(defs: ResolvedDef[], out = new Set<string>()): Set<string> 
   return out
 }
 
+// [impl->req~llm-600~1]
 /**
  * Tolerant read of a `schema_remarks` array: keeps entries whose path resolves
  * in the schema (or is a plain field name it contains), flattened and capped.
@@ -273,6 +278,7 @@ export function parseSchemaRemarks(schema: ResolvedDef[], raw: unknown): SchemaR
   for (const e of asArray(raw)) {
     if (out.length >= MAX_REMARKS) break
     if (!isPlainObject(e) || typeof e.path !== 'string' || typeof e.issue !== 'string') continue
+    // [impl->req~llm-200~1]
     const path = e.path.trim()
     const issue = oneLine(e.issue).slice(0, MAX_REMARK_CHARS)
     if (!path || !issue) continue

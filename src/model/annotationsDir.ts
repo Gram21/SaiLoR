@@ -1,3 +1,4 @@
+// [impl->req~dat-169~1]
 import { FEEDBACK_DIR, paperIdKey, paperIdProblem } from './paperId'
 
 export { FEEDBACK_DIR }
@@ -17,6 +18,7 @@ export { FEEDBACK_DIR }
 
 export const DEFAULT_ANNOTATIONS_DIR = 'annotations'
 
+// [impl->req~dat-390~1]
 /** Is `rel` (relative to the annotations folder) the reserved feedback folder
  *  or something inside it? Never a paper, never pruned, never field-reviewed. */
 export function isFeedbackPath(rel: string): boolean {
@@ -43,6 +45,7 @@ export function annotationsDirOf(raw: unknown): string {
   return typeof name === 'string' && annotationsDirProblem(name) === null ? name : DEFAULT_ANNOTATIONS_DIR
 }
 
+// [impl->req~edt-46~1]
 /** A folder name for `projectFileName`'s own annotations: `review.json` →
  *  `review-annotations`, and `review-annotation.json` too rather than
  *  `review-annotation-annotations`. */
@@ -52,6 +55,7 @@ export function defaultSplitDirName(projectFileName: string): string {
   return annotationsDirProblem(name) === null ? name : 'project-annotations'
 }
 
+// [impl->req~dat-172~1]
 /**
  * Would a project with these paper ids, of this kind (`screening`), write the
  * same files as the parsed project file `raw` if the two shared a folder?
@@ -66,6 +70,7 @@ export function filesCollide(paperIds: Iterable<string>, screening: boolean, raw
   return sharesPaper(paperIds, raw)
 }
 
+// [impl->req~edt-46~1]
 /** Does the parsed project file `raw` list one of `paperIds`? */
 export function sharesPaper(paperIds: Iterable<string>, raw: unknown): boolean {
   const mine = new Set([...paperIds].map(paperIdKey))

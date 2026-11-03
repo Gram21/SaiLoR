@@ -21,6 +21,7 @@ function idProblemLabel(reason: PaperIdIssue['reason']): string {
   }
 }
 
+// [impl->req~edt-20~1]
 /**
  * Ids that are unsafe as a directory name — mirrors `validateDraft`'s
  * (`src/state/editorStore.ts`) own check exactly, via the same
@@ -34,6 +35,7 @@ export function unsafePaperIds(papers: { id: string }[]): Map<string, PaperIdIss
     const id = p.id.trim()
     // Empty ids already get their own "missing id" error; not this one.
     if (!id) continue
+    // [impl->req~edt-90~1]
     const problem = paperIdProblem(id)
     if (problem) problems.set(id, problem)
   }
@@ -85,6 +87,7 @@ export function PapersEditor() {
   const [armedUid, setArmedUid] = useState<string | null>(null)
 
   const isBrowser = getPlatform().kind === 'browser'
+  // [impl->req~edt-50~1]
   const jsonName = location?.name ?? 'the project JSON'
 
   // Live here so a reviewer sees an id collision the moment they cause it,
@@ -146,6 +149,7 @@ export function PapersEditor() {
   // id), but it cannot carry what is not here yet: a reviewer whose work has
   // not been pulled is still recording under the old id, and after the rename
   // lands nothing points at it. The old folder is also left on disk.
+  // [impl->req~edt-45~1]
   const confirmIdChange = (paper: EditorPaper, from: string): boolean => {
     const a = paper.annotations
     const hasAnswers = !!a && typeof a === 'object' && Object.keys(a).length > 0
@@ -375,6 +379,7 @@ function PaperFields({ paper, duplicateId, idProblem, onRemove, onInteract, onId
               // back (macOS's filesystem hands back NFD, everywhere else NFC),
               // so the same characters would name two different directories
               // depending which platform the id was typed on.
+              // [impl->req~edt-21~1]
               const normalized = paper.id.normalize('NFC')
               if (normalized !== paper.id) patch({ id: normalized })
             }}

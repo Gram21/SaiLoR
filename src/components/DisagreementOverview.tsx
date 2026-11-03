@@ -1,3 +1,4 @@
+// [impl->req~con-430~1]
 import { useEffect, useMemo } from 'react'
 import { useStore } from '../state/store'
 import { projectVerdicts, formatValue, type FieldVerdict } from '../consolidate/disagreements'
@@ -44,6 +45,7 @@ export function DisagreementOverview() {
   // component stays mounted for the whole session, so an ungated memo would
   // re-walk (and re-align) every paper on every project change — every
   // annotation keystroke — for a list nobody is looking at.
+  // [impl->req~con-230~1]
   const verdicts: FieldVerdict[] = useMemo(() => {
     if (!open || !project) return []
     return projectVerdicts(project).filter(

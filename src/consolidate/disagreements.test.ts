@@ -1,3 +1,4 @@
+// [utest->req~con-430~1]
 import { describe, it, expect } from 'vitest'
 import { resolveSchema, type AnnotationDef, type ResolvedDef } from '../model/schema'
 import { normalizeTree, type AnnotationValueTree } from '../model/annotations'

@@ -16,6 +16,7 @@ pub struct Pending {
 
 pub type State = Mutex<Pending>;
 
+// [impl->req~plt-270~1]
 /// deb/rpm and unbundled binaries update through the package manager or by hand.
 fn self_update_supported(bundle: Option<BundleType>) -> bool {
     matches!(
@@ -28,10 +29,13 @@ fn percent(done: u64, total: Option<u64>) -> Option<u64> {
     total.filter(|t| *t > 0).map(|t| (done * 100 / t).min(100))
 }
 
+// [impl->req~plt-290~1]
 fn error(app: &AppHandle, e: impl ToString) {
     let _ = app.emit("update:error", e.to_string());
 }
 
+// [impl->req~plt-270~1]
+// [impl->req~plt-280~1]
 #[tauri::command]
 pub async fn update_check(app: AppHandle) -> Value {
     if !self_update_supported(bundle_type()) {
@@ -55,6 +59,8 @@ pub async fn update_check(app: AppHandle) -> Value {
     json!({ "supported": true })
 }
 
+// [impl->req~plt-280~1]
+// [impl->req~plt-290~1]
 #[tauri::command]
 pub fn update_download(app: AppHandle) {
     let Some(update) = app.state::<State>().lock().unwrap().update.clone() else {
@@ -80,6 +86,8 @@ pub fn update_download(app: AppHandle) {
     });
 }
 
+// [impl->req~plt-280~1]
+// [impl->req~plt-360~1]
 #[tauri::command]
 pub async fn update_install(app: AppHandle) {
     if app.state::<crate::close::Guard>().is_dirty() {
@@ -100,6 +108,7 @@ pub async fn update_install(app: AppHandle) {
 mod tests {
     use super::*;
 
+    // [utest->req~plt-270~1]
     #[test]
     fn only_appimage_windows_and_macos_self_update() {
         for b in [
@@ -128,6 +137,8 @@ mod tests {
         assert_eq!(percent(5, Some(0)), None);
     }
 
+    // [utest->req~plt-280~1]
+    // [utest->req~plt-290~1]
     #[test]
     fn feed_is_fixed_https_github_and_signed_versions_are_required() {
         let conf: Value = serde_json::from_str(include_str!("../tauri.conf.json")).unwrap();

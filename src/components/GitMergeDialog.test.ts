@@ -2,6 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { isForeignReview } from './GitMergeDialog'
 import type { MergeTree } from '../git/merge'
 
+// [utest->req~git-310~1]
 describe('isForeignReview (which merge rows "Use all mine" must not speak for)', () => {
   it('is foreign when the tree is another reviewer\'s own', () => {
     expect(isForeignReview({ kind: 'review', reviewer: '2' }, '1')).toBe(true)

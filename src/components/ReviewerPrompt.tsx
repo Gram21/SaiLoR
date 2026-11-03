@@ -1,3 +1,4 @@
+// [impl->req~con-20~1]
 import { STRICT_MANAGER, useStore } from '../state/store'
 import { strictActive } from '../model/strict'
 import { readyCount } from '../consolidate/readiness'
@@ -42,6 +43,8 @@ export function ReviewerPrompt() {
 
   const reviewerIds = Array.from({ length: project.reviewers }, (_, i) => String(i + 1))
   const ready = readyCount(project.schema, project.papers, project.reviewers)
+  // [impl->req~con-10~1]
+  // [impl->req~con-70~1]
   const total = project.papers.length
 
   return (

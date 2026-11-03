@@ -1,3 +1,5 @@
+// [impl->req~ui-100~1]
+// [impl->req~scr-140~1]
 import { useEffect } from 'react'
 import { activePerson, useStore } from '../state/store'
 import { personPapers } from '../model/strict'
@@ -6,6 +8,10 @@ import { DECISION_EXCLUDE, DECISION_INCLUDE } from '../screening/schema'
 import { isTauri } from '../platform/adapter'
 import { getBridge } from '../platform/bridge'
 
+// [impl->req~lst-50~1]
+// [impl->req~ui-10~1]
+// [impl->req~plt-120~1]
+// [impl->req~plt-310~1]
 /**
  * Global keyboard shortcuts:
  *  - Ctrl/Cmd+S         → Save
@@ -178,6 +184,9 @@ export function useKeybindings() {
   }, [])
 }
 
+// [impl->req~lst-50~1]
+// [impl->req~ui-10~1]
+// [impl->req~con-460~1]
 function stepPaper(dir: 1 | -1) {
   const { project, currentPaperId, selectPaper } = useStore.getState()
   if (!project) return
@@ -202,6 +211,8 @@ function stepPaper(dir: 1 | -1) {
   if (next >= 0 && next < ids.length) selectPaper(ids[next])
 }
 
+// [impl->req~lst-50~1]
+// [impl->req~ui-10~1]
 function isEditable(target: EventTarget | null): boolean {
   if (!(target instanceof HTMLElement)) return false
   const tag = target.tagName

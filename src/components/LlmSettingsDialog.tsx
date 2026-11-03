@@ -1,3 +1,7 @@
+// [impl->req~llm-730~1]
+// [impl->req~llm-731~1]
+// [impl->req~llm-733~1]
+// [impl->req~llm-750~1]
 import { useEffect, useState } from 'react'
 import { useAiStore } from '../state/aiStore'
 import { getPlatform } from '../platform'
@@ -92,6 +96,7 @@ export function LlmSettingsDialog() {
   const clearModels = useAiStore((s) => s.clearModels)
   const modelsById = useAiStore((s) => s.models)
   const modelsLoadingById = useAiStore((s) => s.modelsLoading)
+  // [impl->req~llm-30~1]
   const modelsErrorById = useAiStore((s) => s.modelsError)
 
   /** The target being edited/added; null means we are showing the list. */
@@ -230,6 +235,7 @@ export function LlmSettingsDialog() {
     if (kind !== 'local-chat' && kind !== 'local-s1' && kind !== 'hosted-s1') return changeProvider(kind)
     setDraft((d) => {
       if (!d) return d
+      // [impl->req~llm-290~1]
       const base: LlmConfig = {
         ...d,
         attach: 'text',
@@ -342,6 +348,7 @@ export function LlmSettingsDialog() {
     }
   }
 
+  // [impl->req~llm-20~1]
   const onDelete = async (id: string) => {
     if (confirmId !== id) {
       setConfirmId(id)

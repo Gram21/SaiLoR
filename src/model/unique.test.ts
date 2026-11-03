@@ -38,6 +38,7 @@ function tree(over: AnnotationValueTree = {}): AnnotationValueTree {
   return { Keywords: [], Venue: [], Authors: [], Pairs: [], Tags: [], ...over }
 }
 
+// [utest->req~dat-400~1]
 describe('unique schema option', () => {
   it('resolves unique and uniqueBy, and leaves other nodes unchanged', () => {
     expect(kw.unique).toBe(true)
@@ -82,6 +83,7 @@ describe('unique schema option', () => {
   })
 })
 
+// [utest->req~dat-400~1]
 describe('duplicateIndexes', () => {
   it('compares free text trimmed and case-insensitive, and skips empty entries', () => {
     const list = [
@@ -146,6 +148,7 @@ describe('duplicateOnWrite', () => {
     expect(duplicateOnWrite(schema, both, segs, 'last')).toBeNull()
     const other = tree({ Authors: [entry('Ada', ''), entry('Bob', '')] })
     expect(
+      // [utest->req~dat-410~1]
       duplicateOnWrite(
         schema,
         other,
@@ -159,6 +162,7 @@ describe('duplicateOnWrite', () => {
   })
 })
 
+// [utest->req~dat-410~1]
 describe('dropDuplicateSuggestions', () => {
   it('drops suggestions that repeat the tree or an earlier suggestion', () => {
     const t = tree({ Keywords: [{ value: 'NLP' }] })
@@ -174,6 +178,7 @@ describe('dropDuplicateSuggestions', () => {
   })
 })
 
+// [utest->req~dat-420~1]
 describe('validatePaper duplicate issues', () => {
   it('reports each repeated entry of a unique node', () => {
     const paper = {

@@ -1,3 +1,4 @@
+// [impl->req~git-300~1]
 import { useGitStore } from '../state/gitStore'
 import { ConflictResolutionDialog } from './ConflictResolutionDialog'
 

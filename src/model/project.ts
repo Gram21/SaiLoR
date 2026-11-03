@@ -42,6 +42,8 @@ export interface AiUsageRecord {
   model: string
   /** ISO 8601 timestamp of the Apply click. */
   appliedAt: string
+  // [impl->req~llm-550~1]
+  // [impl->req~llm-630~1]
   /** "prompt" for a single suggest-and-apply pass, "agent" for the
    *  tool-using agent with a judge review loop, "classify" for a System One
    *  decision-model pass, "screening" for an include/exclude proposal pass.
@@ -56,19 +58,24 @@ export interface AiUsageRecord {
   verdicts?: { accept: number; revise: number; reject: number }
   /** How many example papers were shown as few-shot context. */
   fewShot?: number
+  // [impl->req~llm-240~1]
+  // [impl->req~llm-580~1]
   /** How many of the applied rows the reviewer edited before applying, out of
    *  however many this record covers. The field still counts as AI-assisted
    *  regardless — editing a proposal doesn't erase that it started as one. */
   edited?: number
+  // [impl->req~llm-660~1]
   /** How many already-answered fields the AI re-check replaced (each was an
    *  explicit reviewer tick — see REQ-LLM-660). */
   rechecked?: number
+  // [impl->req~llm-670~1]
   /** Provider web searches the agent ran, when web search was on. */
   webSearches?: number
   /** The seat the values were written into ("1".."N" or "consolidation"). */
   reviewer?: string
 }
 
+// [impl->req~dat-240~1]
 export interface Paper {
   id: string
   title: string
@@ -202,6 +209,7 @@ export interface ProjectProvenance {
   counts: { included: number; undecided: number; excluded: number; carried: number }
 }
 
+// [impl->req~dat-285~1]
 export interface Project {
   version: number
   /** Display name for the review; empty when the file doesn't set one. */
@@ -279,6 +287,8 @@ export interface Project {
   strict?: StrictConfig
 }
 
+// [impl->req~llm-470~1]
+// [impl->req~llm-650~1]
 /**
  * The seat id the AI writes into, or `null` when there is none. Always the
  * last configured seat (`String(project.reviewers)`) — never a separately
@@ -293,6 +303,8 @@ export function aiSeatId(project: Pick<Project, 'aiSeat' | 'aiEnabled' | 'review
   return String(project.reviewers)
 }
 
+// [impl->req~dat-40~1]
+// [impl->req~llm-470~1]
 /**
  * The display label for a reviewer seat: "Consolidation" for that seat, "AI
  * (Reviewer N)" for the seat `aiSeatId` names, else the plain "Reviewer N".
@@ -334,6 +346,8 @@ const KNOWN_PAPER_KEYS = new Set([
   'reviewsFinished',
   'schemaVersions',
 ])
+// [impl->req~dat-80~1]
+// [impl->req~dat-260~1]
 /** Exported so `editorStore.ts`'s root-extra split reuses this exact list
  *  rather than a second hand-maintained copy. */
 export const KNOWN_ROOT_KEYS = new Set([
@@ -349,6 +363,7 @@ export const KNOWN_ROOT_KEYS = new Set([
   'papers',
 ])
 
+// [impl->req~dat-270~1]
 /**
  * Parse `reviews` defensively: the file is hand-editable, so a malformed entry
  * is dropped, never thrown over. Only keys that look like a reviewer number
@@ -356,6 +371,7 @@ export const KNOWN_ROOT_KEYS = new Set([
  */
 function parseReviews(raw: unknown, schema: ResolvedDef[]): Record<string, AnnotationValueTree> {
   if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {}
+  // [impl->req~dat-280~1]
   const out: Record<string, AnnotationValueTree> = {}
   for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
     if (!/^[1-9]\d*$/.test(key)) continue
@@ -430,6 +446,7 @@ function parseAiUsageVerdicts(raw: unknown): { accept: number; revise: number; r
   return { accept: r.accept as number, revise: r.revise as number, reject: r.reject as number }
 }
 
+// [impl->req~llm-240~1]
 function parseAiUsage(raw: unknown): AiUsageRecord[] {
   if (!Array.isArray(raw)) return []
   const out: AiUsageRecord[] = []
@@ -486,6 +503,8 @@ function parseEqual(raw: unknown): string[] {
   return out
 }
 
+// [impl->req~scr-40~1]
+// [impl->req~scr-50~1]
 /**
  * Parse `config.screening` defensively-but-strictly. Unlike `reviews`/`equal`,
  * a broken value here can't be degraded past: the reasons *are* the schema's
@@ -501,6 +520,7 @@ function parseScreening(raw: unknown): ScreeningConfig | null {
   const reasons: string[] = []
   for (const entry of reasonsRaw) {
     if (typeof entry !== 'string') continue
+    // [impl->req~edt-70~1]
     const trimmed = entry.trim()
     if (!trimmed || seen.has(trimmed)) continue
     seen.add(trimmed)
@@ -576,6 +596,7 @@ export function parseProvenance(raw: unknown): ProjectProvenance | null {
   const counts = r.counts
   if (typeof counts !== 'object' || counts === null) return null
   const c = counts as Record<string, unknown>
+  // [impl->req~dat-166~1]
   const countKeys = ['included', 'undecided', 'excluded', 'carried'] as const
   if (!countKeys.every((k) => typeof c[k] === 'number' && Number.isFinite(c[k]))) return null
   return {
@@ -637,7 +658,9 @@ function exceedsDepth(value: unknown, limit: number): boolean {
   return false
 }
 
+// [impl->req~edt-110~1]
 export function loadProject(input: string | unknown): Project {
+  // [impl->req~dat-20~1]
   let data: unknown
   if (typeof input === 'string') {
     try {
@@ -660,6 +683,8 @@ export function loadProject(input: string | unknown): Project {
     ])
   }
 
+  // [impl->req~dat-10~1]
+  // [impl->req~llm-80~1]
   let raw
   try {
     raw = projectSchema.parse(data)
@@ -683,6 +708,7 @@ export function loadProject(input: string | unknown): Project {
   // disagree with the dropdown shown. `raw.config.schema!` is safe: zod's
   // `superRefine` guarantees it's present whenever `screening` is null.
   const screening = parseScreening((raw.config as { screening?: unknown }).screening)
+  // [impl->req~dat-30~1]
   let schema: ResolvedDef[]
   try {
     schema = resolveSchema(screening ? screeningSchemaDefs(screening) : raw.config.schema!)
@@ -710,6 +736,7 @@ export function loadProject(input: string | unknown): Project {
   const schemaVersion = parseSchemaVersion((data as { schemaVersion?: unknown }).schemaVersion)
   const schemaHistory = parseSchemaHistory((data as { schemaHistory?: unknown }).schemaHistory)
   const rawAnnotationsDir = (data as { annotationsDir?: unknown }).annotationsDir
+  // [impl->req~dat-165~1]
   const annotationsDir =
     typeof rawAnnotationsDir === 'string' && annotationsDirProblem(rawAnnotationsDir) === null ? rawAnnotationsDir : null
 
@@ -720,6 +747,7 @@ export function loadProject(input: string | unknown): Project {
     const versions = parseFileVersions((p as { schemaVersions?: unknown }).schemaVersions)
     const unknownSchemaFiles: string[] = []
     const migrate = <T,>(key: string, value: T, apply: (v: T, m: SchemaMove) => T): T => {
+      // [impl->req~dat-50~1]
       const pending = pendingMoves(schemaHistory, versions[key] ?? null, schemaVersion)
       if (pending === 'unknown') {
         unknownSchemaFiles.push(key)
@@ -734,6 +762,8 @@ export function loadProject(input: string | unknown): Project {
       typeof rawReviews === 'object' && rawReviews !== null && !Array.isArray(rawReviews)
         ? Object.fromEntries(Object.entries(rawReviews).map(([k, v]) => [k, tree(`review-${k}`, v)]))
         : rawReviews
+    // [impl->req~dat-100~1]
+    // [impl->req~dat-290~1]
     const reviewMarks = Object.fromEntries(
       Object.entries(parseReviewMarks((p as { reviewMarks?: unknown }).reviewMarks)).map(([k, v]) => [
         k,
@@ -819,6 +849,7 @@ function parseFileVersions(raw: unknown): Record<string, string | null> {
   return out
 }
 
+// [impl->req~edt-110~1]
 /**
  * Serialize a Project back to the on-disk JSON shape. `config` is written from
  * the resolved schema, annotations are pruned of trailing empties, and any
@@ -870,6 +901,8 @@ export function serializeProject(project: Project): string {
       // Single-reviewer papers have no reviewer trees, so `reviews` stays empty
       // and is omitted below; `normalizeReviews` gives multi-reviewer papers a
       // skeleton for every reviewer, so this is never empty for them.
+      // [impl->req~dat-170~1]
+      // [impl->req~plt-40~1]
       const reviewKeys = Object.keys(p.reviews)
       if (reviewKeys.length > 0) {
         paper.reviews = Object.fromEntries(
@@ -964,6 +997,7 @@ export interface ProjectFileEntry {
   text: string | null
 }
 
+// [impl->req~edt-110~1]
 /**
  * Split a `Project` into the meta-only `project.json` body and the set of
  * per-paper annotation files it should reconcile on disk. Pure and
@@ -1028,6 +1062,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     }
 
     const consolidated: Record<string, unknown> = {}
+    // [impl->req~plt-50~1]
     const hasConsolidatedAnnotations = hasContent(project.schema, p.annotations)
     if (hasConsolidatedAnnotations) consolidated.annotations = serializedTree(project.schema, p.annotations)
     if (p.aiUsage.length > 0) consolidated.aiUsage = p.aiUsage
@@ -1074,6 +1109,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
   return { meta, files }
 }
 
+// [impl->req~plt-61~1]
 /**
  * May the file currently holding `text` be deleted when the project no longer
  * needs that slot? Yes for empty/parseable JSON; no otherwise — an
@@ -1107,6 +1143,7 @@ export function isLegacyProjectShape(raw: unknown): boolean {
 
 const REVIEWER_FILE = /^(?:reviewer|screening)-(\d+)\.json$/
 
+// [impl->req~dat-172~1]
 /**
  * A PDF-highlight file's name. Screening projects have their own
  * (`screening-marks-*`), like their decision files: a screening project and an
@@ -1117,6 +1154,7 @@ export function marksFileName(screening: boolean, seat: string): string {
   return `${screening ? 'screening-marks' : 'marks'}-${seat}.json`
 }
 
+// [impl->req~dat-172~1]
 /**
  * The seat a highlight file holds for a project of this kind, or `null` when
  * it is not one. A screening project's highlight file from before they had
@@ -1256,6 +1294,7 @@ function extractExtra(obj: Record<string, unknown>, known: Set<string>): Record<
   return extra
 }
 
+// [impl->req~dat-400~1]
 /** Convert ResolvedDef back to the compact on-disk AnnotationDef shape. */
 export function dehydrateSchema(defs: ResolvedDef[]): unknown[] {
   return defs.map((d) => {

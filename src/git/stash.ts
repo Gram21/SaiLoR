@@ -49,6 +49,7 @@ export interface StashEntry {
  *  sha, committer date, reflog subject, NUL-terminated. */
 export const STASH_LIST_FORMAT = '%gd%x09%H%x09%cI%x09%gs%x00'
 
+// [impl->req~git-430~1]
 /**
  * Parse `git stash list` into entries, newest first (git's own order).
  *
@@ -89,6 +90,7 @@ export function describeStash(entry: StashEntry): string {
   return entry.message
 }
 
+// [impl->req~git-460~1]
 /** A branch name for `git stash branch`, unique against `existing`. */
 export function stashBranchName(entry: StashEntry, existing: string[]): string {
   const day = entry.date.slice(0, 10) || 'stash'

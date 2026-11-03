@@ -1,3 +1,5 @@
+// [impl->req~dat-169~1]
+// [impl->req~git-70~1]
 import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR, isFeedbackPath } from '../model/annotationsDir'
 /**
  * Is this string safe to use as a path *relative to a repository root*?
@@ -54,10 +56,12 @@ export function annotationsRelDir(relPath: string, name: string = DEFAULT_ANNOTA
   // Always one folder directly inside the project file's directory — a name
   // that could reach anywhere else is replaced by the default.
   const folder = annotationsDirProblem(name) === null ? name : DEFAULT_ANNOTATIONS_DIR
+  // [impl->req~git-215~1]
   const dir = relPath.split(/[\\/]/).slice(0, -1).join('/')
   return dir === '' ? folder : `${dir}/${folder}`
 }
 
+// [impl->req~dat-390~1]
 /**
  * Of a parsed `git status`, the paths that must not be left lying around when
  * a merge starts: every tracked modification, plus untracked files sitting

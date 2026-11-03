@@ -3,6 +3,7 @@ import type { Paper } from '../model/project'
 import type { ResolvedDef } from '../model/schema'
 import { alignableNodes } from './align'
 
+// [impl->req~con-70~1]
 /**
  * Whether a paper is worth consolidating yet: every numbered reviewer has
  * recorded something on it.
@@ -38,6 +39,7 @@ export function readyCount(schema: ResolvedDef[], papers: Paper[], reviewerCount
   return papers.filter((p) => readyToConsolidate(schema, p, reviewerCount)).length
 }
 
+// [impl->req~con-150~1]
 /**
  * Whether the consolidator has committed an answer under `def`.
  *
@@ -53,6 +55,7 @@ export function consolidatorHasAnswered(def: ResolvedDef, consolidated: Annotati
   return hasAnnotations([def], { [def.name]: consolidated[def.name] ?? [] })
 }
 
+// [impl->req~con-330~1]
 /**
  * Whether a paper has a repeatable node (Findings, say) that two or more
  * reviewers recorded entries in, but that Consolidation has not reviewed yet
@@ -99,6 +102,7 @@ export function needsAlignmentCount(schema: ResolvedDef[], papers: Paper[], revi
   return papers.filter((p) => needsAlignment(schema, p, reviewerCount)).length
 }
 
+// [impl->req~con-255~1]
 /**
  * What Consolidation's automatic steps last ran against: a digest of the
  * reviewers' answers, and one of the consolidated tree as those steps left it.

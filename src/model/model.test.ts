@@ -1,3 +1,8 @@
+// [utest->req~llm-580~1]
+// [utest->req~llm-630~1]
+// [utest->req~llm-650~1]
+// [utest->req~llm-660~1]
+// [utest->req~llm-670~1]
 import { describe, it, expect } from 'vitest'
 import {
   resolveSchema,
@@ -54,6 +59,7 @@ function makeProjectJson(annotations: unknown = {}) {
 
 describe('schema resolution', () => {
   it('applies defaults and assigns path ids', () => {
+    // [utest->req~dat-110~1]
     const resolved = resolveSchema(sampleSchema)
     expect(resolved[0]).toMatchObject({ id: 'Relevant', min: 1, max: 1 })
     const findings = resolved[3]
@@ -61,6 +67,7 @@ describe('schema resolution', () => {
     expect(findings.children[0].id).toBe('Findings/Claim')
   })
 
+  // [utest->req~dat-120~1]
   it('flags a node with neither type nor children', () => {
     expect(() => loadProject(
       JSON.stringify({ config: { schema: [{ name: 'Bad' }] }, papers: [] }),
@@ -127,6 +134,7 @@ describe('schema resolution', () => {
     expect(project.schema[0].required).toBe(true)
     expect(project.schema[1].required).toBe(false)
 
+    // [utest->req~dat-130~1]
     const reDumped = JSON.parse(serializeProject(project))
     expect(reDumped.config.schema[0].required).toBe(true)
     // false is the default, so the key stays out of the file.
@@ -168,6 +176,7 @@ describe('schema resolution', () => {
     expect(isRepeatable(resolved[0])).toBe(false)
   })
 
+  // [utest->req~dat-140~1]
   it('keeps visibleIf when it names a real sibling field', () => {
     const resolved = resolveSchema([
       { name: 'Relevant', type: 'boolean' },
@@ -385,6 +394,7 @@ describe('schema resolution', () => {
   })
 
   it('filters equals values the target cannot hold', () => {
+    // [utest->req~dat-170~1]
     const resolved = resolveSchema([
       { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },
       { name: 'Relevant', type: 'boolean' },
@@ -510,6 +520,7 @@ describe('schema resolution', () => {
   })
 
   it('drops invalid conditions inside a nested group, keeping the rest', () => {
+    // [utest->req~dat-80~1]
     const resolved = resolveSchema([
       { name: 'Relevant', type: 'boolean' },
       { name: 'Findings', children: [{ name: 'Claim', type: 'string' }] },
@@ -572,6 +583,7 @@ describe('schema resolution', () => {
   })
 
   it('applies the equals rules inside a nested group too', () => {
+    // [utest->req~dat-260~1]
     const resolved = resolveSchema([
       { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },
       { name: 'Relevant', type: 'boolean' },
@@ -633,6 +645,7 @@ describe('loadProject: input validation', () => {
     }
   })
 
+  // [utest->req~ann-30~1]
   it('reports structural errors per path', () => {
     try {
       loadProject(
@@ -651,6 +664,7 @@ describe('loadProject: input validation', () => {
   })
 
   it('rejects duplicate paper identifiers', () => {
+    // [utest->req~dat-270~1]
     const dup = JSON.stringify({
       config: { schema: sampleSchema },
       papers: [
@@ -839,6 +853,7 @@ describe('isFieldVisible', () => {
   })
 
   it('resolves a value condition against the ancestors map', () => {
+    // [utest->req~dat-60~1]
     const resolved = resolveSchema([
       {
         name: 'Field A',
@@ -898,6 +913,7 @@ describe('isFieldVisible', () => {
   })
 
   it('evaluates a group two levels deep, including a condition on an ancestor field', () => {
+    // [utest->req~dat-100~1]
     const resolved = resolveSchema([
       {
         name: 'Field A',
@@ -1036,6 +1052,8 @@ describe('add/remove guards', () => {
   })
 })
 
+// [utest->req~dat-160~1]
+// [utest->req~dat-165~1]
 describe('normalize', () => {
   it('pads missing and clamps excess instances', () => {
     const resolved = resolveSchema(sampleSchema)

@@ -1,3 +1,5 @@
+// [utest->req~llm-710~1]
+// [utest->req~llm-712~1]
 import { describe, it, expect } from 'vitest'
 import { chatInputBudget, estimateTokens, fitPaperText } from './budget'
 

@@ -22,6 +22,7 @@
  * is a security decision, and `src-tauri/` is outside vitest's scope.
  */
 
+// [impl->req~git-425~1]
 /** How often the background fetch runs while a project in a repository is open. */
 export const BACKGROUND_FETCH_INTERVAL_MS = 120_000
 

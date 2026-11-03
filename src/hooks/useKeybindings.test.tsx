@@ -222,6 +222,7 @@ describe('useKeybindings: paper navigation (REQ-LST-50)', () => {
   })
 })
 
+// [utest->req~plt-120~1]
 describe('reload shortcuts', () => {
   const tauriWindow = window as unknown as { __TAURI_INTERNALS__?: object }
   const requestReload = vi.fn()

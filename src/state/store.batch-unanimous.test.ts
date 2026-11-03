@@ -166,6 +166,7 @@ beforeEach(() => {
 })
 
 describe('adoptAllUnanimousAnnotations', () => {
+  // [utest->req~con-260~1]
   it('aligns then adopts across every paper', async () => {
     st().loadFromText(swappedProject(2), null, 'test.json')
     st().selectReviewer('consolidation')
@@ -294,6 +295,7 @@ describe('adoptAllUnanimousAnnotations', () => {
     expect(st().project!.papers[0].annotations['Study Type'][0].value).toBe('RCT')
   })
 
+  // [utest->req~con-250~1]
   it('marks adopted fields under the Consolidation seat, like a per-paper run does', async () => {
     st().loadFromText(swappedProject(1), null, 'test.json')
     st().selectReviewer('consolidation')

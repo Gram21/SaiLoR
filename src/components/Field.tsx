@@ -1,3 +1,4 @@
+// [impl->req~dat-410~1]
 import { useEffect, useRef, useState } from 'react'
 import {
   deferredConsolidationKey,
@@ -27,6 +28,7 @@ interface FieldProps {
   ariaLabel?: string
 }
 
+// [impl->req~ann-20~1]
 /** Renders the editable control for a single field instance, plus a "grab from PDF" button. */
 export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   const setFieldValue = useStore((s) => s.setFieldValue)
@@ -71,6 +73,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
         })()
       : false,
   )
+  // [impl->req~ann-100~1]
   const compareBtn = isConsolidation && (
     <button
       type="button"
@@ -91,6 +94,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   // every field type, not just `canGrab` ones: a checkbox deserves a reason too.
   const linkCount = useLinkedMarkCount(path, def.name, index)
   const linkBtnRef = useRef<HTMLButtonElement>(null)
+  // [impl->req~ann-50~1]
   const linkBtn = (
     <div className="field-link-wrap">
       <button
@@ -454,6 +458,7 @@ interface StringFieldProps {
   ariaLabel?: string
 }
 
+// [impl->req~ann-20~1]
 /** Auto-expanding text field: single-line when idle, grows downward (capped) while focused. */
 function StringField({ value, onChange, className = '', onInteract, onLeave, ariaLabel }: StringFieldProps) {
   const ref = useRef<HTMLTextAreaElement>(null)
@@ -498,6 +503,7 @@ function StringField({ value, onChange, className = '', onInteract, onLeave, ari
   )
 }
 
+// [impl->req~ann-20~1]
 function parseNumber(s: string): number | null {
   // Grab the first numeric token from the selection (tolerates surrounding text).
   const match = s.replace(',', '.').match(/-?\d+(\.\d+)?/)

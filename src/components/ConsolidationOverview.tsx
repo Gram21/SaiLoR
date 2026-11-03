@@ -70,6 +70,7 @@ export function ConsolidationOverview() {
   const papers = useMemo<DisagreementPaper[]>(() => {
     if (!project) return []
     return project.papers.flatMap((paper) => {
+      // [impl->req~con-390~1]
       const verdicts = verdictsByPaper.get(paper.id)
       return verdicts
         ? [
@@ -94,6 +95,7 @@ export function ConsolidationOverview() {
 
   if (!open || !project) return null
 
+  // [impl->req~con-260~1]
   const total = papers.reduce((count, paper) => count + paper.disagreements, 0)
 
   return (

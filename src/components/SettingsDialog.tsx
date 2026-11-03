@@ -73,12 +73,14 @@ function GitSection() {
   )
 }
 
+// [impl->req~ui-90~1]
 export const SETTINGS_SECTIONS: Array<{ id: string; title: string; Body: ComponentType }> = [
   { id: 'general', title: 'General', Body: GeneralSection },
   { id: 'ai', title: 'AI', Body: AiSection },
   { id: 'git', title: 'Git', Body: GitSection },
 ]
 
+// [impl->req~ui-90~1]
 export function SettingsDialog() {
   const open = useStore((s) => s.userSettingsOpen)
   const setOpen = useStore((s) => s.setUserSettingsOpen)

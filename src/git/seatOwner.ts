@@ -58,6 +58,7 @@ export function seatFileFor(paperId: string, seat: string, screening: boolean): 
   return `${paperId}/${name}.json`
 }
 
+// [impl->req~git-510~1]
 /**
  * Parse `git log --format=%x00%an%x09%ae --name-only`, newest commit first,
  * into "who last touched each path".

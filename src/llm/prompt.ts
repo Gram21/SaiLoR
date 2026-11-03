@@ -55,6 +55,7 @@ select one entry of a repeated node ([0] when omitted).
   "Findings[1]/Evidence[0]/Metric" - the Metric of the first Evidence of the SECOND Finding
 To record a further entry of a repeatable node, use the next free index, staying within its max.`
 
+// [impl->req~llm-140~1]
 const OUTPUT_DOC = `## Output format
 Return exactly this JSON object:
 
@@ -76,6 +77,7 @@ Return exactly this JSON object:
 "skipped" holds the fields you deliberately left empty, with a short reason.
 Optionally add "schema_remarks": [] (see rule about schema remarks).`
 
+// [impl->req~llm-600~1]
 /** Optional feedback channel on the schema itself; must never influence the answers. */
 export const SCHEMA_REMARKS_RULE = `If a field's name, description or options were ambiguous, contradictory, or missing something you
 needed, add up to 5 entries to "schema_remarks": {"path", "issue", "suggestion" (a proposed clearer
@@ -116,6 +118,7 @@ export function fieldLines(targets: FieldTarget[]): string {
     .join('\n')
 }
 
+// [impl->req~llm-450~1]
 /**
  * The system prompt. `delivery` matters: when the paper arrives as extracted
  * text, the model must be warned that the extraction is lossy, or it will
@@ -131,6 +134,7 @@ export function buildSystemPrompt(
   // form the format description above documents.
   const schemaJson = JSON.stringify(dehydrateSchema(schema), null, 2)
 
+  // [impl->req~llm-130~1]
   const extractionRule =
     delivery === 'text'
       ? `6. The paper is given to you as text extracted automatically from a PDF. Tables, figures,
@@ -197,6 +201,9 @@ export function buildUserPdfCaption(paper: Paper): string {
 The paper is attached. Extract the annotations for the fields listed in the schema.`
 }
 
+// [impl->req~llm-360~1]
+// [impl->req~llm-450~1]
+// [impl->req~llm-620~1]
 /**
  * The system prompt for agent mode: a tool-using loop rather than one-shot
  * extraction. Shares the schema description, path syntax, and field list with

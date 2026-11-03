@@ -14,6 +14,7 @@
  * term is irrelevant and optimality is affordable.
  */
 
+// [impl->req~con-80~1]
 /**
  * Pair rows with columns to maximise total weight. Returns `rowToCol`, where
  * `rowToCol[i]` is the column matched to row i, or -1 when row i is left over

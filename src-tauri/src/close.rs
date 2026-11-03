@@ -12,6 +12,7 @@ const SAVE: &str = "Save";
 const DISCARD: &str = "Don't Save";
 const CANCEL: &str = "Cancel";
 
+// [impl->req~plt-360~1]
 #[derive(Default)]
 pub struct Guard {
     dirty: AtomicBool,
@@ -51,6 +52,7 @@ fn choice(result: &MessageDialogResult) -> Choice {
 }
 
 impl Guard {
+    // [impl->req~plt-360~1]
     pub fn is_dirty(&self) -> bool {
         self.dirty.load(SeqCst)
     }
@@ -64,6 +66,7 @@ impl Guard {
         Some(!self.asking.swap(true, SeqCst))
     }
 
+    // [impl->req~plt-120~1]
     /// Some(true): show the dialog for a reload. Some(false): a dialog or save is pending.
     /// None: reload now.
     fn on_reload(&self) -> Option<bool> {
@@ -94,6 +97,7 @@ impl Guard {
         }
     }
 
+    // [impl->req~plt-120~1]
     /// Acts on a save the dialog asked for. Only a successful save continues.
     fn saved(&self, ok: bool) -> Next {
         if !self.saving.swap(false, SeqCst) {
@@ -118,6 +122,7 @@ impl Guard {
     }
 }
 
+// [impl->req~plt-100~1]
 /// True when the close or exit must be prevented. Shows the dialog if needed.
 pub fn intercept(app: &AppHandle) -> bool {
     let guard = app.state::<Guard>();
@@ -130,6 +135,7 @@ pub fn intercept(app: &AppHandle) -> bool {
     true
 }
 
+// [impl->req~plt-120~1]
 /// Reloads the page now when nothing is unsaved, otherwise asks first.
 pub fn request_reload(app: &AppHandle) {
     match app.state::<Guard>().on_reload() {
@@ -139,6 +145,7 @@ pub fn request_reload(app: &AppHandle) {
     }
 }
 
+// [impl->req~plt-370~1]
 /// Quits through the same guard as a window close.
 pub fn request_quit(app: &AppHandle) {
     if !intercept(app) {
@@ -184,11 +191,13 @@ fn reload_main(app: &AppHandle) {
     }
 }
 
+// [impl->req~plt-100~1]
 #[tauri::command]
 pub fn app_set_dirty(guard: tauri::State<'_, Guard>, dirty: bool) {
     guard.dirty.store(dirty, SeqCst);
 }
 
+// [impl->req~plt-100~1]
 /// Only closes or reloads after a save this guard asked for, not on any `true`.
 #[tauri::command]
 pub fn app_save_complete(app: AppHandle, ok: bool) {
@@ -196,6 +205,7 @@ pub fn app_save_complete(app: AppHandle, ok: bool) {
     perform(&app, next);
 }
 
+// [impl->req~plt-120~1]
 #[tauri::command]
 pub fn app_reload(app: AppHandle) {
     request_reload(&app);
@@ -235,6 +245,7 @@ mod tests {
         assert_eq!(Guard::default().on_close(), None);
     }
 
+    // [utest->req~plt-100~1]
     #[test]
     fn dirty_project_asks_once_and_cancel_keeps_it_open() {
         let g = dirty();
@@ -252,6 +263,7 @@ mod tests {
         assert_eq!(g.on_close(), None);
     }
 
+    // [utest->req~plt-100~1]
     #[test]
     fn closes_only_after_a_requested_save_succeeds() {
         let g = dirty();
@@ -269,11 +281,13 @@ mod tests {
         assert_eq!(g.on_close(), None);
     }
 
+    // [utest->req~plt-120~1]
     #[test]
     fn clean_project_reloads_at_once() {
         assert_eq!(Guard::default().on_reload(), None);
     }
 
+    // [utest->req~plt-120~1]
     #[test]
     fn dirty_reload_asks_once_and_cancel_keeps_the_page() {
         let g = dirty();
@@ -283,6 +297,7 @@ mod tests {
         assert_eq!(g.on_reload(), Some(true));
     }
 
+    // [utest->req~plt-120~1]
     #[test]
     fn discard_reloads_without_allowing_a_later_close() {
         let g = dirty();
@@ -291,6 +306,7 @@ mod tests {
         assert_eq!(g.on_close(), Some(true));
     }
 
+    // [utest->req~plt-120~1]
     #[test]
     fn reload_waits_for_a_requested_save_to_succeed() {
         let g = dirty();
@@ -312,6 +328,7 @@ mod tests {
         assert_eq!(g.saved(true), Next::Quit);
     }
 
+    // [utest->req~plt-120~1]
     #[test]
     fn open_close_dialog_blocks_reload() {
         let g = dirty();

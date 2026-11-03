@@ -14,6 +14,7 @@
  * programs are the user's own configuration and are never touched.
  */
 
+// [impl->req~git-60~1]
 const ALLOWED_SCHEMES = ['https://', 'http://', 'ssh://', 'git://', 'git+ssh://', 'file://']
 
 /** scp-like shorthand: user@host:path (but not user@host:/abs — that's ssh:// territory

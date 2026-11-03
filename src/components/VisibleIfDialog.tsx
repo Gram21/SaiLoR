@@ -278,6 +278,7 @@ function insertEntryAt(
   })
 }
 
+// [impl->req~edt-60~1]
 /** Relocate the entry at `from` to `position` of the entry at `to`:
  *  `'before'`/`'after'` make it a sibling, `'inside'` appends it to that group
  *  (`to` empty = root group). No-op for anything {@link canMoveEntry} refuses,
@@ -803,6 +804,7 @@ function usesElsewhere(entry: VisibleIfEntry, targets: GateTarget[]): boolean {
   return targets.find((t) => t.value === entry.field)?.group === 'elsewhere'
 }
 
+// [impl->req~edt-60~1]
 /** Editor for one node's `visibleIf` gate. Modeled on `SchemaInfoDialog`
  *  (shared `.modal*` classes, closable by ×/Escape/outside-click) but with
  *  Cancel/Save: the draft lives here and hits the store in one `updateNode`

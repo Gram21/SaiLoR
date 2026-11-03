@@ -1,3 +1,4 @@
+// [impl->req~con-520~1]
 import { useState } from 'react'
 import { editorSeatFinished, useEditorStore } from '../state/editorStore'
 import { aiSeatId } from '../model/project'
@@ -6,6 +7,10 @@ import { personCounts } from '../model/strict'
 export const STRICT_DISCLAIMER =
   'Strict mode is a workflow aid, not security. Anyone can pick a different person or edit the files.'
 
+// [impl->req~edt-130~1]
+// [impl->req~edt-140~1]
+// [impl->req~edt-160~1]
+// [impl->req~edt-170~1]
 /** Persons, their paper assignments and their finished work, for strict mode. */
 export function StrictModeEditor() {
   const strict = useEditorStore((s) => s.strict)

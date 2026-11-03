@@ -15,6 +15,7 @@ export interface Completeness {
   total: number
 }
 
+// [impl->req~dat-220~1]
 /** True if `required` appears anywhere in the schema, including nested groups. */
 export function hasRequiredFields(defs: ResolvedDef[]): boolean {
   return defs.some((def) => (isField(def) && def.required) || hasRequiredFields(def.children))
@@ -91,6 +92,7 @@ function walk(
   for (const def of defs) {
     if (!isFieldVisible(def, tree ?? {}, gateAncestors, gateRoot)) continue
     const raw = tree?.[def.name]
+    // [impl->req~dat-230~1]
     const instances = Array.isArray(raw) ? raw : []
     for (const inst of instances) {
       if (!inst || typeof inst !== 'object') continue

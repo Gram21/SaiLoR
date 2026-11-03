@@ -11,6 +11,7 @@ const MOD = getPlatform().kind !== 'browser' && isMac ? '⌘' : 'Ctrl'
  *  description has none or more than one — a multi-link description still
  *  needs the right-click popover since there's no way to guess "which one". */
 export function findSingleLink(segments: LinkifySegment[]): string | undefined {
+  // [impl->req~ann-60~1]
   const links = segments.filter((s) => s.href)
   return links.length === 1 ? links[0].href : undefined
 }
@@ -55,6 +56,7 @@ export function NodeName({
   const popoverRef = useRef<HTMLDivElement>(null)
 
   // A required field is marked so the reviewer sees it before validating.
+  // [impl->req~ann-70~1]
   const label = (
     <>
       {def.name}

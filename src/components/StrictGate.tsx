@@ -1,5 +1,7 @@
 import { STRICT_MANAGER, consolidationGateMissing, useStore } from '../state/store'
 
+// [impl->req~con-500~1]
+// [impl->req~con-510~1]
 /** Shown instead of the Consolidation form while assigned persons have not finished the paper. */
 export function StrictGate() {
   const missing = useStore((s) => consolidationGateMissing(s).map((p) => p.name).join(', '))

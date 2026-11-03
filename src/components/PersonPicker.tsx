@@ -1,7 +1,9 @@
+// [impl->req~con-520~1]
 import { STRICT_MANAGER, useStore } from '../state/store'
 import { personPapers, strictActive } from '../model/strict'
 import { STRICT_DISCLAIMER } from './StrictModeEditor'
 
+// [impl->req~con-450~1]
 /** Blocking "Who are you?" dialog for strict mode, shown until a person or the Manager is chosen. */
 export function PersonPicker() {
   const project = useStore((s) => s.project)

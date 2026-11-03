@@ -56,6 +56,8 @@ beforeEach(() => {
   })
 })
 
+// [utest->req~plt-100~1]
+// [utest->req~plt-110~1]
 describe('closing a project', () => {
   it('returns to the start screen immediately when there is nothing to save', () => {
     openProject()
@@ -134,6 +136,7 @@ describe('closing a project', () => {
   })
 })
 
+// [utest->req~plt-150~1]
 describe('recents availability', () => {
   it('marks entries whose file is gone as unavailable, without dropping them', async () => {
     recents = [

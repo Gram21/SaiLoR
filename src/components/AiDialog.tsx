@@ -1,3 +1,8 @@
+// [impl->req~llm-670~1]
+// [impl->req~llm-680~1]
+// [impl->req~llm-741~1]
+// [impl->req~llm-742~1]
+// [impl->req~llm-750~1]
 import { Fragment, useEffect, useState } from 'react'
 import {
   useAiStore,
@@ -58,6 +63,7 @@ function ValueCell({ value }: { value: FieldValue }) {
   return <>{String(value)}</>
 }
 
+// [impl->req~llm-580~1]
 /**
  * The control shown while editing a review row's value — one control per
  * field type, matching `Field.tsx`'s per-type choice (checkbox / enum
@@ -128,6 +134,7 @@ function deliveryOf(cfg: LlmConfig): 'text' | 'pdf' {
   return cfg.attach === 'pdf' && PROVIDERS[cfg.provider].supportsPdf ? 'pdf' : 'text'
 }
 
+// [impl->req~llm-430~1]
 /** Rough token/request range, plus a cost range when both targets involved
  *  have prices set — see cost.ts. Never blocks Start: called with whatever
  *  page counts are cached so far. */
@@ -180,6 +187,7 @@ function estimateLine(
 /** Mid-range tokens per extracted page, between cost.ts's low and high guesses. */
 const TOKENS_PER_PAGE = 750
 
+// [impl->req~llm-740~1]
 /** Whether the current paper probably exceeds the model's input window, from its page count alone. */
 function trimHint(selected: LlmConfig, mode: AiMode, pages: number | undefined, fewShotTokens: number): string | null {
   if (mode === 'classify' || deliveryOf(selected) === 'pdf' || pages === undefined) return null
@@ -196,6 +204,7 @@ const PHASE_LINE: Record<string, string> = {
   parsing: 'Reading the answer…',
 }
 
+// [impl->req~llm-380~1]
 const MODE_INFO: Record<AiMode, string> = {
   prompt: 'One request per paper: the model reads the paper once and proposes values.',
   agent:
@@ -218,6 +227,7 @@ function modelOption(c: LlmConfig): { id: string; label: string } {
   return { id: c.id, label: `${c.name} — ${PROVIDERS[c.provider].label} · ${c.model}` }
 }
 
+// [impl->req~llm-390~1]
 /** The consequences warning for turning on "annotate all papers", worded to stay
  *  accurate whichever mode is selected — shown both in the one-time confirmation
  *  and, once confirmed, as a standing reminder under the toggle. */
@@ -320,6 +330,7 @@ export function AiDialog() {
   const requestPdfFind = useStore((s) => s.requestPdfFind)
   const saveHandle = useStore((s) => s.saveHandle)
 
+  // [impl->req~llm-460~1]
   /** Clicking a paper-sourced evidence quote: switch to that paper if needed,
    *  ask `PdfViewer` to find+highlight it, and peek at the PDF (see `minimized`). */
   const jumpToEvidence = (paperId: string, quote: string) => {
@@ -1230,6 +1241,7 @@ function RunErrors({ errors }: { errors: { paperId: string; paperTitle: string; 
   )
 }
 
+// [impl->req~llm-590~1]
 /** Papers the reviewer skipped mid-batch (REQ-LLM-590) — not a failure, just
  *  a note that they're still eligible for a later run/resume. */
 function SkippedPapers({ papers }: { papers: PaperSkip[] }) {
@@ -1242,6 +1254,7 @@ function SkippedPapers({ papers }: { papers: PaperSkip[] }) {
   )
 }
 
+// [impl->req~llm-410~1]
 function JudgeCell({ row }: { row: ReviewRow }) {
   const judge = row.suggestion.judge
   if (!judge) return <span className="ai-dash">—</span>
@@ -1254,6 +1267,7 @@ function JudgeCell({ row }: { row: ReviewRow }) {
   )
 }
 
+// [impl->req~llm-460~1]
 /** A row's evidence quote is clickable when it names a passage in the paper
  *  itself — prompt mode always (no `source`), agent mode only when it didn't
  *  hand back a web URL instead. */
@@ -1261,6 +1275,8 @@ function isPaperEvidence(row: ReviewRow): boolean {
   return !row.suggestion.source || row.suggestion.source === 'paper'
 }
 
+// [impl->req~llm-210~1]
+// [impl->req~llm-580~1]
 function ReviewTable({
   rows,
   grouped,
@@ -1476,6 +1492,7 @@ function ReviewTable({
   )
 }
 
+// [impl->req~llm-660~1]
 /**
  * Re-check of values already in the seat. Only disagreements are actionable
  * and start unticked (a replacement overwrites a human answer); agreements and
@@ -1591,6 +1608,7 @@ function RecheckSection({
   )
 }
 
+// [impl->req~llm-740~1]
 /**
  * What the model did *not* give us, for one paper. The rejected list is
  * deliberately not hidden behind a soft word: it means the model said

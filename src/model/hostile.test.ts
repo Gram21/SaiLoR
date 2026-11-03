@@ -15,6 +15,7 @@ const wrap = (schema: unknown) => ({
 })
 
 describe('hostile project files', () => {
+  // [utest->req~dat-150~1]
   it('rejects a flat enormous min instead of exhausting memory', () => {
     // 139 bytes. `initTree` materializes max(min, 1) instances at load.
     expect(() => loadProject(wrap([{ name: 'A', type: 'string', min: 1_000_000_000, max: null }]))).toThrow(
@@ -30,6 +31,7 @@ describe('hostile project files', () => {
     expect(() => loadProject(wrap([node]))).toThrow(ProjectLoadError)
   })
 
+  // [utest->req~dat-20~1]
   it('rejects deep nesting as a ProjectLoadError, not a raw RangeError', () => {
     // zod's own validation is recursive and overflows around 700 levels. A
     // RangeError escaping here breaks loadProject's documented contract and

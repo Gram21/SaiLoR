@@ -1,3 +1,6 @@
+// [utest->req~llm-320~1]
+// [utest->req~llm-470~1]
+// [utest->req~llm-630~1]
 import { describe, it, expect } from 'vitest'
 import { gitButtonState, aiButtonState } from './Toolbar'
 import type { GitProbe, GitRepoInfo } from '../git/types'

@@ -1,6 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { mixedDiscardConfirmMessage, isProjectOwnPath } from './GitDialog'
 
+// [utest->req~git-160~1]
 describe('mixedDiscardConfirmMessage (warn before a commit silently reverts or deletes a Discard row)', () => {
   it('warns when a Discard row is mixed in among Use rows (field-only)', () => {
     const msg = mixedDiscardConfirmMessage(false, true, 2, 0, 'review.json')

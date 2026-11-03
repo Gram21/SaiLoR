@@ -55,6 +55,7 @@ const rect = { x: 0.1, y: 0.2, width: 0.3, height: 0.05 }
 /** `def` for a top-level repeatable field, by name — for `addInstance`. */
 const defOf = (name: string) => st().project!.schema.find((d) => d.name === name)!
 
+// [utest->req~ann-120~1]
 describe('removeInstance — reindexes canonical-path-keyed state', () => {
   beforeEach(() => {
     st().loadFromText(projectText(1), null, 'test.json')

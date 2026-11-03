@@ -43,6 +43,7 @@ function ratingOf(unit: Ratings, rater: string): string | null {
   return value ?? null
 }
 
+// [impl->req~con-300~1]
 /**
  * The `pe = 1` / `De = 0` trap shared by all three coefficients: if every
  * rating was the same single category, numerator and denominator are both
@@ -62,6 +63,7 @@ function degenerateNote(coefficient: string): string {
 // Cohen's kappa
 // ---------------------------------------------------------------------------
 
+// [impl->req~con-300~1]
 /**
  * Cohen's κ is defined for exactly two raters — `pe` comes from multiplying
  * each rater's marginal distribution together, which only makes sense pairwise.
@@ -91,6 +93,7 @@ export function cohenKappa(input: MetricInput): MetricResult {
   const pairs: Array<[string, string]> = []
   for (const unit of input.units) {
     const a = ratingOf(unit, r1)
+    // [impl->req~con-270~1]
     const b = ratingOf(unit, r2)
     if (a !== null && b !== null) pairs.push([a, b])
   }
@@ -134,6 +137,7 @@ export function cohenKappa(input: MetricInput): MetricResult {
 // Fleiss' kappa
 // ---------------------------------------------------------------------------
 
+// [impl->req~con-300~1]
 /**
  * Classic Fleiss' κ counts *how many* ratings each unit got per category,
  * never *which* rater gave which — this anonymity is what generalises past
@@ -177,6 +181,7 @@ export function fleissKappa(input: MetricInput): MetricResult {
   if (!applicability.usable) return { value: null, note: applicability.reason }
 
   const n = input.raters.length
+  // [impl->req~con-280~1]
   const N = input.units.length
 
   if (N < 2) {
@@ -227,6 +232,7 @@ export function fleissKappa(input: MetricInput): MetricResult {
 // Krippendorff's alpha (nominal)
 // ---------------------------------------------------------------------------
 
+// [impl->req~con-300~1]
 /**
  * Krippendorff's α tolerates the gaps the other two can't: any number of
  * raters, no requirement they rated the same units. Just needs >= 2 raters.
@@ -241,6 +247,7 @@ export function krippendorffAlphaApplicable(input: MetricInput): Applicability {
   return { usable: true }
 }
 
+// [impl->req~con-290~1]
 /**
  * The coincidence matrix behind one unit's contribution to α.
  *
@@ -285,6 +292,7 @@ function accumulateCoincidences(
   return { n, usableUnits }
 }
 
+// [impl->req~con-290~1]
 /**
  * Krippendorff's α (nominal) = 1 - Do/De via the coincidence matrix.
  *

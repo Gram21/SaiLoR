@@ -76,6 +76,7 @@ export function parseSchemaVersion(raw: unknown): string | null {
   return typeof raw === 'string' && raw !== '' ? raw : null
 }
 
+// [impl->req~dat-166~1]
 /** `id` and every version it descends from. */
 export function ancestorsOf(history: SchemaHistoryEntry[], id: string): Set<string> {
   const byId = new Map(history.map((e) => [e.id, e]))
@@ -100,6 +101,7 @@ function absorbedInto(history: SchemaHistoryEntry[], id: string): { entry: Schem
   return null
 }
 
+// [impl->req~edt-42~1]
 /**
  * Fold `moves` into the current version instead of starting a new one. Used
  * while the current version has not left this machine, so the history does not
@@ -126,6 +128,8 @@ export function amendVersion(
   return { id, history: [...history.slice(0, i), entry, ...history.slice(i + 1)] }
 }
 
+// [impl->req~dat-167~1]
+// [impl->req~dat-168~1]
 /**
  * The moves a file written under `fileVersion` has not seen yet, in history
  * order — or `'unknown'` when the project's history does not know that version

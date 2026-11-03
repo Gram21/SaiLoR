@@ -19,6 +19,7 @@ export function ExportPdfDialog() {
   const setOpen = useStore((s) => s.setExportPdfOpen)
   const paper = useStore(selectCurrentPaper)
   const marks = useStore((s) => s.currentPdfMarks())
+  // [impl->req~pdf-160~1]
   const saveHandle = useStore((s) => s.saveHandle)
 
   const [absPath, setAbsPath] = useState<string | null>(null)

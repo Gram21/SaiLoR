@@ -1,3 +1,4 @@
+// [utest->req~scr-80~1]
 import { describe, it, expect, vi } from 'vitest'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
 
@@ -42,6 +43,7 @@ function screeningProject(opts: { reviewers?: number; papers?: unknown[] } = {})
   })
 }
 
+// [utest->req~scr-70~1]
 describe('setScreeningDecision', () => {
   it('writes into the single-reviewer seat\'s annotations tree', () => {
     st().loadFromText(screeningProject(), null, 'test.json')
@@ -84,6 +86,7 @@ describe('setScreeningDecision', () => {
     expect(st().project!.papers[0].annotations.Decision[0].value).toBeNull()
   })
 
+  // [utest->req~scr-90~1]
   it('clears the reason in the same undo step when changing away from Exclude', () => {
     // A single paper, so auto-advance (undecided -> decided) never fires and
     // cannot move the selection out from under the second decision below.
@@ -108,6 +111,7 @@ describe('setScreeningDecision', () => {
     expect(after.annotations.Reason[0].value).toBe('Duplicate')
   })
 
+  // [utest->req~scr-100~1]
   it('writes decision and reason together in one undo step (the 1-9 shortcut path)', () => {
     st().loadFromText(screeningProject(), null, 'test.json')
     st().selectPaper('p1')
@@ -120,6 +124,7 @@ describe('setScreeningDecision', () => {
     expect(st().project!.papers[0].annotations.Decision[0].value).toBeNull()
   })
 
+  // [utest->req~scr-110~1]
   it('advances to the next undecided paper on undecided -> decided', () => {
     st().loadFromText(screeningProject(), null, 'test.json')
     st().selectPaper('p1')
@@ -161,6 +166,7 @@ describe('setScreeningDecision', () => {
     expect(paper.annotations.Reason[0].value).toBeNull()
   })
 
+  // [utest->req~scr-110~1]
   it('stops at the last paper rather than wrapping', () => {
     st().loadFromText(screeningProject({ papers: [{ id: 'only', title: 'Only', authors: [], pdf: '', annotations: {} }] }), null, 'test.json')
     st().selectPaper('only')
@@ -169,6 +175,7 @@ describe('setScreeningDecision', () => {
   })
 })
 
+// [utest->req~scr-130~1]
 describe('setScreeningReason', () => {
   it('is a no-op unless the seat\'s decision is Exclude', () => {
     st().loadFromText(screeningProject(), null, 'test.json')
@@ -195,6 +202,7 @@ describe('setScreeningReason', () => {
 })
 
 describe('applyAiSuggestions on a screening project', () => {
+  // [utest->req~scr-150~1]
   it('refuses and fills nothing', () => {
     st().loadFromText(screeningProject(), null, 'test.json')
     st().selectPaper('p1')
@@ -208,6 +216,7 @@ describe('applyAiSuggestions on a screening project', () => {
   })
 })
 
+// [utest->req~scr-160~1]
 describe('adoptAllUnanimousScreening', () => {
   it('returns 0 for a single-reviewer project', () => {
     st().loadFromText(screeningProject(), null, 'test.json')

@@ -301,6 +301,7 @@ beforeEach(async () => {
 })
 
 describe('runPull', () => {
+  // [utest->req~git-290~1]
   it('up to date: a notice, no reload, no abort', async () => {
     beginPullResult = { kind: 'up-to-date' }
     await useGitStore.getState().runPull()
@@ -363,6 +364,8 @@ describe('runPull', () => {
     expect(finishCalls).toHaveLength(0)
   })
 
+  // [utest->req~git-210~1]
+  // [utest->req~git-255~1]
   it('a schema both sides extended merges node by node instead of aborting', async () => {
     beginPullResult = {
       kind: 'merge',
@@ -379,6 +382,7 @@ describe('runPull', () => {
     expect(written).toContain('Extra Y')
   })
 
+  // [utest->req~git-130~1]
   it('an unparseable revision aborts the merge and writes nothing', async () => {
     beginPullResult = {
       kind: 'merge',
@@ -409,7 +413,11 @@ describe('runPull', () => {
   })
 })
 
+// [utest->req~git-540~1]
+// [utest->req~git-550~1]
+// [utest->req~git-560~1]
 describe('merge dry run and undo', () => {
+  // [utest->req~git-140~1]
   const preview: MergePreview = {
     kind: 'preview',
     ref: 'origin/main',
@@ -487,6 +495,7 @@ describe('refreshFieldReview (via refreshStatus)', () => {
     expect(useGitStore.getState().panel?.fieldReview).toBeNull()
   })
 
+  // [utest->req~git-150~1]
   it('a revision fails to read — fieldReview stays null, no error surfaced', async () => {
     statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
     headContentResult = null
@@ -556,6 +565,7 @@ describe('refreshFieldReview (via refreshStatus)', () => {
     headContentResult = paperMetaText('Old Title')
     workingContentResult = paperMetaText('New Title')
     await useGitStore.getState().refreshStatus()
+    // [utest->req~git-200~1]
     const id = useGitStore.getState().panel!.fieldReview!.changes.fields[0].id
     useGitStore.getState().setFieldDisposition(id, 'discard')
 
@@ -582,6 +592,7 @@ describe('setFieldDisposition / setAllFieldDispositions', () => {
 
   it('setAllFieldDispositions sets every field and paper row at once', () => {
     useGitStore.getState().setAllFieldDispositions('ignore')
+    // [utest->req~git-180~1]
     const review = useGitStore.getState().panel!.fieldReview!
     for (const f of review.changes.fields) expect(review.decisions[f.id]).toBe('ignore')
     for (const p of review.changes.papers) expect(review.decisions[p.id]).toBe('ignore')
@@ -716,6 +727,7 @@ describe('Amend', () => {
     expect(useGitStore.getState().panel?.notice).toBe('Amended.')
   })
 
+  // [utest->req~git-310~1]
   it('runCommit passes amend through to commitPartial when a field review is active', async () => {
     statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
     headContentResult = paperMetaText('Old Title')
@@ -787,6 +799,7 @@ describe('runDiscard — field review (writeWorking)', () => {
 
     const call = writeWorkingCalls[0]
     const meta = JSON.parse(call.working.metaText) as { papers: { title: string }[] }
+    // [utest->req~git-340~1]
     const annotations = fileContent(call.working, 'a/consolidated.json') as {
       annotations: { 'Study Type': { value: string }[] }
     }
@@ -825,6 +838,7 @@ describe('takeAll — scoped bulk resolution', () => {
   // Mirrors the hazard GitMergeDialog guards against: "Use all mine" must
   // not resolve a conflict in a *different* reviewer's own tree just because
   // it was passed a scope that excludes it.
+  // [utest->req~git-350~1]
   const mine: FieldConflict = {
     id: conflictId('a', { kind: 'review', reviewer: '1' }, 'Study Type'),
     paperId: 'a',
@@ -946,6 +960,7 @@ describe('requestSwitchBranch / resolveBranchSwitchPrompt', () => {
     expect(branchSwitchFinishCalls).toEqual([])
   })
 
+  // [utest->req~git-330~1]
   it('"carryOver" refuses when something outside the project is also dirty', async () => {
     statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
     await useGitStore.getState().refreshStatus()
@@ -1023,6 +1038,7 @@ describe('requestSwitchBranch / resolveBranchSwitchPrompt', () => {
     expect(useGitStore.getState().panel?.merge).toBeNull()
   })
 
+  // [utest->req~git-230~1]
   it('finishing a branch-switch merge calls finishBranchSwitch, not finishPull', async () => {
     statusChanges = [{ path: 'review.json', code: ' M', unmerged: false }]
     await useGitStore.getState().refreshStatus()
@@ -1147,6 +1163,7 @@ describe('Merge branch prompt', () => {
     expect(useGitStore.getState().panel?.mergeBranchPrompt).toEqual({ branch: 'feature' })
   })
 
+  // [utest->req~git-360~1]
   it('does nothing when there is no other branch to merge', () => {
     useGitStore.setState({ branches: [{ name: 'main', current: true, remote: false }] })
     useGitStore.getState().openMergeBranchPrompt()
@@ -1440,6 +1457,7 @@ describe('runDiscardFile', () => {
   })
 })
 
+// [utest->req~git-350~1]
 describe('a carry-over that cannot be put back is never silent', () => {
   // The original bug: when the automatic abort's stash pop failed, the panel
   // refreshed and looked clean while the reviewer's uncommitted readings sat
@@ -1485,6 +1503,7 @@ describe('a carry-over that cannot be put back is never silent', () => {
   })
 })
 
+// [utest->req~git-440~1]
 describe('stashed changes', () => {
   // These tests swap single methods on the shared fake; put them back so no
   // later test inherits a stub it did not ask for.
@@ -1529,6 +1548,7 @@ describe('stashed changes', () => {
     expect(useGitStore.getState().panel?.error).toMatch(/annotations\/p1\/reviewer-1\.json/)
   })
 
+  // [utest->req~git-460~1]
   it('restores onto a branch that does not already exist', async () => {
     const calls: string[] = []
     fakeGit.stashBranch = async (_root, _rel, _sha, branch) => {
@@ -1545,6 +1565,7 @@ describe('stashed changes', () => {
   })
 })
 
+// [utest->req~git-425~1]
 describe('keeping the unpulled count fresh', () => {
   const original = { ...fakeGit }
   afterEach(() => {

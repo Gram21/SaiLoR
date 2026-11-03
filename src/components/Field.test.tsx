@@ -106,6 +106,7 @@ describe('Field: link popover header', () => {
   })
 })
 
+// [utest->req~dat-410~1]
 describe('Field: unique repeatable field', () => {
   it('refuses a value that repeats another entry and shows an inline hint', async () => {
     st().loadFromText(

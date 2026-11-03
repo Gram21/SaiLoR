@@ -1,3 +1,4 @@
+// [utest->req~plt-140~1]
 import { describe, it, expect, beforeEach } from 'vitest'
 import { readRecents, pushRecent, removeRecent, shortenPath, MAX_RECENTS } from './recents'
 

@@ -87,6 +87,7 @@ fn non_empty_dir(p: &Path) -> bool {
     fs::read_dir(p).is_ok_and(|mut e| e.next().is_some())
 }
 
+// [impl->req~plt-90~1]
 pub fn annotations_dir_users(
     session: &Mutex<Session>,
     project_path: &str,
@@ -112,6 +113,7 @@ pub async fn project_annotations_dir_users(
     annotations_dir_users(&session, &project_path, &folder, &paper_ids, screening)
 }
 
+// [impl->req~plt-96~1]
 /// Rename the folder first and put it back if the project file cannot be written.
 pub fn move_dir(session: &Mutex<Session>, project_path: &str, folder: &str) -> Result<(), String> {
     let key = known(session, project_path, "change")?;
@@ -190,6 +192,7 @@ fn sorted_names(dir: &Path) -> Option<Vec<String>> {
     Some(names)
 }
 
+// [impl->req~plt-95~1]
 /// The folder and every project file using it, if others share it; recorded for the split.
 pub fn shared(session: &Mutex<Session>, project_path: &str) -> Result<Option<Shared>, String> {
     let key = known(session, project_path, "inspect")?;
@@ -281,6 +284,7 @@ fn base_name(p: &str) -> String {
         .into_owned()
 }
 
+// [impl->req~plt-95~1]
 /// Split the listed folder. All checks run first; then `applySplit`'s order:
 /// copy, point each project file at its folder, delete, remove emptied folders.
 pub fn split(session: &Mutex<Session>, project_path: &str, plan: &SplitPlan) -> Result<(), String> {
@@ -402,6 +406,9 @@ pub async fn project_split_annotations(
     split(&session, &project_path, &plan)
 }
 
+// [utest->req~plt-90~1]
+// [utest->req~plt-95~1]
+// [utest->req~plt-96~1]
 #[cfg(test)]
 mod tests {
     use super::*;

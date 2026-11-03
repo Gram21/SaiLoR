@@ -1,3 +1,4 @@
+// [utest->req~dat-172~1]
 import { describe, it, expect } from 'vitest'
 import { ownAnnotationPathMatcher, ownAnnotationPathsIn } from './ownAnnotationPath'
 
@@ -73,6 +74,7 @@ describe('ownAnnotationPathMatcher', () => {
   })
 })
 
+// [utest->req~git-170~1]
 describe('ownAnnotationPathsIn', () => {
   const changes = [
     { path: 'annotations/p1/consolidated.json' },
@@ -104,6 +106,7 @@ describe('ownAnnotationPathsIn', () => {
   })
 })
 
+// [utest->req~git-170~1]
 describe('ownAnnotationPathsIn needs files, not collapsed folders', () => {
   it('does not recognise a collapsed untracked folder — which is why callers pass -uall', () => {
     // Plain `git status` reports a paper folder with nothing tracked in it as

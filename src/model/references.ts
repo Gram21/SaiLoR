@@ -25,6 +25,7 @@ export interface RefEntry {
 
 type Format = 'bibtex' | 'ris' | 'csl-json'
 
+// [impl->req~dat-360~1]
 /** Parse a reference file. `filename` picks the format; content-sniff as a fallback. */
 export function parseReferences(text: string, filename: string): RefEntry[] {
   try {
@@ -81,6 +82,7 @@ function normalizeAuthorName(raw: string): string {
   return collapseSpace(rest ? `${rest} ${last}` : last)
 }
 
+// [impl->req~dat-370~1]
 function collapseSpace(s: string): string {
   return s.replace(/\s+/g, ' ').trim()
 }
@@ -420,6 +422,7 @@ function parseBibEntry(raw: string): RefEntry | null {
   // publisher (last resort) — first non-empty wins.
   for (const key of ['journal', 'journaltitle', 'booktitle', 'publisher']) {
     if (!fields.has(key)) continue
+    // [impl->req~dat-380~1]
     const venue = cleanBibValue(fields.get(key)!)
     if (venue) {
       entry.venue = venue
@@ -437,6 +440,7 @@ function parseBibEntry(raw: string): RefEntry | null {
   return entry
 }
 
+// [impl->req~dat-360~1]
 function parseBibtex(text: string): RefEntry[] {
   const out: RefEntry[] = []
   for (const raw of splitBibEntries(text)) {
@@ -507,6 +511,7 @@ function appendRis(cur: RisDraft, tag: string, cont: string): void {
   else if (tag === 'N2' && cur.abstract) cur.abstract = `${cur.abstract} ${text}`
 }
 
+// [impl->req~dat-360~1]
 function parseRis(text: string): RefEntry[] {
   const lines = text.split(/\r\n|\r|\n/)
   const records: RefEntry[] = []
@@ -651,6 +656,7 @@ function parseCslItem(raw: unknown): RefEntry | null {
   return { title, authors, doi, year, venue, abstract }
 }
 
+// [impl->req~dat-360~1]
 function parseCslJson(text: string): RefEntry[] {
   let data: unknown
   try {

@@ -1,3 +1,7 @@
+// [impl->req~pdf-185~1]
+// [impl->req~ui-80~1]
+// [impl->req~con-500~1]
+// [impl->req~llm-470~1]
 import { useEffect, useMemo } from 'react'
 import { useStore, selectCurrentPaper, currentTree, currentFinished, consolidationGateMissing } from '../state/store'
 import { normalizeTree, isFieldVisible } from '../model/annotations'
@@ -58,6 +62,7 @@ export function AnnotationPanel() {
     const verdicts = new Map<string, ConsolidationFieldStatus>()
     if (!isConsolidation || !project || !paper) return verdicts
     for (const verdict of paperVerdicts(project.schema, paper, project.reviewers)) {
+      // [impl->req~ann-90~1]
       const status = consolidationFieldStatus(
         verdict.answeredBy.length,
         project.reviewers,
@@ -74,6 +79,7 @@ export function AnnotationPanel() {
   // Consolidation sees every run, a reviewer seat only the runs with no
   // `reviewer` attribution (predating that field, or genuinely seat-agnostic)
   // or attributed to itself — never another reviewer's own AI run.
+  // [impl->req~llm-570~1]
   const relevantAiUsage = useMemo(() => {
     if (!paper) return []
     if (isConsolidation) return paper.aiUsage
@@ -87,6 +93,7 @@ export function AnnotationPanel() {
   // runs, so every field is in the DOM by the time `querySelector` looks.
   useEffect(() => {
     if (!pendingFieldJump) return
+    // [impl->req~ann-10~1]
     const el = document.querySelector(`[data-canonical="${CSS.escape(pendingFieldJump)}"]`)
     el?.scrollIntoView({ block: 'center' })
     setFlashFieldPath(pendingFieldJump)
@@ -109,6 +116,7 @@ export function AnnotationPanel() {
   // unattributed, so the form is withheld rather than guessing who it is for
   // (see `currentReviewer` in store.ts). The reviewer switch lives in the
   // toolbar above.
+  // [impl->req~ann-80~1]
   const noReviewerPicked = (project?.reviewers ?? 1) > 1 && currentReviewer === null
   if (noReviewerPicked) {
     return (
@@ -173,6 +181,8 @@ export function AnnotationPanel() {
 
   // Humans may still select the AI's seat to look at or correct its work — no
   // hard lock, just a heads-up about whose answers are sitting there.
+  // [impl->req~ann-30~1]
+  // [impl->req~ui-30~1]
   const isAiSeat = !!project && currentReviewer === aiSeatId(project)
 
   return (

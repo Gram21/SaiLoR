@@ -35,6 +35,7 @@ function projectOf(files: FileSet): Project {
   )
 }
 
+// [impl->req~plt-136~1]
 /**
  * The project to save after a clash. `base` is the project as last read or
  * written, `mine` the reviewer's unsaved one, `disk` what is there now.

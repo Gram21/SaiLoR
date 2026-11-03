@@ -6,6 +6,7 @@ export function Unavailable() {
   return <p className="llm-hint llm-wide">Available in the desktop app.</p>
 }
 
+// [impl->req~llm-730~1]
 /** The explicit-consent step that sits between "show the plan" and "download". */
 export function ConsentBox(p: {
   label: string

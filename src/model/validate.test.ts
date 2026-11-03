@@ -113,6 +113,7 @@ describe('required', () => {
 
   // The important case: an unchecked box is a real answer (false), so a boolean
   // is never "empty" — not when it is false, and not when it is missing.
+  // [utest->req~dat-190~1]
   it('NEVER flags a required boolean, whether false or null', () => {
     const schema = [
       def({ name: 'Relevant', type: 'boolean', required: true }),
@@ -134,6 +135,7 @@ describe('required', () => {
     expect(issues).toEqual([])
   })
 
+  // [utest->req~dat-200~1]
   it('skips a required field hidden by an unanswered visibleIf gate', () => {
     const schema = [
       def({ name: 'Relevant', type: 'boolean' }),
@@ -628,6 +630,7 @@ describe('validateProject', () => {
   })
 })
 
+// [utest->req~dat-215~1]
 describe('answers hidden by a schema change are reported', () => {
   const schema = [{ name: 'Study Type', type: 'string' as const }]
 

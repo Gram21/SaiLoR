@@ -1,3 +1,4 @@
+// [utest->req~dat-172~1]
 import { describe, it, expect } from 'vitest'
 import type { AnnotationDef } from './schema'
 import {
@@ -90,6 +91,7 @@ describe('splitProjectFiles', () => {
     const { files } = splitProjectFiles(project)
 
     const r1 = files.find((f) => f.relPath === 'p1/reviewer-1.json')
+    // [utest->req~dat-280~1]
     const r2 = files.find((f) => f.relPath === 'p1/reviewer-2.json')
     expect(r1?.text).toContain('Relevant')
     expect(r2?.text).toBeNull()
@@ -340,6 +342,7 @@ describe('assembleLegacyProjectJson + splitProjectFiles round-trip', () => {
   })
 })
 
+// [utest->req~plt-61~1]
 describe('isDeletableAnnotationText', () => {
   it('allows deleting an empty or valid-JSON file', () => {
     expect(isDeletableAnnotationText('')).toBe(true)
@@ -360,6 +363,7 @@ describe('isDeletableAnnotationText', () => {
   })
 })
 
+// [utest->req~dat-165~1]
 describe('a schema field removed while others still have answers under it', () => {
   const withSchema = (schema: AnnotationDef[]) =>
     JSON.stringify({
@@ -424,6 +428,7 @@ describe('a schema field removed while others still have answers under it', () =
   })
 })
 
+// [utest->req~dat-165~1]
 describe('a schema node that loses every child', () => {
   const projectWith = (schema: AnnotationDef[]) =>
     JSON.stringify({

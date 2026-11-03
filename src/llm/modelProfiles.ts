@@ -1,3 +1,4 @@
+// [impl->req~llm-710~1]
 import { findCatalogEntry } from './localCatalog'
 import type { LlmConfig } from './types'
 
@@ -68,6 +69,7 @@ function baseProfile(cfg: LlmConfig): SystemOneProfile {
   }
 }
 
+// [impl->req~llm-742~1]
 export function systemOneProfileFor(cfg: LlmConfig): SystemOneProfile {
   const p = baseProfile(cfg)
   // A model the app runs itself is started with the catalog's window, which can differ from the family default

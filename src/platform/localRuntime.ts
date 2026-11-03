@@ -1,3 +1,4 @@
+// [impl->req~llm-700~1]
 /**
  * Renderer-facing types and API of the app-managed local runtime (llama.cpp's
  * `llama-server` + downloaded decision-model files). Desktop only — the adapter

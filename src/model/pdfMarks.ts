@@ -1,3 +1,4 @@
+// [impl->req~pdf-110~1]
 /**
  * A reviewer's highlights/notes on a paper's PDF, rendered as an overlay
  * rather than written into the PDF file — keeps the PDF binary untouched so
@@ -141,11 +142,13 @@ export function mergeMarksList(ours: PdfMark[], theirs: PdfMark[]): PdfMark[] {
  *  since body text rarely starts past the page's own midpoint. */
 const COLUMN_SPLIT_X = 0.5
 
+// [impl->req~pdf-130~1]
 /** Which half of the page a rect's left edge falls in: 0 left, 1 right. */
 function columnOf(rect: MarkRect): number {
   return rect.x < COLUMN_SPLIT_X ? 0 : 1
 }
 
+// [impl->req~pdf-130~1]
 /**
  * Stable reading order for cycling through marks: by page, then column
  * (`columnOf`, left before right), then the first rect's `y` within that

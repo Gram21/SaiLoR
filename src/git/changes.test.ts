@@ -601,6 +601,7 @@ describe('composeContents — round-trip and shape invariants', () => {
   })
 })
 
+// [utest->req~git-490~1]
 describe('papersWithBookkeepingChanges', () => {
   const SIMPLE_SCHEMA: AnnotationDef[] = [{ name: 'Relevant', type: 'boolean' }]
 

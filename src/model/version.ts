@@ -1,3 +1,4 @@
+// [impl->req~plt-300~1]
 /**
  * Update check: compare the running version against the latest GitHub release.
  *

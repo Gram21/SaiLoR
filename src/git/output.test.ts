@@ -188,6 +188,7 @@ describe('gitErrorText', () => {
   })
 })
 
+// [utest->req~git-550~1]
 describe('mergePreviewText', () => {
   const preview = (partial: Partial<Extract<MergePreview, { kind: 'preview' }>>) => ({
     kind: 'preview' as const,

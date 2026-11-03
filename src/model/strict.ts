@@ -26,6 +26,8 @@ type StrictProject = Pick<Project, 'strict' | 'reviewers' | 'screening'>
 const isRecord = (v: unknown): v is Record<string, unknown> =>
   typeof v === 'object' && v !== null && !Array.isArray(v)
 
+// [impl->req~edt-110~1]
+// [impl->req~edt-120~1]
 /**
  * Read `config.strict`, `config.persons` and `config.assignments`. Returns no
  * config when none of the keys is present, so an older project stays as it was.
@@ -89,6 +91,7 @@ export function parseStrictConfig(
   return { strict: { enabled: c.strict === true, persons, assignments }, problems }
 }
 
+// [impl->req~edt-110~1]
 /** The config keys for `strict`; each key only when it holds a value. */
 export function strictConfigJson(strict: StrictConfig | undefined): Record<string, unknown> {
   if (!strict) return {}
@@ -121,16 +124,19 @@ export function liveAssignments(project: StrictProject, paperId: string): Assign
   return (project.strict?.assignments[paperId] ?? []).filter((a) => a.seat <= project.reviewers)
 }
 
+// [impl->req~con-470~1]
 export function assignedSeat(project: StrictProject, paperId: string, personId: string): string | null {
   const a = liveAssignments(project, paperId).find((x) => x.person === personId)
   return a ? String(a.seat) : null
 }
 
+// [impl->req~con-460~1]
 /** The ids of the papers assigned to a person, in project order. */
 export function personPapers(project: StrictProject & Pick<Project, 'papers'>, personId: string): string[] {
   return project.papers.filter((p) => assignedSeat(project, p.id, personId) !== null).map((p) => p.id)
 }
 
+// [impl->req~con-500~1]
 /** The assigned persons who have not finished their seat on this paper. */
 export function missingFinishers(project: StrictProject, paper: Pick<Paper, 'id' | 'reviewsFinished'>): Person[] {
   const persons = project.strict?.persons ?? []
@@ -140,6 +146,7 @@ export function missingFinishers(project: StrictProject, paper: Pick<Paper, 'id'
     .filter((p): p is Person => p !== undefined)
 }
 
+// [impl->req~edt-160~1]
 export function personCounts(
   strict: StrictConfig,
   reviewers: number,
@@ -156,6 +163,7 @@ export function personCounts(
   return counts
 }
 
+// [impl->req~edt-150~1]
 /**
  * Give every paper without an assignment `perPaper` persons, in turn over the
  * persons (round robin), on the given seats in order.

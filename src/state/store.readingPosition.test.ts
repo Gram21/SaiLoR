@@ -70,6 +70,7 @@ beforeEach(() => {
   localStorage.clear()
 })
 
+// [utest->req~lst-70~1]
 describe('reading position is persisted per project', () => {
   it('restores the paper and initial page when the same project (by handle path) is reopened', () => {
     const handle = handleAt('/reviews/x.json')

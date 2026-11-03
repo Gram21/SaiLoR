@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom'
 import type { ModelInfo } from '../llm/types'
 import { COMBO_MENU_MAX_HEIGHT } from './ComboBox'
 
+// [impl->req~llm-270~1]
 interface ModelPickerProps {
   id: string
   value: string

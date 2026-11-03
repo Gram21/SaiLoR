@@ -1,3 +1,4 @@
+// [utest->req~dat-169~1]
 import { describe, it, expect } from 'vitest'
 import { annotationsDirOf, annotationsDirProblem, defaultSplitDirName, DEFAULT_ANNOTATIONS_DIR, filesCollide, isFeedbackPath, sharesPaper } from './annotationsDir'
 import { paperIdProblem } from './paperId'
@@ -70,6 +71,7 @@ describe('sharesPaper', () => {
   })
 })
 
+// [utest->req~dat-172~1]
 describe('filesCollide', () => {
   const screening = { config: { screening: { reasons: ['x'] } }, papers: [{ id: 'p1' }] }
   const review = { config: { schema: [] }, papers: [{ id: 'p1' }] }
@@ -81,6 +83,7 @@ describe('filesCollide', () => {
   })
 })
 
+// [utest->req~dat-172~1]
 describe('highlight file names', () => {
   it('are the kind\'s own, with a screening project\'s old ones recognised as such', () => {
     expect(marksFileName(true, '1')).toBe('screening-marks-1.json')
@@ -104,6 +107,7 @@ describe('highlight file names', () => {
   })
 })
 
+// [utest->req~dat-390~1]
 describe('reserved feedback folder', () => {
   it('is not a paper id or an annotations folder name, in any case', () => {
     for (const n of ['feedback', 'Feedback', 'FEEDBACK']) {

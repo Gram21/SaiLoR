@@ -4,6 +4,8 @@
  * the IndexedDB handle store (see idb.ts). Newest first, capped at MAX_RECENTS.
  */
 
+// [impl->req~plt-140~1]
+// [impl->req~plt-150~1]
 export interface RecentEntry {
   id: string
   /** File name, e.g. "review.json". */

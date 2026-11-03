@@ -25,6 +25,7 @@ export function GitHistoryDialog() {
   if (!history) return null
 
   const toggle = (hash: string) => {
+    // [impl->req~git-370~1]
     const next = !expanded[hash]
     setExpanded((prev) => ({ ...prev, [hash]: next }))
     if (next) void loadCommitDiff(hash)

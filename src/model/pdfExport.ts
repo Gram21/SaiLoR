@@ -17,6 +17,7 @@ export interface PdfRectPoints {
   height: number
 }
 
+// [impl->req~pdf-160~1]
 /**
  * Convert a `MarkRect` — a fraction (0..1) of the page's rendered box,
  * top-left origin, y-down — into PDF point space for a page of size

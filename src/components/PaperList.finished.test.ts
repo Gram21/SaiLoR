@@ -204,6 +204,7 @@ describe('paperAnnotationState — what the dot’s color says', () => {
   })
 })
 
+// [utest->req~dat-250~1]
 describe('config.finishCheckbox: false — a fulfilled schema is finished', () => {
   const noTick = (paper: Record<string, unknown>, schema: unknown[] = SCHEMA) =>
     loadProject({

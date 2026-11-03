@@ -1,3 +1,4 @@
+// [impl->req~con-120~1]
 import { makeInstance, type AnnotationValueTree, type InstanceNode } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
 import type { StoredAlignment, StoredSlot } from '../model/alignment'
@@ -61,6 +62,7 @@ export function storedAsTreeAlignment(stored: StoredAlignment): TreeAlignment {
   return out
 }
 
+// [impl->req~con-130~1]
 /**
  * Give the consolidated tree one entry per slot.
  *

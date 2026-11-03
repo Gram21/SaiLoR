@@ -1,3 +1,4 @@
+// [impl->req~scr-250~1]
 import { useRef } from 'react'
 import { useEditorStore } from '../state/editorStore'
 import { countPapersUsingReason } from '../screening/reasonUsage'
@@ -28,6 +29,7 @@ export function ScreeningReasonsEditor() {
     setScreeningReasons(next)
   }
 
+  // [impl->req~scr-260~1]
   /**
    * On blur: if this row was renamed away from a reason papers still record,
    * offer to carry those decisions over to the new label. Declining leaves
@@ -59,6 +61,7 @@ export function ScreeningReasonsEditor() {
     )
     if (migrate) migrateScreeningReason(from, to)
   }
+  // [impl->req~scr-270~1]
   /**
    * Removing a reason papers still record orphans those decisions just as an
    * empty rename does — so it warns the same way rather than dropping them

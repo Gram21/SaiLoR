@@ -12,6 +12,7 @@ afterEach(() => {
 })
 
 describe('useCloseGuard', () => {
+  // [utest->req~plt-370~1]
   it('routes File > Close project through the store close request', () => {
     const original = useStore.getState().requestCloseProject
     const requestCloseProject = vi.fn()

@@ -75,6 +75,7 @@ fn feedback_dir_for(
     Ok(Some(dir))
 }
 
+// [impl->req~dat-390~1]
 pub fn write_feedback(
     session: &Mutex<Session>,
     project: &Path,
@@ -102,6 +103,7 @@ pub struct FeedbackFile {
     bytes: u64,
 }
 
+// [impl->req~dat-390~1]
 pub fn list_feedback(
     session: &Mutex<Session>,
     project: &Path,
@@ -126,6 +128,7 @@ pub fn list_feedback(
     Ok(out)
 }
 
+// [impl->req~dat-390~1]
 #[tauri::command]
 pub async fn project_write_feedback(
     session: State<'_, Mutex<Session>>,
@@ -136,6 +139,7 @@ pub async fn project_write_feedback(
     write_feedback(&session, Path::new(&project_path), &file_name, &content)
 }
 
+// [impl->req~dat-390~1]
 #[tauri::command]
 pub async fn project_list_feedback(
     session: State<'_, Mutex<Session>>,
@@ -149,6 +153,8 @@ mod tests {
     use super::*;
     use crate::project::tests::tmp;
 
+    // [utest->req~dat-390~1]
+    // [utest->req~llm-680~1]
     #[test]
     fn name_and_content_rules() {
         for ok in [
@@ -183,6 +189,8 @@ mod tests {
         );
     }
 
+    // [utest->req~dat-390~1]
+    // [utest->req~llm-680~1]
     #[test]
     fn write_never_overwrites_and_lists_sorted() {
         let d = tmp("feedback");

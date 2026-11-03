@@ -69,6 +69,7 @@ function writtenPdfs(): string[] {
   return json.papers.map((p) => p.pdf)
 }
 
+// [utest->req~plt-80~1]
 describe('saveAs re-derives the PDF paths for the new location', () => {
   beforeEach(() => {
     written = null
@@ -132,6 +133,7 @@ describe('saveAs re-derives the PDF paths for the new location', () => {
     expect(useStore.getState().project!.papers[0].pdf).toBe(rebased)
   })
 
+  // [utest->req~plt-90~1]
   it('takes a folder named after the file when the destination already uses the default one', async () => {
     destination = at('/shared/backup.json')
     folderUsers = { annotations: ['other.json'] }

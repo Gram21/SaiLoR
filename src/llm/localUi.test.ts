@@ -1,3 +1,5 @@
+// [utest->req~llm-730~1]
+// [utest->req~llm-732~1]
 import { describe, it, expect } from 'vitest'
 import type { HardwareInfo } from '../platform/localRuntime'
 import { formatBytes, hardwareSentence, isCloudflareAccountId, memoryCheck, suggestContext, windowSentence } from './localUi'

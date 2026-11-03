@@ -125,12 +125,14 @@ describe('the AI button in the toolbar', () => {
     expect(screen.queryByRole('button', { name: 'AI' })).not.toBeInTheDocument()
   })
 
+  // [utest->req~llm-80~1]
   it('is not rendered when the project does not set config.ai', () => {
     st().loadFromText(JSON.stringify({ version: 1, config: { schema: [{ name: 'F', type: 'string' }] }, papers: [] }), null, 't.json')
     render(<Toolbar />)
     expect(screen.queryByRole('button', { name: 'AI' })).not.toBeInTheDocument()
   })
 
+  // [utest->req~llm-80~1]
   it('is not rendered when the project turns AI off', () => {
     st().loadFromText(annotationProjectJson({ ai: false }), null, 'test.json')
     render(<Toolbar />)
@@ -138,6 +140,7 @@ describe('the AI button in the toolbar', () => {
   })
 })
 
+// [utest->req~plt-62~1]
 describe('unreadable annotation files stay visible for the whole session', () => {
   it('shows a warning that re-opens the list, and none when every file parsed', async () => {
     st().loadFromText(projectJson({ reviewers: 2 }), null, 'test.json')
@@ -198,6 +201,7 @@ describe('REQ-UI-20: toolbar project controls', () => {
     expect(st().userSettingsOpen).toBe(true)
   })
 
+  // [utest->req~ui-20~1]
   it('always renders Close project to keep the layout stable, hidden and disabled without a project', async () => {
     const { rerender } = render(<Toolbar />)
     const hidden = screen.getByTitle('Close project')
@@ -250,6 +254,7 @@ describe('REQ-UI-20: toolbar project controls', () => {
   })
 })
 
+// [utest->req~git-420~1]
 describe('unpulled work and repository setup are visible in the toolbar', () => {
   const repo = (behind: number | null) => ({
     root: '/repo',

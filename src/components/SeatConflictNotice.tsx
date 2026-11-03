@@ -1,3 +1,4 @@
+// [impl->req~git-510~1]
 import { useStore, selectCurrentPaper } from '../state/store'
 import { useGitStore } from '../state/gitStore'
 import { seatTakenByOther, ownerLabel } from '../git/seatOwner'

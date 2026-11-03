@@ -49,6 +49,7 @@ const PROJECT = JSON.stringify({
   papers: [{ id: 'a', title: 'Paper A', authors: [], pdf: 'a.pdf', annotations: {} }],
 })
 
+// [utest->req~plt-130~1]
 describe('save() does not clear dirty (or lose the edit) for a change made during the write', () => {
   beforeEach(() => {
     written = null
@@ -120,6 +121,7 @@ describe('resyncProjectFromDisk clears undo/redo history', () => {
   })
 })
 
+// [utest->req~dat-300~1]
 describe('opening a project never writes to disk by itself', () => {
   it('does not resave a file whose trees predate a schema field added later', async () => {
     // The file was written before "Notes" existed, so the loaded project and

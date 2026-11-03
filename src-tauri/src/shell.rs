@@ -9,11 +9,13 @@ use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 
 const REPO_URL: &str = "https://github.com/Gram21/SaiLoR";
 
+// [impl->req~plt-250~1]
 /// Only these schemes leave the app, in the system browser.
 pub fn is_external(url: &Url) -> bool {
     matches!(url.scheme(), "http" | "https")
 }
 
+// [impl->req~plt-250~1]
 /// The app document itself: `tauri://localhost`, `http(s)://tauri.localhost` on Windows,
 /// or the dev server in debug builds.
 pub fn is_app_url(url: &Url, dev_url: Option<&Url>) -> bool {
@@ -51,6 +53,9 @@ enum Action {
     Emit(&'static str),
 }
 
+// [impl->req~ui-100~1]
+// [impl->req~plt-120~1]
+// [impl->req~plt-310~1]
 fn action(id: &str) -> Option<Action> {
     Some(match id {
         "app:reload" => Action::Reload,
@@ -69,6 +74,9 @@ fn action(id: &str) -> Option<Action> {
     })
 }
 
+// [impl->req~plt-120~1]
+// [impl->req~plt-310~1]
+// [impl->req~plt-370~1]
 fn run(app: &AppHandle, action: Action) {
     let window = app.get_webview_window("main");
     match action {
@@ -120,6 +128,8 @@ fn run(app: &AppHandle, action: Action) {
     }
 }
 
+// [impl->req~plt-250~1]
+// [impl->req~plt-390~1]
 /// Builds the `main` window from `tauri.conf.json` (`create: false`) with link routing.
 pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     if let Ok(dir) = app.path().config_dir() {
@@ -167,6 +177,7 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
     Ok(())
 }
 
+// [impl->req~plt-11~1]
 /// A second launch exits; the running instance comes to the front.
 pub fn focus_main(app: &AppHandle) {
     if let Some(w) = app.get_webview_window("main") {
@@ -184,6 +195,7 @@ fn has_profile(dir: &Path) -> bool {
     LEGACY_ITEMS.iter().any(|i| dir.join(i).exists())
 }
 
+// [impl->req~plt-180~1]
 /// Copies the pre-rename settings into `<config>/SaiLoR` once, only into an unused
 /// profile. Best effort: errors are logged, startup goes on.
 pub fn migrate_legacy(config_dir: &Path) {
@@ -205,6 +217,7 @@ pub fn migrate_legacy(config_dir: &Path) {
     }
 }
 
+// [impl->req~plt-390~1]
 /// Moves the 1.x data folder (`<config>/SaiLoR`) to `~/.sailor` once, only if the new
 /// folder does not exist. Falls back to a copy when a rename is not possible.
 /// Best effort: errors are logged, startup goes on.
@@ -232,6 +245,7 @@ pub fn hide(dir: &Path) {
 #[cfg(not(windows))]
 pub fn hide(_dir: &Path) {}
 
+// [impl->req~plt-180~1]
 /// Recursive copy that skips symlinks and never replaces an existing file.
 fn copy_new(from: &Path, to: &Path) -> std::io::Result<()> {
     let meta = match std::fs::symlink_metadata(from) {
@@ -254,6 +268,10 @@ fn copy_new(from: &Path, to: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
+// [impl->req~ui-100~1]
+// [impl->req~plt-120~1]
+// [impl->req~plt-310~1]
+// [impl->req~plt-370~1]
 /// The default macOS menu, with Settings in the app menu (`app:settings`) and the app
 /// history for Undo and Redo (`app:undo`, `app:redo`).
 /// The page sees Cmd+Z first; the menu item fires only when the page did not handle it.
@@ -304,6 +322,10 @@ fn macos_menu(app: &App) -> tauri::Result<()> {
     Ok(())
 }
 
+// [impl->req~ui-100~1]
+// [impl->req~plt-120~1]
+// [impl->req~plt-310~1]
+// [impl->req~plt-370~1]
 /// Windows and Linux have no default menu bar. This builds the Electron menus.
 #[cfg(not(target_os = "macos"))]
 fn menu(app: &App) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
@@ -376,6 +398,7 @@ mod tests {
         Url::parse(s).unwrap()
     }
 
+    // [utest->req~plt-250~1]
     #[test]
     fn only_http_and_https_are_external() {
         for ok in ["http://example.org/a", "https://doi.org/10.1/x"] {
@@ -393,6 +416,7 @@ mod tests {
         }
     }
 
+    // [utest->req~plt-250~1]
     #[test]
     fn app_urls_stay_in_the_window() {
         let dev = url("http://localhost:5173");
@@ -420,6 +444,7 @@ mod tests {
         assert!(!is_app_url(&url("http://localhost:5173/"), None));
     }
 
+    // [utest->req~plt-390~1]
     #[test]
     fn data_dir_moves_once_and_never_overwrites() {
         let root = std::env::temp_dir().join(format!("sailor-data-{}", std::process::id()));
@@ -443,6 +468,9 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
     }
 
+    // [utest->req~plt-120~1]
+    // [utest->req~plt-310~1]
+    // [utest->req~plt-370~1]
     #[test]
     fn menu_ids_map_to_actions() {
         assert_eq!(action("app:reload"), Some(Action::Reload));
@@ -465,6 +493,7 @@ mod tests {
         d
     }
 
+    // [utest->req~plt-180~1]
     #[test]
     fn migrates_legacy_profile_once() {
         let root = tmp("migrate");
@@ -497,6 +526,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
     }
 
+    // [utest->req~plt-180~1]
     #[test]
     fn copy_never_overwrites_and_skips_missing() {
         let root = tmp("copynew");
@@ -509,6 +539,7 @@ mod tests {
         let _ = std::fs::remove_dir_all(&root);
     }
 
+    // [utest->req~plt-180~1]
     #[test]
     fn migration_without_legacy_creates_nothing() {
         let root = tmp("nolegacy");

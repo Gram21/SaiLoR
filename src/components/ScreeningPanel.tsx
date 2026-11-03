@@ -1,3 +1,4 @@
+// [impl->req~ui-80~1]
 import { useStore, useAiMark, selectCurrentPaper, currentTree } from '../state/store'
 import {
   SCREENING_DECISION,
@@ -27,6 +28,7 @@ export function ScreeningPanel() {
   const setScreeningSummaryOpen = useStore((s) => s.setScreeningSummaryOpen)
   const setAgreementOpen = useStore((s) => s.setAgreementOpen)
   const setDisagreementsOpen = useStore((s) => s.setDisagreementsOpen)
+  // [impl->req~scr-80~1]
   const adoptAllUnanimousScreening = useStore((s) => s.adoptAllUnanimousScreening)
 
   const [decisionMarked, confirmDecision] = useAiMark([], SCREENING_DECISION, 0)
@@ -55,6 +57,9 @@ export function ScreeningPanel() {
   const counts = screeningCounts(project, currentReviewer)
   const pending = isConsolidation ? pendingUnanimous(project) : 0
 
+  // [impl->req~scr-120~1]
+  // [impl->req~scr-170~1]
+  // [impl->req~scr-220~1]
   const decide = (decision: string) => {
     setScreeningDecision(status === (decision === DECISION_INCLUDE ? 'included' : 'excluded') ? null : decision)
   }

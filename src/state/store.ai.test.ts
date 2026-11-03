@@ -1,3 +1,4 @@
+// [utest->req~llm-470~1]
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
 import { normalizeTree } from '../model/annotations'
@@ -134,6 +135,7 @@ describe('applyAiSuggestions: filling empty fields', () => {
     expect(st().past).toHaveLength(1)
   })
 
+  // [utest->req~llm-220~1]
   it('touches only the paper that is open', () => {
     apply([sug('Summary', 'about paper one')])
     expect(paperById('p2').annotations['Summary'][0].value).toBeNull()
@@ -343,6 +345,7 @@ describe('applyAiSuggestions: hand-edited, malformed trees', () => {
 })
 
 describe('applyAiSuggestions: coalescing', () => {
+  // [utest->req~llm-240~1]
   it('does not let the reviewer’s next keystroke fold into the AI’s undo entry', () => {
     st().setFieldValue([], 'Summary', 0, 'typed')
     expect(st().past).toHaveLength(1)
@@ -428,6 +431,7 @@ describe('applyAiSuggestions: usage disclosure', () => {
     expect(usage()).toHaveLength(1)
   })
 
+  // [utest->req~llm-150~1]
   it('persists the optional disclosure fields (mode, judge, rounds, verdicts, fewShot) when given', () => {
     st().applyAiSuggestions(
       [sug('Summary', 'Uses X to do Y.')],
@@ -634,6 +638,7 @@ describe('applyAiSuggestionsBatch: routing into the AI seat (REQ-LLM-470)', () =
   })
 })
 
+// [utest->req~dat-410~1]
 describe('applyAiSuggestionsBatch: unique fields', () => {
   it('skips a suggestion that repeats an entry of a unique field', () => {
     st().loadFromText(

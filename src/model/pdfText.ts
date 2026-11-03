@@ -14,6 +14,7 @@ export interface PdfText {
   empty: boolean
 }
 
+// [impl->req~pdf-180~1]
 /**
  * Below this many non-whitespace characters across the whole document, there's
  * nothing here worth sending to an LLM — treat it as a scanned/image-only PDF
@@ -95,12 +96,14 @@ function collapseWhitespace(text: string): string {
  */
 export const DEFAULT_MAX_PAGES = 2000
 
+// [impl->req~llm-430~1]
 /**
  * Just the page count, for a cost estimate that has no reason to walk every
  * page's text content — `getDocument` alone parses the page tree, not the
  * (much heavier) per-page content streams `extractPdfText` reads.
  */
 export async function countPdfPages(data: ArrayBuffer): Promise<number> {
+  // [impl->req~llm-120~1]
   const doc = await pdfjs.getDocument({ data }).promise
   try {
     return doc.numPages

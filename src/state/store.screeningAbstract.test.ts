@@ -71,6 +71,7 @@ beforeEach(() => {
   )
 })
 
+// [utest->req~scr-290~1]
 describe('extraction fires on selection, not on opening the PDF', () => {
   it('extracts for the paper the project opens on, with no interaction at all', async () => {
     st().loadFromText(screeningProject([paper('p1'), paper('p2')]), null, 'test.json')

@@ -1,3 +1,4 @@
+// [impl->req~llm-630~1]
 import type { Paper, ProjectProtocol } from '../model/project'
 import { DECISION_EXCLUDE, DECISION_INCLUDE, SCREENING_DECISION, SCREENING_REASON } from '../screening/schema'
 import { extractObject } from './parse'
@@ -126,6 +127,7 @@ export function parseScreeningAnswer(raw: string, reasons: string[]): ScreeningO
 // System One (Classify)
 // ---------------------------------------------------------------------------
 
+// [impl->req~llm-711~1]
 /**
  * One `/v1/systemone` request with two choice questions: the decision, and the
  * exclusion reason (ignored unless the decision is Exclude). Returns the

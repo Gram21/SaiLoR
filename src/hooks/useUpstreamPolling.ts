@@ -2,6 +2,7 @@ import { useEffect } from 'react'
 import { useGitStore } from '../state/gitStore'
 import { BACKGROUND_FETCH_INTERVAL_MS } from '../git/fetchPolicy'
 
+// [impl->req~git-425~1]
 /**
  * Keeps the toolbar's "↓ N to pull" fresh while a project in a repository with
  * an upstream is open, by fetching every two minutes (`refreshUpstream`, which

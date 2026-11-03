@@ -1,3 +1,4 @@
+// [impl->req~scr-380~1]
 /**
  * Does a path under a project's `annotations/` folder belong to *this*
  * project, or to a sibling one sharing the same directory?
@@ -25,6 +26,7 @@
  * it out for reuse rather than a third copy of the same regex.
  */
 
+// [impl->req~git-230~1]
 /**
  * Builds a predicate for "does this path, relative to the `annotations/`
  * folder (i.e. already stripped of the `<dir>/` prefix), belong to the
@@ -59,6 +61,7 @@ export function ownAnnotationPathMatcher(raw: unknown): (relUnderDir: string) =>
     `^([^/]+)\\/(?:${consolidatedName}|${reviewerPrefix}-\\d+|${marksPrefix}-consolidated|${marksPrefix}-\\d+)\\.json$`,
   )
   return (relUnderDir: string) => {
+    // [impl->req~git-170~1]
     const m = re.exec(relUnderDir)
     return !!m && paperIds.has(m[1])
   }

@@ -12,6 +12,8 @@ export interface TokenUsage {
   outputTokens: number
 }
 
+// [impl->req~llm-430~1]
+// [impl->req~llm-490~1]
 /** Null when either price is unset — never guessed. */
 export function costOf(usage: TokenUsage, cfg: LlmConfig): number | null {
   if (cfg.inputPrice === undefined || cfg.outputPrice === undefined) return null
@@ -35,6 +37,7 @@ export interface EstimateRunInput {
   systemOneRequests?: number
 }
 
+// [impl->req~llm-620~1]
 /** Shown next to the estimate when web search is on. */
 export const WEB_SEARCH_NOTE =
   "Provider web search is billed per search on top of tokens (check your provider's pricing)"
@@ -84,6 +87,8 @@ function fieldsFor(fieldsPerPaper: number[] | number, index: number): number {
   return Array.isArray(fieldsPerPaper) ? (fieldsPerPaper[index] ?? 0) : fieldsPerPaper
 }
 
+// [impl->req~llm-430~1]
+// [impl->req~llm-710~1]
 export function estimateRun(input: EstimateRunInput): TokenEstimate {
   const perPage = input.delivery === 'pdf' ? PDF_TOKENS_PER_PAGE : TEXT_TOKENS_PER_PAGE
   const fewShot = input.fewShotTokens ?? 0
@@ -176,6 +181,7 @@ export function estimateRun(input: EstimateRunInput): TokenEstimate {
   }
 }
 
+// [impl->req~llm-430~1]
 /** Null when the target has no price set — see `costOf`. */
 export function estimateCost(
   estimate: TokenEstimate,
@@ -187,6 +193,7 @@ export function estimateCost(
   return { low, high }
 }
 
+// [impl->req~llm-430~1]
 /**
  * Same as `estimateCost`, but for an agent-mode run split across two targets:
  * `agentCfg` prices everything except the judge calls, `judgeCfg` prices

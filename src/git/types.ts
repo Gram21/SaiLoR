@@ -1,3 +1,4 @@
+// [impl->req~git-20~1]
 /**
  * Shapes shared between the Rust shell's git plumbing and the
  * renderer's `GitPlatform` seam. Nothing here talks to git or the DOM — see
@@ -10,6 +11,7 @@ import type { StashRestoreResult } from './stashOps'
 export type { AnnotationAuthors, StashEntry, StashRestoreResult }
 import type { ProjectFileEntry } from '../model/project'
 
+// [impl->req~git-390~1]
 /** The split-file form of a project (`splitProjectFiles`'s output): `project.json`
  *  plus a reconciled `annotations/` folder. Passed across IPC since commits/reverts span many files. */
 export interface SplitProject {
@@ -17,6 +19,7 @@ export interface SplitProject {
   files: ProjectFileEntry[]
 }
 
+// [impl->req~git-10~1]
 /** The outcome of one `git` invocation. A non-zero exit is data, not an
  *  exception — see `run_git`'s doc comment in src-tauri/src/git.rs. */
 export interface GitRun {
@@ -90,6 +93,7 @@ export interface GitBranch {
   remote: boolean
 }
 
+// [impl->req~git-220~1]
 /**
  * The outcome of switching to another branch — mirrors `PullStart`'s shape.
  * Nothing is mutated yet except where `'merge'` says otherwise (see `beginBranchSwitch`).

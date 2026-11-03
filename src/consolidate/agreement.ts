@@ -4,6 +4,7 @@ import { projectVerdicts, type FieldVerdict } from './disagreements'
 import { SCREENING_DECISION } from '../screening/schema'
 import { isRepeatable } from './align'
 
+// [impl->req~con-310~1]
 /**
  * Reduces a project down to the opaque `raters`/`units` shape `metrics.ts`
  * consumes. `metrics.ts` deliberately knows nothing about papers, schemas or
@@ -68,6 +69,7 @@ export interface FieldAgreement {
  * forgotten) by every caller.
  */
 export function agreementInput(project: Project): AgreementInput {
+  // [impl->req~con-320~1]
   const raters = Array.from({ length: project.reviewers }, (_, i) => String(i + 1))
   const units: Ratings[] = []
   let skipped = 0
@@ -114,6 +116,7 @@ export function agreementInput(project: Project): AgreementInput {
   })
   const perField = [...perFieldUnits.entries()].map(toAgreement)
 
+  // [impl->req~con-440~1]
   const perEntry = [...entryUnits(project.schema, decisionOnly ? [] : verdicts, raters).entries()].map(toAgreement)
 
   return { input: { raters, units }, unitCount: units.length, skipped, perField, perEntry }

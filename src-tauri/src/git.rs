@@ -23,15 +23,21 @@ use std::time::{Duration, Instant};
 use tauri::{AppHandle, Manager};
 use tauri_plugin_dialog::DialogExt;
 
+// [impl->req~git-50~1]
 const TIMEOUT: Duration = Duration::from_secs(30);
+// [impl->req~git-50~1]
 /// Clone, push, and the fetch before a pull or merge.
 const NETWORK_TIMEOUT: Duration = Duration::from_secs(900);
+// [impl->req~git-425~1]
 /// `BACKGROUND_FETCH_TIMEOUT_MS` from src/git/fetchPolicy.ts.
 const BACKGROUND_FETCH_TIMEOUT: Duration = Duration::from_secs(60);
+// [impl->req~git-370~1]
 const LOG_MAX_COMMITS: usize = 250;
+// [impl->req~git-530~1]
 /// `GIT_MAX_BUFFER`: git is killed when stdout or stderr passes this size.
 const MAX_OUTPUT: usize = 32 * 1024 * 1024;
 
+// [impl->req~git-40~1]
 /// Inherited variables that would point git at another repository (`gitEnv`).
 const STRIPPED_ENV: [&str; 7] = [
     "GIT_DIR",
@@ -43,6 +49,7 @@ const STRIPPED_ENV: [&str; 7] = [
     "GIT_CONFIG_GLOBAL",
 ];
 
+// [impl->req~git-40~1]
 /// `NON_INTERACTIVE_ENV` from src/git/fetchPolicy.ts.
 const NON_INTERACTIVE_ENV: [(&str, &str); 4] = [
     ("GCM_INTERACTIVE", "never"),
@@ -51,6 +58,7 @@ const NON_INTERACTIVE_ENV: [(&str, &str); 4] = [
     ("SSH_ASKPASS", ""),
 ];
 
+// [impl->req~git-425~1]
 /// `FETCH_COMMAND_KEYS` from src/git/fetchPolicy.ts (a regex git evaluates).
 const FETCH_COMMAND_KEYS: &str = r"^(core\.(sshcommand|gitproxy|askpass)|credential\..*helper|remote\..*\.(uploadpack|receivepack)|include\.path|includeif\..*\.path)$";
 
@@ -73,6 +81,7 @@ const IN_PROGRESS: [(&str, &str, &str); 5] = [
 ];
 const CARRY_OVER_STRANDED: &str = "Your uncommitted changes were not lost — they are kept as a stash. Open Git and use \"Stashed changes\" to restore them.";
 
+// [impl->req~git-411~1]
 const SETUP_AUTHOR: &str = "SaiLoR <noreply@sailor.invalid>";
 const SETUP_COMMIT_MESSAGE: &str = "chore: configure git for SaiLoR annotation data\n\n\
 Normalises JSON to LF so a Windows checkout does not rewrite every line,\n\
@@ -138,6 +147,7 @@ impl GitRun {
     }
 }
 
+// [impl->req~git-30~1]
 /// `GIT_SAFE_CONFIG`: `-c` beats every config file, so a received repository
 /// cannot name a command git runs on `status` or `diff`.
 fn safe_config() -> Vec<String> {
@@ -176,6 +186,8 @@ fn reader<R: Read + Send + 'static>(
     rx
 }
 
+// [impl->req~git-20~1]
+// [impl->req~git-40~1]
 /// `runGit`: a non-zero exit is data, not an error. `code: None` means git did
 /// not start, was killed at `timeout`, or wrote more than `MAX_OUTPUT`.
 pub fn run_git(
@@ -187,6 +199,8 @@ pub fn run_git(
     run_git_capped(args, cwd, timeout, extra_env, MAX_OUTPUT)
 }
 
+// [impl->req~git-50~1]
+// [impl->req~git-530~1]
 fn run_git_capped(
     args: &[&str],
     cwd: Option<&Path>,
@@ -305,6 +319,7 @@ fn js_trim(s: &str) -> &str {
 
 // ---- Validators (src/git/relpath.ts, ref.ts, url.ts) ----
 
+// [impl->req~git-70~1]
 /// `relPathProblem`: `None` when `p` is a safe repo-relative path.
 pub fn rel_path_problem(p: &str) -> Option<&'static str> {
     if p.is_empty() {
@@ -330,6 +345,7 @@ pub fn rel_path_problem(p: &str) -> Option<&'static str> {
     None
 }
 
+// [impl->req~git-80~1]
 /// `refProblem`: `None` when `r` is a safe branch name.
 pub fn ref_problem(r: &str) -> Option<&'static str> {
     if r.is_empty() {
@@ -441,6 +457,7 @@ pub fn validate_clone_path(dest: &str) -> Option<&'static str> {
     None
 }
 
+// [impl->req~git-70~1]
 fn assert_rel_path(p: &str) -> Result<(), String> {
     match rel_path_problem(p) {
         Some(why) => Err(format!("Refusing to act on the path \"{p}\" ({why}).")),
@@ -448,6 +465,7 @@ fn assert_rel_path(p: &str) -> Result<(), String> {
     }
 }
 
+// [impl->req~git-80~1]
 fn assert_ref(r: &str) -> Result<(), String> {
     match ref_problem(r) {
         Some(why) => Err(format!("Refusing to act on the ref \"{r}\" ({why}).")),
@@ -455,6 +473,7 @@ fn assert_ref(r: &str) -> Result<(), String> {
     }
 }
 
+// [impl->req~git-480~1]
 /// A stash is named by commit sha across IPC.
 fn assert_sha(sha: &str) -> Result<(), String> {
     let hex = sha.bytes().all(|b| matches!(b, b'0'..=b'9' | b'a'..=b'f'));
@@ -465,6 +484,7 @@ fn assert_sha(sha: &str) -> Result<(), String> {
     }
 }
 
+// [impl->req~git-90~1]
 /// `assertRoot`: `root` came from `git:info` or `git:clone` this session.
 fn assert_root(session: &Mutex<Session>, root: &str) -> Result<PathBuf, String> {
     let p = normalize(Path::new(root));
@@ -688,6 +708,7 @@ pub fn own_matcher(raw: &Value) -> impl Fn(&str) -> bool {
     }
 }
 
+// [impl->req~git-170~1]
 /// `ownAnnotationPathsIn`: changed paths (and rename sources) of this project's own files.
 pub fn own_annotation_paths_in(changes: &[Change], dir: &str, raw: &Value) -> Vec<String> {
     let matches = own_matcher(raw);
@@ -749,6 +770,7 @@ pub struct Managed {
     had_existing: bool,
 }
 
+// [impl->req~git-410~1]
 /// `applyManagedBlock` from src/git/repoSetup.ts.
 pub fn apply_managed_block(existing: Option<&str>, body: &str) -> Managed {
     let block = format!("{BLOCK_BEGIN}\n{body}\n{BLOCK_END}");
@@ -785,6 +807,7 @@ pub fn apply_managed_block(existing: Option<&str>, body: &str) -> Managed {
     }
 }
 
+// [impl->req~git-410~1]
 /// `planRepoSetup`: (attributes, ignore, upToDate, needsConsent).
 fn plan_repo_setup(
     attributes: Option<&str>,
@@ -914,6 +937,7 @@ fn write_contents(
 
 // ---- Shared flows ----
 
+// [impl->req~git-400~1]
 /// `detachedHeadRefusal`: a commit on a detached HEAD belongs to no branch.
 fn detached_refusal(root: &Path) -> Option<GitRun> {
     let b = git(root, &["symbolic-ref", "--short", "-q", "HEAD"]);
@@ -949,6 +973,7 @@ fn own_changed_paths(root: &Path, rel_path: &str, meta_text: &str) -> Result<Vec
     ))
 }
 
+// [impl->req~git-215~1]
 fn merge_blocking_dirty(root: &Path, rel_path: &str) -> Vec<String> {
     let st = status_changes(root, false);
     merge_blocking_paths(
@@ -961,6 +986,7 @@ fn error(message: impl Into<String>) -> Value {
     json!({ "kind": "error", "message": message.into() })
 }
 
+// [impl->req~git-560~1]
 /// Why a merge, pull, or undo must not start now: a lock, an operation in progress, or a detached HEAD.
 fn merge_preflight(root: &Path) -> Option<String> {
     let mut args = vec!["rev-parse", "--git-path", "index.lock"];
@@ -1010,6 +1036,7 @@ fn newest_stamp(root: &Path, prefix: &str) -> Option<String> {
     r.ok.then(|| non_empty(r.out())).flatten()
 }
 
+// [impl->req~git-540~1]
 /// Saves HEAD as `refs/sailor/backup/<millis>` and prunes all but the newest backups.
 fn save_backup(root: &Path) -> Result<String, String> {
     let millis = std::time::SystemTime::now()
@@ -1055,6 +1082,7 @@ fn drop_backup(root: &Path, stamp: &str) {
     }
 }
 
+// [impl->req~git-540~1]
 fn record_result(root: &Path, stamp: &str) {
     git_owned(
         root,
@@ -1066,6 +1094,7 @@ fn record_result(root: &Path, stamp: &str) {
     );
 }
 
+// [impl->req~git-230~1]
 /// `beginMergeInto`: up to the point where the reviewer has to decide.
 fn begin_merge_into(root: &Path, rel_path: &str, r: &str) -> Result<Value, String> {
     if git(root, &["merge-base", "--is-ancestor", r, "HEAD"]).ok {
@@ -1143,6 +1172,7 @@ fn begin_merge_after_backup(root: &Path, rel_path: &str, r: &str) -> Result<Valu
     Ok(json!({ "kind": "merge", "ref": r, "base": base, "ours": ours, "theirs": theirs }))
 }
 
+// [impl->req~git-330~1]
 fn is_remote_tracking_ref(root: &Path, r: &str) -> bool {
     let run = git(
         root,
@@ -1151,6 +1181,7 @@ fn is_remote_tracking_ref(root: &Path, r: &str) -> bool {
     run.ok && run.out().starts_with("refs/remotes/")
 }
 
+// [impl->req~git-560~1]
 /// Checks shared by `pull_begin` and `merge_preview`; `Ok` is the upstream to merge.
 fn pull_target(root: &Path, rel_path: &str) -> Result<String, Value> {
     if let Some(message) = merge_preflight(root) {
@@ -1176,6 +1207,7 @@ fn pull_target(root: &Path, rel_path: &str) -> Result<String, Value> {
     Ok(up.out().to_string())
 }
 
+// [impl->req~git-560~1]
 /// Checks shared by `merge_begin` and `merge_preview`, after `assert_ref`.
 fn merge_target(root: &Path, rel_path: &str, r: &str) -> Result<(), Value> {
     if let Some(message) = merge_preflight(root) {
@@ -1210,6 +1242,7 @@ fn changed_between(root: &Path, from: &str, to: &str) -> Vec<String> {
         .collect()
 }
 
+// [impl->req~git-550~1]
 /// Paths that `git merge r` would leave conflicted, or the paths both sides changed if git is too old.
 fn expected_conflicts(root: &Path, base: &str, r: &str) -> Vec<String> {
     let tree = git(
@@ -1310,6 +1343,7 @@ fn list_stashes(root: &Path) -> Vec<StashEntry> {
     }
 }
 
+// [impl->req~git-480~1]
 fn resolve_stash_ref(root: &Path, sha: &str) -> Option<String> {
     list_stashes(root)
         .into_iter()
@@ -1317,6 +1351,7 @@ fn resolve_stash_ref(root: &Path, sha: &str) -> Option<String> {
         .map(|e| e.stash_ref)
 }
 
+// [impl->req~git-440~1]
 fn push_stash(root: &Path, rel_path: &str, raw: &Value, message: &str) -> GitRun {
     let st = status_changes(root, true);
     if !st.ok {
@@ -1423,6 +1458,7 @@ fn branch_from_stash(root: &Path, sha: &str, branch: &str, dir: &str) -> GitRun 
     git(root, &["stash", "branch", branch, &r])
 }
 
+// [impl->req~git-350~1]
 fn carry_over_ref(root: &Path) -> Option<String> {
     list_stashes(root)
         .into_iter()
@@ -1430,6 +1466,7 @@ fn carry_over_ref(root: &Path) -> Option<String> {
         .map(|e| e.stash_ref)
 }
 
+// [impl->req~git-350~1]
 fn pop_carry_over(root: &Path) -> GitRun {
     match carry_over_ref(root) {
         Some(r) => git(root, &["stash", "pop", &r]),
@@ -1446,6 +1483,7 @@ fn drop_carry_over(root: &Path) -> GitRun {
 
 // ---- Handlers (session-aware, synchronous; wrapped as commands below) ----
 
+// [impl->req~git-10~1]
 pub fn probe() -> Value {
     let r = run_git(&["--version"], None, TIMEOUT, &[]);
     if r.ok {
@@ -1460,6 +1498,7 @@ pub fn probe() -> Value {
     json!({ "available": false, "version": "", "error": e })
 }
 
+// [impl->req~git-100~1]
 pub fn clone(session: &Mutex<Session>, url: &str, dest: &str) -> Value {
     if let Some(e) = validate_git_url(url).or_else(|| validate_clone_path(dest)) {
         return json!({ "ok": false, "error": e });
@@ -1474,6 +1513,7 @@ pub fn clone(session: &Mutex<Session>, url: &str, dest: &str) -> Value {
     json!({ "ok": true, "dest": dest })
 }
 
+// [impl->req~git-110~1]
 pub fn info(session: &Mutex<Session>, project_path: &str) -> Option<Value> {
     let file = Path::new(project_path);
     let dir = dir_of(file);
@@ -1524,6 +1564,7 @@ pub fn info(session: &Mutex<Session>, project_path: &str) -> Option<Value> {
     }))
 }
 
+// [impl->req~git-120~1]
 pub fn status(session: &Mutex<Session>, root: &str) -> Result<Value, String> {
     let root = assert_root(session, root)?;
     let st = status_changes(&root, false);
@@ -1567,6 +1608,7 @@ pub fn working_content(
     Ok(project::read_project(session, &root.join(rel_path)).ok())
 }
 
+// [impl->req~git-370~1]
 pub fn log_begin(session: &Mutex<Session>, root: &str, rel_path: &str) -> Result<Value, String> {
     let root = assert_root(session, root)?;
     assert_rel_path(rel_path)?;
@@ -1592,6 +1634,7 @@ pub fn log_begin(session: &Mutex<Session>, root: &str, rel_path: &str) -> Result
     Ok(json!({ "commits": commits, "truncated": truncated, "error": null }))
 }
 
+// [impl->req~git-370~1]
 pub fn log_diff(
     session: &Mutex<Session>,
     root: &str,
@@ -1638,6 +1681,8 @@ pub fn commit(
     Ok(add_and_commit(&root, paths, message, amend))
 }
 
+// [impl->req~git-170~1]
+// [impl->req~git-180~1]
 fn add_and_commit(root: &Path, paths: &[String], message: &str, amend: bool) -> GitRun {
     let mut add: Vec<String> = vec!["add".into(), "--".into()];
     add.extend(paths.iter().cloned());
@@ -1654,17 +1699,20 @@ fn add_and_commit(root: &Path, paths: &[String], message: &str, amend: bool) -> 
     git_owned(root, &args)
 }
 
+// [impl->req~git-180~1]
 pub fn last_commit_message(session: &Mutex<Session>, root: &str) -> Result<Option<String>, String> {
     let root = assert_root(session, root)?;
     let r = git(&root, &["log", "-1", "--format=%B"]);
     Ok(r.ok.then(|| r.stdout.strip_suffix('\n').unwrap_or(&r.stdout).to_string()))
 }
 
+// [impl->req~git-320~1]
 pub fn push(session: &Mutex<Session>, root: &str) -> Result<GitRun, String> {
     let root = assert_root(session, root)?;
     Ok(run_git(&["push"], Some(&root), NETWORK_TIMEOUT, &[]))
 }
 
+// [impl->req~git-220~1]
 pub fn pull_begin(session: &Mutex<Session>, root: &str, rel_path: &str) -> Result<Value, String> {
     let root = assert_root(session, root)?;
     assert_rel_path(rel_path)?;
@@ -1674,6 +1722,8 @@ pub fn pull_begin(session: &Mutex<Session>, root: &str, rel_path: &str) -> Resul
     }
 }
 
+// [impl->req~git-80~1]
+// [impl->req~git-330~1]
 pub fn merge_begin(
     session: &Mutex<Session>,
     root: &str,
@@ -1689,6 +1739,7 @@ pub fn merge_begin(
     }
 }
 
+// [impl->req~git-550~1]
 /// The dry run before `pull_begin` (no `r`) or `merge_begin`: same refusals, no merge.
 pub fn merge_preview(
     session: &Mutex<Session>,
@@ -1711,6 +1762,7 @@ pub fn merge_preview(
     })
 }
 
+// [impl->req~git-540~1]
 /// Moves the branch back to the backup taken before the last merge or pull SaiLoR completed.
 pub fn undo_merge(session: &Mutex<Session>, root: &str, rel_path: &str) -> Result<GitRun, String> {
     let root = assert_root(session, root)?;
@@ -1762,6 +1814,7 @@ fn as_run(f: impl FnOnce() -> Result<GitRun, String>) -> GitRun {
     f().unwrap_or_else(GitRun::failed)
 }
 
+// [impl->req~git-570~1]
 pub fn pull_finish(
     session: &Mutex<Session>,
     root: &str,
@@ -1807,6 +1860,7 @@ pub fn pull_abort(session: &Mutex<Session>, root: &str) -> Result<GitRun, String
     Ok(git(&root, &["merge", "--abort"]))
 }
 
+// [impl->req~git-510~1]
 pub fn annotation_authors(
     session: &Mutex<Session>,
     root: &str,
@@ -1859,6 +1913,7 @@ pub fn repo_setup_status(
     }))
 }
 
+// [impl->req~git-411~1]
 pub fn apply_repo_setup(
     session: &Mutex<Session>,
     root: &str,
@@ -1907,6 +1962,7 @@ pub fn apply_repo_setup(
     Ok(git_owned(&root, &args))
 }
 
+// [impl->req~git-425~1]
 pub fn background_fetch(session: &Mutex<Session>, root: &str) -> Result<Value, String> {
     let root = assert_root(session, root)?;
     let risky = git(
@@ -1967,11 +2023,13 @@ pub fn branches(session: &Mutex<Session>, root: &str) -> Result<Vec<Value>, Stri
         .collect())
 }
 
+// [impl->req~git-340~1]
 pub fn branch_create(session: &Mutex<Session>, root: &str, name: &str) -> Result<GitRun, String> {
     let root = assert_root(session, root)?;
     Ok(git(&root, &["branch", "--", name]))
 }
 
+// [impl->req~git-360~1]
 pub fn branch_delete(session: &Mutex<Session>, root: &str, branch: &str) -> Result<GitRun, String> {
     let root = assert_root(session, root)?;
     Ok(git(&root, &["branch", "-d", "--", branch]))
@@ -1983,6 +2041,9 @@ pub fn checkout(session: &Mutex<Session>, root: &str, branch: &str) -> Result<Gi
     Ok(git(&root, &["checkout", branch, "--"]))
 }
 
+// [impl->req~dat-390~1]
+// [impl->req~git-340~1]
+// [impl->req~git-350~1]
 pub fn branch_switch_begin(
     session: &Mutex<Session>,
     root: &str,
@@ -2170,6 +2231,7 @@ pub fn stash_branch(
     ))
 }
 
+// [impl->req~git-150~1]
 /// `git:commitPartial`: write `committed`, stage and commit it, then always
 /// write `working` back.
 #[allow(clippy::too_many_arguments)]
@@ -2220,6 +2282,7 @@ pub fn write_working(
     }))
 }
 
+// [impl->req~git-190~1]
 pub fn discard_file(
     session: &Mutex<Session>,
     root: &str,
@@ -2277,6 +2340,7 @@ async fn blocking<T: Send + 'static>(
         .map_err(err)?
 }
 
+// [impl->req~git-10~1]
 #[tauri::command]
 pub async fn git_probe(app: AppHandle) -> Result<Value, String> {
     blocking(app, |_| Ok(probe())).await
@@ -2298,6 +2362,7 @@ pub async fn git_clone(app: AppHandle, url: String, dest: String) -> Result<Valu
     blocking(app, move |s| Ok(clone(s, &url, &dest))).await
 }
 
+// [impl->req~git-100~1]
 #[tauri::command]
 pub async fn git_pick_project_in(app: AppHandle, dir: String) -> Result<Option<String>, String> {
     app.dialog()
@@ -2634,6 +2699,7 @@ mod tests {
     use super::*;
     use crate::project::tests::tmp;
 
+    // [utest->req~git-530~1]
     #[test]
     fn output_over_the_cap_fails_without_data() {
         let r = run_git_capped(&["--version"], None, TIMEOUT, &[], 4);
@@ -2787,6 +2853,7 @@ mod tests {
         }
     }
 
+    // [utest->req~git-120~1]
     #[test]
     fn porcelain_and_log_parsers() {
         assert_eq!(
@@ -3065,6 +3132,7 @@ mod tests {
         assert_eq!(setup_paths("r/p.json").0, "r/.gitattributes");
     }
 
+    // [utest->req~git-90~1]
     #[test]
     fn sha_and_root_checks() {
         assert!(assert_sha(&"a".repeat(40)).is_ok());
@@ -3134,6 +3202,8 @@ mod tests {
         }
     }
 
+    // [utest->req~git-120~1]
+    // [utest->req~git-400~1]
     #[test]
     fn info_status_commit_and_detached_refusal() {
         let (d, s) = repo("git-basic");
@@ -3219,6 +3289,7 @@ mod tests {
         (a, b, s)
     }
 
+    // [utest->req~git-220~1]
     #[test]
     fn pull_fast_forward_merge_and_conflict_elsewhere() {
         let (a, b, s) = clone_pair("git-pull");
@@ -3379,6 +3450,7 @@ mod tests {
         kind
     }
 
+    // [utest->req~git-570~1]
     #[test]
     fn generated_merges_between_clones_of_a_bare_remote_stay_openable() {
         let (a, b, s) = bare_pair("git-fuzz", 6);
@@ -3443,6 +3515,7 @@ mod tests {
         assert!(saw_conflict);
     }
 
+    // [utest->req~git-550~1]
     #[test]
     fn preview_lists_incoming_papers_and_expected_conflicts() {
         let (a, b, s) = bare_pair("git-preview", 3);
@@ -3478,6 +3551,7 @@ mod tests {
         assert!(merge_preview(&s, &root(&a), "p.json", Some("--x")).is_err());
     }
 
+    // [utest->req~git-560~1]
     #[test]
     fn preflight_refuses_locks_operations_in_progress_and_detached_head() {
         let (a, _b, s) = bare_pair("git-preflight", 1);
@@ -3526,6 +3600,7 @@ mod tests {
         );
     }
 
+    // [utest->req~git-540~1]
     #[test]
     fn undo_restores_the_backup_only_while_head_is_the_merge_result() {
         let (a, b, s) = bare_pair("git-undo", 2);
@@ -3576,6 +3651,7 @@ mod tests {
         assert_eq!(backups(&a), none);
     }
 
+    // [utest->req~git-570~1]
     #[test]
     fn finish_refuses_a_merge_that_is_not_valid_json() {
         let (a, b, s) = bare_pair("git-badjson", 1);
@@ -3783,6 +3859,7 @@ mod tests {
         assert!(run("../x").stderr.contains("traversal"));
     }
 
+    // [utest->req~git-90~1]
     #[cfg(unix)]
     #[test]
     fn inside_root_follows_links() {

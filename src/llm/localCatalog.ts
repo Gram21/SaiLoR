@@ -1,3 +1,4 @@
+// [impl->req~llm-700~1]
 /**
  * Models the app can download and run itself. Shared by the main process
  * (which resolves a catalog id to a download URL and a file) and the renderer

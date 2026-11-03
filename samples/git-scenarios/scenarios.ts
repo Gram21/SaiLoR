@@ -1,3 +1,4 @@
+// [impl->req~git-520~1]
 import { execFileSync } from 'node:child_process'
 import { planRepoSetup } from '../../src/git/repoSetup'
 import { BRANCH_SWITCH_STASH_MESSAGE, MANUAL_STASH_PREFIX, parseStashList, STASH_LIST_FORMAT } from '../../src/git/stash'

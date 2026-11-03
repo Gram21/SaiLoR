@@ -1,3 +1,4 @@
+// [impl->req~git-430~1]
 import { useState } from 'react'
 import { useGitStore } from '../state/gitStore'
 import { describeStash, type StashEntry } from '../git/stash'
@@ -35,6 +36,7 @@ export function GitStashSection({ disabled }: { disabled: boolean }) {
     setNote('')
   }
 
+  // [impl->req~git-470~1]
   const drop = (entry: StashEntry) => {
     const ok = window.confirm(
       `Delete the stash "${describeStash(entry)}"?\n\nThe changes in it are not in any file or commit, ` +

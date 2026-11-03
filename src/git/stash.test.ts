@@ -1,3 +1,4 @@
+// [utest->req~git-430~1]
 import { describe, it, expect } from 'vitest'
 import { parseStashList, describeStash, stashBranchName, BRANCH_SWITCH_STASH_MESSAGE } from './stash'
 

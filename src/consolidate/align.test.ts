@@ -418,6 +418,7 @@ describe('alignNode', () => {
       '1': { Findings: [{ children: { Claim: [{ value: 'Alpha' }] } }] },
       '2': {},
     })
+    // [utest->req~con-115~1]
     const alignment = alignNode(schema, reviews, 'Findings')['Findings']
     expect(alignment.slots).toHaveLength(1)
     expect(alignment.slots[0].members['1']).toBe(0)

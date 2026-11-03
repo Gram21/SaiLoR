@@ -17,6 +17,8 @@ function seatTree(
   return paper.reviews[currentReviewer] ?? null
 }
 
+// [impl->req~scr-230~1]
+// [impl->req~scr-240~1]
 /**
  * The two cross-field rules the schema language cannot express. The screening
  * UI makes both unreachable (the Reason control disables itself unless the

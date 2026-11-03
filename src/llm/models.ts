@@ -1,3 +1,5 @@
+// [impl->req~llm-280~1]
+// [impl->req~llm-720~1]
 import type { LlmConfig, LlmHttpRequest, ModelInfo, ModelsPage, Provider, ReasoningProfile } from './types'
 import { API_KEY_SENTINEL } from './types'
 import { baseOf, join } from './providers'
@@ -84,6 +86,7 @@ function anthropicReasoning(capabilities: unknown): ReasoningProfile | null {
   if (!isRecord(effort) || effort.supported !== true) return null
   const order = ['low', 'medium', 'high', 'xhigh', 'max']
   const levels = order.filter((lvl) => {
+    // [impl->req~llm-250~1]
     const entry = effort[lvl]
     return isRecord(entry) && entry.supported === true
   })
@@ -92,6 +95,7 @@ function anthropicReasoning(capabilities: unknown): ReasoningProfile | null {
 
 // ---- List-models requests ----
 
+// [impl->req~llm-260~1]
 const V1_MODELS = '/v1/models'
 
 /**
@@ -236,6 +240,7 @@ function parseGoogleModels(json: unknown): ModelsPage {
   return { models, nextCursor }
 }
 
+// [impl->req~llm-430~1]
 function parseOpenRouterModels(json: unknown): ModelsPage {
   if (!isRecord(json) || !Array.isArray(json.data)) return { models: [] }
   const models = json.data.flatMap((m): ModelInfo[] => {

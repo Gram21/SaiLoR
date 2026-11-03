@@ -26,8 +26,10 @@ import type { Project } from '../model/project'
 export const SCREENING_DECISION = 'Decision'
 export const SCREENING_REASON = 'Reason'
 export const DECISION_INCLUDE = 'Include'
+// [impl->req~scr-20~1]
 export const DECISION_EXCLUDE = 'Exclude'
 
+// [impl->req~scr-30~1]
 /**
  * Seeded into a new screening project. Ordinary SLR exclusion reasons; the
  * author edits them. "Other" is here on purpose — a closed enum needs an
@@ -66,6 +68,7 @@ export function screeningSchemaDefs(config: ScreeningConfig): AnnotationDef[] {
   ]
 }
 
+// [impl->req~scr-10~1]
 /** True when this project screens rather than annotates — the one predicate every caller uses. */
 export function isScreening(project: Project | null | undefined): boolean {
   return !!project?.screening

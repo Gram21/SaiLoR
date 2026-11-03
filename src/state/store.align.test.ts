@@ -1,3 +1,4 @@
+// [utest->req~con-420~1]
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
 
@@ -121,6 +122,7 @@ describe('alignConsolidationNode', () => {
     st().selectReviewer('consolidation')
   })
 
+  // [utest->req~con-130~1]
   it('records the matching and grows the consolidated tree, leaving the reviewers alone', () => {
     const before = JSON.stringify(st().project!.papers[0].reviews)
     expect(st().alignConsolidationNode('p1', 'Findings', false)).toBe(true)
@@ -141,6 +143,7 @@ describe('alignConsolidationNode', () => {
     expect(st().project!.papers[0].annotations['Findings']).toHaveLength(3)
   })
 
+  // [utest->req~con-140~1]
   it('marks the project dirty, because it changed saved data', () => {
     expect(st().dirty).toBe(false)
     st().alignConsolidationNode('p1', 'Findings', false)
@@ -225,6 +228,7 @@ describe('alignConsolidationNode', () => {
     expect(consolidated[0].children?.['Claim']?.[0]?.value).toBe('My own call')
   })
 
+  // [utest->req~con-150~1]
   it('will not re-match a node the consolidator has already answered', () => {
     // The dangerous case. Reviewer 1 anchors, so the slots come out
     // [Alpha, Beta] and the consolidator commits an answer to slot 0 meaning
@@ -358,6 +362,7 @@ describe('adoptUnanimousValues', () => {
     st().selectReviewer('consolidation')
   })
 
+  // [utest->req~con-240~1]
   it('adopts what both reviewers said, keeping the first one\'s wording', () => {
     expect(st().adoptUnanimousValues('p1', false)).toBeGreaterThan(0)
     expect(st().project!.papers[0].annotations['Study Type'][0].value).toBe('Controlled experiment')
@@ -439,6 +444,7 @@ describe('adoptUnanimousValues', () => {
   })
 })
 
+// [utest->req~con-400~1]
 describe('AI is not usable from the Consolidation seat', () => {
   beforeEach(() => {
     st().loadFromText(projectText(2, {}), null, 'test.json')

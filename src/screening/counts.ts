@@ -1,3 +1,4 @@
+// [impl->req~scr-180~1]
 import type { AnnotationValueTree } from '../model/annotations'
 import type { Paper, Project } from '../model/project'
 import { unanimousFills } from '../consolidate/unanimous'
@@ -23,6 +24,8 @@ function seatTree(
   return paper.reviews[currentReviewer] ?? null
 }
 
+// [impl->req~scr-190~1]
+// [impl->req~scr-200~1]
 export interface ScreeningCounts {
   total: number
   included: number
@@ -68,6 +71,7 @@ export function screeningCounts(project: Project, currentReviewer: string | null
     else if (status === 'undecided') undecided++
     else {
       excluded++
+      // [impl->req~scr-170~1]
       const reason = screeningReason(tree)
       if (reason && Object.hasOwn(byReason, reason)) byReason[reason]++
       else excludedWithoutReason++

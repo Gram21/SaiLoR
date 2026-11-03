@@ -6,6 +6,7 @@ import {
   orphanedNodePaths,
   type AnnotationValueTree,
   type FieldValue,
+  // [impl->req~dat-180~1]
   type InstanceNode,
 } from './annotations'
 import { seatLabel, type Paper, type Project } from './project'
@@ -49,6 +50,7 @@ export interface ValidationIssue {
   message: string
 }
 
+// [impl->req~dat-190~1]
 /** A paper `validateProject` skipped because it has no annotations at all. */
 export interface UnannotatedPaper {
   paperId: string
@@ -201,6 +203,8 @@ function validateField(def: ResolvedDef, value: unknown, loc: PathAcc, emit: Emi
   }
 }
 
+// [impl->req~dat-200~1]
+// [impl->req~dat-420~1]
 function validateTree(
   defs: ResolvedDef[],
   tree: unknown,
@@ -294,6 +298,7 @@ function validateTree(
       }
 
       const instance = rawInstance as InstanceNode
+      // [impl->req~dat-210~1]
       const earlier = repeats.get(index)
       if (earlier !== undefined) {
         emit(
@@ -332,6 +337,7 @@ export function validatePaper(schema: ResolvedDef[], paper: Paper): ValidationIs
     })
   }
 
+  // [impl->req~dat-215~1]
   const tree: AnnotationValueTree | undefined = paper?.annotations
   // The same tree twice: once as the level being walked, once as the root a
   // cross-branch `visibleIf` is resolved against, so the dialog hides exactly
@@ -375,6 +381,7 @@ export function validateProject(project: Project): ProjectValidation {
       // answers sit under a removed field has none the current schema can see,
       // so it would otherwise be filed as "not started" — which is exactly the
       // wrong thing to tell somebody whose colleague's work is sitting there.
+      // [impl->req~dat-168~1]
       const orphans = orphanedNodePaths(schema, tree)
       if (orphans.length > 0) {
         const listed = orphans.slice(0, MAX_LISTED_ORPHANS)

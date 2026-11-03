@@ -86,6 +86,7 @@ describe('hasRequiredFields', () => {
 })
 
 describe('completeness — denominator mode', () => {
+  // [utest->req~dat-220~1]
   it('counts every field when nothing is required', () => {
     const p = project(SIMPLE)
     const c = completeness(p.schema, p.papers[0].annotations)
@@ -285,6 +286,7 @@ describe('completeness — fields hidden by visibleIf', () => {
   })
 
   it('skips a field behind an unsatisfied nested group, and counts it once satisfied', () => {
+    // [utest->req~dat-230~1]
     const NESTED_GROUP: AnnotationDef[] = [
       { name: 'Relevant', type: 'boolean' },
       { name: 'Kind', type: 'string', options: ['RCT', 'survey'] },

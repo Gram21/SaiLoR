@@ -21,6 +21,8 @@ type PaperFiles = Parameters<typeof assembleLegacyProjectJson>[1] extends Map<st
 
 const isScreening = (raw: unknown) => Boolean((raw as { config?: { screening?: unknown } } | null)?.config?.screening)
 
+// [impl->req~dat-172~1]
+// [impl->req~plt-40~1]
 /**
  * Turns what Rust read into the whole-project text `loadProject` accepts. A file that does not
  * parse counts as absent and its path goes to `corrupt`.
@@ -79,6 +81,7 @@ const then =
 
 const named = (names: string[], args: unknown[]) => Object.fromEntries(names.map((n, i) => [n, args[i]]))
 
+// [impl->req~plt-230~1]
 export const command = (channel: string) =>
   channel.replace(':', '_').replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)
 
@@ -108,6 +111,8 @@ const replace =
     replaced.set(event, listen(event, (e) => cb(e.payload)))
   }
 
+// [impl->req~llm-722~1]
+// [impl->req~plt-230~1]
 /**
  * The backend API over Tauri IPC: one entry per `SlrBridge` method, channel
  * names mapped to Tauri command/event names, positional args sent as named
@@ -188,6 +193,7 @@ export const tauriBridge: SlrBridge = {
     onProgress: subscribe('local:progress'),
   },
 
+  // [impl->req~ui-25~1]
   setWindowTitle: (title: string) => {
     getCurrentWindow()
       .setTitle(title)
@@ -198,8 +204,10 @@ export const tauriBridge: SlrBridge = {
   saveComplete: send('app:saveComplete', 'ok'),
   onUndo: replace('app:undo'),
   onRedo: replace('app:redo'),
+  // [impl->req~plt-120~1]
   requestReload: send('app:reload'),
   onCloseProject: replace('app:closeProject'),
+  // [impl->req~ui-100~1]
   onOpenSettings: replace('app:settings'),
 
   gitProbe: call('git:probe'),

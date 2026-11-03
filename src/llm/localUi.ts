@@ -1,3 +1,4 @@
+// [impl->req~llm-730~1]
 import type { Backend, HardwareInfo } from '../platform/localRuntime'
 import { computeNumCtx } from './ollama'
 
@@ -29,6 +30,7 @@ export function hostOf(url: string): string {
   }
 }
 
+// [impl->req~llm-732~1]
 /**
  * Context to start from: 16k, 32k with 16 GB RAM or more, never above the
  * model's own limit. Long papers need it; the server default (often 4,096)
@@ -39,6 +41,7 @@ export function suggestContext(totalRamBytes: number | undefined, modelMax?: num
   return computeNumCtx({ promptTokens: base, outputReserve: 0, modelMax })
 }
 
+// [impl->req~llm-732~1]
 /** Memory the model needs and whether it exceeds what the hardware offers (VRAM when known, else free RAM). */
 export function memoryCheck(
   weightsBytes: number,

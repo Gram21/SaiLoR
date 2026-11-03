@@ -36,6 +36,7 @@
 const BEGIN = '# >>> SaiLoR (managed) >>>'
 const END = '# <<< SaiLoR (managed) <<<'
 
+// [impl->req~git-410~1]
 /** What goes between the fences in `.gitattributes`, next to the project. */
 export const ATTRIBUTES_BODY = [
   '# Annotation data is JSON that SaiLoR rewrites in full on every save.',
@@ -114,6 +115,7 @@ export interface RepoSetupPlan {
   needsConsent: boolean
 }
 
+// [impl->req~git-411~1]
 /** What setting this project's repository up would do, given what is there now. */
 export function planRepoSetup(existingAttributes: string | null, existingIgnore: string | null): RepoSetupPlan {
   const attributes = applyManagedBlock(existingAttributes, ATTRIBUTES_BODY)

@@ -1,3 +1,4 @@
+// [impl->req~scr-280~1]
 import { useStore, selectCurrentPaper } from '../state/store'
 
 /**
@@ -12,6 +13,7 @@ import { useStore, selectCurrentPaper } from '../state/store'
 export function ScreeningRecord() {
   const paper = useStore(selectCurrentPaper)
   const toggleScreeningPdf = useStore((s) => s.toggleScreeningPdf)
+  // [impl->req~scr-300~1]
   const extracting = useStore((s) => (paper ? s.screeningAbstractReads[paper.id] === 'reading' : false))
 
   if (!paper) {

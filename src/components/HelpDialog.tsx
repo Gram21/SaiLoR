@@ -1,3 +1,4 @@
+// [impl->req~ui-100~1]
 import { useEffect, useRef, type ReactNode } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
@@ -5,6 +6,7 @@ import { getPlatform } from '../platform'
 import { NEW_ISSUE_URL } from '../model/version'
 
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
+// [impl->req~ui-10~1]
 const MOD = getPlatform().kind !== 'browser' && isMac ? '⌘' : 'Ctrl'
 
 /** Shortcuts while annotating a project. */

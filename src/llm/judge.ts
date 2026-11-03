@@ -20,6 +20,7 @@ export interface JudgeProposal {
   source?: string
   /** For a web-sourced value: the fetched page excerpt the agent quoted from. */
   webExcerpt?: string
+  // [impl->req~llm-620~1]
   /** Sourced from a web-search result the agent never read: the quote is unchecked. */
   webUnverified?: boolean
 }
@@ -82,6 +83,7 @@ ${extractionNote}
 ${RUBRIC}`
 }
 
+// [impl->req~llm-350~1]
 /** The user message listing the proposals to judge (the paper itself goes in
  *  as a separate part/attachment, same as the rest of this module's callers). */
 export function buildJudgeUserMessage(proposals: JudgeProposal[]): string {
@@ -176,6 +178,7 @@ function extractObject(raw: string): Record<string, unknown> | null {
 
 const VALID_VERDICTS = new Set(['accept', 'revise', 'reject'])
 
+// [impl->req~llm-350~1]
 /** Never throws: an unparseable or malformed reply yields empty lists, which
  *  the agent loop treats as "the judge said nothing new" rather than crashing. */
 export function parseJudgeReply(raw: string): JudgeReply {

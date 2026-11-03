@@ -1,6 +1,8 @@
 import { STRICT_MANAGER, activePerson, useStore } from '../state/store'
 import { assignedSeat, personPapers, strictActive } from '../model/strict'
 
+// [impl->req~con-480~1]
+// [impl->req~con-490~1]
 /** Toolbar part for strict mode: who works, Switch person and Finish. */
 export function StrictPersonBar() {
   const project = useStore((s) => s.project)

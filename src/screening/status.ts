@@ -12,6 +12,7 @@ export type ScreeningStatus = 'included' | 'excluded' | 'undecided'
  * on that to never silently drop a paper it merely couldn't parse.
  */
 export function screeningStatus(tree: AnnotationValueTree | null | undefined): ScreeningStatus {
+  // [impl->req~scr-60~1]
   const value = tree?.[SCREENING_DECISION]?.[0]?.value
   if (value === DECISION_INCLUDE) return 'included'
   if (value === DECISION_EXCLUDE) return 'excluded'

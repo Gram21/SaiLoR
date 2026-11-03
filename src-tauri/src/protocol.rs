@@ -54,6 +54,7 @@ fn parse_range(value: &str, len: u64) -> Option<Result<Range<u64>, ()>> {
     })
 }
 
+// [impl->req~plt-200~1]
 pub fn serve(session: &Mutex<Session>, req: &Request<Vec<u8>>) -> Response<Vec<u8>> {
     if req.method() == Method::OPTIONS {
         return respond(StatusCode::NO_CONTENT)
@@ -147,6 +148,7 @@ mod tests {
         (d, s)
     }
 
+    // [utest->req~plt-200~1]
     #[test]
     fn statuses_and_traversal() {
         let (d, s) = setup("proto-status");

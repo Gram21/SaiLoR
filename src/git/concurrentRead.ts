@@ -1,3 +1,4 @@
+// [impl->req~git-380~1]
 /**
  * Reads every id's associated value concurrently rather than one at a time,
  * preserving the exact id→result association regardless of which read

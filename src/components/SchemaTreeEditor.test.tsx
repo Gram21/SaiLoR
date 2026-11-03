@@ -1,3 +1,4 @@
+// [utest->req~edt-40~1]
 import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
@@ -160,6 +161,7 @@ describe('SchemaTreeEditor: known-unpulled work sharpens the warning', () => {
   })
 })
 
+// [utest->req~edt-100~1]
 describe('SchemaTreeEditor: unique option', () => {
   it('offers Unique only on a repeatable field and a uniqueBy picker for its children', async () => {
     const { toAnnotationDefs, fromAnnotationDefs } = await import('../state/editorStore')

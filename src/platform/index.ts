@@ -3,6 +3,7 @@ import { isTauri } from './adapter'
 import { TauriAdapter } from './tauri'
 import { createUnsupportedAdapter } from './unsupported'
 
+// [impl->req~plt-10~1]
 let cached: PlatformAdapter | null = null
 
 /**

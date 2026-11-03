@@ -12,6 +12,7 @@ import { ollamaChatBody } from './ollama'
  * always yields something readable).
  */
 
+// [impl->req~llm-20~1]
 export interface ProviderInfo {
   id: Provider
   label: string
@@ -49,6 +50,8 @@ export interface ProviderInfo {
   tokenParam: 'max_tokens' | 'max_completion_tokens'
 }
 
+// [impl->req~llm-10~1]
+// [impl->req~llm-110~1]
 export const PROVIDERS: Record<Provider, ProviderInfo> = {
   anthropic: {
     id: 'anthropic',
@@ -152,6 +155,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     // the OpenAI-specific `max_completion_tokens` rename.
     tokenParam: 'max_tokens',
   },
+  // [impl->req~llm-520~1]
   systemone: {
     id: 'systemone',
     label: 'System One (Jev-compatible)',
@@ -169,6 +173,7 @@ export const PROVIDERS: Record<Provider, ProviderInfo> = {
     supportsWebSearch: false,
     tokenParam: 'max_tokens', // unused — systemone.ts builds its own request body
   },
+  // [impl->req~llm-720~1]
   ollama: {
     id: 'ollama',
     label: 'Ollama (local)',
@@ -254,6 +259,7 @@ export function anthropicContent(user: PaperPart): unknown[] {
   ]
 }
 
+// [impl->req~llm-280~1]
 export function openaiContent(user: PaperPart): unknown {
   // A plain string keeps the text path portable: some OpenAI-compatible servers
   // don't know the newer parts-array form.
@@ -313,6 +319,7 @@ export function openaiReasoningFields(provider: Provider, effort?: string): Reco
   return provider === 'openrouter' ? { reasoning: { effort } } : { reasoning_effort: effort }
 }
 
+// [impl->req~llm-720~1]
 export function buildRequest(
   cfg: LlmConfig,
   system: string,
@@ -414,6 +421,7 @@ function textOfParts(parts: unknown[]): string {
     .join('')
 }
 
+// [impl->req~llm-310~1]
 /** Pull the assistant's text out of a provider's JSON response. Returns '' if absent. */
 export function extractText(provider: Provider, json: unknown): string {
   if (!isRecord(json)) return ''
@@ -488,6 +496,7 @@ function truncate(s: string, max = 200): string {
   return flat.length <= max ? flat : `${flat.slice(0, max)}…`
 }
 
+// [impl->req~llm-713~1]
 export function extractError(provider: Provider, status: number, body: string): string {
   const label = PROVIDERS[provider]?.label ?? provider
   const fallback = body.trim()

@@ -1,3 +1,4 @@
+// [impl->req~ui-50~1]
 /**
  * Copy to the clipboard, tolerating environments where the async Clipboard
  * API is unavailable or denied (no secure context, no permission granted) —

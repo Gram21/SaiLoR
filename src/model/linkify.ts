@@ -11,6 +11,7 @@
  * details" is not obviously two URLs) and not a general-purpose URL library.
  */
 
+// [impl->req~ann-60~1]
 const URL_PATTERN = /https?:\/\/[^\s<>"')\]]+/g
 
 /** Punctuation a URL is unlikely to end a sentence with on purpose — stripped

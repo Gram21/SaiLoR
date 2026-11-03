@@ -12,6 +12,7 @@ use std::sync::Mutex;
 use tauri::{ipc::Response, AppHandle, Manager, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
+// [impl->req~plt-200~1]
 /// `resolveProjectPath`: the real file `rel` names inside the open project's
 /// directory, or why not (`no-project`, `escapes`, `not-found`).
 pub fn resolve_project_path(session: &Mutex<Session>, rel: &str) -> Result<PathBuf, &'static str> {
@@ -38,6 +39,7 @@ pub fn resolve_project_path(session: &Mutex<Session>, rel: &str) -> Result<PathB
     Ok(real)
 }
 
+// [impl->req~plt-210~1]
 #[tauri::command]
 pub async fn pdf_check_path(
     session: State<'_, Mutex<Session>>,
@@ -79,6 +81,7 @@ pub async fn pdf_pick(
     Ok(readable(&session, paths))
 }
 
+// [impl->req~plt-220~1]
 /// `collectPdfsRecursive`: links are neither followed nor returned; unreadable folders skipped.
 pub fn collect_pdfs(dir: &Path, out: &mut Vec<PathBuf>) {
     let Ok(entries) = fs::read_dir(dir) else {
@@ -99,6 +102,7 @@ pub fn collect_pdfs(dir: &Path, out: &mut Vec<PathBuf>) {
     }
 }
 
+// [impl->req~plt-220~1]
 #[tauri::command]
 pub async fn pdf_pick_folder(
     app: AppHandle,
@@ -133,6 +137,7 @@ pub async fn pdf_read(
     fs::read(&file_path).map(Response::new).map_err(err)
 }
 
+// [impl->req~plt-200~1]
 #[tauri::command]
 pub async fn pdf_allow_path(
     app: AppHandle,
@@ -215,6 +220,7 @@ fn outcome(r: Result<String, String>) -> Value {
     }
 }
 
+// [impl->req~plt-260~1]
 /// `writableExportPaths`: only a path the export dialog returned this session.
 fn export_target(session: &Mutex<Session>, dest: &str) -> Result<(), String> {
     if lock(session)
@@ -227,12 +233,14 @@ fn export_target(session: &Mutex<Session>, dest: &str) -> Result<(), String> {
     }
 }
 
+// [impl->req~plt-260~1]
 fn write_file(dest: &str, bytes: &[u8]) -> Result<String, String> {
     assert_not_symlink(Path::new(dest))?;
     fs::write(dest, bytes).map_err(err)?;
     Ok(dest.to_string())
 }
 
+// [impl->req~plt-260~1]
 #[tauri::command]
 pub async fn text_write(
     session: State<'_, Mutex<Session>>,
@@ -247,6 +255,7 @@ fn write_text(session: &Mutex<Session>, abs_path: &str, text: &str) -> Result<St
     write_file(abs_path, text.as_bytes())
 }
 
+// [impl->req~plt-260~1]
 /// The real file of a PDF the open project references: inside the project
 /// directory, or an outside path the reviewer approved (`allowed_escapes`).
 /// The same set `slr-file` serves, so this command reads nothing new.
@@ -462,6 +471,7 @@ fn embed(doc: &mut Document, marks: &[Mark]) -> lopdf::Result<()> {
     Ok(())
 }
 
+// [impl->req~plt-260~1]
 #[tauri::command]
 pub async fn pdf_embed_marks(
     session: State<'_, Mutex<Session>>,
@@ -555,6 +565,7 @@ mod tests {
             .collect()
     }
 
+    // [utest->req~plt-260~1]
     #[test]
     fn text_write_needs_an_export_dialog_path() {
         let d = tmp("textwrite");
@@ -577,6 +588,7 @@ mod tests {
         );
     }
 
+    // [utest->req~plt-260~1]
     #[cfg(unix)]
     #[test]
     fn text_write_refuses_a_symlink() {
@@ -705,6 +717,7 @@ mod tests {
         assert!(embed_marks(&s, &pdf_s, &marks, &json!("other")).is_err());
     }
 
+    // [utest->req~plt-260~1]
     #[test]
     fn embed_reads_only_project_pdfs() {
         let d = tmp("embedauth");
@@ -741,6 +754,7 @@ mod tests {
         assert_eq!(fs::read(d.join("proj/e.pdf")).unwrap(), before);
     }
 
+    // [utest->req~plt-200~1]
     #[test]
     fn project_path_resolution() {
         let d = tmp("pdfres");
@@ -770,6 +784,7 @@ mod tests {
         assert_eq!(resolve_project_path(&s, "../missing.pdf"), Err("escapes"));
     }
 
+    // [utest->req~plt-200~1]
     #[cfg(unix)]
     #[test]
     fn symlink_inside_project_pointing_out_is_an_escape() {
@@ -782,6 +797,7 @@ mod tests {
         assert_eq!(resolve_project_path(&s, "a.pdf"), Err("escapes"));
     }
 
+    // [utest->req~plt-220~1]
     #[test]
     fn folder_walk_finds_pdfs_case_insensitively() {
         let d = tmp("walk");

@@ -17,6 +17,7 @@
  * the guard.
  */
 
+// [impl->req~git-80~1]
 /** Reasons a ref is refused, for the caller's error message. */
 export type RefProblem = 'empty' | 'option-like' | 'control-char' | 'bad-syntax'
 

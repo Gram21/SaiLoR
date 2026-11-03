@@ -125,6 +125,7 @@ describe('validateDraft with screening', () => {
     expect(issues.join(' ')).toMatch(/at least one exclusion reason/i)
   })
 
+  // [utest->req~scr-50~1]
   it('still rejects a non-screening paper with no PDF', () => {
     const issues = validateDraft(
       draft({
@@ -193,6 +194,8 @@ describe('startFromScreening / resolveScreeningImport', () => {
     expect(draftImport.startKind).toBe('annotation')
   })
 
+  // [utest->req~scr-320~1]
+  // [utest->req~scr-340~1]
   it('include-undecided: carries included + undecided, keeps metadata, drops reviews/equal/aiUsage', async () => {
     await useEditorStore.getState().startFromScreening()
     await useEditorStore.getState().resolveScreeningImport('include-undecided')
@@ -230,6 +233,7 @@ describe('startFromScreening / resolveScreeningImport', () => {
     expect(useEditorStore.getState().screeningImport).toBeNull()
   })
 
+  // [utest->req~scr-330~1]
   it('never touches a project the source is not a screening project', async () => {
     openResult = { text: JSON.stringify({
       version: 1,
@@ -241,6 +245,7 @@ describe('startFromScreening / resolveScreeningImport', () => {
     expect(useEditorStore.getState().screeningImport).toBeNull()
   })
 
+  // [utest->req~scr-350~1]
   it('setScreeningImportKind("screening") makes resolve build a screening project seeded from the source reasons', async () => {
     await useEditorStore.getState().startFromScreening()
     useEditorStore.getState().setScreeningImportKind('screening')
@@ -333,6 +338,7 @@ describe('startFromScreening / resolveScreeningImport', () => {
     expect(inc.annotations).toEqual({})
   })
 
+  // [utest->req~scr-360~1]
   it('skip-undecided records the full census, not just what was carried', async () => {
     vi.useFakeTimers()
     vi.setSystemTime(new Date('2026-07-17T12:00:00.000Z'))
@@ -522,6 +528,7 @@ describe('startFromScreening / resolveScreeningImport', () => {
   // shares the source's directory, so a carried row must never reuse an id
   // that already has files there — not even the id the naive suffix-2
   // dedup would try next, if the source itself already used it.
+  // [utest->req~scr-370~1]
   it('never reuses a source id, even the suffix-2 form, when the source itself already used it', async () => {
     openResult = {
       text: screeningJson([

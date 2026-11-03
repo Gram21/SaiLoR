@@ -30,6 +30,8 @@ export interface PaperIdIssue {
   detail: string
 }
 
+// [impl->req~dat-390~1]
+// [impl->req~edt-21~1]
 /** Folder inside the annotations folder that holds AI schema-feedback files,
  *  so no paper may take that name. Lives here (not `annotationsDir.ts`, which
  *  re-exports it) to keep this module free of import cycles. */
@@ -38,6 +40,7 @@ export const FEEDBACK_DIR = 'feedback'
 // Win32's own illegal set. None of these are legal in a POSIX file name
 // either except `/`, but `/` is already excluded because it would create
 // subdirectories instead of one directory named after the id.
+// [impl->req~edt-10~1]
 const ILLEGAL_CHARS = /[<>:"/\\|?*]/g
 
 // Case-insensitive: Windows reserves these regardless of case, and also when
@@ -78,6 +81,7 @@ export function paperIdProblem(id: string): PaperIdIssue | null {
   return null
 }
 
+// [impl->req~edt-20~1]
 /**
  * Do `a` and `b` name the same directory once the filesystem gets to decide,
  * even though they are different strings? Two hazards, both real in a shared

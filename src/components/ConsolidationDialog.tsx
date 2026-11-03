@@ -1,3 +1,7 @@
+// [impl->req~con-370~1]
+// [impl->req~con-420~1]
+// [impl->req~con-430~1]
+// [impl->req~dat-420~1]
 import { useEffect, useState } from 'react'
 import { useStore, selectCurrentPaper, fieldPath, peekValue, alignmentSlotsAt, type PathSeg } from '../state/store'
 import { resolvePath, displayPath } from '../llm/paths'
@@ -100,6 +104,7 @@ export function ConsolidationDialog() {
 
   useEffect(() => {
     if (!target) return
+    // [impl->req~con-340~1]
     const onKey = (e: KeyboardEvent) => {
       if (e.key !== 'Escape') return
       // Escape backs out of the warning rather than through it: discarding the
@@ -133,6 +138,7 @@ export function ConsolidationDialog() {
   }))
 
   const full: PathSeg[] = [...target.path, { name: target.name, index: target.index }]
+  // [impl->req~con-360~1]
   let entryAt = -1
   let level = project.schema
   full.forEach((seg, i) => {
@@ -149,6 +155,7 @@ export function ConsolidationDialog() {
     ? (paperVerdicts(project.schema, paper, project.reviewers).find((v) => v.canonical === canonical)?.onlyIn ?? [])
     : []
   const preview = (inst: InstanceNode) => {
+    // [impl->req~con-350~1]
     const value = Object.values(inst.children ?? {})
       .flat()
       .map((child) => child.value)

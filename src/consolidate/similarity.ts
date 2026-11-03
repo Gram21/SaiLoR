@@ -14,6 +14,7 @@ export interface Sim {
   weight: number
 }
 
+// [impl->req~con-170~1]
 /** The pair told us nothing — see {@link Sim}. */
 export const NO_EVIDENCE: Sim = { score: 0, weight: 0 }
 
@@ -66,6 +67,7 @@ export function normalizeText(s: string): string {
  */
 const LEV_MAX_LEN = 256
 
+// [impl->req~con-180~1]
 /** Edit distance, computed on a single rolling row rather than a full matrix. */
 export function levenshtein(a: string, b: string): number {
   if (a === b) return 0
@@ -127,6 +129,7 @@ export type TextSimCache = Map<string, number>
  */
 const KEY_SEP = '\u0000'
 
+// [impl->req~con-180~1]
 /**
  * How alike two free-text answers are, 0..1. Neither measure subsumes the
  * other, so the more forgiving wins: edit distance handles typos/inflections
@@ -166,6 +169,7 @@ function blank(value: FieldValue | undefined): boolean {
   return value === null || value === undefined || (typeof value === 'string' && value.trim() === '')
 }
 
+// [impl->req~con-180~1]
 /**
  * How alike one field's two answers are. Type-aware, since each type fails
  * differently:

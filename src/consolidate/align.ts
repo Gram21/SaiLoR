@@ -24,6 +24,7 @@ import {
  * matched *inside* an already-matched pair of parents, never across parents.
  */
 
+// [impl->req~con-90~1]
 /** One consolidated entry, and which reviewer entry each side contributed. */
 export interface AlignedSlot {
   /** Reviewer id → the index of their entry in their *own* array. */
@@ -65,6 +66,7 @@ const ORDER_TIE_BREAK = 1e-6
  */
 const NEW_SLOT_WEIGHT = ORDER_TIE_BREAK / 10
 
+// [impl->req~con-110~1]
 /**
  * How alike two entries must be before they count as *the same entry*.
  *
@@ -88,6 +90,7 @@ const NEW_SLOT_WEIGHT = ORDER_TIE_BREAK / 10
  */
 const MIN_MATCH_SCORE = 0.5
 
+// [impl->req~con-115~1]
 /**
  * Degenerate case: a childless repeatable node where nobody recorded more
  * than one entry. There's exactly one way to pair these, so `MIN_MATCH_SCORE`
@@ -104,6 +107,7 @@ function singlePairing(def: ResolvedDef, lists: Record<string, InstanceNode[]>):
   return def.children.length === 0 && Object.values(lists).every((l) => l.length <= 1)
 }
 
+// [impl->req~con-80~1]
 /** A node holds several entries, so its entries need matching at all. */
 export function isRepeatable(def: ResolvedDef): boolean {
   return def.max === null || def.max > 1
@@ -194,6 +198,7 @@ function newSlot(): AlignedSlot {
   return { members: {}, children: {}, agreement: 0, evidence: 0 }
 }
 
+// [impl->req~con-410~1]
 /**
  * A reviewer's entry indices sorted by content, so matching sees the same
  * input whatever order the reviewer recorded the entries in. Equal entries
@@ -213,12 +218,14 @@ function contentKey(inst: InstanceNode | undefined): string {
   const nested = Object.keys(children)
     .sort()
     .map((name) => {
+      // [impl->req~con-100~1]
       const list = children[name]
       return [name, Array.isArray(list) ? list.map(contentKey).sort() : []]
     })
   return JSON.stringify([inst.value ?? null, nested])
 }
 
+// [impl->req~con-410~1]
 /**
  * Display order for slots: by the reviewer who opened the slot (fold-in
  * order), then by that reviewer's own index. Keeps the anchor's recorded
@@ -414,6 +421,7 @@ function compareReviewerIds(x: string, y: string): number {
   return x < y ? -1 : x > y ? 1 : 0
 }
 
+// [impl->req~con-160~1]
 /**
  * Add reviewers who have no key at all in an already-frozen alignment,
  * without moving anyone who does.

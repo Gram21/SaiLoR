@@ -13,6 +13,8 @@ import type { PathSeg } from '../state/store'
  * Consolidation mode.
  */
 
+// [impl->req~con-190~1]
+// [impl->req~con-220~1]
 /** What the reviewers said about one field of one paper, and whether they agree. */
 export interface FieldVerdict {
   paperId: string
@@ -101,6 +103,7 @@ export function projectVerdicts(project: Project): FieldVerdict[] {
   return project.papers.flatMap((p) => paperVerdicts(project.schema, p, project.reviewers))
 }
 
+// [impl->req~con-210~1]
 function walk(
   defs: ResolvedDef[],
   reviews: Record<string, AnnotationValueTree | undefined>,
@@ -171,6 +174,7 @@ function walk(
           markedEqual,
           agree,
           oneSided,
+          // [impl->req~con-430~1]
           onlyIn: oneSided ? here : [],
           participantCount: participants.length,
           categories,

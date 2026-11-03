@@ -1,3 +1,4 @@
+// [utest->req~llm-570~1]
 import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, beforeEach } from 'vitest'
 import { render, screen, act } from '@testing-library/react'
@@ -147,6 +148,7 @@ describe('AnnotationPanel: AI-usage disclosure', () => {
 describe('AnnotationPanel: markings from screening', () => {
   const mark = { id: 'm', page: 1, kind: 'highlight' as const, rects: [{ x: 0, y: 0, width: 0.1, height: 0.1 }], color: '#ffe066', comment: '', createdAt: '', updatedAt: '' }
 
+  // [utest->req~pdf-185~1]
   it('offers the box only on a paper the screening marked', async () => {
     st().loadFromText(projectJson(), null, 'test.json')
     useStore.setState({ screeningMarks: { p1: [{ seat: '1', mark }] }, showScreeningMarks: false })

@@ -1,3 +1,4 @@
+// [impl->req~con-460~1]
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useStore, currentTree, currentFinished, activePerson } from '../state/store'
 import { personPapers } from '../model/strict'
@@ -22,6 +23,7 @@ import type { Paper, Project } from '../model/project'
 /** Which text a query word is matched against. */
 type SearchMode = 'metadata' | 'annotations'
 
+// [impl->req~lst-30~1]
 /**
  * The sentence each state's dot leads its tooltip/`aria-label` with. This is
  * the only place the color's meaning is stated, and the sole route to it for
@@ -72,6 +74,7 @@ export function paperCompleteness(
   return completeness(project.schema, currentTree(project, currentReviewer, paper))
 }
 
+// [impl->req~lst-30~1]
 /**
  * A paper's annotation state for the active seat — the dot's color, what the
  * filter dropdown matches, and what the counter counts. `null` where
@@ -183,6 +186,8 @@ const PaperRow = memo(function PaperRow({
   dotLabel: string
   dotFill: number | null
 }) {
+  // [impl->req~lst-20~1]
+  // [impl->req~lst-25~1]
   const dotStyle = dotFill === null ? undefined : ({ '--fill': `${dotFill}%` } as CSSProperties)
   return (
     <li
@@ -321,6 +326,7 @@ export function PaperList() {
         const raw = mode === 'annotations' ? e.annotationHaystack : e.metadataHaystack
         const haystack = caseSensitive ? raw : raw.toLowerCase()
         let matched = 0
+        // [impl->req~lst-40~1]
         let chars = 0
         for (const w of words) {
           if (haystack.includes(w)) {
@@ -371,6 +377,8 @@ export function PaperList() {
       }
     } else if (e.key === 'Enter' || e.key === ' ') {
       e.preventDefault()
+      // [impl->req~lst-10~1]
+      // [impl->req~lst-50~1]
       const id = row.dataset.paperId
       if (id) selectPaper(id)
     }

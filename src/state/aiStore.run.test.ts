@@ -285,6 +285,7 @@ describe('run: a superseded run is discarded', () => {
   })
 })
 
+// [utest->req~dat-410~1]
 describe('run: unique fields', () => {
   it('drops a suggestion that repeats an entry and notes why', async () => {
     st().loadFromText(

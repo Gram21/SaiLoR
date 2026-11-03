@@ -1,3 +1,6 @@
+// [impl->req~llm-350~1]
+// [impl->req~llm-600~1]
+// [impl->req~llm-721~1]
 import type { ResolvedDef } from '../model/schema'
 import type { Paper } from '../model/project'
 import type { FieldTarget } from './fields'
@@ -49,6 +52,7 @@ export interface AgentEvent {
 
 export interface AgentInput {
   config: LlmConfig
+  // [impl->req~llm-480~1]
   /** Target the judge runs on; defaults to the agent's own `config`. */
   judgeConfig?: LlmConfig
   schema: ResolvedDef[]
@@ -62,9 +66,11 @@ export interface AgentInput {
   maxToolCallsPerRound?: number
   signal?: AbortSignal
   onEvent?: (e: AgentEvent) => void
+  // [impl->req~llm-450~1]
   /** Pre-built few-shot block (see fewshot.ts). Goes into the agent's own
    *  system prompt only — the judge must not see the reviewer's examples. */
   examples?: string
+  // [impl->req~llm-620~1]
   /** Enable the annotator provider's built-in web search (see `supportsWebSearch`); default off. */
   webSearch?: boolean
 }
@@ -72,6 +78,7 @@ export interface AgentInput {
 export interface AgentResult {
   answer: LlmAnswer
   rounds: number
+  // [impl->req~llm-370~1]
   /** Combined agent+judge totals — see `judgeUsage` for the judge-call share
    *  alone, used to price the two targets separately when they differ. */
   /** `webSearches` is always set by `runAgent`; optional so hand-built results stay valid. */
@@ -177,6 +184,7 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
   }
 
   const fetchedUrls = new Set<string>()
+  // [impl->req~llm-620~1]
   const searchResultUrls = new Set<string>()
   const fetchedExcerpts = new Map<string, string>()
   const verdictByPath = new Map<string, JudgeVerdict>()

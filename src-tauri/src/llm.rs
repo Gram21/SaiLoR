@@ -20,7 +20,9 @@ use std::time::{Duration, SystemTime, UNIX_EPOCH};
 use url::Url;
 
 const API_KEY_SENTINEL: &str = "{{apiKey}}";
+// [impl->req~llm-70~1]
 const LLM_TIMEOUT: Duration = Duration::from_secs(10 * 60);
+// [impl->req~llm-50~1]
 const KEYRING_SERVICE: &str = "SaiLoR";
 const MARKER: &str = "keyring";
 
@@ -77,6 +79,7 @@ fn truthy(v: &Value) -> bool {
     }
 }
 
+// [impl->req~llm-430~1]
 fn valid_price(v: &Value) -> bool {
     v.as_f64().is_some_and(|n| n >= 0.0)
 }
@@ -94,6 +97,7 @@ fn valid_account_id(v: &Value) -> bool {
         .is_some_and(|s| s.len() == 32 && s.bytes().all(|b| matches!(b, b'a'..=b'f' | b'0'..=b'9')))
 }
 
+// [impl->req~llm-700~1]
 fn valid_managed(v: &Value) -> Option<Value> {
     let id = v.get("catalogId")?.as_str()?;
     let ok = (1..=64).contains(&id.len())
@@ -103,6 +107,9 @@ fn valid_managed(v: &Value) -> Option<Value> {
     ok.then(|| serde_json::json!({ "catalogId": id }))
 }
 
+// [impl->req~llm-40~1]
+// [impl->req~llm-60~1]
+// [impl->req~llm-530~1]
 pub fn build_call_headers(
     headers: &HashMap<String, String>,
     api_key: Option<&str>,
@@ -132,6 +139,7 @@ pub fn read_configs(path: &Path) -> Vec<Value> {
         .unwrap_or_default()
 }
 
+// [impl->req~llm-50~1]
 fn write_configs(path: &Path, configs: &[Value]) -> Result<(), String> {
     use std::io::Write;
     if let Some(dir) = path.parent() {
@@ -149,6 +157,7 @@ fn has_key(c: &Value) -> bool {
     c[MARKER] == true
 }
 
+// [impl->req~llm-40~1]
 /// The renderer's view: no key, no marker, only `hasKey`.
 pub fn public_configs(configs: &[Value]) -> Vec<Value> {
     configs
@@ -170,6 +179,10 @@ fn id_of(c: &Value) -> Option<&str> {
     c["id"].as_str()
 }
 
+// [impl->req~llm-40~1]
+// [impl->req~llm-50~1]
+// [impl->req~llm-430~1]
+// [impl->req~llm-530~1]
 pub fn save_config(
     path: &Path,
     keys: &dyn Keys,
@@ -296,6 +309,7 @@ fn http_date_ms(s: &str) -> Option<i64> {
     Some((days * 86400 + h * 3600 + mi * 60 + se) * 1000)
 }
 
+// [impl->req~llm-440~1]
 /// `Retry-After` in ms: delta-seconds or an HTTP-date, None when absent or unreadable.
 pub fn parse_retry_after(header: Option<&str>, now_ms: i64) -> Option<u64> {
     let t = header?.trim();
@@ -309,6 +323,7 @@ fn origin(u: &Url) -> String {
     u.origin().ascii_serialization()
 }
 
+// [impl->req~llm-700~1]
 /// Where a managed call really goes: only the llama-server API paths, on the server we run.
 fn managed_target_url(request: &Url, server_base: &str) -> Result<Url, String> {
     let p = request.path();
@@ -324,6 +339,8 @@ fn managed_target_url(request: &Url, server_base: &str) -> Result<Url, String> {
         .map_err(|_| "Invalid URL".into())
 }
 
+// [impl->req~llm-60~1]
+// [impl->req~llm-440~1]
 pub async fn call(
     path: &Path,
     keys: &dyn Keys,
@@ -430,6 +447,7 @@ pub async fn call(
         .unwrap_or_else(|_| Err("This operation was aborted".into()))
 }
 
+// [impl->req~plt-390~1]
 fn config_file(app: &tauri::AppHandle) -> Result<PathBuf, String> {
     Ok(crate::localruntime::data_dir(app)?.join("llm-config.json"))
 }
@@ -459,6 +477,8 @@ pub async fn llm_delete_config(app: tauri::AppHandle, id: String) -> Result<Vec<
         .map_err(err)?
 }
 
+// [impl->req~llm-530~1]
+// [impl->req~llm-700~1]
 #[tauri::command]
 pub async fn llm_call(
     app: tauri::AppHandle,
@@ -475,6 +495,7 @@ pub async fn llm_call(
     .await
 }
 
+// [impl->req~llm-70~1]
 #[tauri::command]
 pub async fn llm_abort(request_id: String) {
     net::abort(&format!("llm:{request_id}"));
@@ -537,6 +558,7 @@ mod tests {
         }
     }
 
+    // [utest->req~llm-530~1]
     #[test]
     fn call_headers() {
         let h = headers(&[
@@ -576,6 +598,9 @@ mod tests {
         );
     }
 
+    // [utest->req~llm-40~1]
+    // [utest->req~llm-50~1]
+    // [utest->req~llm-430~1]
     #[test]
     fn save_sanitizes_and_keeps_keys_out_of_the_file() {
         let path = temp_file("save");
@@ -633,6 +658,7 @@ mod tests {
         assert!(save_config(&path, &keys, json!({ "name": "no id" }), None).is_err());
     }
 
+    // [utest->req~llm-60~1]
     #[tokio::test]
     async fn call_pins_the_origin_and_splices_the_key() {
         let path = temp_file("call");
@@ -718,6 +744,7 @@ mod tests {
         assert_eq!(s.seen.lock().unwrap().len(), 3);
     }
 
+    // [utest->req~llm-700~1]
     #[tokio::test]
     async fn managed_calls_go_to_the_local_server() {
         let base = "http://127.0.0.1:5555";
@@ -764,6 +791,7 @@ mod tests {
         assert!(missing.is_err_and(|e| e.contains("not downloaded") || e.contains("root")));
     }
 
+    // [utest->req~llm-70~1]
     #[tokio::test]
     async fn call_can_be_aborted() {
         let path = temp_file("abort");

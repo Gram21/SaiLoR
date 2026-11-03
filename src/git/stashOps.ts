@@ -28,10 +28,12 @@ function failed(stderr: string): GitRun {
 }
 
 export async function listStashes(run: RunGit): Promise<StashEntry[]> {
+  // [impl->req~git-480~1]
   const r = await run(['stash', 'list', `--format=${STASH_LIST_FORMAT}`])
   return r.ok ? parseStashList(r.stdout) : []
 }
 
+// [impl->req~git-440~1]
 /** The stash's *current* `stash@{n}`, or null once it no longer exists. */
 export async function resolveStashRef(run: RunGit, sha: string): Promise<string | null> {
   return (await listStashes(run)).find((e) => e.sha === sha)?.ref ?? null
@@ -62,6 +64,7 @@ export async function pushStash(run: RunGit, relPath: string, raw: unknown, mess
   return run(['stash', 'push', '-u', '-m', `${MANUAL_STASH_PREFIX}${note}`, '--', ...paths])
 }
 
+// [impl->req~git-450~1]
 export type StashRestoreResult =
   | { kind: 'restored' }
   /** Applied, but the entry could not be removed afterwards — it now
@@ -116,6 +119,7 @@ export async function restoreStash(
   return { kind: 'conflict' }
 }
 
+// [impl->req~git-470~1]
 /**
  * Undo a stash apply that stopped half-way.
  *
@@ -137,6 +141,7 @@ async function rollBackFailedApply(run: RunGit, ref: string): Promise<void> {
 
 /** Delete a stash for good. */
 export async function dropStash(run: RunGit, sha: string): Promise<GitRun> {
+  // [impl->req~git-460~1]
   const ref = await resolveStashRef(run, sha)
   if (!ref) return failed('That stash no longer exists.')
   return run(['stash', 'drop', ref])
@@ -163,6 +168,7 @@ export async function branchFromStash(
   if (!ref) return failed('That stash no longer exists.')
   const st = await run(['status', '--porcelain=v1', '-z', '-uall'])
   if (!st.ok) return st
+  // [impl->req~git-350~1]
   const blocking = mergeBlockingPaths(parsePorcelain(st.stdout), annotationsDir)
   if (blocking.length > 0) {
     return failed(`Commit or stash these first, so the switch cannot mix two sets of edits:\n${blocking.join('\n')}`)

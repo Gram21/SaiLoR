@@ -36,6 +36,7 @@ pub fn paper_id_ok(id: &str) -> bool {
         && id.to_lowercase() != FEEDBACK_DIR
 }
 
+// [impl->req~dat-169~1]
 /// `annotationsDirProblem(name) === null` from src/model/annotationsDir.ts.
 pub fn annotations_dir_ok(name: &str) -> bool {
     name == name.trim_matches(|c: char| c.is_whitespace() || c == '\u{feff}')
@@ -51,6 +52,7 @@ pub fn annotations_dir_of(raw: &Value) -> String {
     }
 }
 
+// [impl->req~plt-50~1]
 /// `isLegacyProjectShape`: papers still carry `annotations`/`reviews` inline.
 pub fn is_legacy_shape(raw: &Value) -> bool {
     raw.get("papers")
@@ -61,6 +63,7 @@ pub fn is_legacy_shape(raw: &Value) -> bool {
         })
 }
 
+// [impl->req~dat-169~1]
 /// `annotationsDirFor`: one folder directly inside the project's directory, never a link.
 pub fn annotations_dir_for(file: &Path, raw: &Value) -> Result<PathBuf, String> {
     let project_dir = dir_of(&normalize(file)).to_path_buf();
@@ -104,6 +107,8 @@ pub fn read_meta(file: &Path) -> Value {
         .unwrap_or(Value::Null)
 }
 
+// [impl->req~dat-172~1]
+// [impl->req~plt-60~1]
 /// `safeReadAnnotationFile`: `None` when missing or resolving (via any link) outside `base`.
 pub fn safe_read(base: &Path, rel: &str) -> Option<String> {
     let resolved = resolve(base, Path::new(rel));
@@ -155,6 +160,7 @@ pub struct Opened {
     pub siblings: Vec<Sibling>,
 }
 
+// [impl->req~plt-90~1]
 /// `projectsUsingFolder` without the `keep` filter: other project files next to
 /// `file` whose annotations folder is `folder`. Links and non-projects skipped.
 pub fn projects_using_folder(file: &Path, folder: &str) -> Vec<Sibling> {
@@ -186,6 +192,10 @@ pub fn projects_using_folder(file: &Path, folder: &str) -> Vec<Sibling> {
     out
 }
 
+// [impl->req~dat-172~1]
+// [impl->req~plt-40~1]
+// [impl->req~plt-50~1]
+// [impl->req~plt-60~1]
 /// `readProjectText` minus the assembly; records stamps for a later save.
 pub fn read_project(session: &Mutex<Session>, file: &Path) -> Result<Opened, String> {
     let text = read_lossy(file).map_err(err)?;
@@ -242,12 +252,15 @@ pub fn read_project(session: &Mutex<Session>, file: &Path) -> Result<Opened, Str
     })
 }
 
+// [impl->req~plt-20~1]
 fn open(session: &Mutex<Session>, file: &Path) -> Result<Opened, String> {
     let opened = read_project(session, file)?;
     lock(session).known_projects.insert(normalize(file));
     Ok(opened)
 }
 
+// [impl->req~plt-20~1]
+// [impl->req~plt-30~1]
 #[tauri::command]
 pub async fn project_open(
     app: AppHandle,
@@ -285,6 +298,7 @@ pub struct Saved {
     pub stale: Vec<String>,
 }
 
+// [impl->req~plt-61~1]
 /// `isDeletableAnnotationText`: empty or parseable; anything else must survive.
 fn deletable(text: &str) -> bool {
     text.trim().is_empty() || serde_json::from_str::<Value>(text).is_ok()
@@ -302,6 +316,11 @@ fn meta_of(file: &Path, meta_text: Option<&str>) -> Result<Value, String> {
     }
 }
 
+// [impl->req~dat-390~1]
+// [impl->req~plt-40~1]
+// [impl->req~plt-42~1]
+// [impl->req~plt-61~1]
+// [impl->req~plt-70~1]
 /// `writeProjectFiles`: meta, then reconcile the annotations folder against `files`.
 pub fn write_project_files(
     session: &Mutex<Session>,
@@ -361,6 +380,8 @@ pub fn write_project_files(
     Ok(())
 }
 
+// [impl->req~plt-30~1]
+// [impl->req~plt-135~1]
 /// `project:save`: refuses unknown paths; writes nothing when any target changed on disk.
 pub fn save(
     session: &Mutex<Session>,
@@ -478,6 +499,8 @@ pub struct PickedPath {
     path: String,
 }
 
+// [impl->req~plt-30~1]
+// [impl->req~plt-80~1]
 #[tauri::command]
 pub async fn project_pick_save_path(
     app: AppHandle,
@@ -506,6 +529,7 @@ pub struct Peek {
     title: Option<String>,
 }
 
+// [impl->req~plt-150~1]
 pub fn peek(path: &str) -> Peek {
     if fs::File::open(path).is_err() {
         return Peek {
@@ -524,6 +548,7 @@ pub fn peek(path: &str) -> Peek {
     }
 }
 
+// [impl->req~plt-150~1]
 #[tauri::command]
 pub async fn project_peek(paths: Vec<String>) -> Result<Vec<Peek>, String> {
     Ok(paths.iter().map(|p| peek(p)).collect())
@@ -574,6 +599,7 @@ pub fn screening_source(
     }))
 }
 
+// [impl->req~pdf-185~1]
 #[tauri::command]
 pub async fn project_screening_source(
     session: State<'_, Mutex<Session>>,
@@ -652,6 +678,7 @@ pub mod tests {
         );
     }
 
+    // [utest->req~plt-30~1]
     #[test]
     fn save_refuses_unauthorized_path() {
         let d = tmp("unauth");
@@ -662,6 +689,9 @@ pub mod tests {
         assert!(!target.exists());
     }
 
+    // [utest->req~plt-40~1]
+    // [utest->req~plt-61~1]
+    // [utest->req~plt-135~1]
     #[test]
     fn save_round_trip_stale_and_deletion_rules() {
         let d = tmp("roundtrip");
@@ -720,6 +750,7 @@ pub mod tests {
         assert!(!d.join("annotations/p1").exists());
     }
 
+    // [utest->req~plt-70~1]
     #[test]
     fn save_refuses_escapes_and_feedback() {
         let d = tmp("escape");
@@ -739,6 +770,7 @@ pub mod tests {
         assert!(!d.join("x.json").exists());
     }
 
+    // [utest->req~plt-70~1]
     #[cfg(unix)]
     #[test]
     fn save_refuses_symlinks() {
@@ -809,6 +841,7 @@ pub mod tests {
         assert!(lock(&s).allowed_escapes.is_empty());
     }
 
+    // [utest->req~plt-150~1]
     #[test]
     fn peek_reports_existence_and_title() {
         let d = tmp("peek");
@@ -846,6 +879,7 @@ pub mod tests {
         );
     }
 
+    // [utest->req~pdf-185~1]
     #[test]
     fn screening_source_reads_only_a_plain_sibling() {
         let d = tmp("screening-source");

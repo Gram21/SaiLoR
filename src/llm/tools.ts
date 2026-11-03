@@ -1,3 +1,4 @@
+// [impl->req~llm-330~1]
 import type { SchemaRemark, WebFetchResult } from './types'
 
 /**
@@ -157,6 +158,7 @@ function isRecord(v: unknown): v is Record<string, unknown> {
   return typeof v === 'object' && v !== null
 }
 
+// [impl->req~llm-600~1]
 /** Tolerant parse of a `submit_annotations` call's args. Never throws; a
  *  malformed entry is simply dropped rather than failing the whole call. */
 export function parseSubmitArgs(args: unknown): SubmitPayload {
@@ -407,6 +409,7 @@ function htmlToText(html: string): string {
     .trim()
 }
 
+// [impl->req~llm-360~1]
 async function fetchUrl(
   args: unknown,
   fetchWeb: (url: string, signal?: AbortSignal) => Promise<WebFetchResult>,

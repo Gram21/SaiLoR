@@ -1,3 +1,7 @@
+// [impl->req~ui-70~1]
+// [impl->req~ui-80~1]
+// [impl->req~ui-100~1]
+// [impl->req~con-470~1]
 import { useEffect, useState } from 'react'
 import { activePerson, useStore } from '../state/store'
 import { useAiStore } from '../state/aiStore'
@@ -20,6 +24,7 @@ import { aiSeatId, seatLabel } from '../model/project'
  *  control — a reviewer who reaches for it should learn why it doesn't work
  *  and what to do instead, not wonder whether they misremembered it existing. */
 const GIT_BROWSER_DISABLED_HINT = 'Git support is disabled in the browser version. Use the SaiLoR desktop app if you need it.'
+// [impl->req~ui-30~1]
 /** Desktop, no project open (the start screen): git acts on the open
  *  project's file, so there is nothing to act on yet. */
 const GIT_NO_PROJECT_HINT = 'Open a project in a git repository to use Git.'
@@ -82,8 +87,12 @@ const AI_CONSOLIDATION_HINT =
 const AI_REVIEWER_UNSET_HINT = 'Pick a reviewer first — there is nothing to annotate as "the reviewer" yet'
 const AI_PROJECT_DISABLED_HINT = 'AI is turned off for this project in its settings.'
 const AI_ENABLED_HINT = 'Annotate papers with AI'
+// [impl->req~llm-80~1]
+// [impl->req~llm-320~1]
 const AI_SCREENING_ENABLED_HINT = 'Propose include/exclude decisions with AI'
 
+// [impl->req~llm-470~1]
+// [impl->req~llm-630~1]
 /**
  * The toolbar AI button's disabled state and tooltip — same shape and same
  * reasoning as `gitButtonState`: always rendered, disabled-with-a-reason
@@ -103,6 +112,7 @@ export function aiButtonState(
   aiEnabled: boolean,
   busy: boolean,
   editorOpen: boolean,
+  // [impl->req~llm-470~1]
   hasAiSeat: boolean,
 ): AiButtonState {
   const blockConsolidation = isConsolidation && !hasAiSeat
@@ -122,6 +132,7 @@ export function aiButtonState(
   return { disabled, title }
 }
 
+// [impl->req~ui-20~1]
 /** Top bar: file/Git on the left, the reviewer seat in the middle, then save status, review tools (Validate, AI), appearance controls and help. */
 export function Toolbar() {
   const requestOpenProject = useStore((s) => s.requestOpenProject)
@@ -133,6 +144,7 @@ export function Toolbar() {
   const lastSavedAt = useStore((s) => s.lastSavedAt)
   const sidebarCollapsed = useStore((s) => s.sidebarCollapsed)
   const runValidation = useStore((s) => s.runValidation)
+  // [impl->req~ui-20~1]
   const requestCloseProject = useStore((s) => s.requestCloseProject)
   const editorOpen = useEditorStore((s) => s.open)
   const personMode = useStore((s) => activePerson(s) !== null)
@@ -283,6 +295,9 @@ export function Toolbar() {
       : [{ type: 'item', label: 'No recent files', disabled: true, onSelect: () => {} } as MenuItem]),
   ]
 
+  // [impl->req~git-420~1]
+  // [impl->req~git-430~1]
+  // [impl->req~plt-62~1]
   const saveItems: MenuItem[] = [
     { type: 'item', label: 'Save', shortcut: `${modKey}+S`, disabled: !project, onSelect: () => void save() },
     {

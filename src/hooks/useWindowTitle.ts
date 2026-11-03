@@ -1,3 +1,4 @@
+// [impl->req~ui-25~1]
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { getPlatform } from '../platform'

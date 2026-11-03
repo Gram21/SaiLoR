@@ -26,6 +26,7 @@ export function DuplicateReviewDialog() {
 
   useEffect(() => {
     if (!draft) return
+    // [impl->req~dat-340~1]
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') resolveDuplicateReview('cancel')
     }

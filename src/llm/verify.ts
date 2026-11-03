@@ -1,3 +1,4 @@
+// [impl->req~llm-340~1]
 import type { ResolvedDef } from '../model/schema'
 import type { LlmAnswer } from './types'
 import { validateAnswerObject } from './parse'
@@ -17,6 +18,7 @@ export interface CheckFailure {
   reason: string
 }
 
+// [impl->req~llm-460~1]
 /** One word- or NFKC-level normalization, so a quote copied verbatim from the
  *  paper still matches after PDF-extraction noise: curly quotes, ligatures, a
  *  word hyphenated across a line break, and incidental case/whitespace. */
@@ -78,11 +80,13 @@ function looksLikeUrl(s: string | undefined): s is string {
   return typeof s === 'string' && /^https?:\/\//i.test(s)
 }
 
+// [impl->req~llm-620~1]
 /** Trivial URL normalization for source matching: drop the fragment and trailing slashes. */
 export function normalizeUrl(u: string): string {
   return u.trim().replace(/#.*$/, '').replace(/\/+$/, '')
 }
 
+// [impl->req~llm-620~1]
 /**
  * Validate a submitted batch against the schema and, per field, against its
  * evidence. `fetchedUrls` is every URL the agent actually fetched this run —

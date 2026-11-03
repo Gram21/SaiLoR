@@ -32,6 +32,7 @@ export interface GitInfoResult {
 
 const out = (r: GitRun): string => r.stdout.trim()
 
+// [impl->req~git-110~1]
 /**
  * Derives `git:info`'s result fields from the outputs of its five
  * independent `git` calls (`src-tauri/src/git.rs`'s `git_info` command runs them

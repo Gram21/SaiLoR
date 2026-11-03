@@ -4,6 +4,7 @@ import type { AnnotationValueTree, FieldValue } from '../model/annotations'
 import { isEmptyValue } from '../model/validate'
 import { formatPath, type RawSeg } from './paths'
 
+// [impl->req~llm-100~1]
 /** One field the AI will be asked about, with the value it currently holds. */
 export interface FieldTarget {
   /** Canonical path, e.g. "Findings/Evidence/Metric". */
@@ -46,6 +47,7 @@ export function unansweredFields(
   return fieldTargets(schema, tree, (def, value) => isUnanswered(def, value))
 }
 
+// [impl->req~llm-610~1]
 /**
  * Every field whose existing value satisfies `keep`, in schema order. Shared by
  * `unansweredFields` and `answeredFields` (recheck.ts) so both see the same

@@ -31,6 +31,7 @@ function defaultSleep(ms: number, signal?: AbortSignal): Promise<void> {
   })
 }
 
+// [impl->req~llm-440~1]
 /**
  * Parse a `Retry-After` header value: either delta-seconds or an HTTP-date
  * (RFC 9110 §10.2.3). Returns milliseconds from `now`, or undefined when the
@@ -53,6 +54,7 @@ export interface RetryOptions {
   maxRetries?: number
   baseDelayMs?: number
   sleep?: (ms: number, signal?: AbortSignal) => Promise<void>
+  // [impl->req~llm-440~1]
   /** Called right before each retry's sleep — lets a caller narrate "retrying
    *  in Ns…" without threading progress state through this module. */
   onRetry?: (info: { attempt: number; delayMs: number; status: number }) => void
@@ -71,6 +73,7 @@ function backoffDelay(attempt: number, baseDelayMs: number): number {
   return Math.random() * cap
 }
 
+// [impl->req~llm-440~1]
 /**
  * Wraps an `callLlm`-shaped function so HTTP 429/408/5xx/529 responses are
  * retried with backoff instead of surfacing straight to the caller. Honors
@@ -95,6 +98,8 @@ export function withRetry(callLlm: CallLlm, opts: RetryOptions = {}): CallLlm {
   }
 }
 
+// [impl->req~llm-440~1]
+// [impl->req~llm-500~1]
 /**
  * Run `worker` over `items` with at most `concurrency` in flight at once,
  * returning results in input order (like `Promise.allSettled`). Once

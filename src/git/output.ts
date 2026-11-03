@@ -7,6 +7,7 @@ import type { GitFileChange, GitRun, MergePreview } from './types'
  * purpose, precisely so it lands here.
  */
 
+// [impl->req~git-120~1]
 /** A diff longer than this is cut: the panel is for seeing what changed, not
  *  for rendering a megabyte of it, and the DOM node is what would actually hurt. */
 export const MAX_DIFF_CHARS = 200_000
@@ -133,6 +134,7 @@ export function parseGitLog(raw: string): CommitRecord[] {
   return out
 }
 
+// [impl->req~git-390~1]
 /** What to show when a git command failed. stderr first, because that is where
  *  git puts the reason; stdout only when it said nothing else. */
 export function gitErrorText(run: GitRun): string {
@@ -150,6 +152,7 @@ function listed(items: string[]): string {
   return items.length > PREVIEW_LIST_MAX ? `${shown} and ${items.length - PREVIEW_LIST_MAX} more` : shown
 }
 
+// [impl->req~git-550~1]
 /** The confirm text for a merge or pull dry run. `relPath` is the repository-relative project file. */
 export function mergePreviewText(
   preview: Extract<MergePreview, { kind: 'preview' }>,

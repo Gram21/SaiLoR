@@ -2,6 +2,7 @@ import type { Paper } from '../model/project'
 import { displayPath } from '../llm/paths'
 import { formatValue, type FieldVerdict } from './disagreements'
 
+// [impl->req~con-380~1]
 /**
  * Render one paper's block of the disagreement export: its metadata, then
  * every disagreement in it — the exact field location, then each reviewer
@@ -11,6 +12,7 @@ import { formatValue, type FieldVerdict } from './disagreements'
  * this function only formats, it does not decide what counts as one.
  */
 export function paperDisagreementsText(paper: Paper, verdicts: FieldVerdict[]): string {
+  // [impl->req~con-390~1]
   const lines = [
     `ID: ${paper.id}`,
     `Authors: ${paper.authors.length > 0 ? paper.authors.join(', ') : '(none recorded)'}`,

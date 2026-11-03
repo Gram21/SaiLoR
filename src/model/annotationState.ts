@@ -3,6 +3,7 @@ import { hasAnnotations, type AnnotationValueTree } from './annotations'
 import type { ResolvedDef } from './schema'
 import type { Project } from './project'
 
+// [impl->req~lst-30~1]
 /**
  * Where a paper stands for one reviewer seat — single vocabulary behind the
  * paper list's dot, state filter, and "finished: 5/100" counter.
@@ -22,6 +23,7 @@ import type { Project } from './project'
  */
 export type AnnotationState = 'untouched' | 'partial' | 'complete' | 'finished' | 'flagged'
 
+// [impl->req~dat-250~1]
 /**
  * `null` where completeness doesn't apply — a screening project (see
  * `completenessApplies`), which has its own dot meaning and no finished
@@ -59,6 +61,7 @@ export function annotationState(
     return c.filled === c.total ? 'finished' : c.filled === 0 ? 'untouched' : 'partial'
   }
   if (c.total === 0) return finished ? 'finished' : touched ? 'partial' : 'untouched'
+  // [impl->req~ann-80~1]
   const complete = c.filled === c.total
   if (finished) return complete || !hasRequired ? 'finished' : 'flagged'
   if (complete) return 'complete'
@@ -91,6 +94,7 @@ export function finishCheckboxLabel(isConsolidation: boolean): string {
   return isConsolidation ? 'Consolidation finished' : 'Annotation finished'
 }
 
+// [impl->req~dat-250~1]
 /**
  * `annotationState` from a seat's raw tree, for callers without a
  * precomputed `Completeness` (store's landing-paper pick, annotation panel).
@@ -128,6 +132,7 @@ export type AnnotationFilter = 'all' | 'open' | 'in-progress' | 'finished' | 'is
 /** Dropdown order: all, then `open` narrowing to `in-progress`, then the two ticked buckets. */
 export const ANNOTATION_FILTERS: AnnotationFilter[] = ['all', 'open', 'in-progress', 'finished', 'issues']
 
+// [impl->req~lst-40~1]
 /** Drops `issues` where no paper can ever reach it (`config.finishCheckbox: false`
  *  — see `annotationState`); an always-empty option would misread as "no problems". */
 export function annotationFiltersFor(requireTick: boolean): AnnotationFilter[] {
@@ -144,6 +149,7 @@ export const ANNOTATION_FILTER_LABELS: Record<AnnotationFilter, string> = {
   issues: 'with issues',
 }
 
+// [impl->req~lst-40~1]
 /**
  * Does a paper belong under `filter`? Single mapping from the five dot
  * states (plus `touched`) to the buckets.

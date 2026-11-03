@@ -1,3 +1,4 @@
+// [utest->req~llm-610~1]
 import { describe, it, expect } from 'vitest'
 import { resolveSchema } from '../model/schema'
 import { answeredFields, buildRecheckSystemPrompt, parseRecheckReply } from './recheck'

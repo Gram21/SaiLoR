@@ -31,6 +31,7 @@ const DEFAULT_NUM_CTX = 8192
 /** Ollama's reported prompt tokens within this many of num_ctx means the prompt filled the window. */
 const TRUNCATION_MARGIN = 64
 
+// [impl->req~llm-720~1]
 /**
  * The `num_ctx` to send: prompt + reply (+ hidden reasoning) rounded up to a
  * multiple of 1024, never above the model's own limit when known.
@@ -46,6 +47,7 @@ export function computeNumCtx(p: {
   return p.modelMax && p.modelMax > 0 ? Math.min(rounded, p.modelMax) : rounded
 }
 
+// [impl->req~llm-720~1]
 /**
  * The window for a request: the target's configured one, else sized from the
  * request (never below 8192 — cheap, and small prompts grow across agent rounds).
@@ -56,6 +58,7 @@ export function ollamaNumCtx(cfg: Pick<LlmConfig, 'contextTokens'>, promptChars:
   return Math.max(computed, DEFAULT_NUM_CTX)
 }
 
+// [impl->req~llm-721~1]
 /**
  * True when Ollama had to cut the prompt. ponytail: prompt-cache reuse can make
  * `prompt_eval_count` smaller than the real prompt, so a truncation after a
@@ -75,6 +78,7 @@ function thinkOf(effort: string | undefined): boolean | string {
   return effort === 'on' || effort === 'true' ? true : effort
 }
 
+// [impl->req~llm-720~1]
 /**
  * Body for the native `POST /api/chat`. `num_ctx` is always set (see file
  * comment); `num_predict` bounds reasoning + answer together.
@@ -97,6 +101,7 @@ export function ollamaChatBody(
   })
 }
 
+// [impl->req~llm-721~1]
 export const INPUT_TRUNCATED_MESSAGE =
   'The local model cut off the start of the prompt (context window too small). Raise the target\'s context size or use a shorter paper.'
 
@@ -188,6 +193,7 @@ const numOrMax = (v: unknown): number | undefined => {
   return nums.length ? Math.max(...nums) : undefined
 }
 
+// [impl->req~llm-723~1]
 /**
  * KV-cache size at `numCtx` (f16 K and V): 2 * layers * kv heads * head dim * 2 bytes * ctx.
  * Over-estimates for sliding-window/hybrid models, which keep less. Null when
@@ -233,6 +239,7 @@ export function parsePs(json: unknown): OllamaRunning[] {
   })
 }
 
+// [impl->req~llm-723~1]
 /** Where a loaded model runs: all on GPU, split (slow), or CPU only. */
 export function gpuStatus(e: Pick<OllamaRunning, 'sizeBytes' | 'sizeVram'>): { kind: 'gpu' | 'split' | 'cpu'; pct: number } {
   if (e.sizeVram <= 0) return { kind: 'cpu', pct: 0 }
@@ -272,6 +279,7 @@ export function drainNdjson(buffer: string): { lines: string[]; rest: string } {
 
 // ---- Registry (download size before pulling) ----
 
+// [impl->req~llm-723~1]
 /**
  * Manifest URL of the public registry `ollama pull` uses. Not an official API:
  * callers must handle 404/changes and treat the size as an estimate.
@@ -283,6 +291,7 @@ export function manifestUrl(tag: string): string | null {
   return `https://registry.ollama.ai/v2/${repo}/manifests/${version}`
 }
 
+// [impl->req~llm-723~1]
 /** Total download size = sum of the manifest's layer sizes; null when unreadable. */
 export function sumManifestBytes(json: unknown): number | null {
   if (!isRecord(json) || !Array.isArray(json.layers) || json.layers.length === 0) return null
@@ -381,6 +390,7 @@ const entry = (
 
 // Tags checked in the Ollama library on 2026-10-02. Annotation quality (JSON
 // output) is NOT benchmarked for any of them. phi4 is excluded: 16K context.
+// [impl->req~llm-723~1]
 export const OLLAMA_SHORTLIST: ShortlistModel[] = [
   entry('qwen3.5:4b', 'Qwen 3.5 4B', 3.4, 256_000, 8, 'Smallest option; for modest laptops.'),
   entry('ministral-3:3b', 'Ministral 3 3B', 3.0, 256_000, 8, 'Smallest option; for modest laptops.'),

@@ -1,3 +1,4 @@
+// [impl->req~git-540~1]
 import { useEffect, useRef, useState } from 'react'
 import { useGitStore } from '../state/gitStore'
 import { useStore } from '../state/store'
@@ -321,6 +322,8 @@ export function GitDialog() {
                 type="button"
                 disabled={working || dirty}
                 onClick={() => {
+                  // [impl->req~git-190~1]
+                  // [impl->req~git-490~1]
                   const ok = window.confirm(
                     'Undo the last merge or pull? Your branch goes back to the backup that SaiLoR saved ' +
                       'before it. If you already pushed the merge, the remote still has it.',

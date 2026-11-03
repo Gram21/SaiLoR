@@ -1,3 +1,4 @@
+// [impl->req~llm-330~1]
 import type { LlmConfig, LlmHttpRequest, Provider } from './types'
 import { API_KEY_SENTINEL } from './types'
 import {
@@ -81,6 +82,7 @@ export interface ChatResponse {
   citations: { url: string; title?: string }[]
   /** Anthropic `pause_turn`: the server-tool loop paused; send `raw` back to continue. */
   paused: boolean
+  // [impl->req~llm-721~1]
   /** Ollama only: the server cut the front of the prompt (instructions lost); the answer cannot be trusted. */
   inputTruncated?: boolean
 }
@@ -224,6 +226,7 @@ function openaiMessages(messages: ChatMessage[], paper?: PaperPart): unknown[] {
   })
 }
 
+// [impl->req~llm-720~1]
 /** Ollama native shape: tool args are objects, results are keyed by tool name. */
 function ollamaMessages(messages: ChatMessage[], paper?: PaperPart): unknown[] {
   if (paper?.kind === 'pdf') throw new Error('Ollama cannot take a PDF; attach the paper as text.')
@@ -265,6 +268,8 @@ const WEB_SEARCH_MAX_USES = 5
 // Anthropic's basic version needs no code-execution sidecar (unlike 20260209+).
 const ANTHROPIC_WEB_SEARCH = { type: 'web_search_20250305', name: 'web_search', max_uses: WEB_SEARCH_MAX_USES }
 
+// [impl->req~llm-620~1]
+// [impl->req~llm-720~1]
 export function buildChatRequest(
   cfg: LlmConfig,
   system: string,
@@ -275,6 +280,7 @@ export function buildChatRequest(
   const maxTokens = opts?.maxTokens ?? DEFAULT_MAX_TOKENS
   const base = baseOf(cfg)
   const effort = cfg.reasoningEffort
+  // [impl->req~llm-620~1]
   const webSearch = Boolean(opts?.webSearch) && PROVIDERS[cfg.provider].supportsWebSearch
 
   if (cfg.provider === 'anthropic') {
@@ -402,6 +408,8 @@ function safeParseArgs(raw: unknown): unknown {
   }
 }
 
+// [impl->req~llm-620~1]
+// [impl->req~llm-720~1]
 /** `req` is the request that produced `json`; Ollama needs its `num_ctx` to detect input truncation. */
 export function parseChatResponse(provider: Provider, json: unknown, req?: { body?: string }): ChatResponse {
   const empty: ChatResponse = {

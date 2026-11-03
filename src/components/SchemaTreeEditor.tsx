@@ -1,3 +1,4 @@
+// [impl->req~edt-100~1]
 import { useMemo, useRef, useState, type DragEvent } from 'react'
 import {
   useEditorStore,
@@ -15,6 +16,7 @@ import { useGitStore } from '../state/gitStore'
 import { VisibleIfDialog, describeVisibleIf, describeVisibleIfFull } from './VisibleIfDialog'
 import '../styles/schema-editor.css'
 
+// [impl->req~edt-60~1]
 /** Where the currently dragged node would land. */
 interface DropTarget {
   uid: string
@@ -126,6 +128,8 @@ function SchemaNodeRow({
   const keepHidden = useEditorStore((s) => s.keepHidden)
   const setKeepHidden = useEditorStore((s) => s.setKeepHidden)
 
+  // [impl->req~edt-40~1]
+  // [impl->req~edt-41~1]
   /** This node's rename or move since the last save, if its answers are
    *  affected — see `pendingSchemaMoves`. */
   const pendingMove = useMemo(() => {

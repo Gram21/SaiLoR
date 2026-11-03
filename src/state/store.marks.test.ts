@@ -49,6 +49,7 @@ function projectText(reviewers = 1): string {
 const st = () => useStore.getState()
 const rect = { x: 0.1, y: 0.2, width: 0.3, height: 0.05 }
 
+// [utest->req~pdf-120~1]
 describe('PDF marks — single-reviewer project', () => {
   beforeEach(() => {
     st().loadFromText(projectText(1), null, 'test.json')
@@ -206,6 +207,7 @@ describe('PDF marks — grouped (cross-page) highlights', () => {
     expect(marks.find((m) => m.id === id2)?.color).toBe('#d0bfff')
   })
 
+  // [utest->req~ann-100~1]
   it('linkMarkToField on one fragment links every fragment, without double-adding on a repeat call', () => {
     const id1 = st().addHighlight(1, [rect], undefined, undefined, undefined, 'g1')!
     const id2 = st().addHighlight(2, [rect], undefined, undefined, undefined, 'g1')!
@@ -322,6 +324,7 @@ describe('PDF marks — multi-reviewer scoping', () => {
   })
 })
 
+// [utest->req~ann-110~1]
 describe('lastCreatedMarkId', () => {
   beforeEach(() => {
     st().loadFromText(

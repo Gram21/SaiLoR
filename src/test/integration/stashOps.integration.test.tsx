@@ -68,6 +68,7 @@ afterEach(() => {
   rmSync(repo, { recursive: true, force: true })
 })
 
+// [utest->req~git-440~1]
 describe('pushStash', () => {
   it("parks this project's changes, including a paper's first reading, and nothing else", async () => {
     write('annotations/p1/reviewer-1.json', answer('edited'))
@@ -96,6 +97,7 @@ describe('pushStash', () => {
   })
 })
 
+// [utest->req~git-450~1]
 describe('restoreStash', () => {
   async function stashAnEdit() {
     write('annotations/p1/reviewer-1.json', answer('edited'))
@@ -122,6 +124,7 @@ describe('restoreStash', () => {
     expect(await listStashes(run)).toHaveLength(1)
   })
 
+  // [utest->req~git-450~1]
   it('rolls a conflicting restore all the way back, keeping the stash', async () => {
     const sha = await stashAnEdit()
     // Meanwhile the same file changed and was committed — the stash no
@@ -140,6 +143,7 @@ describe('restoreStash', () => {
     expect((await listStashes(run)).map((e) => e.sha)).toEqual([sha])
   })
 
+  // [utest->req~git-480~1]
   it('finds the right stash by sha after others have been pushed on top', async () => {
     // stash@{n} shifts; a sha does not.
     const sha = await stashAnEdit()
@@ -160,6 +164,7 @@ describe('restoreStash', () => {
   })
 })
 
+// [utest->req~git-460~1]
 describe('branchFromStash', () => {
   it('restores a stash that no longer fits onto a branch where it cannot conflict', async () => {
     write('annotations/p1/reviewer-1.json', answer('edited'))
@@ -189,6 +194,7 @@ describe('dropStash', () => {
   })
 })
 
+// [utest->req~git-350~1]
 describe('the branch-switch carry-over is found by name, not by position', () => {
   /** What git:branchSwitchBegin pushes. */
   function pushCarryOver(content: string) {

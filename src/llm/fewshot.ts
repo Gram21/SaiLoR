@@ -46,6 +46,7 @@ function answeredLines(defs: ResolvedDef[], tree: AnnotationValueTree | undefine
   return out
 }
 
+// [impl->req~llm-450~1]
 /** How many fields `tree` has answered — used to order few-shot candidates
  *  "most complete first" (see the store's `fewShotCandidates`). */
 export function countAnsweredFields(schema: ResolvedDef[], tree: AnnotationValueTree | undefined): number {
@@ -73,6 +74,7 @@ function assemble(blocks: string[][]): string {
   return body ? `${HEADER}\n\n${body}` : HEADER
 }
 
+// [impl->req~llm-450~1]
 /**
  * Builds the "## Worked examples from this review" prompt section. Truncates
  * to `maxChars` (default ~6000) by dropping whole trailing lines — a field
@@ -95,6 +97,7 @@ export function buildFewShotBlock(
   return blocks.length > 0 ? assemble(blocks) : ''
 }
 
+// [impl->req~llm-450~1]
 /**
  * Picks up to `k` example candidates, excluding the paper currently being
  * annotated. Deterministic: takes candidates in the order given (the caller

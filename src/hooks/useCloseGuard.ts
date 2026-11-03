@@ -1,9 +1,13 @@
+// [impl->req~ui-100~1]
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { useEditorStore } from '../state/editorStore'
 import { isTauri } from '../platform/adapter'
 import { getBridge } from '../platform/bridge'
 
+// [impl->req~plt-100~1]
+// [impl->req~plt-310~1]
+// [impl->req~plt-370~1]
 /**
  * Wires desktop (Tauri) menu/lifecycle integration:
  *  - keeps the main process informed of the unsaved-changes state,

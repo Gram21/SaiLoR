@@ -34,6 +34,7 @@ function paper(annotations: AnnotationValueTree): Paper {
   }
 }
 
+// [utest->req~scr-230~1]
 function project(papers: Paper[]): Project {
   return {
     version: 1,
@@ -56,6 +57,7 @@ function project(papers: Paper[]): Project {
 
 describe('screeningIssues', () => {
   it('flags Exclude with no reason recorded', () => {
+    // [utest->req~scr-240~1]
     const issues = screeningIssues(project([paper(tree(DECISION_EXCLUDE))]), null)
     expect(issues).toHaveLength(1)
     expect(issues[0].kind).toBe('screening')

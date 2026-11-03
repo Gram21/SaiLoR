@@ -1,3 +1,6 @@
+// [impl->req~ui-40~1]
+// [impl->req~ui-90~1]
+// [impl->req~plt-170~1]
 /**
  * App appearance settings (theme + font scaling), persisted to localStorage and
  * applied to the document root. These affect the app chrome only — the PDF is

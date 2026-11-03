@@ -18,6 +18,7 @@ const entry = (id: string, parents: string[], moves: SchemaHistoryEntry['moves']
 })
 const mv = (from: string, to: string) => ({ from: from.split('/'), to: to.split('/') })
 
+// [utest->req~dat-167~1]
 describe('pendingMoves', () => {
   const history = [entry('a', [], [mv('X', 'Y')]), entry('b', ['a'], [mv('Y', 'Z')])]
 
@@ -45,6 +46,7 @@ describe('pendingMoves', () => {
     expect(pendingMoves(merged, 'ours', 'm')).toEqual([mv('C', 'D')])
   })
 
+  // [utest->req~edt-42~1]
   it('gives a file stamped with a folded-in version only the moves it has not seen', () => {
     const amended = amendVersion(history, 'b', [mv('Z', 'W')], '2026-09-23T10:05:00.000Z')!
     expect(amended.history.map((e) => e.id)).toEqual(['a', amended.id])
@@ -55,6 +57,7 @@ describe('pendingMoves', () => {
   })
 })
 
+// [utest->req~dat-167~1]
 describe('moveInTree', () => {
   it('renames a field', () => {
     expect(moveInTree({ Old: [{ value: 'x' }] }, mv('Old', 'New'))).toEqual({ New: [{ value: 'x' }] })
@@ -101,6 +104,7 @@ describe('loading files written under an older schema version', () => {
   const file = (schemaVersion: string | undefined, value: string) =>
     JSON.stringify({ ...(schemaVersion ? { schemaVersion } : {}), annotations: { Old: [{ value }] } })
 
+  // [utest->req~dat-167~1]
   it('carries the answers across the renames made since', () => {
     const project = projectFromFiles(meta([mv('Old', 'New')]), [['p/reviewer-1.json', file('v1', 'kept')]])
     expect(project.papers[0].reviews['1'].New).toEqual([{ value: 'kept' }])
@@ -111,12 +115,14 @@ describe('loading files written under an older schema version', () => {
     expect(project.papers[0].reviews['1'].New).toEqual([{ value: 'old' }])
   })
 
+  // [utest->req~dat-168~1]
   it('leaves a file of an unknown version alone, and says so', () => {
     const project = projectFromFiles(meta([mv('Old', 'New')]), [['p/reviewer-1.json', file('stranger', 'x')]])
     expect(project.papers[0].unknownSchemaFiles).toEqual(['review-1'])
     expect(project.papers[0].reviews['1'].Old).toEqual([{ value: 'x' }])
   })
 
+  // [utest->req~dat-166~1]
   it('stamps every file it writes, and reading its own text back moves nothing again', () => {
     // Old → New, then a new "Old" added: moving twice would wrongly move the new one too.
     const m = { ...meta([mv('Old', 'New')]), config: { reviewers: 2, schema: [{ name: 'New', type: 'string' }, { name: 'Old', type: 'string' }] } }

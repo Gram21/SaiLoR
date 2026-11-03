@@ -11,6 +11,7 @@ import {
 import type { Project } from '../model/project'
 
 describe('screeningSchemaDefs', () => {
+  // [utest->req~scr-20~1]
   it('derives exactly Decision and Reason, in that order', () => {
     const defs = screeningSchemaDefs({ reasons: ['Wrong topic', 'Duplicate'] })
     expect(defs.map((d) => d.name)).toEqual([SCREENING_DECISION, SCREENING_REASON])
@@ -66,12 +67,14 @@ describe('isScreening', () => {
     extra: {},
   }
 
+  // [utest->req~scr-10~1]
   it('is true when config.screening is set', () => {
     const project: Project = { ...base, screening: { reasons: ['X'] } }
     expect(isScreening(project)).toBe(true)
   })
 
   it('is false for an ordinary project, and for null/undefined', () => {
+    // [utest->req~scr-30~1]
     const project: Project = { ...base, screening: null }
     expect(isScreening(project)).toBe(false)
     expect(isScreening(null)).toBe(false)

@@ -26,6 +26,7 @@ export interface StampedTarget {
   now: string | null
 }
 
+// [impl->req~plt-135~1]
 /**
  * Which of these would be overwritten destructively.
  *

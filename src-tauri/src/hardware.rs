@@ -122,6 +122,7 @@ pub fn parse_lspci(out: &str) -> Vec<Gpu> {
         .collect()
 }
 
+// [impl->req~llm-702~1]
 pub fn recommend_backend(platform: &str, arch: &str, gpus: &[Gpu]) -> &'static str {
     let has = |v: &str| gpus.iter().any(|g| g.vendor == v);
     if platform == "darwin" {
@@ -219,6 +220,7 @@ pub(crate) fn disk_free(dir: &Path) -> i64 {
         .map_or(-1, |d| d.available_space() as i64)
 }
 
+// [impl->req~llm-702~1]
 pub async fn probe(data_dir: &Path) -> HardwareInfo {
     let (platform, arch) = node_names();
     let gpus = probe_gpus(platform, arch).await;
@@ -263,6 +265,7 @@ mod tests {
         }
     }
 
+    // [utest->req~llm-702~1]
     #[test]
     fn parsers() {
         let smi = parse_nvidia_smi("NVIDIA GeForce RTX 4090, 24564\nNVIDIA T4, 15360\n");
@@ -308,6 +311,7 @@ mod tests {
         assert_eq!(vendor_of("Mystery Board"), "other");
     }
 
+    // [utest->req~llm-702~1]
     #[test]
     fn backends() {
         let nv = [named("nvidia", "x")];

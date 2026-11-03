@@ -72,6 +72,7 @@ beforeEach(async () => {
   await es().startEdit()
 })
 
+// [utest->req~edt-41~1]
 describe('pendingSchemaMoves', () => {
   it('sees a rename and a move into a single group, parents first', () => {
     es().updateNode(uidOf('Group'), { name: 'Section' })
@@ -100,6 +101,7 @@ describe('saving a changed schema', () => {
     expect(loadProject(json).papers[0].reviews['1'].Design).toEqual([{ value: 'RCT' }])
   })
 
+  // [utest->req~edt-41~1]
   it('records no move when the reviewer chose to keep the answers hidden', async () => {
     es().updateNode(uidOf('Kind'), { name: 'Design' })
     es().setKeepHidden(uidOf('Design'), true)
@@ -116,6 +118,7 @@ describe('saving a changed schema', () => {
     expect(lastSaved().schemaVersion).toBe(first)
   })
 
+  // [utest->req~edt-42~1]
   it('without git, folds an edit made within minutes into the same version', async () => {
     es().updateNode(uidOf('Kind'), { name: 'Design' })
     await es().save()
@@ -153,6 +156,7 @@ describe('saving a changed schema', () => {
     expect(lastSaved().schemaHistory).toHaveLength(1)
   })
 
+  // [utest->req~edt-42~1]
   it('in a repository, starts a new version once the current one is committed', async () => {
     headText = null
     es().updateNode(uidOf('Kind'), { name: 'Design' })

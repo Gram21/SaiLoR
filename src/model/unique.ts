@@ -34,6 +34,7 @@ function subtreeKey(def: ResolvedDef, inst: InstanceNode | undefined): string | 
   return `${own ?? ''}|${kids ?? ''}`
 }
 
+// [impl->req~dat-400~1]
 /** The comparison key of one entry of a `unique` node; null when the entry holds no answer. */
 export function entryKey(def: ResolvedDef, inst: InstanceNode | undefined): string | null {
   const names = def.uniqueBy
@@ -44,6 +45,7 @@ export function entryKey(def: ResolvedDef, inst: InstanceNode | undefined): stri
   )
 }
 
+// [impl->req~dat-400~1]
 /** For each entry that repeats an earlier one: [its index, index of the earlier entry]. */
 export function duplicateIndexes(def: ResolvedDef, list: InstanceNode[]): Array<[number, number]> {
   const first = new Map<string, number>()
@@ -85,6 +87,7 @@ function writeInto(
   return false
 }
 
+// [impl->req~dat-410~1]
 /**
  * The hint to show when writing `value` at `segs` would make an entry of a
  * `unique` node equal to another entry; null when the write is allowed. An
@@ -129,6 +132,7 @@ export function duplicateOnWrite(
   return null
 }
 
+// [impl->req~dat-410~1]
 /**
  * Split suggested values into the ones that keep every `unique` node free of
  * repeats (applied in order to a copy of `tree`) and the ones that would not.

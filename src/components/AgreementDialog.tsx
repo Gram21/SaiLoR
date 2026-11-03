@@ -1,3 +1,4 @@
+// [impl->req~con-440~1]
 import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../state/store'
 import { copyText } from '../clipboard'
@@ -35,6 +36,7 @@ export const METRICS: MetricSpec[] = [
   },
 ]
 
+// [impl->req~con-310~1]
 /**
  * The per-field table as tab-separated text, for the "Copy" button — pulled
  * out as a pure function so the exact cell wording is testable without
@@ -87,6 +89,7 @@ export function AgreementDialog() {
   // (Findings, say) two or more reviewers recorded but nobody has lined up
   // yet makes the coefficients below unreliable — not absent, just wrong in
   // a way that looks like data.
+  // [impl->req~con-330~1]
   const needsAlignment = useMemo(
     () => (open && project ? needsAlignmentCount(project.schema, project.papers, project.reviewers) : 0),
     [open, project],

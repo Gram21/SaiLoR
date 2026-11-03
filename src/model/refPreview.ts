@@ -17,6 +17,7 @@
  *  item's top-left, `w`/`h` its rendered extent. */
 export type PreviewTextItem = { str: string; x: number; y: number; w: number; h: number }
 
+// [impl->req~pdf-150~1]
 export type EntryBox = { x: number; y: number; w: number; h: number }
 
 /** Items within this Δy belong to the same text line. */

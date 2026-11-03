@@ -35,6 +35,7 @@ function fieldsFrom(protocol: ProjectProtocol | null): Fields {
   }
 }
 
+// [impl->req~edt-70~1]
 function linesToList(text: string): string[] {
   return text
     .split('\n')

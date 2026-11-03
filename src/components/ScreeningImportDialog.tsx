@@ -1,3 +1,4 @@
+// [impl->req~scr-320~1]
 import { useEditorStore } from '../state/editorStore'
 
 /**

@@ -59,6 +59,7 @@ beforeEach(() => {
 })
 
 describe('useConsolidationAlignment', () => {
+  // [utest->req~con-255~1]
   it('runs once, then leaves the paper alone while the reviewers are unchanged', async () => {
     act(() => {
       st().loadFromText(projectJson(agreed), null, 'test.json')
@@ -90,6 +91,7 @@ describe('useConsolidationAlignment', () => {
     expect(markParts(st().project!.papers[0].consolidationSync!).reviews).toBe(markParts(synced!).reviews)
   })
 
+  // [utest->req~con-257~1]
   it('asks before rewriting an answered tree once a reviewer changes something', async () => {
     act(() => {
       st().loadFromText(projectJson(agreed), null, 'test.json')

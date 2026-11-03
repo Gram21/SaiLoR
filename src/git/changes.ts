@@ -1,3 +1,4 @@
+// [impl->req~llm-470~1]
 import { produce } from 'immer'
 import { isField, type FieldType, type ResolvedDef } from '../model/schema'
 import { emptyValue, makeInstance, type AnnotationValueTree, type FieldValue, type InstanceNode } from '../model/annotations'
@@ -17,6 +18,7 @@ import { parseYear } from '../model/year'
 
 export type Disposition = 'use' | 'ignore' | 'discard'
 
+// [impl->req~git-130~1]
 /** One field whose value differs between HEAD and the working tree. */
 export interface FieldChange {
   /** Decision-map key and React row key. Uses `merge.ts`'s `conflictId`
@@ -56,6 +58,7 @@ export interface DetectedChanges {
   papers: PaperChange[]
 }
 
+// [impl->req~git-490~1]
 /**
  * Paper fields the commit carries whatever the reviewer decided elsewhere.
  *
@@ -225,6 +228,7 @@ function diffPaperMeta(head: Paper, working: Paper, out: FieldChange[]): void {
   for (const [primary, hidden] of Object.entries(PAPER_META_BUNDLES)) {
     const primaryChange = byCanonical.get(primary)
     for (const h of hidden) {
+      // [impl->req~git-140~1]
       const hiddenChange = byCanonical.get(h)
       if (!hiddenChange) continue // that field didn't change — nothing to fold in
       if (primaryChange) {
@@ -253,6 +257,7 @@ function diffPaperMeta(head: Paper, working: Paper, out: FieldChange[]): void {
  * file-level commit in that state.
  */
 export function detectFieldChanges(head: Project, working: Project): DetectedChanges | null {
+  // [impl->req~dat-285~1]
   const structural =
     !deepEqualJson(head.schema, working.schema) ||
     head.reviewers !== working.reviewers ||

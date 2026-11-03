@@ -1,3 +1,5 @@
+// [utest->req~llm-720~1]
+// [utest->req~llm-721~1]
 import { describe, it, expect } from 'vitest'
 import { buildChatRequest, parseChatResponse, type ChatMessage, type ToolDef } from './chat'
 import { PROVIDERS, buildRequest, extractError, extractText, wasTruncated } from './providers'

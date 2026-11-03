@@ -1,3 +1,4 @@
+// [utest->req~git-110~1]
 import { describe, it, expect } from 'vitest'
 import { deriveGitInfo } from './deriveGitInfo'
 import type { GitRun } from './types'

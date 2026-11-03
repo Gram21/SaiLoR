@@ -1,3 +1,4 @@
+// [utest->req~git-240~1]
 import { describe, it, expect } from 'vitest'
 import { loadProject, serializeProject, type Project } from '../model/project'
 import { normalizeTree } from '../model/annotations'
@@ -502,6 +503,7 @@ describe('mergeProjects — schema changes', () => {
     expect(outcome.notes.some((n) => n.kind === 'schema-remote')).toBe(true)
   })
 
+  // [utest->req~git-260~1]
   it('keeps answers under a field the remote removed, hidden, and says so', () => {
     // The merged tree is walked against every node either side kept, and an
     // answer under a node the schema no longer has rides along as a hidden
@@ -533,6 +535,7 @@ describe('mergeProjects — schema changes', () => {
     expect(outcome.notes.some((n) => n.kind === 'schema-remote')).toBe(true)
   })
 
+  // [utest->req~git-255~1]
   it('combines a schema both sides extended, node by node', () => {
     const base = project({ schema: SIMPLE, papers: [] })
     const ours = project({ schema: PLUS_X, papers: [] })
@@ -543,6 +546,7 @@ describe('mergeProjects — schema changes', () => {
     expect(outcome.conflicts).toEqual([])
   })
 
+  // [utest->req~git-250~1]
   it('asks for the reviewer count when both sides changed it, differently', () => {
     const base = project({ reviewers: 1, papers: [] })
     const ours = project({ reviewers: 2, papers: [] })
@@ -1316,6 +1320,7 @@ describe('mergeProjects — schema, node by node', () => {
   })
 })
 
+// [utest->req~git-255~1]
 describe('mergeResultProblem', () => {
   it('names a combined schema the loader would refuse', () => {
     // Each side removed a different one of G's children, leaving it with none.
@@ -1334,6 +1339,7 @@ describe('mergeResultProblem', () => {
 describe('mergeProjects — schema versions', () => {
   const H = (id: string, parents: string[], moves: { from: string[]; to: string[] }[] = []) => ({ id, parents, at: '', moves })
 
+  // [utest->req~git-256~1]
   it('merges an edit made under the old name into the field the other side renamed', () => {
     const v0 = [H('v0', [])]
     const base = project({ schema: SIMPLE, papers: [paper('a')], extra: {} })
@@ -1357,6 +1363,7 @@ describe('mergeProjects — schema versions', () => {
     expect(outcome.merged.schemaVersion).toBe('v1')
   })
 
+  // [utest->req~git-256~1]
   it('gives a merge of two new versions a version descending from both', () => {
     const v0 = [H('v0', [])]
     const mk = (schema: AnnotationDef[], v: string, h: ReturnType<typeof H>[]) => {

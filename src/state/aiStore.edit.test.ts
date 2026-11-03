@@ -1,3 +1,7 @@
+// [utest->req~llm-240~1]
+// [utest->req~llm-410~1]
+// [utest->req~llm-580~1]
+// [utest->req~llm-590~1]
 import { describe, it, expect, beforeEach, vi } from 'vitest'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
 import type { LlmConfig, LlmHttpRequest, LlmHttpResponse } from '../llm/types'

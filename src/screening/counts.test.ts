@@ -67,6 +67,7 @@ describe('screeningCounts', () => {
         paper({ annotations: tree() }),
       ],
     })
+    // [utest->req~scr-190~1]
     const counts = screeningCounts(p, null)
     expect(counts.total).toBe(3)
     expect(counts.included).toBe(1)
@@ -79,6 +80,7 @@ describe('screeningCounts', () => {
     const p = project({
       papers: [paper({ annotations: tree(DECISION_EXCLUDE, 'Duplicate') })],
     })
+    // [utest->req~scr-200~1]
     const counts = screeningCounts(p, null)
     expect(counts.byReason).toEqual({ 'Wrong topic': 0, Duplicate: 1, 'Not in English': 0 })
   })
@@ -97,6 +99,7 @@ describe('screeningCounts', () => {
     expect(screeningCounts(p, null).excludedWithoutReason).toBe(1)
   })
 
+  // [utest->req~scr-180~1]
   it('counts differ per seat: Reviewer 1, Reviewer 2, and Consolidation can disagree', () => {
     const p = project({
       reviewers: 2,

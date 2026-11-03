@@ -1,3 +1,4 @@
+// [utest->req~pdf-170~1]
 import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'

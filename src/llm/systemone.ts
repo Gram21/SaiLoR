@@ -7,6 +7,7 @@ import { optionsBudgetOf, systemOneProfileFor } from './modelProfiles'
 import type { LlmConfig, LlmHttpRequest, Suggestion } from './types'
 import { API_KEY_SENTINEL } from './types'
 
+// [impl->req~llm-520~1]
 /**
  * "System 1" decision models (TypeSafe Jev, convaiinnovations Laya via
  * `laya-serve`) answer one closed-form question at a time with a calibrated
@@ -75,6 +76,7 @@ const QUESTION_MARKER_TOKENS = 4
 /** Below this state budget a body slice is too small to be useful: title + abstract only. */
 const MIN_BODY_STATE_TOKENS = 2000
 
+// [impl->req~llm-713~1]
 /** URL + model for a System One target; `error` when the config cannot form one. */
 export function systemOneEndpoint(cfg: LlmConfig): { url: string; model: string } | { error: string } {
   if (cfg.systemOneFlavor !== 'cloudflare') {
@@ -143,6 +145,7 @@ function composeState(input: SystemOneStateInput, budget: number): { text: strin
   return { text: [head, fitted.text].filter(Boolean).join('\n\n'), truncated: true, mode: 'abstract+body' }
 }
 
+// [impl->req~llm-711~1]
 /**
  * Plans every `/v1/systemone` request needed for `items`: label checks against
  * the model's profile, greedy packing into as few requests as `maxQuestions`
@@ -218,6 +221,7 @@ export function planSystemOne(
   return { requests, notHandled, state }
 }
 
+// [impl->req~llm-711~1]
 /** Plans System One requests for the eligible `targets`; the ineligible ones are left to the caller. */
 export function planSystemOneRequests(
   cfg: LlmConfig & { maxStateTokens?: number },
@@ -247,6 +251,7 @@ export function planSystemOneRequests(
   return planSystemOne(cfg, items, { head, hasAbstract: !!paper.abstract, body: paperText })
 }
 
+// [impl->req~llm-520~1]
 /** Backward-compatible: the first planned request, or null when nothing is eligible/handled. */
 export function buildSystemOneRequest(
   cfg: LlmConfig & { maxStateTokens?: number },
@@ -272,6 +277,8 @@ export interface SystemOneResult {
   usage: { inputTokens: number; outputTokens: number }
 }
 
+// [impl->req~llm-520~1]
+// [impl->req~llm-713~1]
 /**
  * Validates a `/v1/systemone` reply against what was asked. Never throws:
  * junk in `json` (wrong shape, unknown answer type, an out-of-set choice)
@@ -366,6 +373,7 @@ export function parseSystemOneResponse(
   return { suggestions, skipped, probabilities, usage: { inputTokens, outputTokens } }
 }
 
+// [impl->req~llm-711~1]
 /** Combines the results of several requests planned for one paper. */
 export function mergeSystemOneResults(results: SystemOneResult[]): SystemOneResult {
   return {
@@ -389,6 +397,7 @@ export interface SystemOneComparison {
   p: number
 }
 
+// [impl->req~llm-520~1]
 /**
  * Cross-checks each of an LLM's `suggestions` against the matching System One
  * answer in `s1` (by path). Booleans compare exactly; enum choices compare
@@ -399,6 +408,7 @@ export interface SystemOneComparison {
 /** What "Verify setup" asks and expects back — a single throwaway noul question. */
 export const SYSTEMONE_VERIFY_ASKED: SystemOneAsked[] = [{ id: 'q0', path: 'verify', kind: 'noul' }]
 
+// [impl->req~llm-520~1]
 /** The minimal request "Verify setup" sends for a System One target: one tiny
  *  noul question, so a bad key/model/URL surfaces here rather than mid-run. */
 export function buildSystemOneVerifyRequest(cfg: LlmConfig): LlmHttpRequest {
@@ -409,6 +419,8 @@ export function buildSystemOneVerifyRequest(cfg: LlmConfig): LlmHttpRequest {
   })
 }
 
+// [impl->req~llm-520~1]
+// [impl->req~llm-560~1]
 export function compareWithSystemOne(
   suggestions: Suggestion[],
   s1: SystemOneResult,

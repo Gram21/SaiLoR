@@ -1,3 +1,4 @@
+// [utest->req~llm-700~1]
 import { describe, it, expect } from 'vitest'
 import { LOCAL_MODEL_CATALOG, findCatalogEntry, requireAvailableEntry } from './localCatalog'
 

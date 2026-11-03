@@ -1,3 +1,4 @@
+// [utest->req~git-520~1]
 import { afterAll, describe, expect, it } from 'vitest'
 import { readFileSync, rmSync } from 'node:fs'
 import { buildScenario, ANNA, type Stage } from '../../../samples/git-scenarios/builder'

@@ -57,6 +57,7 @@ export function initTree(defs: ResolvedDef[]): AnnotationValueTree {
   return tree
 }
 
+// [impl->req~dat-165~1]
 /**
  * The parts of `tree` the current schema has no def for — answers left behind
  * when a field was removed or renamed.
@@ -116,6 +117,8 @@ export function instanceHoldsAnswer(inst: unknown): boolean {
   return false
 }
 
+// [impl->req~ann-40~1]
+// [impl->req~dat-160~1]
 /**
  * Reconcile a loaded (possibly partial) value tree against the schema: coerce
  * each instance to the def's shape, pad/clamp to min (at least 1) / max, and
@@ -133,6 +136,7 @@ export function normalizeTree(
     // `"Study Type": "RCT"`). Adopt it as that one entry rather than dropping
     // it, since this walk rewrites the file and discarding would silently
     // lose the answer on the next save. `null`/`undefined` stay absent.
+    // [impl->req~dat-170~1]
     const list = Array.isArray(raw) ? raw : raw == null ? [] : [raw as InstanceNode]
     let instances: InstanceNode[] = list.map((inst) => normalizeInstance(def, inst))
 
@@ -211,6 +215,7 @@ export function pruneTree(
 }
 
 function pruneInstance(def: ResolvedDef, inst: InstanceNode): InstanceNode {
+  // [impl->req~ann-30~1]
   const out: InstanceNode = {}
   if (isField(def)) out.value = inst.value ?? emptyValue(def.type)
   // Same reasoning as `normalizeInstance`: `pruneTree` with no defs yields
@@ -360,6 +365,7 @@ export function treeHoldsOrphans(defs: ResolvedDef[], tree: AnnotationValueTree)
   return orphanedNodePaths(defs, tree).length > 0
 }
 
+// [impl->req~dat-215~1]
 /**
  * Where those orphans are, as readable paths ("Findings › Notes"). Nothing in
  * the app renders an orphan — no form field, no export, no agreement figure —

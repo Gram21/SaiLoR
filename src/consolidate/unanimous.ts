@@ -1,3 +1,4 @@
+// [impl->req~con-250~1]
 import { isField, type ResolvedDef } from '../model/schema'
 import type { AnnotationValueTree, FieldValue } from '../model/annotations'
 import { isUnanswered } from '../llm/fields'
@@ -28,6 +29,8 @@ export interface UnanimousFill {
   value: FieldValue
 }
 
+// [impl->req~con-200~1]
+// [impl->req~con-240~1]
 /**
  * The form two answers are compared in when deciding whether the reviewers said
  * the same thing.

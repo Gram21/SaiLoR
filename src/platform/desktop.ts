@@ -40,10 +40,12 @@ const RECENTS_KEY = 'slr.recents.electron'
  */
 let lastWritten: { path: string; meta: string; files: Map<string, string | null> } | null = null
 
+// [impl->req~plt-41~1]
 function noteWritten(path: string, meta: string, files: ProjectFileEntry[]): void {
   lastWritten = { path, meta, files: new Map(files.map((f) => [f.relPath, f.text])) }
 }
 
+// [impl->req~plt-41~1]
 /**
  * Run a call that may rewrite the working tree, forgetting the baseline first
  * so the next save writes every file rather than only what differs from it.
@@ -61,6 +63,7 @@ function withBaselineDropped<T>(call: () => Promise<T>): Promise<T> {
   return call()
 }
 
+// [impl->req~plt-43~1]
 /**
  * The baseline as it reads under `meta`'s schema version. A save that brings
  * a new version (the editor recorded a rename) carries every file's answers
@@ -82,6 +85,7 @@ function rebaselined(base: typeof lastWritten, meta: unknown): typeof lastWritte
   }
 }
 
+// [impl->req~plt-41~1]
 /** Record how `text` — a project just read from `path` — serializes, so the
  *  next save can tell edits apart from normalization. Unparseable text leaves
  *  no baseline, so that save writes everything, exactly as before. */
@@ -127,6 +131,7 @@ export class DesktopAdapter implements PlatformAdapter {
     return removeRecent(RECENTS_KEY, id)
   }
 
+  // [impl->req~plt-150~1]
   async checkRecents(entries: RecentEntry[]): Promise<RecentEntry[]> {
     if (entries.length === 0) return entries
     // The id IS the absolute path on the desktop.
@@ -173,6 +178,9 @@ export class DesktopAdapter implements PlatformAdapter {
     }
   }
 
+  // [impl->req~plt-41~1]
+  // [impl->req~plt-42~1]
+  // [impl->req~plt-135~1]
   async saveProject(text: string, handle: SaveHandle): Promise<SaveHandle> {
     if (!handle.path) throw new Error('No file path; use "Save as".')
     // `text` is the shared whole-project JSON contract; on disk this build splits it into
@@ -207,11 +215,13 @@ export class DesktopAdapter implements PlatformAdapter {
     return handle
   }
 
+  // [impl->req~plt-80~1]
   async rebasePdfPaths(pdfPaths: string[], from: SaveHandle, to: SaveHandle): Promise<string[]> {
     if (!from.path || !to.path || pdfPaths.length === 0) return pdfPaths
     return bridge().rebasePaths(from.path, to.path, pdfPaths)
   }
 
+  // [impl->req~plt-210~1]
   async getPdfSource(pdfPath: string, projectHandle: SaveHandle): Promise<PdfSource> {
     // Re-assert the dir from this project's handle: the editor repoints it when picking a
     // new location, so trusting whatever was set last could resolve PDFs against the wrong dir.

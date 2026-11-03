@@ -1,3 +1,5 @@
+// [impl->req~ui-80~1]
+// [impl->req~con-500~1]
 import { useEffect, useRef } from 'react'
 import { consolidationGateMissing, useStore } from '../state/store'
 import { alignableNodes } from '../consolidate/align'
@@ -60,6 +62,7 @@ export function useConsolidationAlignment(): void {
     // Read off the store rather than the rendered `project`: this effect must
     // not list `project` as a dependency, or the writes the run itself makes
     // would tear it down and restart it before it ever finished.
+    // [impl->req~con-255~1]
     const paper = useStore.getState().project?.papers.find((p) => p.id === currentPaperId)
     if (!paper) {
       queue.current = []

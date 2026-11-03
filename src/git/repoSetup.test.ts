@@ -1,3 +1,4 @@
+// [utest->req~git-410~1]
 import { describe, it, expect } from 'vitest'
 import { applyManagedBlock, planRepoSetup, ATTRIBUTES_BODY, IGNORE_BODY } from './repoSetup'
 
@@ -45,6 +46,7 @@ describe('applyManagedBlock', () => {
   })
 })
 
+// [utest->req~git-411~1]
 describe('planRepoSetup', () => {
   it('needs no consent for a repository with neither file', () => {
     const plan = planRepoSetup(null, null)

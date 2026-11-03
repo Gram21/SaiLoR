@@ -4,6 +4,7 @@ export type ConsolidationFieldStatus = 'agree' | 'disagree'
 
 const emptyVerdicts = new Map<string, ConsolidationFieldStatus>()
 
+// [impl->req~con-230~1]
 /**
  * Visual status for one field in Consolidation. Green means every configured
  * reviewer answered and they all agree. Red surfaces any disagreement already

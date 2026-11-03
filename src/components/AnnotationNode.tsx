@@ -1,3 +1,4 @@
+// [impl->req~ann-10~1]
 import { fieldPath, useAiMark, useStore, type PathSeg } from '../state/store'
 import { isField, isRepeatable, type ResolvedDef } from '../model/schema'
 import {
@@ -50,6 +51,7 @@ export function AnnotationNode({
   // Common case: a single, non-repeatable leaf field on one row.
   if (leaf && !repeatable) {
     const inst = instances[0]
+    // [impl->req~ann-40~1]
     const canonical = fieldPath(path, def.name, 0)
     return (
       <div
@@ -107,6 +109,7 @@ export function AnnotationNode({
 
           {isField(def) &&
             (() => {
+              // [impl->req~ann-30~1]
               const canonical = fieldPath(path, def.name, i)
               return (
                 <div

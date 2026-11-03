@@ -75,6 +75,7 @@ function rewriteTree(tree: AnnotationValueTree, from: string, to: string): Annot
 export function renameReasonInPapers<T extends ReasonBearingPaper>(papers: T[], from: string, to: string): T[] {
   if (from === '' || from === to) return papers
   let anyChanged = false
+  // [impl->req~scr-260~1]
   const next = papers.map((paper) => {
     let changed = false
 

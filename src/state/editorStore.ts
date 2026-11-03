@@ -1,3 +1,5 @@
+// [impl->req~llm-470~1]
+// [impl->req~plt-96~1]
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { z } from 'zod'
@@ -204,6 +206,7 @@ function cleanVisibleIf(spec: VisibleIfSpec | null): VisibleIfSpec | null {
   return conditions.length > 0 ? { mode: spec.mode, conditions } : null
 }
 
+// [impl->req~edt-100~1]
 /** Editor tree → the compact AnnotationDef[] written to `config.schema`. */
 export function toAnnotationDefs(nodes: EditorNode[]): AnnotationDef[] {
   return nodes.map((n) => {
@@ -230,6 +233,7 @@ export function toAnnotationDefs(nodes: EditorNode[]): AnnotationDef[] {
   })
 }
 
+// [impl->req~edt-100~1]
 /** AnnotationDef[] from an existing file → editor tree (assigning uids). */
 export function fromAnnotationDefs(defs: AnnotationDef[]): EditorNode[] {
   return defs.map((d) => {
@@ -293,6 +297,7 @@ export function nodePathNames(nodes: EditorNode[], uid: string): string[] | null
   return null
 }
 
+// [impl->req~edt-30~1]
 /** The uid of `uid`'s parent, or null at the root. Distinguishes a reorder
  *  (same parent) from a re-parenting (answer path changes, orphaning answers). */
 export function parentUidOf(nodes: EditorNode[], uid: string, parent: string | null = null): string | null | undefined {
@@ -363,6 +368,7 @@ export interface PendingSchemaMove {
   kept: boolean
 }
 
+// [impl->req~edt-41~1]
 function pathsByUid(
   nodes: EditorNode[],
   prefix: EditorNode[] = [],
@@ -398,6 +404,7 @@ export function pendingSchemaMoves(
   const uids = [...before.keys()].sort((a, b) => before.get(a)!.length - before.get(b)!.length)
   for (const uid of uids) {
     const oldChain = before.get(uid)!
+    // [impl->req~dat-380~1]
     const newChain = after.get(uid)
     if (!newChain) continue
     const old = oldChain.map((n) => n.name)
@@ -412,6 +419,7 @@ export function pendingSchemaMoves(
     while (c < cur.length - 1 && c < to.length - 1 && cur[c] === to[c]) c++
     const single = (chain: EditorNode[]) => chain.slice(c, -1).every((n) => n.max === 1)
     const carried = single(oldChain) && single(newChain)
+    // [impl->req~dat-350~1]
     const kept = !!keepHidden[uid]
     out.push({ uid, from: cur, to, carried, kept })
     if (carried && !kept) applied.push({ from: cur, to })
@@ -620,6 +628,7 @@ function commitImport(
   const resolvedUid: string[] = []
   let updated = 0
   let unchanged = 0
+  // [impl->req~edt-10~1]
   let added = 0
 
   entries.forEach((entry, i) => {
@@ -629,6 +638,7 @@ function commitImport(
     if (shouldMerge && (verdict.kind === 'certain' || verdict.kind === 'probable')) {
       const targetUid =
         verdict.target.where === 'existing' ? existingUids[verdict.target.index] : resolvedUid[verdict.target.index]
+      // [impl->req~edt-42~1]
       const match = targetUid ? s.papers.find((p) => p.uid === targetUid) : undefined
       if (match) {
         if (fillFromRef(match, entry)) updated++
@@ -802,6 +812,7 @@ export function editorSeatFinished(paper: EditorPaper | undefined, seat: number)
   return finished?.[String(seat)] === true
 }
 
+// [impl->req~edt-120~1]
 /**
  * Validate a draft the same way loading does (structure + schema resolution),
  * plus editor-specific checks. Returns [] when the draft is valid.
@@ -1820,6 +1831,7 @@ export const useEditorStore = create<EditorState>()(
       })
     },
 
+    // [impl->req~edt-130~1]
     setStrictEnabled: (on) => {
       lastEditKey = null
       const snap = snapshotOf(get())
@@ -1830,6 +1842,7 @@ export const useEditorStore = create<EditorState>()(
       })
     },
 
+    // [impl->req~edt-130~1]
     addPerson: () => {
       lastEditKey = null
       const snap = snapshotOf(get())
@@ -1848,6 +1861,7 @@ export const useEditorStore = create<EditorState>()(
       })
     },
 
+    // [impl->req~edt-130~1]
     renamePerson: (id, name) => {
       const key = `person:${id}`
       const coalesce = key === lastEditKey
@@ -1862,6 +1876,7 @@ export const useEditorStore = create<EditorState>()(
       })
     },
 
+    // [impl->req~edt-130~1]
     removePerson: (id) => {
       lastEditKey = null
       const st = get()
@@ -1892,6 +1907,7 @@ export const useEditorStore = create<EditorState>()(
       })
     },
 
+    // [impl->req~edt-140~1]
     setAssignment: (paperUid, seat, personId) => {
       lastEditKey = null
       const st = get()
@@ -1920,6 +1936,7 @@ export const useEditorStore = create<EditorState>()(
       })
     },
 
+    // [impl->req~edt-150~1]
     bulkAssignStrict: (perPaper) => {
       lastEditKey = null
       const st = get()
@@ -1942,6 +1959,7 @@ export const useEditorStore = create<EditorState>()(
       })
     },
 
+    // [impl->req~edt-170~1]
     reopenWork: (paperUid, seat) => {
       lastEditKey = null
       const snap = snapshotOf(get())
@@ -2231,6 +2249,7 @@ export const useEditorStore = create<EditorState>()(
         if (s.screeningImport) s.screeningImport.startKind = kind
       }),
 
+    // [impl->req~edt-46~1]
     resolveScreeningImport: async (choice) => {
       const draft = get().screeningImport
       if (!draft) return

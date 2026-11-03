@@ -20,6 +20,8 @@ import {
   buildRecheckSystemPrompt,
   parseRecheckReply,
   type RecheckOutcome,
+  // [impl->req~llm-250~1]
+  // [impl->req~llm-290~1]
   type RecheckTarget,
 } from '../llm/recheck'
 import { buildRunFeedback, feedbackFileName, hasFeedbackWorthSaving, type FeedbackRow } from '../llm/feedback'
@@ -82,6 +84,8 @@ const MAX_MODEL_PAGES = 10
 /** Most recent agent-mode progress messages kept on screen (per paper). */
 const MAX_AGENT_EVENTS = 5
 
+// [impl->req~llm-150~1]
+// [impl->req~llm-300~1]
 export type AiPhase =
   | 'setup' // choosing a target, nothing sent yet
   | 'reading' // extracting the PDF's text
@@ -92,6 +96,8 @@ export type AiPhase =
   | 'applied'
   | 'error'
 
+// [impl->req~llm-380~1]
+// [impl->req~llm-550~1]
 export type AiMode = 'prompt' | 'agent' | 'classify'
 
 /** A suggestion plus the reviewer's decision about it and which paper it belongs to. */
@@ -105,6 +111,7 @@ export interface ReviewRow {
    *  One's own answer for the same field. Absent when no cross-check model is
    *  assigned, or the field wasn't eligible/asked. */
   crossCheck?: SystemOneComparison
+  // [impl->req~llm-580~1]
   /** True once the reviewer has edited this row's value via `editRow` — the
    *  original AI-proposed value stays in `suggestion.value` (shown as "AI
    *  proposed: X"); the edited value lives here instead. */
@@ -116,6 +123,7 @@ export interface ReviewRow {
   flagged?: boolean
 }
 
+// [impl->req~llm-660~1]
 /** The re-check's verdict on one value already in the seat. Only `disagree`
  *  is actionable; agree/unsure are kept for the compact list and the feedback. */
 export interface RecheckRow {
@@ -134,6 +142,8 @@ export interface PaperRunError {
   message: string
 }
 
+// [impl->req~llm-80~1]
+// [impl->req~llm-590~1]
 /** A paper the reviewer skipped mid-batch (REQ-LLM-590) — not an error, and
  *  not in `doneIds`, so it stays a resume candidate. */
 export interface PaperSkip {
@@ -159,6 +169,10 @@ export interface PaperNotes {
   info?: string[]
 }
 
+// [impl->req~llm-90~1]
+// [impl->req~llm-110~1]
+// [impl->req~llm-160~1]
+// [impl->req~llm-310~1]
 interface AiState {
   open: boolean
   /** True while the dialog is hidden ("peeking" at the PDF) but not discarded —
@@ -377,12 +391,15 @@ interface AiState {
 // Not in the store: it is not serializable and nothing renders from it.
 let controller: AbortController | null = null
 let ticker: ReturnType<typeof setInterval> | null = null
+// [impl->req~llm-590~1]
 /** One AbortController per paper currently in flight, keyed by paper id —
  *  lets `skipPaper` abort a single paper's calls without touching the rest of
  *  the batch. Reset at the top of each `executeBatch` call; safe as a module
  *  variable since only one batch executes at a time (the `controller`
  *  supersede pattern above already relies on the same assumption). */
 let paperControllers = new Map<string, AbortController>()
+// [impl->req~llm-120~1]
+// [impl->req~llm-680~1]
 /** True once the current review's feedback has been written (or deliberately
  *  skipped), so Apply followed by Close cannot write it twice. */
 let feedbackHandled = false
@@ -392,6 +409,7 @@ function stopTicker() {
   ticker = null
 }
 
+// [impl->req~llm-590~1]
 /** A signal that aborts as soon as either `a` or `b` does. Manual rather than
  *  `AbortSignal.any` for now — ponytail: swap in once the app's minimum
  *  system WebView baseline is confirmed to have it everywhere this runs. */
@@ -426,9 +444,11 @@ export const AGENT_MIN_CONTEXT = 32_000
 const AGENT_CONTEXT_REASON = 'Agent mode needs a model with a context window of at least 32k tokens'
 const OLLAMA_CONTEXT_REASON =
   "Set 'Context to use' for this model in the model settings (Ollama's default window is often only 4,096 tokens and would silently cut the paper)"
+// [impl->req~llm-741~1]
 export const LOCAL_TRUNCATED_MESSAGE =
   "The local model cut off the start of the prompt because its context window is too small. Raise 'Context to use' in the model settings or use a shorter paper."
 
+// [impl->req~llm-740~1]
 /**
  * Cuts `paperText` to what is left of `cfg`'s window after `fixedText` (system
  * prompt, few-shot block and the user-message wrapper) and the reply. Unchanged
@@ -450,6 +470,7 @@ export function fitForChat(cfg: LlmConfig, fixedText: string, paperText: string)
   return { text: f.text, fit: { pagesKept: f.pagesKept, pagesTotal: f.pagesTotal, droppedReferences: f.droppedReferences } }
 }
 
+// [impl->req~llm-740~1]
 /** The review note for a trimmed paper. */
 export function describeFit(model: string, fit: PaperFit): string {
   const pages = fit.pagesKept <= 1 ? 'page 1' : `pages 1–${fit.pagesKept}`
@@ -464,11 +485,14 @@ function worseFit(a: PaperFit | undefined, b: PaperFit | undefined): PaperFit | 
   return !a || (b && b.pagesKept < a.pagesKept) ? (b ?? a) : a
 }
 
+// [impl->req~llm-743~1]
 /** Why Agent mode cannot use this model, or null. Its tool results pile up in the window. */
 export function agentContextReason(cfg: Pick<LlmConfig, 'contextTokens'>): string | null {
   return cfg.contextTokens !== undefined && cfg.contextTokens < AGENT_MIN_CONTEXT ? AGENT_CONTEXT_REASON : null
 }
 
+// [impl->req~llm-741~1]
+// [impl->req~llm-743~1]
 /** Why a run with these models must not start, or null. */
 export function startBlocker(mode: AiMode, annotator: LlmConfig, judge?: LlmConfig | null): string | null {
   if (annotator.provider === 'ollama' && !annotator.contextTokens) return OLLAMA_CONTEXT_REASON
@@ -483,6 +507,7 @@ export function isLocalModel(cfg: LlmConfig): boolean {
   return !!cfg.managed || isLocalHost(baseOf(cfg))
 }
 
+// [impl->req~llm-741~1]
 /** Where a paper goes for this model, for the consent line. */
 export function destinationNote(cfg: LlmConfig): string {
   if (isLocalModel(cfg)) return 'This model runs on your machine; nothing leaves it.'
@@ -498,6 +523,7 @@ function hostOf(url: string): string {
   }
 }
 
+// [impl->req~llm-742~1]
 /**
  * An app-managed local model starts on its first call, which can take seconds
  * and fail; start it here so the run can show that phase and the real error.
@@ -516,6 +542,10 @@ export async function ensureLocalModel(cfg: LlmConfig, onStarting: () => void): 
   }
 }
 
+// [impl->req~llm-100~1]
+// [impl->req~llm-390~1]
+// [impl->req~llm-470~1]
+// [impl->req~llm-660~1]
 /** Papers eligible for "annotate all papers": have a PDF, aren't finished for
  *  the target seat, and have at least one unanswered field. With `recheck`,
  *  finished papers and papers with only answered fields qualify too. The target seat is
@@ -566,6 +596,7 @@ function fewShotSourceSeat(project: Project, currentReviewer: string | null): st
   return currentReviewer === aiSeat ? null : currentReviewer
 }
 
+// [impl->req~llm-450~1]
 /** Finished papers for the few-shot source seat, most-answered-fields-first
  *  (ties keep project order — `Array.prototype.sort` is stable). */
 export function fewShotCandidates(project: Project, currentReviewer: string | null): FewShotCandidate[] {
@@ -587,6 +618,7 @@ export function fewShotCandidates(project: Project, currentReviewer: string | nu
   return out
 }
 
+// [impl->req~llm-450~1]
 /** The few-shot prompt block for one paper, and how many examples it actually
  *  carries after `buildFewShotBlock`'s truncation — `''`/`0` when nothing was
  *  picked (empty candidate list, or every candidate excluded/truncated away). */
@@ -608,6 +640,7 @@ export function buildFewShotForPaper(
 // All-papers batch persistence — resuming a run stopped mid-way (REQ-LLM-510).
 // ---------------------------------------------------------------------------
 
+// [impl->req~llm-510~1]
 /** What an interrupted all-papers run needs to pick back up where it left
  *  off. Keyed by project identity + target seat (see `batchStorageKey`), one
  *  entry per project — a newer run overwrites an older one outright. */
@@ -650,6 +683,7 @@ function batchStorageKey(seat: string | null): string {
   return `slr.llm.batch.${projectIdentityKey()}.${seat ?? ''}`
 }
 
+// [impl->req~llm-510~1]
 function persistBatch(seat: string | null, data: PersistedBatch): void {
   // No project (closed mid-run) or no identity: a key would collide with others.
   if (!projectIdentityKey()) return
@@ -664,6 +698,7 @@ function persistBatch(seat: string | null, data: PersistedBatch): void {
   }
 }
 
+// [impl->req~llm-510~1]
 function readPersistedBatch(seat: string | null): PersistedBatch | null {
   if (!projectIdentityKey()) return null
   try {
@@ -676,6 +711,7 @@ function readPersistedBatch(seat: string | null): PersistedBatch | null {
   }
 }
 
+// [impl->req~llm-510~1]
 function clearPersistedBatch(seat: string | null): void {
   try {
     localStorage?.removeItem(batchStorageKey(seat))
@@ -690,16 +726,19 @@ function clearPersistedBatch(seat: string | null): void {
 // the last global choice (the plain `slr.llm.*` keys read/written below).
 // ---------------------------------------------------------------------------
 
+// [impl->req~llm-540~1]
 interface StoredRoles {
   annotatorId?: string
   judgeId?: string | null
   crossCheckId?: string | null
 }
 
+// [impl->req~llm-540~1]
 function rolesStorageKey(): string {
   return `slr.llm.roles.${projectIdentityKey()}`
 }
 
+// [impl->req~llm-540~1]
 function readProjectRoles(): StoredRoles {
   if (!projectIdentityKey()) return {}
   try {
@@ -710,6 +749,7 @@ function readProjectRoles(): StoredRoles {
   }
 }
 
+// [impl->req~llm-540~1]
 function writeProjectRole(patch: StoredRoles): void {
   if (!projectIdentityKey()) return
   try {
@@ -721,6 +761,11 @@ function writeProjectRole(patch: StoredRoles): void {
 
 export const useAiStore = create<AiState>()(
   immer((set, get) => {
+    // [impl->req~dat-410~1]
+    // [impl->req~llm-490~1]
+    // [impl->req~llm-500~1]
+    // [impl->req~llm-590~1]
+    // [impl->req~llm-670~1]
     /**
      * Runs `papers` through `runPool` at the configured concurrency (1 outside
      * all-papers mode), shared by a fresh `run()` and a `resumeBatch()`
@@ -805,6 +850,8 @@ export const useAiStore = create<AiState>()(
       // this worker gets to look at the spend cap, so a cap-triggered stop
       // still "starts" up to `concurrency - 1` extra workers that immediately
       // no-op — negligible over/spend, not worth a second scheduling layer.
+      // [impl->req~llm-390~1]
+      // [impl->req~llm-500~1]
       const concurrency = get().allPapers ? Math.min(Math.max(1, get().concurrency), MAX_CONCURRENCY) : 1
 
       try {
@@ -859,6 +906,7 @@ export const useAiStore = create<AiState>()(
               let fitForPaper: PaperFit | undefined
               let infoNotes: string[] = []
               let recheckReply: Awaited<ReturnType<typeof runOnePaperPrompt>>['recheck']
+              // [impl->req~llm-580~1]
               let rowChecked: (sug: Suggestion) => boolean
 
               if (mode === 'agent') {
@@ -984,6 +1032,8 @@ export const useAiStore = create<AiState>()(
                     crossCheck: cmp,
                     // Mirrors the initial `checked` decision, so it survives
                     // the reviewer re-ticking the row (REQ-LLM-580).
+                    // [impl->req~llm-410~1]
+                    // [impl->req~llm-580~1]
                     flagged: !checked,
                   })
                 }
@@ -1094,6 +1144,8 @@ export const useAiStore = create<AiState>()(
       })
     }
 
+    // [impl->req~llm-600~1]
+    // [impl->req~llm-680~1]
     /**
      * Once per review, when it ends: aggregate what happened to the proposals
      * into `<annotations>/feedback/` (no paper text, no quotes). Never throws
@@ -1167,6 +1219,7 @@ export const useAiStore = create<AiState>()(
 
     return {
     open: false,
+    // [impl->req~llm-460~1]
     minimized: false,
     settingsOpen: false,
     configs: [],
@@ -1177,21 +1230,29 @@ export const useAiStore = create<AiState>()(
     modelsFetchedAt: {},
     mode: readMode(),
     allPapers: false,
+    // [impl->req~llm-480~1]
     judgeSelectedId: readJudge(),
     crossCheckId: readCrossCheck(),
     confidenceThreshold: readThreshold(),
+    // [impl->req~llm-490~1]
     spendCap: null,
+    // [impl->req~llm-490~1]
     spentSoFar: 0,
+    // [impl->req~llm-490~1]
     spendCapHit: false,
+    // [impl->req~llm-440~1]
     retryNotice: null,
+    // [impl->req~llm-450~1]
     fewShot: readFewShot(),
     fewShotCount: readFewShotCount(),
     fewShotAvailable: 0,
     recheck: false,
     answeredCount: 0,
     webSearch: readWebSearch(),
+    // [impl->req~llm-680~1]
     saveFeedback: readSaveFeedback(),
     feedbackResult: null,
+    // [impl->req~llm-430~1]
     pageCounts: {},
     pageCountsLoading: {},
     phase: 'setup',
@@ -1201,11 +1262,14 @@ export const useAiStore = create<AiState>()(
     targets: [],
     currentPaperHasPdf: true,
     candidates: [],
+    // [impl->req~llm-500~1]
     batchDone: 0,
     batchTotal: 0,
     inFlightPapers: [],
+    // [impl->req~llm-590~1]
     skippedPapers: [],
     concurrency: readConcurrency(),
+    // [impl->req~llm-510~1]
     resumeAvailable: null,
     batchStartedAt: null,
     agentEvents: [],
@@ -1224,6 +1288,8 @@ export const useAiStore = create<AiState>()(
     applied: null,
     scanned: false,
 
+    // [impl->req~llm-470~1]
+    // [impl->req~llm-540~1]
     openDialog: async () => {
       const app = useStore.getState()
       const paper = app.project?.papers.find((p) => p.id === app.currentPaperId)
@@ -1322,16 +1388,20 @@ export const useAiStore = create<AiState>()(
       })
     },
 
+    // [impl->req~llm-460~1]
     setMinimized: (minimized) => set((s) => { s.minimized = minimized }),
 
     setSettingsOpen: (open) => set((s) => { s.settingsOpen = open }),
 
+    // [impl->req~llm-540~1]
     selectConfig: (id) => {
       writeSelected(id)
       writeProjectRole({ annotatorId: id })
       set((s) => { s.selectedId = id })
     },
 
+    // [impl->req~llm-380~1]
+    // [impl->req~llm-540~1]
     setMode: (mode) => {
       writeMode(mode)
       set((s) => {
@@ -1350,17 +1420,21 @@ export const useAiStore = create<AiState>()(
       refreshCandidates()
     },
 
+    // [impl->req~llm-390~1]
     setAllPapers: (on) => {
       set((s) => { s.allPapers = on })
       if (on) refreshCandidates()
     },
 
+    // [impl->req~llm-480~1]
+    // [impl->req~llm-540~1]
     selectJudge: (id) => {
       writeJudge(id)
       writeProjectRole({ judgeId: id })
       set((s) => { s.judgeSelectedId = id })
     },
 
+    // [impl->req~llm-540~1]
     selectCrossCheck: (id) => {
       writeCrossCheck(id)
       writeProjectRole({ crossCheckId: id })
@@ -1373,6 +1447,7 @@ export const useAiStore = create<AiState>()(
       set((s) => { s.confidenceThreshold = clamped })
     },
 
+    // [impl->req~llm-490~1]
     setSpendCap: (cap) => set((s) => { s.spendCap = cap }),
 
     setFewShot: (on) => {
@@ -1400,6 +1475,7 @@ export const useAiStore = create<AiState>()(
       set((s) => { s.fewShotCount = count })
     },
 
+    // [impl->req~llm-430~1]
     ensurePageCounts: async (paperIds) => {
       const app = useStore.getState()
       const missing = paperIds.filter(
@@ -1571,6 +1647,11 @@ export const useAiStore = create<AiState>()(
         delete s.modelsFetchedAt[id]
       }),
 
+    // [impl->req~llm-100~1]
+    // [impl->req~llm-300~1]
+    // [impl->req~llm-410~1]
+    // [impl->req~llm-440~1]
+    // [impl->req~llm-480~1]
     run: async () => {
       const app = useStore.getState()
       const config = get().configs.find((c) => c.id === get().selectedId)
@@ -1686,6 +1767,7 @@ export const useAiStore = create<AiState>()(
       )
     },
 
+    // [impl->req~llm-510~1]
     resumeBatch: async () => {
       const app = useStore.getState()
       if (!app.project) return
@@ -1781,6 +1863,8 @@ export const useAiStore = create<AiState>()(
       )
     },
 
+    // [impl->req~llm-390~1]
+    // [impl->req~llm-500~1]
     setConcurrency: (n) => {
       const clamped = Math.min(Math.max(1, Math.round(n)), MAX_CONCURRENCY)
       writeConcurrency(clamped)
@@ -1799,25 +1883,32 @@ export const useAiStore = create<AiState>()(
       })
     },
 
+    // [impl->req~llm-590~1]
     skipPaper: (paperId) => {
       paperControllers.get(paperId)?.abort()
     },
 
+    // [impl->req~llm-210~1]
     toggleRow: (index, checked) =>
       set((s) => {
         if (s.rows[index]) s.rows[index].checked = checked
       }),
 
+    // [impl->req~llm-660~1]
     toggleRecheckRow: (index, checked) =>
       set((s) => {
         if (s.recheckRows[index]?.outcome.verdict === 'disagree') s.recheckRows[index].checked = checked
       }),
 
+    // [impl->req~llm-210~1]
     setAllRows: (checked) =>
       set((s) => {
         s.rows.forEach((r) => { r.checked = checked })
       }),
 
+    // [impl->req~llm-210~1]
+    // [impl->req~llm-240~1]
+    // [impl->req~llm-580~1]
     editRow: (index, raw) => {
       const project = useStore.getState().project
       const row = get().rows[index]
@@ -1837,12 +1928,20 @@ export const useAiStore = create<AiState>()(
       return null
     },
 
+    // [impl->req~llm-210~1]
+    // [impl->req~llm-240~1]
+    // [impl->req~llm-580~1]
+    // [impl->req~llm-660~1]
     apply: () => {
       const runUsage = get().runUsage
       if (!runUsage) return
       const mode = get().mode
+      // [impl->req~llm-240~1]
+      // [impl->req~llm-480~1]
       const runJudge = get().runJudge
+      // [impl->req~llm-240~1]
       const roundsByPaper = get().roundsByPaper
+      // [impl->req~llm-450~1]
       const fewShotByPaper = get().fewShotByPaper
       const webSearchesByPaper = get().webSearchesByPaper
       const checked = get().rows.filter((r) => r.checked)
@@ -1930,11 +2029,13 @@ export const useAiStore = create<AiState>()(
       void writeFeedback(true)
     },
 
+    // [impl->req~llm-510~1]
     discardBatch: () => {
       if (get().allPapers) clearPersistedBatch(get().targetSeat)
       get().closeDialog()
     },
 
+    // [impl->req~llm-510~1]
     dismissResume: () => {
       clearPersistedBatch(get().targetSeat)
       set((s) => { s.resumeAvailable = null })
@@ -1947,6 +2048,11 @@ export const useAiStore = create<AiState>()(
 // Per-paper run helpers — one call for prompt mode, one loop for agent mode.
 // ---------------------------------------------------------------------------
 
+// [impl->req~llm-420~1]
+// [impl->req~llm-610~1]
+// [impl->req~llm-660~1]
+// [impl->req~llm-740~1]
+// [impl->req~llm-741~1]
 async function runOnePaperPrompt(
   project: Project,
   paper: Paper,
@@ -2044,6 +2150,7 @@ async function runOnePaperPrompt(
 
   let answer: LlmAnswer = { fields: [], skipped: [], rejected: [] }
   let calls = 0
+  // [impl->req~llm-420~1]
   const usage = { inputTokens: 0, outputTokens: 0 }
   const add = (u: { inputTokens: number; outputTokens: number }) => {
     usage.inputTokens += u.inputTokens
@@ -2074,6 +2181,10 @@ async function runOnePaperPrompt(
   return { answer, recheck, calls, usage, paperText, fit }
 }
 
+// [impl->req~llm-380~1]
+// [impl->req~llm-420~1]
+// [impl->req~llm-620~1]
+// [impl->req~llm-740~1]
 async function runOnePaperAgent(
   project: Project,
   paper: Paper,
@@ -2162,6 +2273,7 @@ async function runOnePaperAgent(
   }
 }
 
+// [impl->req~llm-742~1]
 /**
  * Plans and sends every System One request one paper needs (small-window models
  * need several), then merges the replies. Throws on a config that cannot form a
@@ -2190,6 +2302,9 @@ async function askSystemOne(
   return { plan, result: mergeSystemOneResults(results) }
 }
 
+// [impl->req~llm-520~1]
+// [impl->req~llm-550~1]
+// [impl->req~llm-742~1]
 /**
  * Classify mode's per-paper call: the System One requests for whichever of
  * `targets` are eligible (booleans and single-valued enums — see
@@ -2251,6 +2366,9 @@ async function runOnePaperClassify(
   }
 }
 
+// [impl->req~llm-520~1]
+// [impl->req~llm-560~1]
+// [impl->req~llm-742~1]
 /**
  * Cross-check role: after a paper's suggestions are in hand, ask System One
  * the same question for whichever of `targets` are both eligible and were

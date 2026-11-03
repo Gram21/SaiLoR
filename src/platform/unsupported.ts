@@ -1,3 +1,5 @@
+// [impl->req~llm-722~1]
+// [impl->req~plt-10~1]
 import type { PlatformAdapter } from './adapter'
 import type { RecentEntry } from './recents'
 import type { WebFetchResult } from '../llm/types'

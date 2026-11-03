@@ -1,3 +1,4 @@
+// [impl->req~llm-722~1]
 import type { LocalServerInfo, OllamaModel, OllamaRunning, PullProgress } from '../llm/ollama'
 
 /** Added to results that name a server URL. */

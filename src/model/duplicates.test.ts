@@ -70,6 +70,7 @@ describe('classifyImport — certain (DOI)', () => {
     expect(v.kind).toBe('certain')
   })
 
+  // [utest->req~dat-330~1]
   it('beats a 5-year gap — the year veto never applies to a DOI match', () => {
     const v = classifyOne(
       rec('Totally Different Title A', { doi: '10.1/x', year: 2010 }),
@@ -327,6 +328,7 @@ describe('classifyImport — structure', () => {
     expect(verdicts[1].kind === 'probable' && verdicts[1].target).toEqual({ where: 'batch', index: 0 })
   })
 
+  // [utest->req~dat-310~1]
   it('a batch target index is always lower than the entry\'s own index (the chain invariant)', () => {
     const verdicts = classifyImport(
       [],

@@ -1,3 +1,6 @@
+// [impl->req~pdf-10~1]
+// [impl->req~pdf-185~1]
+// [impl->req~ui-80~1]
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
 import { Document, Page } from 'react-pdf'
@@ -93,10 +96,12 @@ function findMatches(root: HTMLElement, query: string, caseSensitive: boolean): 
   const ranges: Range[] = []
   const needle = caseSensitive ? query : query.toLowerCase()
   if (!needle) return ranges
+  // [impl->req~pdf-50~1]
   const layers = root.querySelectorAll<HTMLElement>('.react-pdf__Page__textContent')
   layers.forEach((layer) => {
     // Concatenate the layer's text nodes so matches can span multiple spans.
     const walker = document.createTreeWalker(layer, NodeFilter.SHOW_TEXT)
+    // [impl->req~pdf-55~1]
     const nodes: Text[] = []
     const starts: number[] = []
     let hay = ''
@@ -128,6 +133,7 @@ function findMatches(root: HTMLElement, query: string, caseSensitive: boolean): 
   return ranges
 }
 
+// [impl->req~llm-460~1]
 /**
  * Ranges matching an AI evidence quote, for the "jump from evidence to PDF"
  * flow (see `pdfFindRequest`). Extracted text never matches a PDF's text
@@ -165,6 +171,7 @@ function useClampedAnchor(ref: React.RefObject<HTMLDivElement | null>, anchor: {
       return
     }
     const m = 8
+    // [impl->req~pdf-150~1]
     const r = el.getBoundingClientRect()
     setPos({
       left: Math.min(Math.max(m, anchor.x), window.innerWidth - r.width - m),
@@ -422,6 +429,7 @@ export function PdfViewer() {
   // each reference number's resolved entry location (null = not found) for
   // the current document.
   const citeHoverRef = useRef<string | null>(null)
+  // [impl->req~pdf-40~1]
   const citeLookupRef = useRef<{ doc: PDFDocumentProxy; found: Map<number, { page: number; x: number; y: number } | null> } | null>(null)
   const [linkPreview, setLinkPreview] = useState<{
     left: number
@@ -431,6 +439,7 @@ export function PdfViewer() {
     width: number
     height: number
   } | null>(null)
+  // [impl->req~pdf-20~1]
   const hideLinkPreview = () => {
     linkHoverTokenRef.current++ // invalidates any in-flight resolution too
     citeHoverRef.current = null
@@ -564,6 +573,7 @@ export function PdfViewer() {
   // Current page = last page whose top has scrolled into the upper viewport.
   // Runs on every scroll, so it also reflects jumps from internal PDF links.
   const updateCurrentPage = () => {
+    // [impl->req~pdf-30~1]
     const root = containerRef.current
     if (!root) return
     const rootTop = root.getBoundingClientRect().top
@@ -683,6 +693,7 @@ export function PdfViewer() {
     // NFC: pdf.js can split an accented letter's base + combining mark across
     // adjacent spans (see pdfText.ts's identical fix), so a selection crossing
     // that boundary reads back decomposed unless normalized here.
+    // [impl->req~pdf-60~1]
     const text = (sel?.toString() ?? '').normalize('NFC')
     if (text.trim()) setPdfSelection(text)
     updateSelectionToolbar(sel, text)
@@ -716,6 +727,7 @@ export function PdfViewer() {
     setMarkDragActive(true)
 
     const startX = e.clientX
+    // [impl->req~pdf-140~1]
     const startY = e.clientY
     const sel = window.getSelection()
     const anchor = document.caretRangeFromPoint(startX, startY)
@@ -831,6 +843,8 @@ export function PdfViewer() {
         // click/release point (e.g. selection started inside a footer) —
         // fall back to this page's full, unclipped text.
         sub.setStart(p === startPage ? range.startContainer : textLayer, p === startPage ? range.startOffset : 0)
+        // [impl->req~pdf-70~1]
+        // [impl->req~pdf-80~1]
         const last = nodes[nodes.length - 1]
         if (p === endPage) sub.setEnd(range.endContainer, range.endOffset)
         else if (last) sub.setEnd(last, last.length)
@@ -1010,6 +1024,7 @@ export function PdfViewer() {
     const page = pageNumberForNode(target.startContainer)
     if (page) setCurrentPage(page)
     const rect = target.getBoundingClientRect()
+    // [impl->req~pdf-130~1]
     const rootRect = root.getBoundingClientRect()
     if (rect.height > 0) root.scrollTop += rect.top - rootRect.top - root.clientHeight / 2
     clearPdfFindRequest()
@@ -1042,6 +1057,7 @@ export function PdfViewer() {
     const pageRect = pageEl.getBoundingClientRect()
     const x = (e.clientX - pageRect.left) / pageRect.width
     const y = (e.clientY - pageRect.top) / pageRect.height
+    // [impl->req~pdf-90~1]
     const id = addHighlight(page, [{ x, y, width: 0.02, height: 0.02 }], undefined, 'note')
     setPlacingNote(false)
     if (id) {
@@ -1485,6 +1501,7 @@ export function PdfViewer() {
     const root = containerRef.current
     if (active && root) {
       const rect = active.getBoundingClientRect()
+      // [impl->req~pdf-100~1]
       const rootRect = root.getBoundingClientRect()
       if (rect.height > 0) {
         root.scrollTop += rect.top - rootRect.top - root.clientHeight / 2

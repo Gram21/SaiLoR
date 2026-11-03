@@ -1,3 +1,5 @@
+// [impl->req~llm-630~1]
+// [impl->req~scr-390~1]
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { getPlatform } from '../platform'
@@ -123,6 +125,7 @@ export function screeningCandidates(project: Project, seat: string | null): { id
     .map((p) => ({ id: p.id, title: p.title }))
 }
 
+// [impl->req~llm-640~1]
 /**
  * Conservative pre-ticking (REQ-LLM-640): a wrongly excluded paper is silently
  * lost from the review, so Exclude never starts ticked and Include only when
@@ -172,6 +175,7 @@ export const useAiScreeningStore = create<ScreeningAiState>()(
     cost: null,
     applied: null,
 
+    // [impl->req~llm-650~1]
     openDialog: async () => {
       const app = useStore.getState()
       const project = app.project
@@ -408,6 +412,8 @@ function safeJson(body: string): unknown {
   }
 }
 
+// [impl->req~llm-740~1]
+// [impl->req~llm-741~1]
 async function promptOne(
   config: LlmConfig,
   paper: Paper,
@@ -442,6 +448,7 @@ async function promptOne(
   }
 }
 
+// [impl->req~llm-742~1]
 async function classifyOne(
   config: LlmConfig,
   paper: Paper,

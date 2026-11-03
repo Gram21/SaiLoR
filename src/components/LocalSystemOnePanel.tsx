@@ -1,3 +1,4 @@
+// [impl->req~llm-730~1]
 import { useEffect, useState } from 'react'
 import { getPlatform } from '../platform'
 import { LOCAL_MODEL_CATALOG, type LocalModelEntry } from '../llm/localCatalog'
