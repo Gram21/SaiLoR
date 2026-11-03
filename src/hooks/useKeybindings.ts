@@ -15,6 +15,7 @@ import { getBridge } from '../platform/bridge'
  *  - Ctrl/Cmd+Shift+Z / Ctrl+Y → Redo
  *  - Ctrl/Cmd +/-/0        → PDF zoom in / out / reset
  *  - Ctrl/Cmd+Shift +/-/0  → App font size in / out / reset
+ *  - Ctrl/Cmd+,            → Settings
  *  - Alt+ArrowDown / ]  → next paper
  *  - Alt+ArrowUp   / [  → previous paper
  *  - I / E / U          → screening: include / exclude / un-decide (screening
@@ -85,6 +86,13 @@ export function useKeybindings() {
         // instead of stacking, and F1 is its documented escape hatch.
         if (document.querySelector(BLOCKING_SURFACES_FOR_HELP)) return
         useStore.getState().setHelpOpen(true)
+        return
+      }
+
+      if (mod && e.key === ',') {
+        e.preventDefault()
+        if (document.querySelector(BLOCKING_SURFACES)) return
+        useStore.getState().setUserSettingsOpen(true)
         return
       }
 

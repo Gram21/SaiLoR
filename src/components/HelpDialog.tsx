@@ -22,6 +22,7 @@ const ANNOTATE_KEYS: Array<[string, string]> = [
   [`${MOD}+Shift + / -`, 'App font size larger / smaller'],
   [`${MOD}+Shift+0`, 'Reset app font size'],
   [`${MOD}+C / V / X`, 'Copy / paste / cut (native)'],
+  [`${MOD}+,`, 'Open settings'],
   ['F1', 'Open this help'],
 ]
 
@@ -30,6 +31,7 @@ const START_KEYS: Array<[string, string]> = [
   [`${MOD}+O`, 'Open a project file'],
   [`${MOD}+Shift + / -`, 'App font size larger / smaller'],
   [`${MOD}+Shift+0`, 'Reset app font size'],
+  [`${MOD}+,`, 'Open settings'],
   ['F1', 'Open this help'],
 ]
 
@@ -44,6 +46,7 @@ const SCREENING_KEYS: Array<[string, string]> = [
   ['1 – 9', 'Exclude with the Nth configured reason'],
   ['Alt+↓  /  ]', 'Next paper'],
   ['Alt+↑  /  [', 'Previous paper'],
+  [`${MOD}+,`, 'Open settings'],
   ['F1', 'Open this help'],
 ]
 
@@ -56,6 +59,7 @@ const EDITOR_KEYS: Array<[string, string]> = [
   [`${MOD}+Shift + / -`, 'App font size larger / smaller'],
   [`${MOD}+Shift+0`, 'Reset app font size'],
   [`${MOD}+C / V / X`, 'Copy / paste / cut (native)'],
+  [`${MOD}+,`, 'Open settings'],
   ['F1', 'Open this help'],
 ]
 

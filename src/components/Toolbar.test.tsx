@@ -191,6 +191,13 @@ describe('REQ-UI-20: toolbar project controls', () => {
     expect(st().autosaveEnabled).toBe(true)
   })
 
+  it('opens Settings from its toolbar button (REQ-UI-100)', async () => {
+    useStore.setState({ userSettingsOpen: false })
+    render(<Toolbar />)
+    await userEvent.click(screen.getByRole('button', { name: 'Settings' }))
+    expect(st().userSettingsOpen).toBe(true)
+  })
+
   it('always renders Close project to keep the layout stable, hidden and disabled without a project', async () => {
     const { rerender } = render(<Toolbar />)
     const hidden = screen.getByTitle('Close project')

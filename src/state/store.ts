@@ -577,6 +577,7 @@ interface AppState {
   pdfZoom: number
   recents: RecentEntry[]
   helpOpen: boolean
+  userSettingsOpen: boolean
   /** Result of the last validation run; null until the user asks for one. */
   validation: ValidationIssue[] | null
   /** Papers the last run skipped for having no annotations at all — see `validateProject`. */
@@ -798,6 +799,7 @@ interface AppState {
   zoomOutPdf: () => void
   resetPdfZoom: () => void
   setHelpOpen: (open: boolean) => void
+  setUserSettingsOpen: (open: boolean) => void
   /** Re-raise the "some annotation files could not be read" warning — see
    *  `corruptFiles`. */
   showCorruptFiles: () => void
@@ -1227,6 +1229,7 @@ export const useStore = create<AppState>()(
     pdfZoom: 1,
     recents: getPlatform().getRecents(),
     helpOpen: false,
+    userSettingsOpen: false,
     validation: null,
     validationUnannotated: null,
     validationOpen: false,
@@ -2142,6 +2145,11 @@ export const useStore = create<AppState>()(
     setHelpOpen: (open) =>
       set((s) => {
         s.helpOpen = open
+      }),
+
+    setUserSettingsOpen: (open) =>
+      set((s) => {
+        s.userSettingsOpen = open
       }),
 
     showCorruptFiles: () => {

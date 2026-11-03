@@ -144,6 +144,7 @@ export function Toolbar() {
   const recents = useStore((s) => s.recents)
   const forgetRecent = useStore((s) => s.forgetRecent)
   const setHelpOpen = useStore((s) => s.setHelpOpen)
+  const setUserSettingsOpen = useStore((s) => s.setUserSettingsOpen)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const selectReviewer = useStore((s) => s.selectReviewer)
   const readOnly = useStore((s) => s.readOnly)
@@ -547,6 +548,15 @@ export function Toolbar() {
             onClick={toggleTheme}
           >
             {theme === 'dark' ? '☀' : '☾'}
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            title={`Settings (${modKey}+,)`}
+            aria-label="Settings"
+            onClick={() => setUserSettingsOpen(true)}
+          >
+            ⚙
           </button>
           <button
             type="button"
