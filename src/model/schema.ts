@@ -1,5 +1,6 @@
 // [impl->req~dat-285~1]
 import { z } from 'zod'
+import { t } from '../i18n'
 
 /**
  * The annotation schema is a nested taxonomy. Each node may be a leaf field
@@ -111,12 +112,14 @@ export interface ResolvedDef {
 
 const fieldTypeSchema = z.enum(['string', 'number', 'boolean', 'year'])
 
-const visibleConditionSchema: z.ZodType<VisibleCondition> = z
-  .object({
-    field: z.string().min(1, '"visibleIf" condition needs a field name'),
-    equals: z.array(z.union([z.string(), z.boolean()])).optional(),
-  })
-  .strict()
+const visibleConditionSchema: z.ZodType<VisibleCondition> = z.lazy(() =>
+  z
+    .object({
+      field: z.string().min(1, t('store.schema.visibleFieldMissing')),
+      equals: z.array(z.union([z.string(), z.boolean()])).optional(),
+    })
+    .strict(),
+)
 
 // Groups nest, so this is lazy for the same reason `annotationDefSchema` is.
 // [impl->req~dat-60~1]
@@ -126,7 +129,7 @@ const visibleIfSpecSchema: z.ZodType<VisibleIfSpec> = z.lazy(() =>
       mode: z.enum(['all', 'any']),
       conditions: z
         .array(z.union([visibleConditionSchema, visibleIfSpecSchema]))
-        .min(1, '"visibleIf" needs at least one condition'),
+        .min(1, t('store.schema.visibleEmpty')),
     })
     .strict(),
 )
@@ -138,7 +141,7 @@ const visibleIfInputSchema = z.union([z.string(), visibleIfSpecSchema])
 export const annotationDefSchema: z.ZodType<AnnotationDef> = z.lazy(() =>
   z
     .object({
-      name: z.string().min(1, 'Annotation "name" must be a non-empty string'),
+      name: z.string().min(1, t('store.schema.nameEmpty')),
       type: fieldTypeSchema.optional(),
       min: z.number().int().min(0).optional(),
       max: z.union([z.number().int().min(1), z.null()]).optional(),
@@ -147,7 +150,7 @@ export const annotationDefSchema: z.ZodType<AnnotationDef> = z.lazy(() =>
       required: z.boolean().optional(),
       visibleIf: visibleIfInputSchema.optional(),
       unique: z.boolean().optional(),
-      uniqueBy: z.array(z.string()).min(1, '"uniqueBy" needs at least one field name').optional(),
+      uniqueBy: z.array(z.string()).min(1, t('store.schema.uniqueByEmpty')).optional(),
       children: z.array(annotationDefSchema).optional(),
     })
     .strict()
@@ -157,25 +160,25 @@ export const annotationDefSchema: z.ZodType<AnnotationDef> = z.lazy(() =>
       if (max !== null && max < min) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `"${def.name}": max (${max}) must be >= min (${min})`,
+          message: t('store.schema.maxMin', { name: def.name, max, min }),
         })
       }
       if (!def.type && (!def.children || def.children.length === 0)) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `"${def.name}": a node must have a "type" or non-empty "children"`,
+          message: t('store.schema.typeOrChildren', { name: def.name }),
         })
       }
       if (def.options && def.options.length > 0 && def.type !== 'string') {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `"${def.name}": "options" (enum) is only allowed on a string field (set "type": "string")`,
+          message: t('store.schema.optionsOnString', { name: def.name }),
         })
       }
       if (def.required && !def.type) {
         ctx.addIssue({
           code: z.ZodIssueCode.custom,
-          message: `"${def.name}": "required" is only allowed on a field (set a "type")`,
+          message: t('store.schema.requiredOnField', { name: def.name }),
         })
       }
     }),
@@ -226,13 +229,15 @@ export interface ScreeningConfig {
   reasons: string[]
 }
 
-const screeningConfigSchema: z.ZodType<ScreeningConfig> = z
-  .object({
-    reasons: z
-      .array(z.string())
-      .min(1, 'config.screening.reasons must list at least one exclusion reason'),
-  })
-  .strict()
+const screeningConfigSchema: z.ZodType<ScreeningConfig> = z.lazy(() =>
+  z
+    .object({
+      reasons: z
+        .array(z.string())
+        .min(1, t('store.schema.reasonsRequired')),
+    })
+    .strict(),
+)
 
 export const projectSchema = z
   .object({
@@ -274,7 +279,7 @@ export const projectSchema = z
       ctx.addIssue({
         code: z.ZodIssueCode.custom,
         path: ['config', 'schema'],
-        message: 'config.schema must have at least one node',
+        message: t('store.schema.nodeRequired'),
       })
     }
     // Screening is normally done on title + abstract from a reference-manager
@@ -285,7 +290,7 @@ export const projectSchema = z
           ctx.addIssue({
             code: z.ZodIssueCode.custom,
             path: ['papers', i, 'pdf'],
-            message: 'Each paper needs a "pdf" path',
+            message: t('store.schema.paperPdf'),
           })
         }
       })
@@ -439,16 +444,12 @@ function resolveDefs(
     // hand-edited file.
     if (def.name === '__proto__') {
       throw new SchemaError(
-        `Annotation name "__proto__" is not allowed${
-          parentPath ? ` (under "${parentPath}")` : ''
-        }: answers stored under it cannot be saved. Rename the field.`,
+        t('store.schema.protoName', { where: parentPath ? t('store.schema.protoWhere', { parent: parentPath }) : '' }),
       )
     }
     if (seen.has(def.name)) {
       throw new SchemaError(
-        `Duplicate sibling annotation name "${def.name}"${
-          parentPath ? ` under "${parentPath}"` : ' at the top level'
-        }. Sibling names must be unique.`,
+        t('store.schema.duplicate', { name: def.name, place: placeOf(parentPath) }),
       )
     }
     // Siblings differing only by whitespace are rejected too: `parsePath`
@@ -456,12 +457,7 @@ function resolveDefs(
     // canonical path and a committed answer could land in the wrong field.
     const clash = [...seen].find((n) => n.trim() === def.name.trim())
     if (clash !== undefined) {
-      throw new SchemaError(
-        `Annotation names "${clash}" and "${def.name}"${
-          parentPath ? ` under "${parentPath}"` : ' at the top level'
-        } differ only by surrounding spaces, which makes answers to them
- indistinguishable. Rename one of them.`.replace(/\s*\n\s*/g, ' '),
-      )
+      throw new SchemaError(t('store.schema.nameClash', { a: clash, b: def.name, place: placeOf(parentPath) }))
     }
     seen.add(def.name)
 
@@ -497,25 +493,27 @@ function resolveDefs(
   })
 }
 
+function placeOf(parentPath: string): string {
+  return parentPath ? t('store.schema.placeUnder', { parent: parentPath }) : t('store.schema.placeTop')
+}
+
 // [impl->req~dat-400~1]
 function assertUniqueOptions(def: AnnotationDef, id: string, max: number | null): void {
   if (def.unique && max === 1) {
-    throw new SchemaError(
-      `"${id}": "unique" is only allowed on a repeatable node (set "max" above 1 or to null).`,
-    )
+    throw new SchemaError(t('store.schema.uniqueNotRepeatable', { id }))
   }
   if (def.uniqueBy === undefined) return
   if (!def.unique) {
-    throw new SchemaError(`"${id}": "uniqueBy" needs "unique": true.`)
+    throw new SchemaError(t('store.schema.uniqueByNeedsUnique', { id }))
   }
   const children = def.children ?? []
   if (children.length === 0) {
-    throw new SchemaError(`"${id}": "uniqueBy" is only allowed on a node with "children".`)
+    throw new SchemaError(t('store.schema.uniqueByNoChildren', { id }))
   }
   const unknown = def.uniqueBy.filter((n) => !children.some((c) => c.name === n))
   if (unknown.length > 0) {
     throw new SchemaError(
-      `"${id}": "uniqueBy" names unknown child field(s): ${unknown.map((n) => `"${n}"`).join(', ')}.`,
+      t('store.schema.uniqueByUnknown', { id, names: unknown.map((n) => `"${n}"`).join(', ') }),
     )
   }
 }
@@ -544,10 +542,7 @@ const MAX_INITIAL_INSTANCES = 100_000
 function assertInstanceBudget(defs: ResolvedDef[]): void {
   const total = countInstances(defs, MAX_INITIAL_INSTANCES)
   if (total > MAX_INITIAL_INSTANCES) {
-    throw new SchemaError(
-      `This schema would create at least ${MAX_INITIAL_INSTANCES} empty entries before anything is filled in. ` +
-        'Lower the "min" values, or nest fewer repeated groups inside each other.',
-    )
+    throw new SchemaError(t('store.schema.budget', { max: MAX_INITIAL_INSTANCES }))
   }
 }
 

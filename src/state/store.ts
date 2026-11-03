@@ -53,6 +53,7 @@ import {
 } from '../model/version'
 import { getPlatform, type SaveHandle } from '../platform'
 import { StaleSaveError } from '../platform/adapter'
+import { t, tp } from '../i18n'
 import { resolveClash } from '../model/staleSave'
 import { DEFAULT_ANNOTATIONS_DIR, defaultSplitDirName } from '../model/annotationsDir'
 import { planSplit, type SplitRow } from '../model/annotationSplit'
@@ -499,7 +500,7 @@ function saveFailure(err: unknown): LoadError {
   const text = err instanceof Error ? err.message : String(err)
   const lines = text.split('\n').map((l) => l.trim()).filter(Boolean)
   const [headline, ...rest] = lines
-  return { message: headline ?? 'Failed to save.', details: rest }
+  return { message: headline ?? t('store.save.failed'), details: rest }
 }
 
 export interface AnnotationsSplit {
@@ -547,14 +548,11 @@ function corruptFilesWarning(paths: string[]): LoadError {
   const listed = paths.slice(0, CORRUPT_LIST_LIMIT)
   const rest = paths.length - listed.length
   return {
-    message:
-      paths.length === 1
-        ? 'One annotation file could not be read; its data is missing from this session.'
-        : `${paths.length} annotation files could not be read; their data is missing from this session.`,
+    message: tp('store.corruptFiles.message', paths.length),
     details: [
       ...listed.map((p) => `annotations/${p}`),
-      ...(rest > 0 ? [`…and ${rest} more`] : []),
-      'They are not valid JSON — a leftover git merge conflict is the usual cause. The files are left on disk untouched; repair them (or restore them from git) and reopen the project.',
+      ...(rest > 0 ? [t('store.corruptFiles.more', { count: rest })] : []),
+      t('store.corruptFiles.hint'),
     ],
   }
 }
@@ -1399,11 +1397,8 @@ export const useStore = create<AppState>()(
           }
           if (!s.loadError && s.project?.refusedAnnotationsDir !== undefined) {
             s.loadError = {
-              message: `This project names "${s.project.refusedAnnotationsDir}" as its annotations folder, which is not allowed.`,
-              details: [
-                'An annotations folder must be a plain folder name directly next to the project file. ' +
-                  `SaiLoR uses "${DEFAULT_ANNOTATIONS_DIR}/" instead.`,
-              ],
+              message: t('store.refusedDir.message', { dir: s.project.refusedAnnotationsDir }),
+              details: [t('store.refusedDir.hint', { dir: DEFAULT_ANNOTATIONS_DIR })],
             }
           }
         })
@@ -1412,7 +1407,7 @@ export const useStore = create<AppState>()(
       } catch (err) {
         set((s) => {
           s.busy = false
-          s.loadError = { message: 'Failed to open the project.', details: [String(err)] }
+          s.loadError = { message: t('store.loadError.openFailed'), details: [String(err)] }
         })
       }
     },
@@ -1584,8 +1579,8 @@ export const useStore = create<AppState>()(
             s.busy = false
             s.recents = s.recents.map((r) => (r.id === id ? { ...r, available: false } : r))
             s.loadError = {
-              message: 'That project could not be opened.',
-              details: ['It may have been moved, renamed, or deleted.'],
+              message: t('store.loadError.recentMissing'),
+              details: [t('store.loadError.recentMissingHint')],
             }
           })
           return
@@ -1599,11 +1594,8 @@ export const useStore = create<AppState>()(
           }
           if (!s.loadError && s.project?.refusedAnnotationsDir !== undefined) {
             s.loadError = {
-              message: `This project names "${s.project.refusedAnnotationsDir}" as its annotations folder, which is not allowed.`,
-              details: [
-                'An annotations folder must be a plain folder name directly next to the project file. ' +
-                  `SaiLoR uses "${DEFAULT_ANNOTATIONS_DIR}/" instead.`,
-              ],
+              message: t('store.refusedDir.message', { dir: s.project.refusedAnnotationsDir }),
+              details: [t('store.refusedDir.hint', { dir: DEFAULT_ANNOTATIONS_DIR })],
             }
           }
         })
@@ -1612,7 +1604,7 @@ export const useStore = create<AppState>()(
       } catch (err) {
         set((s) => {
           s.busy = false
-          s.loadError = { message: 'Failed to open the recent file.', details: [String(err)] }
+          s.loadError = { message: t('store.loadError.recentFailed'), details: [String(err)] }
         })
       }
     },
@@ -1722,7 +1714,7 @@ export const useStore = create<AppState>()(
         const le: LoadError =
           err instanceof ProjectLoadError
             ? { message: err.message, details: err.details }
-            : { message: 'Failed to load the project.', details: [String(err)] }
+            : { message: t('store.loadError.loadFailed'), details: [String(err)] }
         set((s) => {
           s.loadError = le
           s.busy = false
@@ -1821,7 +1813,7 @@ export const useStore = create<AppState>()(
       let disk: Project
       try {
         const opened = await getPlatform().openRecent(saveHandle.path)
-        if (!opened) throw new Error('The project file could not be read.')
+        if (!opened) throw new Error(t('store.staleSave.unreadable'))
         disk = loadProject(opened.text)
       } catch (err) {
         set((s) => {
@@ -1848,7 +1840,7 @@ export const useStore = create<AppState>()(
         const problem = mergeResultProblem(outcome.merged)
         if (problem) {
           set((s) => {
-            if (s.staleSave) s.staleSave.refusal = `The combined project would not open again: ${problem}`
+            if (s.staleSave) s.staleSave.refusal = t('store.staleSave.combinedRefused', { problem })
           })
           return
         }
@@ -1897,7 +1889,7 @@ export const useStore = create<AppState>()(
       const problem = mergeResultProblem(resolved)
       if (problem) {
         set((s) => {
-          if (s.staleSave) s.staleSave.error = `The combined project would not open again, so nothing was saved: ${problem}`
+          if (s.staleSave) s.staleSave.error = t('store.staleSave.combinedNothingSaved', { problem })
         })
         return
       }
@@ -2012,7 +2004,7 @@ export const useStore = create<AppState>()(
       if (!split || !saveHandle?.path) return
       if (dirty) {
         set((s) => {
-          if (s.annotationsSplit) s.annotationsSplit.error = 'Save the project first — the split rewrites its files.'
+          if (s.annotationsSplit) s.annotationsSplit.error = t('store.split.saveFirst')
         })
         return
       }
@@ -2082,9 +2074,7 @@ export const useStore = create<AppState>()(
               set((s) => {
                 s.busy = false
                 s.loadError = {
-                  message:
-                    `Can't save here — "${users[0]}" in this folder already keeps its annotations in "${folder}/", ` +
-                    `and "${own}/" is taken too. Choose a different folder or file name.`,
+                  message: t('store.save.cannotHere', { user: users[0], folder, own }),
                   details: [],
                 }
               })

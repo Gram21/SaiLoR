@@ -15,6 +15,7 @@ import {
   type AnnotationValueTree,
 } from './annotations'
 import { screeningSchemaDefs } from '../screening/schema'
+import { t } from '../i18n'
 import { parseYear } from './year'
 import { parseMarks, parseReviewMarks, type PdfMark } from './pdfMarks'
 import { parseAlignment, type StoredAlignment } from './alignment'
@@ -312,8 +313,8 @@ export function aiSeatId(project: Pick<Project, 'aiSeat' | 'aiEnabled' | 'review
  * seat is never accidentally shown as an ordinary human reviewer.
  */
 export function seatLabel(project: Pick<Project, 'aiSeat' | 'aiEnabled' | 'reviewers' | 'screening'>, seatId: string): string {
-  if (seatId === 'consolidation') return 'Consolidation'
-  return seatId === aiSeatId(project) ? `AI (Reviewer ${seatId})` : `Reviewer ${seatId}`
+  if (seatId === 'consolidation') return t('store.seat.consolidation')
+  return seatId === aiSeatId(project) ? t('store.seat.ai', { seat: seatId }) : t('store.seat.reviewer', { seat: seatId })
 }
 
 export class ProjectLoadError extends Error {
@@ -527,9 +528,7 @@ function parseScreening(raw: unknown): ScreeningConfig | null {
     reasons.push(trimmed)
   }
   if (reasons.length === 0) {
-    throw new ProjectLoadError('The screening configuration is invalid.', [
-      'config.screening.reasons must list at least one exclusion reason',
-    ])
+    throw new ProjectLoadError(t('store.load.screeningInvalid'), [t('store.schema.reasonsRequired')])
   }
   return { reasons }
 }
@@ -666,7 +665,7 @@ export function loadProject(input: string | unknown): Project {
     try {
       data = JSON.parse(input)
     } catch (err) {
-      throw new ProjectLoadError('The file is not valid JSON.', [String(err)])
+      throw new ProjectLoadError(t('store.load.notJson'), [String(err)])
     }
   } else {
     data = input
@@ -678,9 +677,7 @@ export function loadProject(input: string | unknown): Project {
   // RangeError that escaped this function's ProjectLoadError contract. One
   // check here covers all of them, including `extra`'s unbounded key depth.
   if (exceedsDepth(data, MAX_JSON_DEPTH)) {
-    throw new ProjectLoadError('The project file is nested too deeply.', [
-      `Nesting deeper than ${MAX_JSON_DEPTH} levels is not supported.`,
-    ])
+    throw new ProjectLoadError(t('store.load.tooDeep'), [t('store.load.tooDeepDetail', { max: MAX_JSON_DEPTH })])
   }
 
   // [impl->req~dat-10~1]
@@ -691,14 +688,14 @@ export function loadProject(input: string | unknown): Project {
   } catch (err) {
     if (err instanceof z.ZodError) {
       throw new ProjectLoadError(
-        'The project file does not match the expected structure.',
+        t('store.load.structure'),
         err.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`),
       )
     }
     // Belt and braces: depth guard above should make this unreachable, but a
     // stack overflow must never escape as anything but ProjectLoadError.
     if (err instanceof RangeError) {
-      throw new ProjectLoadError('The project file is nested too deeply.', [String(err)])
+      throw new ProjectLoadError(t('store.load.tooDeep'), [String(err)])
     }
     throw err
   }
@@ -714,7 +711,7 @@ export function loadProject(input: string | unknown): Project {
     schema = resolveSchema(screening ? screeningSchemaDefs(screening) : raw.config.schema!)
   } catch (err) {
     if (err instanceof SchemaError) {
-      throw new ProjectLoadError('The annotation schema is invalid.', [err.message])
+      throw new ProjectLoadError(t('store.load.schemaInvalid'), [err.message])
     }
     throw err
   }
@@ -723,14 +720,14 @@ export function loadProject(input: string | unknown): Project {
   const ids = new Set<string>()
   for (const p of raw.papers) {
     if (ids.has(p.id)) {
-      throw new ProjectLoadError('Duplicate paper id.', [`Paper id "${p.id}" appears more than once.`])
+      throw new ProjectLoadError(t('store.load.duplicatePaper'), [t('store.load.duplicatePaperDetail', { id: p.id })])
     }
     ids.add(p.id)
   }
 
   const strict = parseStrictConfig((data as { config?: unknown }).config, ids)
   if (strict.problems.length > 0) {
-    throw new ProjectLoadError('The strict mode settings are invalid.', strict.problems)
+    throw new ProjectLoadError(t('store.load.strictInvalid'), strict.problems)
   }
 
   const schemaVersion = parseSchemaVersion((data as { schemaVersion?: unknown }).schemaVersion)

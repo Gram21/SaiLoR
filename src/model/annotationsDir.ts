@@ -1,5 +1,6 @@
 // [impl->req~dat-169~1]
 import { FEEDBACK_DIR, paperIdKey, paperIdProblem } from './paperId'
+import { t } from '../i18n'
 
 export { FEEDBACK_DIR }
 
@@ -27,14 +28,14 @@ export function isFeedbackPath(rel: string): boolean {
 
 /** Why `name` cannot be an annotations folder, or `null` when it can. */
 export function annotationsDirProblem(name: string): string | null {
-  if (name !== name.trim()) return 'it starts or ends with a space'
+  if (name !== name.trim()) return t('store.annotationsDir.spaceEdge')
   // Everything a paper id may not be: separators, `.`/`..`, `:` (drive
   // letters, and so `C:x`), control characters, a trailing dot, reserved
   // Windows names.
   const issue = paperIdProblem(name)
   if (issue) return issue.detail
   // `.git` would be git's own directory; any hidden name is too easy to lose.
-  if (name.startsWith('.')) return 'it starts with a dot'
+  if (name.startsWith('.')) return t('store.annotationsDir.dot')
   return null
 }
 

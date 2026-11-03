@@ -1,4 +1,5 @@
 import type { ResolvedDef } from './schema'
+import { t } from '../i18n'
 import {
   isRecordedAnswer,
   makeInstance,
@@ -123,7 +124,7 @@ export function duplicateOnWrite(
       if (key !== null && key !== entryKey(def, oldList[index])) {
         const other = newList.findIndex((inst, j) => j !== index && entryKey(def, inst) === key)
         if (other >= 0)
-          return `"${def.name.trim()}" already has this entry (#${other + 1}). Each entry is allowed once.`
+          return t('store.unique.duplicate', { name: def.name.trim(), n: other + 1 })
       }
     }
     before = oldList[index]?.children

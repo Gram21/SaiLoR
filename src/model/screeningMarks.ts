@@ -2,6 +2,7 @@
 import { classifyImport, type DupRecord } from './duplicates'
 import type { PdfMark } from './pdfMarks'
 import type { Paper, Project } from './project'
+import { t } from '../i18n'
 
 /**
  * The PDF highlights a screening project holds for the papers of a project
@@ -48,5 +49,5 @@ export function screeningMarksByPaper(project: Project, screening: Project): Rec
 
 /** Who made a screening highlight, in words. */
 export function screeningSeatLabel(seat: string): string {
-  return seat === 'consolidated' ? 'Screening, consolidated' : `Screening, Reviewer ${seat}`
+  return seat === 'consolidated' ? t('store.screening.consolidated') : t('store.screening.reviewer', { seat })
 }
