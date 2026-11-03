@@ -40,6 +40,8 @@ The schema is an array of nodes. Each node describes one thing to record:
   max          Maximum number of entries. A whole number, or null for unbounded. Default 1.
   options      For a "string" field: the closed set of allowed values (an enum).
   required     true if the reviewer must fill this field in. Only valid on a node with a type.
+  unique       true if no two entries of this repeatable node may hold the same answer.
+  uniqueBy     For a unique group: the child names that decide if two entries are the same.
   description  What to record in this field. Read it carefully - it is the instruction.
 
 A node whose max is null or greater than 1 is repeatable and may hold several entries.
