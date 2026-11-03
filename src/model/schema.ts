@@ -75,6 +75,10 @@ export interface AnnotationDef {
    * time rather than rejected; a spec left with no conditions gates nothing.
    */
   visibleIf?: string | VisibleIfSpec
+  /** A repeatable node only: no two entries may hold the same answer. Defaults to false. */
+  unique?: boolean
+  /** With `unique` on a node with children: the child names that decide equality. Defaults to all. */
+  uniqueBy?: string[]
   children?: AnnotationDef[]
 }
 
@@ -94,6 +98,8 @@ export interface ResolvedDef {
   /** Normalized: the shorthand string form is expanded into a one-condition
    *  spec, and invalid conditions are dropped (see `resolveVisibleIf`). */
   visibleIf?: VisibleIfSpec
+  unique?: boolean
+  uniqueBy?: string[]
   children: ResolvedDef[]
 }
 
@@ -137,6 +143,8 @@ export const annotationDefSchema: z.ZodType<AnnotationDef> = z.lazy(() =>
       options: z.array(z.string()).optional(),
       required: z.boolean().optional(),
       visibleIf: visibleIfInputSchema.optional(),
+      unique: z.boolean().optional(),
+      uniqueBy: z.array(z.string()).min(1, '"uniqueBy" needs at least one field name').optional(),
       children: z.array(annotationDefSchema).optional(),
     })
     .strict()
@@ -451,6 +459,7 @@ function resolveDefs(
     const id = parentPath ? `${parentPath}/${def.name}` : def.name
     const min = def.min ?? 1
     const max = def.max === undefined ? 1 : def.max
+    assertUniqueOptions(def, id, max)
     return {
       id,
       name: def.name,
@@ -465,6 +474,8 @@ function resolveDefs(
       required: def.type === 'boolean' ? false : (def.required ?? false),
       // See `AnnotationDef.visibleIf`; invalid references are dropped silently.
       visibleIf: resolveVisibleIf(def, defs, ancestorFields, root, id),
+      ...(def.unique ? { unique: true } : {}),
+      ...(def.unique && def.uniqueBy ? { uniqueBy: def.uniqueBy } : {}),
       children: def.children
         ? resolveDefs(
             def.children,
@@ -475,6 +486,28 @@ function resolveDefs(
         : [],
     }
   })
+}
+
+function assertUniqueOptions(def: AnnotationDef, id: string, max: number | null): void {
+  if (def.unique && max === 1) {
+    throw new SchemaError(
+      `"${id}": "unique" is only allowed on a repeatable node (set "max" above 1 or to null).`,
+    )
+  }
+  if (def.uniqueBy === undefined) return
+  if (!def.unique) {
+    throw new SchemaError(`"${id}": "uniqueBy" needs "unique": true.`)
+  }
+  const children = def.children ?? []
+  if (children.length === 0) {
+    throw new SchemaError(`"${id}": "uniqueBy" is only allowed on a node with "children".`)
+  }
+  const unknown = def.uniqueBy.filter((n) => !children.some((c) => c.name === n))
+  if (unknown.length > 0) {
+    throw new SchemaError(
+      `"${id}": "uniqueBy" names unknown child field(s): ${unknown.map((n) => `"${n}"`).join(', ')}.`,
+    )
+  }
 }
 
 /** Validate + resolve a raw schema array into ResolvedDef nodes. */
