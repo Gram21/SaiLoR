@@ -9,6 +9,8 @@ import {
   savePaneWidths,
   loadAutosaveEnabled,
   saveAutosaveEnabled,
+  loadLanguage,
+  saveLanguage,
   FONT_MIN,
   FONT_MAX,
   PANE_LEFT_DEFAULT,
@@ -130,5 +132,24 @@ describe('autosave', () => {
     expect(loadAutosaveEnabled()).toBe(true)
     saveAutosaveEnabled(false)
     expect(loadAutosaveEnabled()).toBe(false)
+  })
+})
+
+// [utest->req~ui-110~1]
+describe('language', () => {
+  it('uses a supported browser language, else English', () => {
+    vi.stubGlobal('navigator', { language: 'de-AT' })
+    expect(loadLanguage()).toBe('de')
+    vi.stubGlobal('navigator', { language: 'fr-FR' })
+    expect(loadLanguage()).toBe('en')
+  })
+
+  it('round-trips a stored choice under slr.language and ignores unknown values', () => {
+    vi.stubGlobal('navigator', { language: 'en-US' })
+    saveLanguage('de')
+    expect(localStorage.getItem('slr.language')).toBe('de')
+    expect(loadLanguage()).toBe('de')
+    localStorage.setItem('slr.language', 'xx')
+    expect(loadLanguage()).toBe('en')
   })
 })

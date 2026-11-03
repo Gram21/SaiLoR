@@ -8,6 +8,7 @@ import { useAiStore } from '../state/aiStore'
 import { useGitStore } from '../state/gitStore'
 import { useKeybindings } from '../hooks/useKeybindings'
 import { SettingsDialog } from './SettingsDialog'
+import { setLanguage } from '../i18n'
 
 function Host() {
   useKeybindings()
@@ -86,7 +87,7 @@ describe('SettingsDialog (REQ-UI-90, REQ-UI-100)', () => {
   it('labels every control', () => {
     act(() => st().setUserSettingsOpen(true))
     render(<SettingsDialog />)
-    for (const name of ['General', 'AI', 'Git']) {
+    for (const name of ['General', 'Language', 'AI', 'Git']) {
       expect(screen.getByRole('region', { name })).toBeInTheDocument()
     }
     expect(screen.getByRole('combobox', { name: 'Theme' })).toBeInTheDocument()
@@ -132,5 +133,26 @@ describe('SettingsDialog (REQ-UI-90, REQ-UI-100)', () => {
     expect(screen.getByText('SaiLoR uses the git on your PATH: git version 2.43.0.')).toBeInTheDocument()
     act(() => useGitStore.setState({ probe: { available: false, version: '', error: 'git was not found' } }))
     expect(screen.getByText('git was not found')).toBeInTheDocument()
+  })
+
+  // [utest->req~ui-110~1]
+  it('switches the dialog to German and stores the choice', async () => {
+    const user = userEvent.setup()
+    act(() => st().setUserSettingsOpen(true))
+    render(<SettingsDialog />)
+    const select = screen.getByRole('combobox', { name: 'User interface language' })
+    expect(select).toHaveValue('en')
+    expect(screen.getByRole('option', { name: 'Deutsch' })).toHaveAttribute('lang', 'de')
+    try {
+      await user.selectOptions(select, 'de')
+      expect(localStorage.getItem('slr.language')).toBe('de')
+      expect(document.documentElement.lang).toBe('de')
+      expect(screen.getByRole('dialog', { name: 'Einstellungen' })).toBeInTheDocument()
+      expect(screen.getByRole('region', { name: 'Sprache' })).toBeInTheDocument()
+      expect(screen.getByRole('combobox', { name: 'Sprache der Oberfläche' })).toHaveValue('de')
+    } finally {
+      act(() => setLanguage('en'))
+    }
+    expect(screen.getByRole('dialog', { name: 'Settings' })).toBeInTheDocument()
   })
 })

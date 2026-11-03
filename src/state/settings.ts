@@ -104,6 +104,27 @@ export function saveAutosaveEnabled(enabled: boolean): void {
   safeSet(AUTOSAVE_KEY, enabled ? '1' : '0')
 }
 
+const LANGUAGE_KEY = 'slr.language'
+export const LANGUAGES = ['en', 'de'] as const
+export type Language = (typeof LANGUAGES)[number]
+
+function isLanguage(value: unknown): value is Language {
+  return (LANGUAGES as readonly unknown[]).includes(value)
+}
+
+// [impl->req~ui-110~1]
+export function loadLanguage(): Language {
+  const stored = safeGet(LANGUAGE_KEY)
+  if (isLanguage(stored)) return stored
+  const browser = typeof navigator !== 'undefined' ? navigator.language?.split('-')[0]?.toLowerCase() : undefined
+  return isLanguage(browser) ? browser : 'en'
+}
+
+// [impl->req~ui-110~1]
+export function saveLanguage(lang: Language): void {
+  safeSet(LANGUAGE_KEY, lang)
+}
+
 /** Exported so other stores that persist small bits of session state (e.g.
  *  the reviewer selection in `store.ts`) don't each reimplement the same
  *  try/catch — private browsing / disabled storage must never throw. */

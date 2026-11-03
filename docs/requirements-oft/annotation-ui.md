@@ -807,7 +807,7 @@ The Settings dialog shall have a Language section with one choice per supported 
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability)
-- **Evidence:** `src/components/SettingsDialog.tsx` (`LanguageSection`, `SETTINGS_SECTIONS`), `src/state/settings.ts` (`loadLanguage`, `saveLanguage`), `src/i18n.tsx` (`setLanguage`, `useLanguage`)
+- **Evidence:** `src/components/SettingsDialog.tsx` (`LanguageSection`, `SETTINGS_SECTIONS`), `src/state/settings.ts` (`loadLanguage`, `saveLanguage`), `src/i18n.ts` (`setLanguage`, `useLanguage`)
 - **Verified by:** `src/state/settings.test.ts` (`language`), `src/components/SettingsDialog.test.tsx` (`switches the dialog to German and stores the choice`)
 - **Status:** Implemented
 
@@ -822,7 +822,7 @@ The system shall take each user-visible text of the renderer from the active lan
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability)
-- **Evidence:** `src/i18n.tsx` (`t`, `tp`, `rich`, `useT`), `src/locales/en.json`, `src/locales/de.json`, `src/components/`
+- **Evidence:** `src/i18n.ts` (`t`, `tp`, `rich`, `useT`), `src/locales/en.json`, `src/locales/de.json`, `src/components/`
 - **Verified by:** `src/i18n.test.ts` (`t`, `tp`, `rich`)
 - **Status:** Implemented
 
@@ -837,7 +837,7 @@ Each language file shall have exactly the keys of the English file. For each key
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Maintainability: Testability)
-- **Evidence:** `src/locales/en.json`, `src/locales/de.json`, `src/i18n.tsx` (`MESSAGES`)
+- **Evidence:** `src/locales/en.json`, `src/locales/de.json`, `src/i18n.ts` (`MESSAGES`)
 - **Verified by:** `src/i18n.test.ts` (`language files`)
 - **Status:** Implemented
 
