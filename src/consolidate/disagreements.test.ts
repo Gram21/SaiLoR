@@ -361,6 +361,33 @@ describe('paperVerdicts — one-sided entries', () => {
     // no basis for saying whose entry is whose.
     expect(verdictOf(splitPaper({}), 'Findings[1]/Claim').oneSided).toBe(false)
   })
+
+  it('names the reviewers who recorded a one-sided entry', () => {
+    expect(verdictOf(splitPaper(MAPPING), 'Findings[1]/Claim').onlyIn).toEqual(['1'])
+    expect(verdictOf(splitPaper(MAPPING), 'Findings/Claim').onlyIn).toEqual([])
+    expect(verdictOf(splitPaper({}), 'Findings[1]/Claim').onlyIn).toEqual([])
+  })
+
+  it('names only reviewers who recorded every enclosing entry', () => {
+    const paper = makePaper({
+      reviews: {
+        '1': tree(SCHEMA, {
+          Findings: [{ children: { ...finding('Mine alone'), Evidence: [{ children: { Metric: [{ value: 'a' }] } }] } }],
+        }),
+        '2': tree(SCHEMA, {
+          Findings: [{ children: { ...finding('Other'), Evidence: [{ children: { Metric: [{ value: 'b' }] } }] } }],
+        }),
+      },
+      alignment: {
+        Findings: [
+          { members: { '1': 0 }, children: { Evidence: [{ members: { '1': 0, '2': 0 } }] } },
+          { members: { '2': 0 } },
+        ],
+      },
+    })
+    expect(verdictOf(paper, 'Findings/Evidence/Metric').onlyIn).toEqual(['1'])
+    expect(verdictOf(paper, 'Findings[1]/Claim').onlyIn).toEqual(['2'])
+  })
 })
 
 describe('paperVerdicts — reads reviewers through the stored alignment', () => {

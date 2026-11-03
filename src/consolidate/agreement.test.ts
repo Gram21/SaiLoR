@@ -377,3 +377,45 @@ describe('boolean fields', () => {
     expect(built.input.units).toContainEqual({ '1': 'true', '2': 'false' })
   })
 })
+
+describe('per-entry agreement (REQ-CON-440)', () => {
+  it('rates each repeated entry as a whole over its sub-fields, apart from the flat fields', () => {
+    const schema = resolveSchema([
+      { name: 'Study Type', type: 'string' },
+      { name: 'Findings', max: null, children: [{ name: 'Claim', type: 'string' }, { name: 'Kind', type: 'string' }] },
+    ])
+    const entry = (claim: string, kind: string) => ({ children: { Claim: [{ value: claim }], Kind: [{ value: kind }] } })
+    const project = makeProject({
+      schema,
+      papers: [
+        makePaper({
+          reviews: {
+            '1': normalizeTree(schema, { 'Study Type': [{ value: 'RCT' }], Findings: [entry('A', 'x'), entry('B', 'x')] }),
+            '2': normalizeTree(schema, { 'Study Type': [{ value: 'RCT' }], Findings: [entry('A', 'x'), entry('B', 'y')] }),
+          },
+        }),
+      ],
+    })
+
+    const built = agreementInput(project)
+    expect(built.unitCount).toBe(5)
+    expect(built.perEntry.map((f) => [f.key, f.label, f.unitCount])).toEqual([['Findings', 'Findings', 2]])
+    const [same, differs] = built.perEntry[0].input.units
+    expect(same['1']).toBe(same['2'])
+    expect(differs['1']).not.toBe(differs['2'])
+  })
+
+  it('leaves an entry only one reviewer filled in out of the per-entry units', () => {
+    const project = makeProject({
+      papers: [
+        makePaper({
+          reviews: {
+            '1': tree({ Findings: [{ children: { Claim: [{ value: 'A' }] } }] }),
+            '2': tree({ 'Study Type': [{ value: 'RCT' }] }),
+          },
+        }),
+      ],
+    })
+    expect(agreementInput(project).perEntry).toEqual([])
+  })
+})

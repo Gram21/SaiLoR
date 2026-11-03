@@ -59,3 +59,13 @@ describe('AgreementDialog: unaligned-papers warning', () => {
     expect(screen.queryByRole('alert')).not.toBeInTheDocument()
   })
 })
+
+describe('AgreementDialog: per-entry table (REQ-CON-440)', () => {
+  it('lists each repeatable node with its entry count', () => {
+    st().loadFromText(projectJson({ findingsConsolidated: false }), null, 'test.json')
+    useStore.setState({ agreementOpen: true })
+    render(<AgreementDialog />)
+    expect(screen.getByRole('heading', { name: 'Per entry' })).toBeInTheDocument()
+    expect(screen.getByRole('cell', { name: 'Findings' })).toBeInTheDocument()
+  })
+})

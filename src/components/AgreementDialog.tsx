@@ -94,6 +94,7 @@ export function AgreementDialog() {
 
   const [selected, setSelected] = useState<Set<string>>(() => new Set())
   const [copied, setCopied] = useState(false)
+  const [copiedEntry, setCopiedEntry] = useState(false)
 
   // Default to whichever metrics this project's data can actually support,
   // rather than nothing: a reviewer opening this dialog came to see agreement,
@@ -228,6 +229,25 @@ export function AgreementDialog() {
                   }}
                 />
               )}
+              {built.perEntry.length > 0 && (
+                <PerFieldTable
+                  title="Per entry"
+                  perField={built.perEntry}
+                  metrics={METRICS.filter((m) => selected.has(m.key))}
+                  copied={copiedEntry}
+                  onCopy={() => {
+                    const tsv = perFieldTsv(
+                      built.perEntry,
+                      METRICS.filter((m) => selected.has(m.key)),
+                    )
+                    void copyText(tsv).then((ok) => {
+                      if (!ok) return
+                      setCopiedEntry(true)
+                      setTimeout(() => setCopiedEntry(false), 2000)
+                    })
+                  }}
+                />
+              )}
             </>
           )}
         </div>
@@ -245,11 +265,13 @@ export function AgreementDialog() {
  * worse than a scrollbar.
  */
 function PerFieldTable({
+  title = 'Per field',
   perField,
   metrics,
   copied,
   onCopy,
 }: {
+  title?: string
   perField: FieldAgreement[]
   metrics: MetricSpec[]
   copied: boolean
@@ -258,8 +280,8 @@ function PerFieldTable({
   return (
     <div className="agreement-perfield">
       <div className="agreement-perfield-head">
-        <h3 className="agreement-perfield-title">Per field</h3>
-        <button type="button" onClick={onCopy} title="Copy the per-field table to the clipboard as TSV">
+        <h3 className="agreement-perfield-title">{title}</h3>
+        <button type="button" onClick={onCopy} title={`Copy the ${title.toLowerCase().replace(' ', '-')} table to the clipboard as TSV`}>
           {copied ? 'Copied' : 'Copy as TSV'}
         </button>
       </div>

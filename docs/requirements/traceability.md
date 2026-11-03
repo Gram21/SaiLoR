@@ -271,6 +271,10 @@ inspection only.
 | REQ-CON-380 | Export disagreements per paper | Functional · Functional Suitability | `src/consolidate/exportDisagreements.ts:13-34` | `src/consolidate/exportDisagreements.test.ts:54-121` | — | `openwiki/workflows/consolidation.md` §Resolution UI flow / §Disagreement export |
 | REQ-CON-390 | Export disagreements project-wide | Functional · Functional Suitability | `src/consolidate/exportDisagreements.ts:36-51`<br>`src/components/ConsolidationOverview.tsx:86-89` | `src/consolidate/exportDisagreements.test.ts:123-177` | commit `9125ee0` | `openwiki/workflows/consolidation.md` §Resolution UI flow / §Disagreement export |
 | REQ-CON-400 | Disable AI suggestions for Consolidation seat | Functional · Functional Suitability | — | `src/state/store.align.test.ts:442-464` | — | `openwiki/workflows/consolidation.md` §Resolution UI flow / §Disagreement export |
+| REQ-CON-410 | Align repeated entries independent of entry order | Functional · Functional Suitability | `src/consolidate/align.ts` (`contentOrder`, `sortSlots`) | `src/consolidate/align.property.test.ts` | — | — |
+| REQ-CON-420 | Remap repeated entries by hand | Functional · Functional Suitability | `src/state/store.ts` (`remapConsolidationEntry`)<br>`src/components/ConsolidationDialog.tsx` | `src/state/store.align.test.ts`<br>`src/components/ConsolidationDialog.test.tsx`<br>`src/model/alignment.test.ts` | — | — |
+| REQ-CON-430 | Show unmatched entries as only in one reviewer | Functional · Functional Suitability | `src/consolidate/disagreements.ts` (`onlyIn`)<br>`src/components/DisagreementOverview.tsx`<br>`src/components/ConsolidationDialog.tsx` | `src/consolidate/disagreements.test.ts`<br>`src/components/ConsolidationDialog.test.tsx` | — | — |
+| REQ-CON-440 | Compute agreement per repeated entry | Functional · Functional Suitability | `src/consolidate/agreement.ts` (`perEntry`)<br>`src/components/AgreementDialog.tsx` | `src/consolidate/agreement.test.ts`<br>`src/consolidate/agreement.property.test.ts`<br>`src/components/AgreementDialog.test.tsx` | — | — |
 
 ## Git integration ([git-integration.md](git-integration.md))
 

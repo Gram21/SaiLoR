@@ -88,7 +88,7 @@ for the glossary.
 - **Status:** Implemented
 
 ### REQ-CON-120: Persist only slot membership
-- **Description:** When storing an alignment, the system shall persist only slot membership, and shall re-derive agreement and evidence scores on demand.
+- **Description:** When storing an alignment, the system shall persist only slot membership and the manual marker of each slot, and shall re-derive agreement and evidence scores on demand. When loading an alignment, the system shall keep slot keys that it does not know.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/consolidate/apply.ts:20-38`
 - **Status:** Implemented
@@ -106,7 +106,7 @@ for the glossary.
 - **Status:** Implemented
 
 ### REQ-CON-150: Freeze answered alignments
-- **Description:** When the Consolidation seat has recorded any answer under a schema node for a paper, the system shall not re-match that node's alignment for that paper.
+- **Description:** When the Consolidation seat has recorded any answer under a schema node for a paper, or the consolidator has remapped an entry of that node by hand, the system shall not re-match that node's alignment for that paper.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/consolidate/readiness.ts:52-54`, `src/state/store.align.test.ts:228`
 - **Status:** Implemented
@@ -271,4 +271,28 @@ for the glossary.
 - **Description:** When the Consolidation seat is active, the system shall disable the AI-suggestion feature while keeping it available to numbered reviewer seats.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/store.align.test.ts:442-464`
+- **Status:** Implemented
+
+### REQ-CON-410: Align repeated entries independent of entry order
+- **Description:** When aligning the entries of a repeatable node, the system shall pair entries by best sub-field match, and shall produce the same pairing and the same agreement scores for any order in which the reviewers recorded their entries, including the order of nested entries.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/consolidate/align.ts` (`contentOrder`, `sortSlots`), `src/consolidate/align.property.test.ts`
+- **Status:** Implemented
+
+### REQ-CON-420: Remap repeated entries by hand
+- **Description:** When the consolidator picks a different entry of a reviewer for a consolidated entry, the system shall pair that reviewer entry with the consolidated entry, shall move the replaced entry into the slot that held the picked entry, and shall mark both slots as manual. When the consolidator picks no entry, the system shall remove the reviewer from that slot. The system shall rematch the nested entries of each changed slot, and shall record the change as one undo entry.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/store.ts` (`remapConsolidationEntry`), `src/components/ConsolidationDialog.tsx`, `src/state/store.align.test.ts`, `src/components/ConsolidationDialog.test.tsx`, `src/model/alignment.test.ts`
+- **Status:** Implemented
+
+### REQ-CON-430: Show unmatched entries as only in one reviewer
+- **Description:** When a repeated entry is not recorded by every participating reviewer, the system shall name the reviewers who recorded that entry as "Only in" in the disagreement list and in the compare dialog.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/consolidate/disagreements.ts` (`onlyIn`), `src/components/DisagreementOverview.tsx`, `src/components/ConsolidationDialog.tsx`, `src/consolidate/disagreements.test.ts`, `src/components/ConsolidationDialog.test.tsx`
+- **Status:** Implemented
+
+### REQ-CON-440: Compute agreement per repeated entry
+- **Description:** The system shall compute agreement per sub-field and per entry of a repeatable node. An entry counts as one unit when at least two reviewers recorded an answer in it. Two reviewers agree on an entry only when all their sub-field answers in that entry agree. Per-entry units shall not change the pooled or per-field values. Entry order shall not change any agreement value. The agreement dialog shall show a "Per entry" table.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/consolidate/agreement.ts` (`perEntry`), `src/components/AgreementDialog.tsx`, `src/consolidate/agreement.test.ts`, `src/consolidate/agreement.property.test.ts`, `src/components/AgreementDialog.test.tsx`
 - **Status:** Implemented

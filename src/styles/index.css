@@ -2753,6 +2753,23 @@ kbd {
   width: 16px;
   height: 16px;
 }
+.consolidation-mapping {
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+  color: var(--muted);
+  font-size: 0.9em;
+}
+.consolidation-mapping p {
+  margin: 0 0 6px;
+}
+.consolidation-mapping label {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-top: 4px;
+}
 
 /* The "you marked them equal, now say which value" nudge. Sits quiet until the
    field is actually stranded, when it becomes the one thing left to do. */
@@ -2997,6 +3014,10 @@ kbd {
 }
 .disagreement-value {
   white-space: nowrap;
+}
+.disagreement-only {
+  white-space: nowrap;
+  font-style: italic;
 }
 .disagreement-reviewer {
   margin-right: 4px;

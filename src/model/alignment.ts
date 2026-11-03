@@ -36,6 +36,8 @@ export interface StoredSlot {
   members: Record<string, number>
   /** Mappings for this slot's repeated children, matched within this pair. */
   children?: StoredAlignment
+  /** The consolidator set this slot's members by hand; automatic matching keeps them. */
+  manual?: true
 }
 
 /** Node name → its slots, for one level of the tree. */
@@ -64,16 +66,43 @@ export function parseAlignment(raw: unknown): StoredAlignment {
 }
 
 function parseSlot(raw: unknown): StoredSlot {
-  if (typeof raw !== 'object' || raw === null) return { members: {} }
-  const r = raw as { members?: unknown; children?: unknown }
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return { members: {} }
+  const { members: rawMembers, children: rawChildren, manual, ...unknown } = raw as Record<string, unknown>
   const members: Record<string, number> = {}
-  if (typeof r.members === 'object' && r.members !== null && !Array.isArray(r.members)) {
-    for (const [reviewer, index] of Object.entries(r.members as Record<string, unknown>)) {
+  if (typeof rawMembers === 'object' && rawMembers !== null && !Array.isArray(rawMembers)) {
+    for (const [reviewer, index] of Object.entries(rawMembers as Record<string, unknown>)) {
       if (typeof index === 'number' && Number.isInteger(index) && index >= 0) members[reviewer] = index
     }
   }
-  const children = parseAlignment(r.children)
-  return Object.keys(children).length > 0 ? { members, children } : { members }
+  const slot: StoredSlot = { ...unknown, members }
+  const children = parseAlignment(rawChildren)
+  if (Object.keys(children).length > 0) slot.children = children
+  if (manual === true) slot.manual = true
+  return slot
+}
+
+/**
+ * One reviewer's own entries for node `name` below `path`, where `path` is in
+ * slot space (consolidated indices). Returns an empty list when the reviewer
+ * has no entry in one of the ancestor slots.
+ */
+export function reviewerEntriesAt(
+  alignment: StoredAlignment,
+  tree: AnnotationValueTree | undefined,
+  path: { name: string; index: number }[],
+  name: string,
+  reviewer: string,
+): InstanceNode[] {
+  let level: StoredAlignment = alignment
+  let current = tree
+  for (const seg of path) {
+    const slots = level[seg.name]
+    const own = slots ? slots[seg.index]?.members[reviewer] : seg.index
+    if (own === undefined) return []
+    current = asList(current?.[seg.name])[own]?.children
+    level = slots?.[seg.index]?.children ?? {}
+  }
+  return asList(current?.[name])
 }
 
 /** The project JSON is hand-editable, so a node may hold something else. */

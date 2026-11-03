@@ -39,6 +39,8 @@ export interface FieldVerdict {
    * participants; otherwise every entry is trivially one-sided.
    */
   oneSided: boolean
+  /** When `oneSided`, the participants who recorded this entry; empty otherwise. */
+  onlyIn: string[]
   /**
    * Reviewers who annotated anything on this paper — not `project.reviewers`,
    * since a reviewer who hasn't opened the paper isn't withholding an answer.
@@ -90,7 +92,7 @@ export function paperVerdicts(schema: ResolvedDef[], paper: Paper, reviewerCount
   const participants = reviewerIds.filter((r) => touchedBy[r])
 
   const out: FieldVerdict[] = []
-  walk(schema, reviews, reviewerIds, [], paper, out, touchedBy, paper.alignment, participants, false)
+  walk(schema, reviews, reviewerIds, [], paper, out, touchedBy, paper.alignment, participants, participants)
   return out
 }
 
@@ -109,9 +111,9 @@ function walk(
   touchedBy: Record<string, boolean>,
   alignment: StoredAlignment,
   participants: string[],
-  /** True if an ancestor entry was one-sided — propagates down since a field
-   *  of a finding only one reviewer recorded is one-sided too. */
-  parentOneSided: boolean,
+  /** Participants who recorded every ancestor entry — a field of a finding
+   *  only one reviewer recorded is one-sided too. */
+  present: string[],
 ): void {
   for (const def of defs) {
     // Post-alignment, index N is the same entry for every reviewer, so walk as
@@ -131,9 +133,8 @@ function walk(
 
       // An entry some participants contributed to and others did not.
       const slot = slots?.[index]
-      const oneSided =
-        parentOneSided ||
-        (participants.length >= 2 && !!slot && participants.some((r) => slot.members[r] === undefined))
+      const here = slot ? present.filter((r) => slot.members[r] !== undefined) : present
+      const oneSided = participants.length >= 2 && here.length < participants.length
 
       if (isField(def)) {
         const values: Record<string, FieldValue | undefined> = {}
@@ -170,6 +171,7 @@ function walk(
           markedEqual,
           agree,
           oneSided,
+          onlyIn: oneSided ? here : [],
           participantCount: participants.length,
           categories,
         })
@@ -188,7 +190,7 @@ function walk(
           touchedBy,
           slot?.children ?? {},
           participants,
-          oneSided,
+          here,
         )
       }
     }
