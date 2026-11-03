@@ -246,3 +246,20 @@ annotating:
 | Alt+↓ / `]` | Next paper |
 | Alt+↑ / `[` | Previous paper |
 | F1 | Open help |
+
+## Changing the language
+
+SaiLoR is available in English and German.
+On the first start, SaiLoR uses the language of your system if it is available.
+In all other cases, SaiLoR starts in English.
+
+To change the language:
+
+1. Open **Settings** with Ctrl/Cmd+, or click the SaiLoR title in the toolbar.
+2. Go to the **Language** section.
+3. Select a language in **User interface language**.
+
+The window and the native menus change at once. You do not have to restart SaiLoR.
+SaiLoR stores the choice for your user account, not in the project.
+The language does not change project data, schema field names or AI prompts.
+Some messages from git and from the operating system stay in their own language.
