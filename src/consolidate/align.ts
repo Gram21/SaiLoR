@@ -474,7 +474,8 @@ export function widenAlignment(
       childTrees[reviewer] = lists[reviewer]?.[index]?.children
     }
     const widenedChildren = widenAlignment(def.children, slot.children ?? {}, childTrees, cache)
-    const nextSlot: StoredSlot = { members: nextMembers }
+    const nextSlot: StoredSlot = { ...slot, members: nextMembers }
+    delete nextSlot.children
     if (Object.keys(widenedChildren.alignment).length > 0) nextSlot.children = widenedChildren.alignment
     out[def.name] = [nextSlot]
     if (memberAdded || widenedChildren.changed) changed = true
@@ -508,16 +509,12 @@ function widenList(
   if (singlePairing(def, lists) && existingSlots.length === 1) {
     const members = { ...existingSlots[0].members }
     for (const r of newcomers) members[r] = 0
-    return { slots: [{ members }], changed: true }
+    return { slots: [{ ...existingSlots[0], members }], changed: true }
   }
 
-  // Plain member-bag copies — `simAgainstSlot` only reads `.members`;
-  // `children` passes through untouched until a slot is actually widened below.
-  const slots: StoredSlot[] = existingSlots.map((s) => {
-    const slot: StoredSlot = { members: { ...s.members } }
-    if (s.children) slot.children = s.children
-    return slot
-  })
+  // Member-bag copies — `simAgainstSlot` only reads `.members`; `children` and
+  // any other stored keys pass through untouched until a slot is widened below.
+  const slots: StoredSlot[] = existingSlots.map((s) => ({ ...s, members: { ...s.members } }))
   let changed = false
 
   for (const reviewer of newcomers) {

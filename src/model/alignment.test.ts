@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { resolveSchema, type AnnotationDef } from './schema'
 import { normalizeTree, type AnnotationValueTree } from './annotations'
-import { alignedReviews, parseAlignment, type StoredAlignment } from './alignment'
+import { alignedReviews, parseAlignment, reviewerEntriesAt, type StoredAlignment } from './alignment'
 
 const FINDINGS: AnnotationDef[] = [
   { name: 'Findings', max: null, children: [{ name: 'Claim', type: 'string' }] },
@@ -151,5 +151,36 @@ describe('parseAlignment', () => {
     expect(parseAlignment({ Findings: [null, 7, { members: { '1': 0 } }] })).toEqual({
       Findings: [{ members: {} }, { members: {} }, { members: { '1': 0 } }],
     })
+  })
+
+  it('keeps the manual marker and keys it does not know', () => {
+    const raw = { Findings: [{ members: { '1': 0 }, manual: true, note: { by: 'x' } }] }
+    expect(parseAlignment(raw)).toEqual(raw)
+  })
+
+  it('drops a manual marker that is not true', () => {
+    expect(parseAlignment({ Findings: [{ members: { '1': 0 }, manual: 'yes' }] })).toEqual({
+      Findings: [{ members: { '1': 0 } }],
+    })
+  })
+})
+
+describe('reviewerEntriesAt', () => {
+  const tree = {
+    Findings: [
+      { children: { Notes: [{ value: 'a' }] } },
+      { children: { Notes: [{ value: 'b' }, { value: 'c' }] } },
+    ],
+  }
+
+  it('follows the slot to the reviewer\'s own entry', () => {
+    const alignment: StoredAlignment = { Findings: [{ members: { '1': 1 } }, { members: { '2': 0 } }] }
+    expect(reviewerEntriesAt(alignment, tree, [{ name: 'Findings', index: 0 }], 'Notes', '1')).toHaveLength(2)
+    expect(reviewerEntriesAt(alignment, tree, [{ name: 'Findings', index: 1 }], 'Notes', '1')).toEqual([])
+  })
+
+  it('reads by position where no mapping exists', () => {
+    expect(reviewerEntriesAt({}, tree, [{ name: 'Findings', index: 0 }], 'Notes', '1')).toEqual([{ value: 'a' }])
+    expect(reviewerEntriesAt({}, tree, [], 'Findings', '1')).toHaveLength(2)
   })
 })

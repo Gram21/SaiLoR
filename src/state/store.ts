@@ -10,7 +10,7 @@ import {
   type AiUsageRecord,
   aiSeatId,
 } from '../model/project'
-import { alignedReviews, type StoredAlignment, type StoredSlot } from '../model/alignment'
+import { alignedReviews, reviewerEntriesAt, type StoredAlignment, type StoredSlot } from '../model/alignment'
 import {
   hasAnnotations,
   makeInstance,
@@ -185,7 +185,7 @@ export function shiftCanonicalPath(
  * where the path doesn't resolve, so the caller can skip the fixup rather
  * than fabricate a slot list that was never computed.
  */
-function alignmentSlotsAt(
+export function alignmentSlotsAt(
   alignment: StoredAlignment,
   path: PathSeg[],
   name: string,
@@ -200,6 +200,23 @@ function alignmentSlotsAt(
     level = slots[slotIndex].children ?? {}
   }
   return level[name]
+}
+
+function hasManualSlot(slots: StoredSlot[] | undefined): boolean {
+  return !!slots?.some((slot) => slot.manual === true || Object.values(slot.children ?? {}).some(hasManualSlot))
+}
+
+function withoutReviewer(alignment: StoredAlignment, reviewer: string): StoredAlignment {
+  const out: StoredAlignment = {}
+  for (const [name, slots] of Object.entries(alignment)) {
+    out[name] = slots.map((slot) => {
+      const next: StoredSlot = { ...slot, members: { ...slot.members } }
+      delete next.members[reviewer]
+      if (slot.children) next.children = withoutReviewer(slot.children, reviewer)
+      return next
+    })
+  }
+  return out
 }
 
 /** The reviewer scope for a mark key: `null` for a single-reviewer project
@@ -965,6 +982,20 @@ interface AppState {
    * one per node) — driven by `useConsolidationAlignment`, a node at a time.
    */
   alignConsolidationNode: (paperId: string, nodeName: string, coalesce: boolean) => boolean
+  /**
+   * The consolidator puts `reviewer`'s own entry `entryIndex` (or no entry, for
+   * `null`) into consolidated slot `slotIndex` of node `name` below `path`. A
+   * sibling slot that held that entry takes the slot's previous entry instead.
+   * Both slots are marked `manual`, so later automatic matching keeps them.
+   */
+  remapConsolidationEntry: (
+    paperId: string,
+    path: PathSeg[],
+    name: string,
+    slotIndex: number,
+    reviewer: string,
+    entryIndex: number | null,
+  ) => void
   /**
    * Fills consolidated fields still unanswered with the value every reviewer
    * gave (marked like an AI fill). Returns how many. Must run after
@@ -3091,7 +3122,7 @@ export const useStore = create<AppState>()(
       // paper) — so a frozen node still runs `widenAlignment` below instead of
       // returning outright: it only adds a reviewer absent from every slot's
       // `members`, never moves one already there.
-      const frozen = consolidatorHasAnswered(def, paper.annotations)
+      const frozen = consolidatorHasAnswered(def, paper.annotations) || hasManualSlot(paper.alignment[nodeName])
 
       // Only numbered reviewers who've actually written something vote — the
       // consolidated tree being built from them can't match against itself,
@@ -3143,6 +3174,64 @@ export const useStore = create<AppState>()(
       // A value typed after this must not merge into the alignment's undo entry.
       if (changed) lastFieldKey = null
       return changed
+    },
+
+    remapConsolidationEntry: (paperId, path, name, slotIndex, reviewer, entryIndex) => {
+      if (get().readOnly) return
+      const prev = get()
+      const project = prev.project
+      if (!project || project.reviewers <= 1) return
+      const paper = project.papers.find((p) => p.id === paperId)
+      if (!paper) return
+      let def: ResolvedDef | undefined
+      let level = project.schema
+      for (const seg of [...path, { name }]) {
+        def = level.find((d) => d.name === seg.name)
+        level = def?.children ?? []
+      }
+      const slots = alignmentSlotsAt(paper.alignment, path, name, (_slots, seg) => seg.index)
+      if (!def || !slots || slotIndex < 0 || slotIndex >= slots.length) return
+      const before = slots[slotIndex].members[reviewer]
+      if (before === (entryIndex ?? undefined)) return
+      const own = (r: string) => reviewerEntriesAt(paper.alignment, paper.reviews[r], path, name, r)
+      if (entryIndex !== null && (!Number.isInteger(entryIndex) || entryIndex < 0 || entryIndex >= own(reviewer).length)) {
+        return
+      }
+      const snap: HistoryEntry = { project, paperId: prev.currentPaperId }
+
+      set((s) => {
+        const draft = s.project!.papers.find((p) => p.id === paperId)
+        const draftSlots = draft && alignmentSlotsAt(draft.alignment, path, name, (_slots, seg) => seg.index)
+        if (!draftSlots) return
+        const touched = [slotIndex]
+        const other = entryIndex === null ? -1 : draftSlots.findIndex((slot) => slot.members[reviewer] === entryIndex)
+        if (other >= 0) {
+          if (before === undefined) delete draftSlots[other].members[reviewer]
+          else draftSlots[other].members[reviewer] = before
+          touched.push(other)
+        }
+        if (entryIndex === null) delete draftSlots[slotIndex].members[reviewer]
+        else draftSlots[slotIndex].members[reviewer] = entryIndex
+
+        for (const at of touched) {
+          const slot = draftSlots[at]
+          slot.manual = true
+          if (def.children.length === 0) continue
+          const childTrees: Record<string, AnnotationValueTree | undefined> = {}
+          for (const [r, index] of Object.entries(slot.members)) childTrees[r] = own(r)[index]?.children
+          const refit = widenAlignment(def.children, withoutReviewer(slot.children ?? {}, reviewer), childTrees, new Map()).alignment
+          const present: Record<string, AnnotationValueTree> = {}
+          for (const [r, tree] of Object.entries(childTrees)) if (tree) present[r] = tree
+          for (const child of alignableNodes(def.children)) {
+            if (!refit[child]) Object.assign(refit, toStoredAlignment(alignNode(def.children, present, child)))
+          }
+          if (Object.keys(refit).length > 0) slot.children = refit
+          else delete slot.children
+        }
+        pushPast(s, snap)
+        s.dirty = true
+      })
+      lastFieldKey = null
     },
 
     adoptUnanimousValues: (paperId, coalesce) => {
