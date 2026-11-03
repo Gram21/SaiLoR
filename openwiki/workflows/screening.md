@@ -6,6 +6,76 @@ tags: [screening, workflow, prisma, schema, validation, multi-reviewer]
 verified:
   - by: openwiki/0.7.3
     at: 2026-11-02T08:58:22.323Z
+sources:
+  - id: openwiki-source-5e350144821ef45403557db2
+    resource: repo://src-tauri/src/project.rs
+  - id: openwiki-source-54631e6ebf1d3b815c4a5eed
+    resource: repo://src/App.tsx
+  - id: openwiki-source-57771ec2f8e2fcc75b7e3567
+    resource: repo://src/components/AnnotationPanel.tsx
+  - id: openwiki-source-8274b48e7dac031772eea062
+    resource: repo://src/components/ConsolidationDialog.tsx
+  - id: openwiki-source-4599b619fa759e59c83c5e95
+    resource: repo://src/components/PaperList.tsx
+  - id: openwiki-source-5ad199ba542ff21b3fc608a3
+    resource: repo://src/components/PdfViewer.tsx
+  - id: openwiki-source-770a5cff3dc7490c2df0d1ab
+    resource: repo://src/components/ProjectEditor.tsx
+  - id: openwiki-source-d960f15fbc4ca05bd459823b
+    resource: repo://src/components/ScreeningImportDialog.tsx
+  - id: openwiki-source-43dac0cae806474a160d5b4b
+    resource: repo://src/components/ScreeningPanel.tsx
+  - id: openwiki-source-9e7bc818aa92a7e05b33441a
+    resource: repo://src/components/ScreeningReasonsEditor.tsx
+  - id: openwiki-source-dab0c45065e1ef471ffadf12
+    resource: repo://src/components/ScreeningRecord.tsx
+  - id: openwiki-source-f8cbacea70b4828f54b5d7ab
+    resource: repo://src/components/ScreeningSummary.tsx
+  - id: openwiki-source-d284db292c5d5d9e3292e37d
+    resource: repo://src/consolidate/agreement.ts
+  - id: openwiki-source-2e4cee0e79365b1e9129226b
+    resource: repo://src/consolidate/unanimous.ts
+  - id: openwiki-source-c85a074faabee3af51b3db68
+    resource: repo://src/git/ownAnnotationPath.ts
+  - id: openwiki-source-5ac51bca8e99f7c8930be1b1
+    resource: repo://src/hooks/useKeybindings.ts
+  - id: openwiki-source-8cea3d31e78ed048bd98459e
+    resource: repo://src/model/annotationState.ts
+  - id: openwiki-source-68e9e61da0efb614946dda70
+    resource: repo://src/model/project.ts
+  - id: openwiki-source-a0459bce65b7490683280544
+    resource: repo://src/model/schema.ts
+  - id: openwiki-source-75a678397757a635cb1544f6
+    resource: repo://src/model/screeningMarks.test.ts
+  - id: openwiki-source-6f6097db1395bf290c1b787f
+    resource: repo://src/model/screeningMarks.ts
+  - id: openwiki-source-21c51411758a9e9f51f59864
+    resource: repo://src/platform/tauri.test.ts
+  - id: openwiki-source-6caeef66ec21bf4ae91fe55c
+    resource: repo://src/platform/tauri.ts
+  - id: openwiki-source-5f3156110d9aafbc8e103762
+    resource: repo://src/screening/counts.ts
+  - id: openwiki-source-bb661fe9e76765e4c890ce71
+    resource: repo://src/screening/reasonUsage.ts
+  - id: openwiki-source-c0a5a9016440eaf62ed2a380
+    resource: repo://src/screening/schema.ts
+  - id: openwiki-source-479c74ae5cbf30b0a06174a1
+    resource: repo://src/screening/status.ts
+  - id: openwiki-source-fa765b0e395ba25b6016d05a
+    resource: repo://src/screening/validate.ts
+  - id: openwiki-source-8c6459487bae1e5f2b4509d4
+    resource: repo://src/state/editorStore.screening.test.ts
+  - id: openwiki-source-f222dc1d70cd27df6524150a
+    resource: repo://src/state/editorStore.ts
+  - id: openwiki-source-9de36eae273aef15cabd4bdf
+    resource: repo://src/state/store.screening.test.ts
+  - id: openwiki-source-ef7081db6ccf2fcb18d86368
+    resource: repo://src/state/store.screeningAbstract.test.ts
+  - id: openwiki-source-84922f99cb5fa901e7ed7ace
+    resource: repo://src/state/store.screeningMarks.test.ts
+  - id: openwiki-source-89409d7a9c0280067e058c1a
+    resource: repo://src/state/store.ts
+generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
 ---
 
 # Screening Mode
@@ -41,6 +111,7 @@ A screening project differs from an annotation project in six coupled ways:
    undecided) papers into a fresh annotation or second-screening project, recording provenance for a
    PRISMA flow diagram.
 6. **The AI flow is a proposal flow, not a fill flow.** The toolbar's AI button opens the screening
+<!-- openwiki: broken internal link [ai-screening.md] file "ai-screening.md" does not exist. Fix the href or restore the target, then delete this comment. -->
    proposal dialog instead of the annotation fill dialog — see [AI-Assisted Screening](ai-screening.md).
 
 ```mermaid

@@ -4,30 +4,36 @@ title: Annotation Schema and Validation
 description: How a hand-authored schema in project.json becomes a typed, validated annotation form — AnnotationDef/ResolvedDef types, zod validation, field types, cardinality, visibleIf gates, the schema editor's draft lifecycle, required/enum/type/cardinality checks, orphaned-answer recovery, schema-version moves, completeness, and duplicate detection.
 tags: [annotation-schema, validation, schema, completeness, duplicates, zod, orphaned-answers, visibleif]
 sources:
-  - id: openwiki-source-9ba90f76bfe4d97ca0da5f57b0d2b9c4
+  - id: openwiki-source-4599b619fa759e59c83c5e95
+    resource: repo://src/components/PaperList.tsx
+  - id: openwiki-source-6dcdb38541424370473bc2db
     resource: repo://src/components/SchemaTreeEditor.tsx
-  - id: openwiki-source-56cd0e91b13f421e8f10dbfc51ea39c3
+  - id: openwiki-source-ef51b2e3b1037894541eaa97
     resource: repo://src/components/ValidationDialog.tsx
-  - id: openwiki-source-c9a0923d5e3d4c41b0dc20f6df0a7f2f
+  - id: openwiki-source-65150f62cb332bb33bc50944
     resource: repo://src/components/VisibleIfDialog.tsx
-  - id: openwiki-source-e7bb2ea1b5c44d2ab6ff60831cd47a86
+  - id: openwiki-source-ded932c19c04aac08bb5edf2
     resource: repo://src/model/annotations.ts
-  - id: openwiki-source-46e6c4d06d0e4ecb8b58a2ba8750a55c
+  - id: openwiki-source-8cea3d31e78ed048bd98459e
     resource: repo://src/model/annotationState.ts
-  - id: openwiki-source-4b0d2b7f7d5d4bfab5a2f9cb0b41a6f5
+  - id: openwiki-source-10f28c6eb0d085b63a96d626
     resource: repo://src/model/completeness.ts
-  - id: openwiki-source-fb5f4c3da3c14aefa3c06cbcd9be11bd
+  - id: openwiki-source-71d9c0c25913dcadf68162e8
     resource: repo://src/model/duplicates.ts
-  - id: openwiki-source-80d612cb1bc44a0b8edbc1a49eb5b8f2
+  - id: openwiki-source-e9e2373841f50ccebfc6fbe2
     resource: repo://src/model/fieldUsage.ts
   - id: openwiki-source-68e9e61da0efb614946dda70
     resource: repo://src/model/project.ts
   - id: openwiki-source-a0459bce65b7490683280544
     resource: repo://src/model/schema.ts
-  - id: openwiki-source-73cb314c1db540c1a0302e6b58c9dcbf
+  - id: openwiki-source-8265ce16bf0c745a31657d73
     resource: repo://src/model/schemaVersion.ts
   - id: openwiki-source-ff5f46fa2216a7ebb3226632
     resource: repo://src/model/validate.ts
+  - id: openwiki-source-f7e2548450f906ff26910c43
+    resource: repo://src/model/year.ts
+  - id: openwiki-source-c0a5a9016440eaf62ed2a380
+    resource: repo://src/screening/schema.ts
   - id: openwiki-source-fa765b0e395ba25b6016d05a
     resource: repo://src/screening/validate.ts
   - id: openwiki-source-f222dc1d70cd27df6524150a
@@ -37,6 +43,7 @@ sources:
 verified:
   - by: openwiki/0.7.3
     at: 2026-11-02T08:58:22.323Z
+generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
 ---
 
 # Annotation Schema and Validation

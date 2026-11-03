@@ -493,17 +493,17 @@ inspection only.
 
 ## Coverage statistics
 
-Counts come from `python3 technical-report/trace_stats.py` at the revision that adds REQ-PLT-380.
+Counts come from `python3 technical-report/trace_stats.py` at the revision that adds the settings, unique values, git hardening and consolidation alignment merge.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 394 | 100% |
-| With an implementing source link | 368 | 93% |
-| With at least one verifying test | 364 | 92% |
-| Without an automated check (source inspection only) | 30 | 8% |
-| With an introducing/pinning commit | 118 | 30% |
-| With a documentation link | 340 | 86% |
+| Requirements traced | 408 | 100% |
+| With an implementing source link | 382 | 94% |
+| With at least one verifying test | 378 | 93% |
+| Without an automated check (source inspection only) | 30 | 7% |
+| With an introducing/pinning commit | 122 | 30% |
+| With a documentation link | 344 | 84% |
 | Security-related (ISO 25010 Security) | 33 | 8% |
-| Distinct test files linked | 186 | — |
-| Distinct source files linked | 178 | — |
+| Distinct test files linked | 191 | — |
+| Distinct source files linked | 180 | — |
 | Linked files missing at this revision | 0 | — |

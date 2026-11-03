@@ -46,7 +46,7 @@ sources:
     resource: repo://src/model/alignment.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
-generated: {by: "openwiki/0.4.0", at: "2026-08-26T09:23:05.972Z"}
+generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
 verified:
   - by: openwiki/0.7.3
     at: 2026-11-02T08:58:22.323Z

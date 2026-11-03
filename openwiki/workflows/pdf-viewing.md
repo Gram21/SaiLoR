@@ -6,12 +6,53 @@ tags: [pdf, pdf-viewer, pdf-marks, react-pdf, pdfjs, undo-redo, reading-position
 verified:
   - by: openwiki/0.7.3
     at: 2026-11-02T08:58:22.323Z
+sources:
+  - id: openwiki-source-b964a762a9ce70a322ce429d
+    resource: repo://src-tauri/src/authz.rs
+  - id: openwiki-source-99b0214e9f2113a0f6a2cf92
+    resource: repo://src-tauri/src/main.rs
+  - id: openwiki-source-99d8ec247bccb5e5394a5deb
+    resource: repo://src-tauri/src/pdf.rs
+  - id: openwiki-source-e7abf856466c7e9265c41eff
+    resource: repo://src-tauri/src/protocol.rs
+  - id: openwiki-source-cc1d532f24bc2b2cacbb51ef
+    resource: repo://src/components/ExportPdfDialog.tsx
+  - id: openwiki-source-68f078890cce490fe8d3e3a8
+    resource: repo://src/components/Field.tsx
+  - id: openwiki-source-5ad199ba542ff21b3fc608a3
+    resource: repo://src/components/PdfViewer.tsx
+  - id: openwiki-source-b829454bd5ef88ed4faf287f
+    resource: repo://src/model/annotationSplit.ts
+  - id: openwiki-source-e69d9dbba623a3a759cfb3f0
+    resource: repo://src/model/linkify.ts
+  - id: openwiki-source-054edfaca63c303f09a0f0fc
+    resource: repo://src/model/pdfExport.ts
+  - id: openwiki-source-859188651eeb8377ceeb6f8f
+    resource: repo://src/model/pdfMarks.ts
+  - id: openwiki-source-38fd24f72fe3c15924f3f7b8
+    resource: repo://src/model/pdfMeta.ts
+  - id: openwiki-source-ae14bc8af41fc9fb47d83c11
+    resource: repo://src/model/pdfText.ts
+  - id: openwiki-source-68e9e61da0efb614946dda70
+    resource: repo://src/model/project.ts
+  - id: openwiki-source-ee9ca2ad478832d4c42ce686
+    resource: repo://src/model/refPreview.ts
+  - id: openwiki-source-d1afade4641722495f434a61
+    resource: repo://src/platform/desktop.ts
+  - id: openwiki-source-f1fdcd7ce204bd96db1ea2d7
+    resource: repo://src/platform/pdfjs.ts
+  - id: openwiki-source-6caeef66ec21bf4ae91fe55c
+    resource: repo://src/platform/tauri.ts
+  - id: openwiki-source-89409d7a9c0280067e058c1a
+    resource: repo://src/state/store.ts
+generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
 ---
 
 # PDF Viewer and Marks
 
 The middle pane of SaiLoR is a PDF reader built on [react-pdf](https://github.com/wojtekmaj/react-pdf) (pdf.js underneath). It does three jobs at once: render and navigate the paper, let the reviewer highlight and annotate it, and feed the annotation panel — text the reviewer selects can be "grabbed" straight into a field, and highlights can be linked to fields as evidence. Crucially, the marks a reviewer makes are **SaiLoR's own overlay data, never written into the PDF binary**; they live in the project's per-seat `marks-*.json` files alongside the annotations and are burned into real PDF annotations only on explicit export. Keeping the PDF untouched is what lets it stay a plain relative-path reference, shared and diffed by git like everything else in a project — writing real PDF annotation objects into the file would make every reviewer's mark a binary edit to a file every reviewer references, with no way to tell whose is whose.
 
+<!-- openwiki: broken internal link [../operations/tauri-shell.md] file "../operations/tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 In the desktop app (SaiLoR's only shipping runtime), the PDF bytes the viewer renders are served by the Rust shell over the custom `slr-file://` scheme, under the same project-directory authorization as everything else (see [Tauri shell](../operations/tauri-shell.md) and the serving contract below).
 
 This page covers the `slr-file://` serving contract as the viewer experiences it, the viewer component itself, the marks model and its undoable mutations, field-linking, mark export, reading-position persistence, and the PDF metadata/text extraction that pre-fills project fields and feeds LLM prompts.
