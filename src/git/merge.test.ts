@@ -1435,3 +1435,21 @@ describe('mergeProjects — a field renamed differently on each side', () => {
     expect(resolved.papers[0].annotations.C).toEqual([{ value: 'agreed' }])
   })
 })
+
+describe('mergeProjects — strict mode settings', () => {
+  const strict = { enabled: true, persons: [{ id: 'p1', name: 'Ann' }], assignments: {} }
+
+  it('keeps strict mode that only the other side added', () => {
+    const base = project({ reviewers: 2 })
+    const outcome = mergeProjects(base, base, { ...base, strict })
+    expectMerged(outcome)
+    expect(outcome.merged.strict).toEqual(strict)
+  })
+
+  it('keeps strict mode that only our side has', () => {
+    const base = project({ reviewers: 2 })
+    const outcome = mergeProjects(base, { ...base, strict }, base)
+    expectMerged(outcome)
+    expect(outcome.merged.strict).toEqual(strict)
+  })
+})

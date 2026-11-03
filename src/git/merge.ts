@@ -1381,6 +1381,9 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
     if (value !== undefined) mergedRootExtra[k] = value
   }
 
+  const strictM = merge3(base?.strict, ours.strict, theirs.strict, deepEqualJson)
+  const strict = strictM ? strictM.value : ours.strict
+
   const removalNote = schemaRemovalNote(base, schema, ours, theirs)
   if (removalNote) notes.push(removalNote)
   if (!changedFromBase(base?.schema, ours.schema) && changedFromBase(base?.schema, theirs.schema)) {
@@ -1429,6 +1432,7 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
       finishCheckbox: finishM ? finishM.value! : ours.finishCheckbox,
       reviewers: reviewersM ? reviewersM.value! : ours.reviewers,
       screening: screeningValue,
+      ...(strict ? { strict } : {}),
       provenance: provenanceM ? provenanceM.value : ours.provenance,
       protocol: Object.keys(protocol).length > 0 ? protocol : null,
       schemaInfo,
