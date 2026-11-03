@@ -6,7 +6,7 @@ import { alignedReviews, reviewerEntriesAt } from '../model/alignment'
 import { isRepeatable } from '../consolidate/align'
 import { isEmptyValue } from '../model/validate'
 import { comparable } from '../consolidate/unanimous'
-import { formatValue } from '../consolidate/disagreements'
+import { formatValue, paperVerdicts } from '../consolidate/disagreements'
 import { SCREENING_DECISION } from '../screening/schema'
 import { seatLabel } from '../model/project'
 import type { ResolvedDef } from '../model/schema'
@@ -144,6 +144,9 @@ export function ConsolidationDialog() {
   const entrySlot = entrySeg
     ? alignmentSlotsAt(paper.alignment, entryPath, entrySeg.name, (_slots, seg) => seg.index)?.[entrySeg.index]
     : undefined
+  const onlyIn = entrySlot
+    ? (paperVerdicts(project.schema, paper, project.reviewers).find((v) => v.canonical === canonical)?.onlyIn ?? [])
+    : []
   const preview = (inst: InstanceNode) => {
     const value = Object.values(inst.children ?? {})
       .flat()
@@ -215,6 +218,9 @@ export function ConsolidationDialog() {
               <span className={`help-mode ${agreement === 'agree' ? 'ok' : 'bad'}`}>
                 {agreement === 'agree' ? 'Reviewers agree' : 'Reviewers disagree'}
               </span>
+            )}
+            {onlyIn.length > 0 && (
+              <span className="help-mode">Only in {onlyIn.map((r) => seatLabel(project, r)).join(', ')}</span>
             )}
           </strong>
           <button type="button" className="icon-btn" title="Close" onClick={requestClose} aria-label="Close">

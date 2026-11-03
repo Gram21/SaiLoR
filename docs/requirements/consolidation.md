@@ -284,3 +284,9 @@ for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/store.ts` (`remapConsolidationEntry`), `src/components/ConsolidationDialog.tsx`, `src/state/store.align.test.ts`, `src/components/ConsolidationDialog.test.tsx`, `src/model/alignment.test.ts`
 - **Status:** Implemented
+
+### REQ-CON-430: Show unmatched entries as only in one reviewer
+- **Description:** When a repeated entry is not recorded by every participating reviewer, the system shall name the reviewers who recorded that entry as "Only in" in the disagreement list and in the compare dialog.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/consolidate/disagreements.ts` (`onlyIn`), `src/components/DisagreementOverview.tsx`, `src/components/ConsolidationDialog.tsx`, `src/consolidate/disagreements.test.ts`, `src/components/ConsolidationDialog.test.tsx`
+- **Status:** Implemented

@@ -3009,6 +3009,10 @@ kbd {
 .disagreement-value {
   white-space: nowrap;
 }
+.disagreement-only {
+  white-space: nowrap;
+  font-style: italic;
+}
 .disagreement-reviewer {
   margin-right: 4px;
   color: var(--text);

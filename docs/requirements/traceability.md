@@ -267,6 +267,7 @@ inspection only.
 | REQ-CON-400 | Disable AI suggestions for Consolidation seat | Functional · Functional Suitability | — | `src/state/store.align.test.ts:442-464` | — | `openwiki/workflows/consolidation.md` §Resolution UI flow / §Disagreement export |
 | REQ-CON-410 | Align repeated entries independent of entry order | Functional · Functional Suitability | `src/consolidate/align.ts` (`contentOrder`, `sortSlots`) | `src/consolidate/align.property.test.ts` | — | — |
 | REQ-CON-420 | Remap repeated entries by hand | Functional · Functional Suitability | `src/state/store.ts` (`remapConsolidationEntry`)<br>`src/components/ConsolidationDialog.tsx` | `src/state/store.align.test.ts`<br>`src/components/ConsolidationDialog.test.tsx`<br>`src/model/alignment.test.ts` | — | — |
+| REQ-CON-430 | Show unmatched entries as only in one reviewer | Functional · Functional Suitability | `src/consolidate/disagreements.ts` (`onlyIn`)<br>`src/components/DisagreementOverview.tsx`<br>`src/components/ConsolidationDialog.tsx` | `src/consolidate/disagreements.test.ts`<br>`src/components/ConsolidationDialog.test.tsx` | — | — |
 
 ## Git integration ([git-integration.md](git-integration.md))
 
