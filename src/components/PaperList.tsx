@@ -1,5 +1,6 @@
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
-import { useStore, currentTree, currentFinished } from '../state/store'
+import { useStore, currentTree, currentFinished, activePerson } from '../state/store'
+import { personPapers } from '../model/strict'
 import { hasAnnotations, annotationText } from '../model/annotations'
 import { completeness, completenessPercent, hasRequiredFields, type Completeness } from '../model/completeness'
 import {
@@ -240,7 +241,13 @@ export function PaperList() {
   // Build the search index once per project: one haystack per paper, per
   // mode. Keying on `papers` already invalidates this whenever annotation
   // content changes, since immer's `set` replaces the edited paper object.
-  const papers = project?.papers
+  const person = useStore(activePerson)
+  const allPapers = project?.papers
+  const papers = useMemo(() => {
+    if (!allPapers || !project || !person) return allPapers
+    const mine = new Set(personPapers(project, person))
+    return allPapers.filter((p) => mine.has(p.id))
+  }, [allPapers, project, person])
   const index = useMemo<IndexedPaper[]>(() => {
     if (!papers || !project) return []
     const applies = completenessApplies(project)
@@ -275,7 +282,7 @@ export function PaperList() {
   // "how far through this review am I", which no single row's dot answers.
   const progress = useMemo(() => {
     if (!project) return null
-    const total = project.papers.length
+    const total = index.length
     if (isScreening) {
       const done = project.papers.filter(
         (p) => paperScreeningStatus(project, p, currentReviewer) !== 'undecided',
@@ -332,7 +339,7 @@ export function PaperList() {
 
   if (!project) return null
 
-  const total = project.papers.length
+  const total = index.length
   const isFiltered =
     words.length > 0 || (isScreening ? screeningFilter !== 'all' : annotationFilter !== 'all')
   const countText = isFiltered ? `${filtered.length} of ${total}` : `${total}`

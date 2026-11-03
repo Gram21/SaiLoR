@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
-import { useStore } from '../state/store'
+import { activePerson, useStore } from '../state/store'
+import { personPapers } from '../model/strict'
 import { useEditorStore } from '../state/editorStore'
 import { DECISION_EXCLUDE, DECISION_INCLUDE } from '../screening/schema'
 import { isTauri } from '../platform/adapter'
@@ -195,11 +196,10 @@ function stepPaper(dir: 1 | -1) {
 
   // Falls back to the project's own order when the list isn't mounted (the
   // sidebar is collapsed) — there is no visible filter to disagree with then.
-  const idx = project.papers.findIndex((p) => p.id === currentPaperId)
-  const next = idx + dir
-  if (next >= 0 && next < project.papers.length) {
-    selectPaper(project.papers[next].id)
-  }
+  const person = activePerson(useStore.getState())
+  const ids = person ? personPapers(project, person) : project.papers.map((p) => p.id)
+  const next = ids.indexOf(currentPaperId ?? '') + dir
+  if (next >= 0 && next < ids.length) selectPaper(ids[next])
 }
 
 function isEditable(target: EventTarget | null): boolean {

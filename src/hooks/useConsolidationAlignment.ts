@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { useStore } from '../state/store'
+import { consolidationGateMissing, useStore } from '../state/store'
 import { alignableNodes } from '../consolidate/align'
 import { consolidationMark, markParts } from '../consolidate/readiness'
 
@@ -48,7 +48,8 @@ export function useConsolidationAlignment(): void {
   const running = useRef(false)
 
   // View-only mode only shows the stored consolidation: no matching, no adoption, no prompt.
-  const active = !readOnly && currentReviewer === 'consolidation' && !!project && project.reviewers > 1
+  const gated = useStore((s) => consolidationGateMissing(s).length > 0)
+  const active = !readOnly && !gated && currentReviewer === 'consolidation' && !!project && project.reviewers > 1
   const schema = project?.schema
 
   useEffect(() => {

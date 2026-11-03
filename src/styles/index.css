@@ -332,6 +332,16 @@ body.resizing * {
   font-size: 0.8rem;
   white-space: nowrap;
 }
+.strict-person-bar {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+.strict-person-name {
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+}
 .reviewer-btn {
   min-width: 26px;
   padding: 3px 8px;

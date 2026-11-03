@@ -1,4 +1,5 @@
-import { useStore } from '../state/store'
+import { STRICT_MANAGER, useStore } from '../state/store'
+import { strictActive } from '../model/strict'
 import { readyCount } from '../consolidate/readiness'
 import { CONSOLIDATION_SEAT } from '../git/seatOwner'
 
@@ -29,7 +30,9 @@ export function ReviewerPrompt() {
   const currentReviewer = useStore((s) => s.currentReviewer)
   const selectReviewer = useStore((s) => s.selectReviewer)
   const helpOpen = useStore((s) => s.helpOpen)
+  const strictPerson = useStore((s) => s.strictPerson)
   if (!project || project.reviewers <= 1) return null
+  if (strictActive(project) && strictPerson !== STRICT_MANAGER) return null
   // Yield to Help. Nothing else can be reached while this is up, so F1 is the
   // one way to go and read more before committing to a seat — and it would be
   // perverse for the prompt explaining multi-review to be what stops you.

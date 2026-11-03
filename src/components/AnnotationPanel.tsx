@@ -1,5 +1,5 @@
 import { useEffect, useMemo } from 'react'
-import { useStore, selectCurrentPaper, currentTree, currentFinished } from '../state/store'
+import { useStore, selectCurrentPaper, currentTree, currentFinished, consolidationGateMissing } from '../state/store'
 import { normalizeTree, isFieldVisible } from '../model/annotations'
 import { finishCheckboxLabel } from '../model/annotationState'
 import { aiSeatId, seatLabel } from '../model/project'
@@ -8,6 +8,7 @@ import { paperVerdicts } from '../consolidate/disagreements'
 import { AnnotationNode } from './AnnotationNode'
 import { SeatConflictNotice } from './SeatConflictNotice'
 import { AiUsageDisclosure } from './AiUsageDisclosure'
+import { StrictGate } from './StrictGate'
 import {
   consolidationFieldStatus,
   ConsolidationVerdictsContext,
@@ -32,6 +33,7 @@ export function AnnotationPanel() {
   const setPendingFieldJump = useStore((s) => s.setPendingFieldJump)
   const flashFieldPath = useStore((s) => s.flashFieldPath)
   const setFlashFieldPath = useStore((s) => s.setFlashFieldPath)
+  const gated = useStore((s) => consolidationGateMissing(s).length > 0)
 
   // Consolidation is the pass where a human decides between what the reviewers
   // actually said. A model has no standing there: its answer would be a fresh
@@ -117,6 +119,7 @@ export function AnnotationPanel() {
       </div>
     )
   }
+  if (gated) return <StrictGate />
 
   // Falls back to a schema-shaped empty tree for a reviewer who hasn't written
   // anything on this paper yet, without creating it just to render the form —

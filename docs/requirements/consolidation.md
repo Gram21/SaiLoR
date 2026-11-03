@@ -330,13 +330,13 @@ for the glossary.
 ### REQ-CON-500: Gate consolidation until all persons finish
 - **Description:** In strict mode, when the Consolidation seat opens a paper on which an assigned person has not finished, the system shall hide the consolidation form, stop the automatic alignment and list the persons who have not finished.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/strict.ts` (`missingFinishers`), `src/state/store.ts` (`consolidationGateMissing`), `src/components/AnnotationPanel.tsx`, `src/hooks/useConsolidationAlignment.ts`
+- **Evidence:** `src/model/strict.ts` (`missingFinishers`), `src/state/store.ts` (`consolidationGateMissing`), `src/components/StrictGate.tsx` (`StrictGate`), `src/components/AnnotationPanel.tsx`, `src/hooks/useConsolidationAlignment.ts`
 - **Status:** Implemented
 
 ### REQ-CON-510: Override the consolidation gate
 - **Description:** While the Manager works in strict mode, the system shall let the Manager open a gated paper for consolidation after a confirmation. The override shall last until the project is opened again.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.ts` (`overrideConsolidationGate`, `consolidationOverrides`), `src/components/AnnotationPanel.tsx`
+- **Evidence:** `src/state/store.ts` (`overrideConsolidationGate`, `consolidationOverrides`), `src/components/StrictGate.tsx` (`StrictGate`)
 - **Status:** Implemented
 
 ### REQ-CON-520: State that strict mode is not security

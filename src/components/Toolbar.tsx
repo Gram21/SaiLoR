@@ -1,5 +1,5 @@
 import { useEffect, useState } from 'react'
-import { useStore } from '../state/store'
+import { activePerson, useStore } from '../state/store'
 import { useAiStore } from '../state/aiStore'
 import { useAiScreeningStore } from '../state/aiScreeningStore'
 import { useEditorStore } from '../state/editorStore'
@@ -8,6 +8,7 @@ import { CONSOLIDATION_SEAT } from '../git/seatOwner'
 import { getPlatform } from '../platform'
 import { Dropdown, type MenuItem } from './Dropdown'
 import { SidebarToggle } from './SidebarToggle'
+import { StrictPersonBar } from './StrictPersonBar'
 import type { GitProbe, GitRepoInfo } from '../git/types'
 import { aiSeatId, seatLabel } from '../model/project'
 
@@ -134,6 +135,7 @@ export function Toolbar() {
   const runValidation = useStore((s) => s.runValidation)
   const requestCloseProject = useStore((s) => s.requestCloseProject)
   const editorOpen = useEditorStore((s) => s.open)
+  const personMode = useStore((s) => activePerson(s) !== null)
   const project = useStore((s) => s.project)
   const busy = useStore((s) => s.busy)
   const theme = useStore((s) => s.theme)
@@ -353,6 +355,7 @@ export function Toolbar() {
       </div>
 
       <div className="toolbar-center">
+        {!editorOpen && <StrictPersonBar />}
         {/* Only a multi-reviewer project shows this — a single-reviewer one has
             nobody to switch between. Which "seat" is active must be unmistakable,
             since it decides which tree every edit lands in. Past
@@ -360,6 +363,7 @@ export function Toolbar() {
             toolbar, so it becomes a dropdown — but the closed trigger still names
             the active seat, or the whole point of an at-a-glance seat is lost. */}
         {showReviewerSwitch &&
+          !personMode &&
           !editorOpen &&
           (useReviewerDropdown ? (
             <div
