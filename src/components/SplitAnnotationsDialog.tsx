@@ -1,6 +1,7 @@
 // [impl->req~plt-95~1]
 import { useStore } from '../state/store'
 import { annotationsDirProblem } from '../model/annotationsDir'
+import { useT, tp, rich } from '../i18n'
 
 /**
  * Offered when the open project keeps its annotations in a folder that other
@@ -15,15 +16,16 @@ export function SplitAnnotationsDialog() {
   const setSplitTargets = useStore((s) => s.setSplitTargets)
   const runSplit = useStore((s) => s.runSplit)
   const dismissSplit = useStore((s) => s.dismissSplit)
+  const t = useT()
   if (!split) return null
 
   const nameOf = new Map(split.projects.map((p) => [p.path, p.name]))
   const folderProblem = (folder: string, path: string): string | null => {
     const problem = annotationsDirProblem(folder)
-    if (problem) return `Not a usable folder name: ${problem}.`
-    if (folder === split.shared) return `Choose a name other than "${split.shared}".`
+    if (problem) return t('split.folderInvalid', { problem })
+    if (folder === split.shared) return t('split.folderShared', { folder: split.shared })
     if (split.projects.some((p) => p.path !== path && p.folder.toLowerCase() === folder.toLowerCase())) {
-      return 'Another project already gets this folder.'
+      return t('split.folderTaken')
     }
     return null
   }
@@ -34,17 +36,12 @@ export function SplitAnnotationsDialog() {
 
   return (
     <div className="modal-overlay">
-      <div className="modal split-annotations-dialog" role="dialog" aria-modal="true" aria-label="Split the annotations folder">
+      <div className="modal split-annotations-dialog" role="dialog" aria-modal="true" aria-label={t('split.ariaLabel')}>
         <div className="modal-head">
-          <strong>Give each project its own annotations folder</strong>
+          <strong>{t('split.title')}</strong>
         </div>
         <div className="modal-body">
-          <p>
-            These project files all keep their annotations in <code>{split.shared}/</code>. Two projects of the
-            same kind that share a paper write the very same files there and overwrite each other&apos;s
-            answers. Splitting moves each project&apos;s files into a folder of its own and records it in the
-            project file. In a git repository the move shows up in the Git panel for you to commit.
-          </p>
+          <p>{rich('split.intro', { shared: split.shared })}</p>
           <ul className="split-projects">
             {split.projects.map((p, i) => (
               <li key={p.path}>
@@ -53,12 +50,10 @@ export function SplitAnnotationsDialog() {
                 <input
                   className="field-input"
                   value={p.folder}
-                  aria-label={`Annotations folder for ${p.name}`}
+                  aria-label={t('split.folderAria', { name: p.name })}
                   onChange={(e) => setSplitFolder(p.path, e.target.value)}
                 />
-                <span className="git-muted">
-                  {count(p.path)} file{count(p.path) === 1 ? '' : 's'}
-                </span>
+                <span className="git-muted">{tp('split.files', count(p.path))}</span>
                 {problems[i] && <span className="split-problem">{problems[i]}</span>}
               </li>
             ))}
@@ -66,17 +61,14 @@ export function SplitAnnotationsDialog() {
 
           {ambiguous.length > 0 && (
             <>
-              <p>
-                More than one project could own these files. Check each guess; a file copied to both is never
-                lost, only duplicated.
-              </p>
+              <p>{t('split.ambiguous')}</p>
               <ul className="split-rows">
                 {ambiguous.map((r) => (
                   <li key={r.relPath}>
                     <code>{r.relPath}</code>
                     <select
                       value={r.targets.length === 1 ? r.targets[0] : '*'}
-                      aria-label={`Where ${r.relPath} goes`}
+                      aria-label={t('split.whereAria', { file: r.relPath })}
                       onChange={(e) => setSplitTargets(r.relPath, e.target.value === '*' ? r.candidates : [e.target.value])}
                     >
                       {r.candidates.map((c) => (
@@ -84,7 +76,7 @@ export function SplitAnnotationsDialog() {
                           {nameOf.get(c)}
                         </option>
                       ))}
-                      <option value="*">Copy to each</option>
+                      <option value="*">{t('split.copyToEach')}</option>
                     </select>
                     <span className="git-muted">{r.reason}</span>
                   </li>
@@ -95,7 +87,7 @@ export function SplitAnnotationsDialog() {
 
           {unowned > 0 && (
             <p className="git-muted">
-              {unowned} file{unowned === 1 ? '' : 's'} belong to no project here and stay in <code>{split.shared}/</code>.
+              {rich(unowned === 1 ? 'split.unowned_one' : 'split.unowned_other', { count: unowned, folder: split.shared })}
             </p>
           )}
           {split.error && (
@@ -104,8 +96,8 @@ export function SplitAnnotationsDialog() {
             </p>
           )}
           <div className="modal-actions">
-            <button type="button" onClick={dismissSplit} disabled={split.working} title="You will be asked again the next time you open this project">
-              Not now
+            <button type="button" onClick={dismissSplit} disabled={split.working} title={t('split.notNowTitle')}>
+              {t('split.notNow')}
             </button>
             <button
               type="button"
@@ -113,7 +105,7 @@ export function SplitAnnotationsDialog() {
               disabled={split.working || problems.some(Boolean)}
               onClick={() => void runSplit()}
             >
-              Split
+              {t('split.confirm')}
             </button>
           </div>
         </div>

@@ -3,6 +3,7 @@ import { loadProject } from './project'
 import type { ResolvedDef } from './schema'
 import { ancestorsOf, parseSchemaHistory, parseSchemaVersion } from './schemaVersion'
 import { parsePath } from '../llm/paths'
+import { t } from '../i18n'
 
 /**
  * Splitting an annotations folder that several project files next to each
@@ -150,25 +151,25 @@ export function planSplit(projects: SplitProject[], files: SplitFile[]): SplitRo
       reason,
       ambiguous: candidates.length > 1,
     })
-    if (candidates.length === 0) return row([], 'No project here lists this paper for this kind of file.')
-    if (candidates.length === 1) return row(candidates, 'Only this project lists this paper.')
+    if (candidates.length === 0) return row([], t('split.reason.noProject'))
+    if (candidates.length === 1) return row(candidates, t('split.reason.onlyProject'))
 
     let parsed: { schemaVersion?: unknown; annotations?: unknown; marks?: unknown } = {}
     try {
       parsed = JSON.parse(f.text)
     } catch {
-      return row(candidates, 'The file cannot be read, so it is copied to each.')
+      return row(candidates, t('split.reason.unreadable'))
     }
     const pool = all.filter((p) => candidates.includes(p.path))
     const stamp = parseSchemaVersion(parsed.schemaVersion)
     const byStamp = stamp ? pool.filter((p) => p.versions.has(stamp)) : []
-    if (byStamp.length === 1) return row([byStamp[0].path], "Written under this project's schema version.")
+    if (byStamp.length === 1) return row([byStamp[0].path], t('split.reason.schemaVersion'))
 
     const scores = pool.map((p) => ({ path: p.path, score: kind === 'marks' ? linkFit(p.schema, parsed.marks) : fit(p.schema, parsed.annotations) }))
     const best = Math.max(...scores.map((s) => s.score))
     const winners = scores.filter((s) => s.score === best)
-    if (best > 0 && winners.length === 1) return row([winners[0].path], "Its answers fit this project's schema best.")
-    return row(candidates, 'Nothing tells the projects apart, so it is copied to each.')
+    if (best > 0 && winners.length === 1) return row([winners[0].path], t('split.reason.fit'))
+    return row(candidates, t('split.reason.tie'))
   })
 }
 

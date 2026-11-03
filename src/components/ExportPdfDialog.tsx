@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react'
 import { useStore, selectCurrentPaper } from '../state/store'
 import { getPlatform } from '../platform'
 import { annotatedFileName } from '../model/pdfExport'
+import { useT, tp } from '../i18n'
 // For `.ai-error`, reused here for the same "inline error callout" look.
 import '../styles/ai.css'
 
@@ -19,6 +20,7 @@ export function ExportPdfDialog() {
   const setOpen = useStore((s) => s.setExportPdfOpen)
   const paper = useStore(selectCurrentPaper)
   const marks = useStore((s) => s.currentPdfMarks())
+  const t = useT()
   // [impl->req~pdf-160~1]
   const saveHandle = useStore((s) => s.saveHandle)
 
@@ -38,14 +40,14 @@ export function ExportPdfDialog() {
     setAbsPath(null)
     setResolveError(null)
     if (!saveHandle?.path) {
-      setResolveError('The project has not been saved yet, so there is no folder to resolve the PDF against.')
+      setResolveError(t('exportPdf.notSaved'))
       return
     }
     setResolving(true)
     getPlatform()
       .absolutePdfPaths([paper.pdf], saveHandle)
       .then(([resolved]) => {
-        if (!resolved) setResolveError(`Could not resolve "${paper.pdf}" to a file on disk.`)
+        if (!resolved) setResolveError(t('exportPdf.resolveError', { file: paper.pdf }))
         else setAbsPath(resolved)
       })
       .catch((err) => setResolveError(String(err)))
@@ -101,26 +103,22 @@ export function ExportPdfDialog() {
     <div className="modal-overlay" onClick={close}>
       <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
         <div className="modal-head">
-          <strong>Export PDF with annotations</strong>
-          <button type="button" className="icon-btn" title="Close" onClick={close} aria-label="Close">
+          <strong>{t('exportPdf.title')}</strong>
+          <button type="button" className="icon-btn" title={t('common.close')} onClick={close} aria-label={t('common.close')}>
             ×
           </button>
         </div>
         <div className="modal-body">
           {successPath ? (
-            <p>Exported to {successPath}</p>
+            <p>{t('exportPdf.exported', { path: successPath })}</p>
           ) : (
             <>
-              <p>
-                Writes {marks.length} highlight{marks.length === 1 ? '' : 's'}/note
-                {marks.length === 1 ? '' : 's'} into a real PDF file, as standard annotation objects any
-                PDF reader can show.
-              </p>
-              {resolving && <p>Locating the PDF file…</p>}
+              <p>{tp('exportPdf.writes', marks.length)}</p>
+              {resolving && <p>{t('exportPdf.locating')}</p>}
               {resolveError && <p className="ai-error">{resolveError}</p>}
               {!resolving && !resolveError && (
                 <fieldset>
-                  <legend>Where to save</legend>
+                  <legend>{t('exportPdf.where')}</legend>
                   <label>
                     <input
                       type="radio"
@@ -129,7 +127,7 @@ export function ExportPdfDialog() {
                       onChange={() => setTarget('new')}
                       disabled={busy}
                     />
-                    <span>Save as a new PDF file</span>
+                    <span>{t('exportPdf.targetNew')}</span>
                   </label>
                   <label>
                     <input
@@ -139,31 +137,28 @@ export function ExportPdfDialog() {
                       onChange={() => setTarget('original')}
                       disabled={busy}
                     />
-                    <span>Save into the original PDF file</span>
+                    <span>{t('exportPdf.targetOriginal')}</span>
                   </label>
                   {target === 'original' && (
                     <div className="consolidation-warning">
-                      <p>
-                        This overwrites the PDF file directly. Other reviewers share this same file — this
-                        can affect what they see and is likely to cause a git merge conflict.
-                      </p>
+                      <p>{t('exportPdf.overwriteWarning')}</p>
                     </div>
                   )}
                 </fieldset>
               )}
               {exportError && <p className="ai-error">{exportError}</p>}
               <div className="screening-import-actions">
-                <button type="button" title="Cancel without exporting" disabled={busy} onClick={close}>
-                  Cancel
+                <button type="button" title={t('exportPdf.cancelTitle')} disabled={busy} onClick={close}>
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
                   className="primary"
-                  title="Write the highlights and notes into the PDF"
+                  title={t('exportPdf.exportTitle')}
                   disabled={busy || resolving || !absPath}
                   onClick={() => void runExport()}
                 >
-                  {busy ? 'Exporting…' : 'Export'}
+                  {busy ? t('exportPdf.exporting') : t('exportPdf.export')}
                 </button>
               </div>
             </>

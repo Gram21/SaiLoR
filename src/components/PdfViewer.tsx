@@ -13,6 +13,7 @@ import { screeningSeatLabel } from '../model/screeningMarks'
 import { detectEntryBox, detectNumericCitation, findNumericReference, type PreviewTextItem } from '../model/refPreview'
 import { getPlatform } from '../platform'
 import { normalize } from '../llm/verify'
+import { useT, tp } from '../i18n'
 // Side-effect import: configures the pdf.js worker.
 import '../platform/pdfjs'
 
@@ -358,6 +359,7 @@ export function PdfViewer() {
   const unlinkMarkFromField = useStore((s) => s.unlinkMarkFromField)
   const setExportPdfOpen = useStore((s) => s.setExportPdfOpen)
   const setLastCreatedMarkId = useStore((s) => s.setLastCreatedMarkId)
+  const t = useT()
   // Color-swatch toolbar offered after a text selection, near where it ends.
   const [selectionToolbar, setSelectionToolbar] = useState<
     { x: number; y: number; spans: { page: number; rects: MarkRect[] }[]; text: string } | null
@@ -1510,7 +1512,7 @@ export function PdfViewer() {
   }, [matchCount, activeMatch, searchOpen])
 
   if (!paperId) {
-    return <div className="panel pdf empty">No paper selected.</div>
+    return <div className="panel pdf empty">{t('pdf.noPaper')}</div>
   }
 
   // Reachable now that a screening project may relax `pdf` to `""` (a
@@ -1519,12 +1521,12 @@ export function PdfViewer() {
     return (
       <div className="panel pdf empty">
         <div>
-          This paper has no PDF attached.
+          {t('pdf.noPdf')}
           {screening && (
             <>
               {' '}
-              <button type="button" onClick={toggleScreeningPdf} title="Return to this paper's screening record">
-                Back to the record
+              <button type="button" onClick={toggleScreeningPdf} title={t('pdf.backToRecordTitle')}>
+                {t('pdf.backToRecord')}
               </button>
             </>
           )}
@@ -1541,23 +1543,23 @@ export function PdfViewer() {
           {authors && <span className="pdf-authors">{authors}</span>}
           {doi && (
             <span className="pdf-doi">
-              DOI: <code>{doi}</code>
+              {t('pdf.doi')} <code>{doi}</code>
             </span>
           )}
         </div>
         <div className="pdf-tools">
           {screening && (
-            <button type="button" onClick={toggleScreeningPdf} title="Return to this paper's screening record">
-              Back to the record
+            <button type="button" onClick={toggleScreeningPdf} title={t('pdf.backToRecordTitle')}>
+              {t('pdf.backToRecord')}
             </button>
           )}
           {(canJumpBack || canJumpForward) && (
-            <div className="pdf-history" role="group" aria-label="Jump history">
+            <div className="pdf-history" role="group" aria-label={t('pdf.jumpHistory')}>
               <button
                 type="button"
                 className="icon-btn"
-                title="Jump back to where you were before following a link"
-                aria-label="Jump back"
+                title={t('pdf.jumpBackTitle')}
+                aria-label={t('pdf.jumpBack')}
                 onClick={jumpBack}
                 disabled={!canJumpBack}
               >
@@ -1566,8 +1568,8 @@ export function PdfViewer() {
               <button
                 type="button"
                 className="icon-btn"
-                title="Jump forward"
-                aria-label="Jump forward"
+                title={t('pdf.jumpForward')}
+                aria-label={t('pdf.jumpForward')}
                 onClick={jumpForward}
                 disabled={!canJumpForward}
               >
@@ -1576,12 +1578,12 @@ export function PdfViewer() {
             </div>
           )}
           {numPages > 1 && (
-            <div className="pdf-pages" role="group" aria-label="Page navigation">
+            <div className="pdf-pages" role="group" aria-label={t('pdf.pageNavigation')}>
               <button
                 type="button"
                 className="icon-btn"
-                title="Previous page"
-                aria-label="Previous page"
+                title={t('pdf.previousPage')}
+                aria-label={t('pdf.previousPage')}
                 onClick={() => scrollToPage(currentPage - 1)}
                 disabled={currentPage <= 1}
               >
@@ -1592,7 +1594,7 @@ export function PdfViewer() {
                 className="pdf-page-input"
                 type="text"
                 inputMode="numeric"
-                aria-label="Current page"
+                aria-label={t('pdf.currentPage')}
                 value={pageInput}
                 onChange={(e) => setPageInput(e.target.value.replace(/[^0-9]/g, ''))}
                 onFocus={(e) => e.currentTarget.select()}
@@ -1608,7 +1610,7 @@ export function PdfViewer() {
                 className="pdf-page-total"
                 title={
                   truncatedPages
-                    ? `This document reports ${truncatedPages} pages; only the first ${numPages} are shown.`
+                    ? t('pdf.truncatedPages', { total: truncatedPages, shown: numPages })
                     : undefined
                 }
               >
@@ -1618,8 +1620,8 @@ export function PdfViewer() {
               <button
                 type="button"
                 className="icon-btn"
-                title="Next page"
-                aria-label="Next page"
+                title={t('pdf.nextPage')}
+                aria-label={t('pdf.nextPage')}
                 onClick={() => scrollToPage(currentPage + 1)}
                 disabled={currentPage >= numPages}
               >
@@ -1630,8 +1632,8 @@ export function PdfViewer() {
           <button
             type="button"
             className={`icon-btn${annotationToolbarOpen ? ' active' : ''}`}
-            title="Annotation tools"
-            aria-label="Annotation tools"
+            title={t('pdf.annotationTools')}
+            aria-label={t('pdf.annotationTools')}
             aria-pressed={annotationToolbarOpen}
             onClick={() =>
               setAnnotationToolbarOpen((open) => {
@@ -1645,19 +1647,19 @@ export function PdfViewer() {
           <button
             type="button"
             className={`icon-btn${searchOpen ? ' active' : ''}`}
-            title="Search in PDF (Ctrl+F)"
-            aria-label="Search in PDF"
+            title={t('pdf.searchTitle')}
+            aria-label={t('pdf.search')}
             aria-pressed={searchOpen}
             onClick={() => (searchOpen ? closeSearch() : openSearch())}
           >
             🔍
           </button>
-          <div className="pdf-zoom" role="group" aria-label="Zoom">
+          <div className="pdf-zoom" role="group" aria-label={t('pdf.zoom')}>
             <button
               type="button"
               className="icon-btn"
-              title="Zoom out (Ctrl+-)"
-              aria-label="Zoom out"
+              title={t('pdf.zoomOutTitle')}
+              aria-label={t('pdf.zoomOut')}
               onClick={zoomOut}
               disabled={zoom <= PDF_ZOOM_MIN}
             >
@@ -1666,8 +1668,8 @@ export function PdfViewer() {
             <button
               type="button"
               className="icon-btn pdf-zoom-level"
-              title="Reset zoom"
-              aria-label="Reset zoom"
+              title={t('pdf.resetZoom')}
+              aria-label={t('pdf.resetZoom')}
               onClick={resetZoom}
             >
               {Math.round(zoom * 100)}%
@@ -1675,8 +1677,8 @@ export function PdfViewer() {
             <button
               type="button"
               className="icon-btn"
-              title="Zoom in (Ctrl++)"
-              aria-label="Zoom in"
+              title={t('pdf.zoomInTitle')}
+              aria-label={t('pdf.zoomIn')}
               onClick={zoomIn}
               disabled={zoom >= PDF_ZOOM_MAX}
             >
@@ -1691,8 +1693,8 @@ export function PdfViewer() {
             ref={searchInputRef}
             className="pdf-search-input"
             type="text"
-            placeholder="Search in PDF…"
-            aria-label="Search in PDF"
+            placeholder={t('pdf.searchPlaceholder')}
+            aria-label={t('pdf.search')}
             value={query}
             onChange={(e) => {
               setQuery(e.target.value)
@@ -1716,10 +1718,10 @@ export function PdfViewer() {
             className={`icon-btn pdf-search-case${searchCaseSensitive ? ' active' : ''}`}
             title={
               searchCaseSensitive
-                ? 'Matching exact case (e.g. "AI" no longer matches "contains"). Click to ignore case again.'
-                : 'Ignoring case (e.g. "AI" also matches "contains"). Click to match exact case instead.'
+                ? t('pdf.caseSensitiveOn')
+                : t('pdf.caseSensitiveOff')
             }
-            aria-label="Toggle case-sensitive search"
+            aria-label={t('pdf.caseToggle')}
             aria-pressed={searchCaseSensitive}
             onClick={() => setSearchCaseSensitive((c) => !c)}
           >
@@ -1728,8 +1730,8 @@ export function PdfViewer() {
           <button
             type="button"
             className="icon-btn"
-            title="Previous match (Shift+Enter)"
-            aria-label="Previous match"
+            title={t('pdf.previousMatchTitle')}
+            aria-label={t('pdf.previousMatch')}
             onClick={() => goToMatch(-1)}
             disabled={matchCount === 0}
           >
@@ -1738,8 +1740,8 @@ export function PdfViewer() {
           <button
             type="button"
             className="icon-btn"
-            title="Next match (Enter)"
-            aria-label="Next match"
+            title={t('pdf.nextMatchTitle')}
+            aria-label={t('pdf.nextMatch')}
             onClick={() => goToMatch(1)}
             disabled={matchCount === 0}
           >
@@ -1748,8 +1750,8 @@ export function PdfViewer() {
           <button
             type="button"
             className="icon-btn"
-            title="Close search (Esc)"
-            aria-label="Close search"
+            title={t('pdf.closeSearchTitle')}
+            aria-label={t('pdf.closeSearch')}
             onClick={closeSearch}
           >
             ×
@@ -1757,12 +1759,12 @@ export function PdfViewer() {
         </div>
       )}
       {annotationToolbarOpen && (
-        <div className="pdf-annotation-toolbar" role="toolbar" aria-label="Annotation tools">
+        <div className="pdf-annotation-toolbar" role="toolbar" aria-label={t('pdf.annotationTools')}>
           <button
             type="button"
             className={`icon-btn${placingNote ? ' active' : ''}`}
-            title="Add sticky note"
-            aria-label="Add sticky note"
+            title={t('pdf.addNote')}
+            aria-label={t('pdf.addNote')}
             aria-pressed={placingNote}
             disabled={readOnly}
             onClick={() => setPlacingNote((v) => !v)}
@@ -1772,8 +1774,8 @@ export function PdfViewer() {
           <button
             type="button"
             className="icon-btn"
-            title="Previous annotation"
-            aria-label="Previous annotation"
+            title={t('pdf.previousAnnotation')}
+            aria-label={t('pdf.previousAnnotation')}
             onClick={() => cycleTo(-1)}
             disabled={sortedMarks.length === 0}
           >
@@ -1787,8 +1789,8 @@ export function PdfViewer() {
           <button
             type="button"
             className="icon-btn"
-            title="Next annotation"
-            aria-label="Next annotation"
+            title={t('pdf.nextAnnotation')}
+            aria-label={t('pdf.nextAnnotation')}
             onClick={() => cycleTo(1)}
             disabled={sortedMarks.length === 0}
           >
@@ -1797,8 +1799,8 @@ export function PdfViewer() {
           <button
             type="button"
             className="icon-btn pdf-annotation-toolbar-export"
-            title="Export PDF with annotations"
-            aria-label="Export PDF with annotations"
+            title={t('exportPdf.title')}
+            aria-label={t('exportPdf.title')}
             onClick={() => setExportPdfOpen(true)}
             disabled={marks.length === 0}
           >
@@ -1819,21 +1821,18 @@ export function PdfViewer() {
         onMouseMove={onPdfMouseMove}
       >
         {error ? (
-          <div className="pdf-error">Could not load PDF: {error}</div>
+          <div className="pdf-error">{t('pdf.loadError', { error })}</div>
         ) : needsFolderGrant ? (
           <div className="pdf-grant">
-            <p>
-              SaiLoR needs to know where this project's PDFs are. Choose the folder that contains
-              the project file — nothing is uploaded anywhere; it stays on this device.
-            </p>
+            <p>{t('pdf.grant.body')}</p>
             <button
               type="button"
               className="primary"
-              title={grantingFolder ? 'Waiting for the folder picker to close' : "Grant access to the folder containing this project's PDFs"}
+              title={grantingFolder ? t('pdf.grant.waiting') : t('pdf.grant.title')}
               onClick={grantFolderAccess}
               disabled={grantingFolder}
             >
-              {grantingFolder ? 'Waiting for folder…' : 'Choose folder…'}
+              {grantingFolder ? t('pdf.grant.waitingLabel') : t('pdf.grant.choose')}
             </button>
           </div>
         ) : url ? (
@@ -1849,7 +1848,7 @@ export function PdfViewer() {
               pdfDocRef.current = doc // for resolving link destinations on hover
             }}
             onLoadError={(err) => setError(String(err?.message ?? err))}
-            loading={<div className="pdf-loading">Loading PDF…</div>}
+            loading={<div className="pdf-loading">{t('pdf.loading')}</div>}
             // External links open in a new tab instead of navigating the app
             // away; the shell must route it to the system browser
             // (REQ-PLT-250, not yet ported to Tauri: docs/tauri-migration.md
@@ -1860,7 +1859,7 @@ export function PdfViewer() {
             {pages}
           </Document>
         ) : (
-          <div className="pdf-loading">Loading PDF…</div>
+          <div className="pdf-loading">{t('pdf.loading')}</div>
         )}
       </div>
       {selectionToolbar && !readOnly && (
@@ -1880,8 +1879,8 @@ export function PdfViewer() {
               type="button"
               className="pdf-color-swatch"
               style={{ background: c }}
-              title="Highlight"
-              aria-label={`Highlight in ${c}`}
+              title={t('pdf.highlight')}
+              aria-label={t('pdf.highlightIn', { color: c })}
               onClick={() => commitHighlight(c)}
             />
           ))}
@@ -1909,8 +1908,8 @@ export function PdfViewer() {
                     type="button"
                     className={`pdf-color-swatch${mark.color === c ? ' active' : ''}`}
                     style={{ background: c }}
-                    title="Recolor"
-                    aria-label={`Set color ${c}`}
+                    title={t('pdf.recolor')}
+                    aria-label={t('pdf.setColor', { color: c })}
                     disabled={readOnly}
                     onClick={() => setMarkColor(mark.id, c)}
                   />
@@ -1918,7 +1917,7 @@ export function PdfViewer() {
               </div>
               <textarea
                 className="field-input field-textarea pdf-mark-comment-input"
-                placeholder="Add a comment…"
+                placeholder={t('pdf.commentPlaceholder')}
                 value={mark.comment}
                 autoFocus={!readOnly}
                 readOnly={readOnly}
@@ -1934,7 +1933,7 @@ export function PdfViewer() {
                       <button
                         type="button"
                         className="field-link-unlink"
-                        title="Unlink"
+                        title={t('pdf.unlink')}
                         disabled={readOnly}
                         onClick={() => unlinkMarkFromField(mark.id, l.path)}
                       >
@@ -1948,14 +1947,13 @@ export function PdfViewer() {
                 <button
                   type="button"
                   className="pdf-mark-delete"
-                  title="Delete this highlight"
+                  title={t('pdf.deleteTitle')}
                   disabled={readOnly}
                   onClick={() => {
                     const links = mark.linkedFields ?? []
                     if (links.length > 0) {
                       const ok = window.confirm(
-                        `This highlight is linked to ${links.length} field${links.length === 1 ? '' : 's'} as evidence ` +
-                          `(${links.map((l) => l.label).join(', ')}). Delete it anyway?`,
+                        tp('pdf.deleteLinked', links.length, { labels: links.map((l) => l.label).join(', ') }),
                       )
                       if (!ok) return
                     }
@@ -1963,10 +1961,10 @@ export function PdfViewer() {
                     setActiveMark(null)
                   }}
                 >
-                  Delete
+                  {t('common.delete')}
                 </button>
-                <button type="button" className="primary" title="Close this popover" onClick={() => setActiveMark(null)}>
-                  Done
+                <button type="button" className="primary" title={t('pdf.closePopover')} onClick={() => setActiveMark(null)}>
+                  {t('pdf.done')}
                 </button>
               </div>
             </div>
@@ -1982,19 +1980,19 @@ export function PdfViewer() {
               ...(linkPreview.top !== undefined ? { top: linkPreview.top } : { bottom: linkPreview.bottom }),
             }}
           >
-            <img src={linkPreview.img} width={linkPreview.width} height={linkPreview.height} alt="Preview of the link's destination" />
+            <img src={linkPreview.img} width={linkPreview.width} height={linkPreview.height} alt={t('pdf.linkPreviewAlt')} />
           </div>,
           document.body,
         )}
       {quoteNotFound && (
         <div className="toast" role="status">
-          <span className="toast-text">Couldn't locate this quote in the PDF.</span>
+          <span className="toast-text">{t('pdf.quoteNotFound')}</span>
           <button
             type="button"
             className="icon-btn"
             onClick={() => setQuoteNotFound(false)}
-            title="Dismiss"
-            aria-label="Dismiss"
+            title={t('pdf.dismiss')}
+            aria-label={t('pdf.dismiss')}
           >
             ×
           </button>
