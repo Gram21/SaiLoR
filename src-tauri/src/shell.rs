@@ -46,8 +46,41 @@ const DE: &[(&str, &str)] = &[
 ];
 
 // [impl->req~plt-400~1]
+/// Italian texts of the native menu labels and the About dialog.
+const IT: &[(&str, &str)] = &[
+    ("File", "File"),
+    ("Edit", "Modifica"),
+    ("View", "Vista"),
+    ("Window", "Finestra"),
+    ("Help", "Aiuto"),
+    ("Settings…", "Impostazioni…"),
+    ("Close project", "Chiudi progetto"),
+    ("Quit", "Esci"),
+    ("Quit SaiLoR", "Esci da SaiLoR"),
+    ("Undo", "Annulla"),
+    ("Redo", "Ripeti"),
+    ("Cut", "Taglia"),
+    ("Copy", "Copia"),
+    ("Paste", "Incolla"),
+    ("Select All", "Seleziona tutto"),
+    ("Reload", "Ricarica"),
+    ("Full Screen", "Schermo intero"),
+    ("Minimize", "Riduci a icona"),
+    ("Maximize/Restore", "Ingrandisci/Ripristina"),
+    ("Zoom", "Zoom"),
+    ("Close", "Chiudi"),
+    ("Close Window", "Chiudi finestra"),
+    ("Services", "Servizi"),
+    ("Hide SaiLoR", "Nascondi SaiLoR"),
+    ("Hide Others", "Nascondi altre"),
+    ("Project on GitHub", "Progetto su GitHub"),
+    ("About SaiLoR", "Informazioni su SaiLoR"),
+    ("Version", "Versione"),
+];
+
+// [impl->req~plt-400~1]
 /// The menu tables by UI language code. English needs no table.
-const TABLES: &[(&str, &[(&str, &str)])] = &[("de", DE)];
+const TABLES: &[(&str, &[(&str, &str)])] = &[("de", DE), ("it", IT)];
 
 // [impl->req~plt-400~1]
 /// The text of a menu label in the active language. English is the fallback.

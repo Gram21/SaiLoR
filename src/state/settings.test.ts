@@ -137,11 +137,13 @@ describe('autosave', () => {
 
 // [utest->req~ui-110~1]
 describe('language', () => {
-  it('uses a supported browser language, else English', () => {
-    vi.stubGlobal('navigator', { language: 'de-AT' })
-    expect(loadLanguage()).toBe('de')
-    vi.stubGlobal('navigator', { language: 'fr-FR' })
-    expect(loadLanguage()).toBe('en')
+  it.each([
+    ['de-AT', 'de'],
+    ['it-CH', 'it'],
+    ['ko-KR', 'en'],
+  ])('uses the supported browser language of %s, else English', (browser, lang) => {
+    vi.stubGlobal('navigator', { language: browser })
+    expect(loadLanguage()).toBe(lang)
   })
 
   it('round-trips a stored choice under slr.language and ignores unknown values', () => {
