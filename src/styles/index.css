@@ -169,7 +169,17 @@ button.primary.danger {
   min-width: 0;
 }
 .app-title {
+  font: inherit;
   font-weight: 600;
+  color: inherit;
+  background: none;
+  border: 0;
+  border-radius: 4px;
+  padding: 2px 6px;
+  cursor: pointer;
+}
+.app-title:hover {
+  background: var(--hover, rgba(127, 127, 127, 0.15));
 }
 .toolbar-actions {
   display: flex;

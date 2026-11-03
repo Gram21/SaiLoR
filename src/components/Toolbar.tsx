@@ -343,9 +343,15 @@ export function Toolbar() {
           <Icon name="close" size={16} />
         </button>
 
-        <span className="app-title">
+        <button
+          type="button"
+          className="app-title"
+          title={`Settings (${modKey}+,)`}
+          aria-label="Settings"
+          onClick={() => setUserSettingsOpen(true)}
+        >
           SaiLoR
-        </span>
+        </button>
 
         <div className="toolbar-actions">
           <Dropdown label="Open" title="Open a project" disabled={busy} items={openItems} />
@@ -567,15 +573,6 @@ export function Toolbar() {
             onClick={toggleTheme}
           >
             {theme === 'dark' ? '☀' : '☾'}
-          </button>
-          <button
-            type="button"
-            className="icon-btn"
-            title={`Settings (${modKey}+,)`}
-            aria-label="Settings"
-            onClick={() => setUserSettingsOpen(true)}
-          >
-            ⚙
           </button>
           <button
             type="button"
