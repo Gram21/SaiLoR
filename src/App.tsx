@@ -62,8 +62,10 @@ import {
   PANE_RIGHT_MIN,
   PANE_RIGHT_MAX,
 } from './state/settings'
+import { rich, useT } from './i18n'
 
 export function App() {
+  const t = useT()
   useKeybindings()
   useDirtyGuard()
   useCloseGuard()
@@ -185,18 +187,15 @@ export function App() {
               height={80}
             />
             <h1>SaiLoR</h1>
-            <p>
-              SaiLoR for the web has been discontinued: browser file-system limitations made
-              too many features (multi-file saving, git) unreliable to support real review work.
-            </p>
-            <p>Please use the desktop app instead.</p>
+            <p>{t('app.web.discontinued')}</p>
+            <p>{t('app.web.useDesktop')}</p>
             <a
               className="primary"
               href="https://github.com/Gram21/SaiLoR/releases"
               target="_blank"
               rel="noreferrer"
             >
-              Download SaiLoR
+              {t('app.web.download')}
             </a>
           </div>
         </div>
@@ -236,32 +235,32 @@ export function App() {
               height={80}
             />
             <h1>SaiLoR</h1>
-            <p>Open a project JSON file to begin annotating, or set one up.</p>
+            <p>{t('app.welcome.intro')}</p>
             <button
               type="button"
               className="primary"
               onClick={() => void openProject()}
-              title="Open an existing project JSON file"
+              title={t('app.welcome.openTitle')}
             >
-              Open project…
+              {t('app.welcome.open')}
             </button>
             <div className="welcome-create">
-              <button type="button" onClick={() => void startNew()} title="Create a new annotation schema from scratch">
-                New annotation JSON…
+              <button type="button" onClick={() => void startNew()} title={t('app.welcome.newTitle')}>
+                {t('app.welcome.new')}
               </button>
               <button
                 type="button"
                 onClick={() => void startEdit()}
-                title="Open an existing project JSON to edit its annotation schema"
+                title={t('app.welcome.editTitle')}
               >
-                Edit annotation JSON…
+                {t('app.welcome.edit')}
               </button>
               <button
                 type="button"
                 onClick={() => void startFromScreening()}
-                title="Create a new annotation project from a finished screening"
+                title={t('app.welcome.fromScreeningTitle')}
               >
-                New from screening…
+                {t('app.welcome.fromScreening')}
               </button>
               {/* Absent in the browser build entirely — see GitCloneDialog's
                   doc comment and PlatformAdapter.getGit() for why there is no
@@ -273,13 +272,13 @@ export function App() {
                   disabled={gitProbe !== null && !gitProbe.available}
                   title={gitProbe && !gitProbe.available ? gitProbe.error : undefined}
                 >
-                  Import from remote git…
+                  {t('toolbar.git.importRemote')}
                 </button>
               )}
             </div>
             {recents.length > 0 && (
               <div className="welcome-recents">
-                <div className="welcome-recents-label">Recent projects</div>
+                <div className="welcome-recents-label">{t('toolbar.recent.header')}</div>
                 {recents.map((item) => {
                   const label = item.title || item.name
                   const where = item.path ?? item.name
@@ -295,14 +294,14 @@ export function App() {
                         type="button"
                         className={`welcome-recent${missing ? ' unavailable' : ''}`}
                         // The full text on hover, since both lines truncate.
-                        title={missing ? `Not found — ${where}` : `${label}\n${where}`}
+                        title={missing ? t('toolbar.recent.missingHint', { where }) : `${label}\n${where}`}
                         disabled={missing}
                         onClick={() => void openRecent(item.id)}
                       >
                         {/* The project's own title, falling back to the file name. */}
                         <span className="recent-title">
                           {label}
-                          {missing && <span className="recent-missing">not found</span>}
+                          {missing && <span className="recent-missing">{t('app.welcome.notFound')}</span>}
                         </span>
                         {/* The path distinguishes two projects sharing a name. */}
                         <span className="recent-path">{shortWhere}</span>
@@ -310,8 +309,8 @@ export function App() {
                       <button
                         type="button"
                         className="icon-btn recent-edit"
-                        title="Edit this project's annotation schema"
-                        aria-label={`Edit the annotation schema of ${label}`}
+                        title={t('app.welcome.editRecent')}
+                        aria-label={t('app.welcome.editRecentAria', { name: label })}
                         disabled={missing}
                         onClick={() => void startEditRecent(item.id)}
                       >
@@ -320,8 +319,8 @@ export function App() {
                       <button
                         type="button"
                         className="icon-btn recent-remove"
-                        title="Remove from recent projects"
-                        aria-label={`Remove ${label} from recent projects`}
+                        title={t('toolbar.recent.remove')}
+                        aria-label={t('app.welcome.removeRecentAria', { name: label })}
                         onClick={() => forgetRecent(item.id)}
                       >
                         ×
@@ -336,7 +335,7 @@ export function App() {
               {update && (
                 <div className="update-notice">
                   <span>
-                    <strong>Version {update.latest} is available</strong> — you have {appVersion}.
+                    {rich('app.update.available', { version: update.latest, current: appVersion })}
                   </span>
                   <span className="update-links">
                     {nativeUpdate ? (
@@ -349,20 +348,20 @@ export function App() {
                           type="button"
                           className="update-download"
                           onClick={() => void installUpdate()}
-                          title="Restart the app to install the downloaded update"
+                          title={t('app.update.restartTitle')}
                         >
-                          Restart to update
+                          {t('app.update.restart')}
                         </button>
                       ) : updateProgress != null ? (
-                        <span>Downloading update… {Math.round(updateProgress)}%</span>
+                        <span>{t('app.update.progress', { percent: Math.round(updateProgress) })}</span>
                       ) : (
                         <button
                           type="button"
                           className="update-download"
                           onClick={() => void downloadUpdate()}
-                          title="Download the latest update"
+                          title={t('app.update.downloadTitle')}
                         >
-                          Download update
+                          {t('app.update.download')}
                         </button>
                       )
                     ) : (
@@ -376,17 +375,17 @@ export function App() {
                           rel="noopener noreferrer"
                           title={update.download.name}
                         >
-                          Download for {update.download.label}
+                          {t('app.update.downloadFor', { label: update.download.label })}
                         </a>
                       )
                     )}
                     <a href={update.url} target="_blank" rel="noopener noreferrer">
-                      Release notes
+                      {t('app.update.notes')}
                     </a>
                   </span>
                   {updateError && (
                     <span className="update-error">
-                      Update download failed — use the link on the release page instead.
+                      {t('app.update.failed')}
                     </span>
                   )}
                 </div>
@@ -397,9 +396,9 @@ export function App() {
                 href={NEW_ISSUE_URL}
                 target="_blank"
                 rel="noreferrer"
-                title="Report a bug on GitHub — opens a new issue in your browser"
+                title={t('app.report.title')}
               >
-                Report a bug
+                {t('app.report.label')}
               </a>
             </div>
           </div>

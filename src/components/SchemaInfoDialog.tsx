@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { linkifyText } from '../model/linkify'
+import { useT } from '../i18n'
 
 /**
  * The schema-wide comment authored via `Project.schemaInfo`. Auto-opened once
@@ -16,6 +17,7 @@ export function SchemaInfoDialog() {
   const open = useStore((s) => s.schemaInfoOpen)
   const setOpen = useStore((s) => s.setSchemaInfoOpen)
   const text = useStore((s) => s.project?.schemaInfo ?? null)
+  const t = useT()
 
   useEffect(() => {
     if (!open) return
@@ -35,16 +37,16 @@ export function SchemaInfoDialog() {
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="About this schema"
+        aria-label={t('app.schemaInfo.title')}
       >
         <div className="modal-head">
-          <strong>About this schema</strong>
+          <strong>{t('app.schemaInfo.title')}</strong>
           <button
             type="button"
             className="icon-btn"
             onClick={() => setOpen(false)}
-            aria-label="Close"
-            title="Close"
+            aria-label={t('common.close')}
+            title={t('common.close')}
           >
             ×
           </button>
@@ -63,8 +65,8 @@ export function SchemaInfoDialog() {
           </p>
         </div>
         <div className="schema-info-actions">
-          <button type="button" className="primary" onClick={() => setOpen(false)} title="Close this dialog">
-            Okay
+          <button type="button" className="primary" onClick={() => setOpen(false)} title={t('app.schemaInfo.closeTitle')}>
+            {t('app.schemaInfo.ok')}
           </button>
         </div>
       </div>

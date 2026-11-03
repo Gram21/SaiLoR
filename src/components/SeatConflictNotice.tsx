@@ -3,6 +3,7 @@ import { useStore, selectCurrentPaper } from '../state/store'
 import { useGitStore } from '../state/gitStore'
 import { seatTakenByOther, ownerLabel } from '../git/seatOwner'
 import { seatLabel } from '../model/project'
+import { rich, useT } from '../i18n'
 
 /**
  * "Somebody has already read this paper in the seat you are sitting in."
@@ -31,18 +32,17 @@ export function SeatConflictNotice() {
   const currentReviewer = useStore((s) => s.currentReviewer)
   const screening = !!project?.screening
   const authors = useGitStore((s) => s.annotationAuthors)
+  const t = useT()
 
   if (!paper || !currentReviewer) return null
   const other = seatTakenByOther(authors, paper.id, currentReviewer, screening)
   if (!other) return null
 
-  const seat = project ? seatLabel(project, currentReviewer) : `Reviewer ${currentReviewer}`
+  const seat = project ? seatLabel(project, currentReviewer) : t('toolbar.reviewer.name', { n: currentReviewer })
 
   return (
     <p className="seat-conflict-notice" role="status">
-      <strong>{ownerLabel(other)}</strong> has already committed {seat} for this paper. If that was
-      not meant to be you, switch seats or pick another paper — two people in one seat write the
-      same file, and whoever merges last replaces the other's answers.
+      {rich('app.seatConflict.text', { owner: ownerLabel(other), seat })}
     </p>
   )
 }

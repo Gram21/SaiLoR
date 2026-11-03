@@ -1,5 +1,6 @@
 import { STRICT_MANAGER, activePerson, useStore } from '../state/store'
 import { assignedSeat, personPapers, strictActive } from '../model/strict'
+import { useT } from '../i18n'
 
 // [impl->req~con-480~1]
 // [impl->req~con-490~1]
@@ -13,10 +14,11 @@ export function StrictPersonBar() {
   const readOnly = useStore((s) => s.readOnly)
   const switchPerson = useStore((s) => s.switchPerson)
   const finishPersonWork = useStore((s) => s.finishPersonWork)
+  const t = useT()
   if (!strictActive(project) || strictPerson === null) return null
 
   const name =
-    strictPerson === STRICT_MANAGER ? 'Manager' : (project.strict.persons.find((p) => p.id === strictPerson)?.name ?? '')
+    strictPerson === STRICT_MANAGER ? t('strict.manager') : (project.strict.persons.find((p) => p.id === strictPerson)?.name ?? '')
   const papers = person ? personPapers(project, person) : []
   const open = person
     ? papers.filter((id) => {
@@ -26,33 +28,31 @@ export function StrictPersonBar() {
     : 0
 
   const finish = () => {
-    const message =
-      `Mark your work on all ${papers.length} assigned papers as finished and save the project? ` +
-      'After the save, only the Manager can reopen the work.'
+    const message = t('strict.bar.finishConfirm', { count: papers.length })
     if (window.confirm(message)) void finishPersonWork()
   }
 
   return (
-    <div className="strict-person-bar" role="group" aria-label="Strict mode person">
-      <span className="strict-person-name">Working as {name}</span>
+    <div className="strict-person-bar" role="group" aria-label={t('strict.bar.group')}>
+      <span className="strict-person-name">{t('strict.bar.working', { name })}</span>
       <button
         type="button"
         className="tb-btn"
         disabled={busy || dirty}
-        title={dirty ? 'Save your changes before you switch to a different person' : 'Choose a different person'}
+        title={dirty ? t('strict.bar.switchDirty') : t('strict.bar.switchTitle')}
         onClick={switchPerson}
       >
-        Switch person
+        {t('strict.bar.switch')}
       </button>
       {person && (
         <button
           type="button"
           className="tb-btn"
           disabled={busy || readOnly || open === 0}
-          title={open === 0 ? 'All your assigned papers are finished' : 'Mark all your assigned papers as finished and save'}
+          title={open === 0 ? t('strict.bar.finishedAll') : t('strict.bar.finishTitle')}
           onClick={finish}
         >
-          Finish
+          {t('strict.bar.finish')}
         </button>
       )}
     </div>

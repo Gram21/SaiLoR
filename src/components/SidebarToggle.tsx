@@ -1,4 +1,5 @@
 import { useStore } from '../state/store'
+import { useT } from '../i18n'
 
 /**
  * Show/hide the paper list. Rendered inside the list's own header while it is
@@ -9,8 +10,9 @@ export function SidebarToggle() {
   const collapsed = useStore((s) => s.sidebarCollapsed)
   const toggleSidebar = useStore((s) => s.toggleSidebar)
   const project = useStore((s) => s.project)
+  const t = useT()
 
-  const label = collapsed ? 'Show paper list' : 'Hide paper list'
+  const label = collapsed ? t('toolbar.sidebar.show') : t('toolbar.sidebar.hide')
 
   return (
     <button

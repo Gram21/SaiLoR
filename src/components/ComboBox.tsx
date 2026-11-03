@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef, useState } from 'react'
 import { createPortal } from 'react-dom'
+import { useT } from '../i18n'
 
 /** Keep in sync with `.combo-menu`'s `max-height` in index.css — used to
  *  decide whether there's enough room to open downward at all. Exported for
@@ -82,6 +83,7 @@ export function ComboBox({
   disabled = false,
   ariaLabel,
 }: ComboBoxProps) {
+  const t = useT()
   const options: ComboOption[] = rawOptions.map((o) =>
     typeof o === 'string' ? { id: o, label: o } : o,
   )
@@ -217,7 +219,7 @@ export function ComboBox({
         aria-label={ariaLabel}
         disabled={disabled}
         value={open ? filter : labelOf(value)}
-        placeholder={labelOf(value) || 'Select…'}
+        placeholder={labelOf(value) || t('widget.combo.select')}
         onFocus={() => {
           onInteract?.()
           openMenu()
@@ -238,8 +240,8 @@ export function ComboBox({
         <button
           type="button"
           className="combo-clear"
-          aria-label="Clear selection"
-          title="Clear selection"
+          aria-label={t('widget.combo.clear')}
+          title={t('widget.combo.clear')}
           onMouseDown={(e) => {
             e.preventDefault()
             e.stopPropagation()
@@ -266,7 +268,7 @@ export function ComboBox({
             }}
           >
             {filtered.length === 0 ? (
-              <div className="combo-empty">No matches</div>
+              <div className="combo-empty">{t('widget.combo.noMatches')}</div>
             ) : (
               filtered.map((opt, i) => (
                 <div

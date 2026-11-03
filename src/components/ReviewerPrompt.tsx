@@ -3,6 +3,7 @@ import { STRICT_MANAGER, useStore } from '../state/store'
 import { strictActive } from '../model/strict'
 import { readyCount } from '../consolidate/readiness'
 import { CONSOLIDATION_SEAT } from '../git/seatOwner'
+import { rich, useT } from '../i18n'
 
 /**
  * Shown when a multi-reviewer project is opened and nobody has picked a seat —
@@ -32,6 +33,7 @@ export function ReviewerPrompt() {
   const selectReviewer = useStore((s) => s.selectReviewer)
   const helpOpen = useStore((s) => s.helpOpen)
   const strictPerson = useStore((s) => s.strictPerson)
+  const t = useT()
   if (!project || project.reviewers <= 1) return null
   if (strictActive(project) && strictPerson !== STRICT_MANAGER) return null
   // Yield to Help. Nothing else can be reached while this is up, so F1 is the
@@ -55,25 +57,13 @@ export function ReviewerPrompt() {
     <div className="modal-overlay" data-yields-to-help>
       <div className="modal reviewer-prompt" role="dialog" aria-modal="true">
         <div className="modal-head">
-          <strong>This review has {project.reviewers} reviewers</strong>
+          <strong>{t('prompt.reviewer.title', { count: project.reviewers })}</strong>
         </div>
         <div className="modal-body">
-          <p>
-            Every paper here is annotated <strong>independently</strong> by {project.reviewers}{' '}
-            people. You will see and edit <strong>only your own</strong> answers — not anyone else's.
-            That is the point: an SLR's reviewers are meant to reach their findings separately, so
-            that where they agree means something.
-          </p>
-          <p>
-            Pick the reviewer seat you are using for this session. Your selection is remembered only
-            on this machine for this project and is never written to the project file.
-          </p>
-          <p>
-            <strong>Consolidation</strong> is the pass that comes after. Whoever takes that seat sees
-            everyone's answers side by side, settles the disagreements, and records the project's
-            final result. It is not another opinion — it is the reconciliation of the others.
-          </p>
-          <p className="reviewer-prompt-ask">Which are you?</p>
+          <p>{rich('prompt.reviewer.intro', { count: project.reviewers })}</p>
+          <p>{t('prompt.reviewer.pick')}</p>
+          <p>{rich('prompt.reviewer.consolidation')}</p>
+          <p className="reviewer-prompt-ask">{t('prompt.reviewer.ask')}</p>
           <div className="reviewer-prompt-choices">
             {reviewerIds.map((id) => {
               return (
@@ -82,9 +72,9 @@ export function ReviewerPrompt() {
                   type="button"
                   className="reviewer-prompt-choice"
                   onClick={() => selectReviewer(id)}
-                  title={`Review independently as Reviewer ${id}`}
+                  title={t('prompt.reviewer.choiceTitle', { id })}
                 >
-                  Reviewer {id}
+                  {t('toolbar.reviewer.name', { n: id })}
                 </button>
               )
             })}
@@ -94,11 +84,11 @@ export function ReviewerPrompt() {
               onClick={() => selectReviewer(CONSOLIDATION_SEAT)}
               title={
                 total > 0 && ready === total
-                  ? 'Every paper has been annotated by all reviewers'
-                  : 'Papers not yet annotated by every reviewer cannot be compared yet'
+                  ? t('prompt.reviewer.readyTitle')
+                  : t('prompt.reviewer.notReadyTitle')
               }
             >
-              Consolidation
+              {t('toolbar.reviewer.consolidation')}
               {/* Says how much there is to do rather than blocking the seat: a
                   consolidator may legitimately want to start on the papers that
                   are ready while the rest are still being reviewed. The ones
@@ -106,19 +96,14 @@ export function ReviewerPrompt() {
                   popups shut. */}
               <span className="reviewer-prompt-ready">
                 {total === 0
-                  ? 'no papers yet'
+                  ? t('prompt.reviewer.noPapers')
                   : ready === 0
-                    ? 'no papers ready yet'
-                    : `${ready} of ${total} papers ready`}
+                    ? t('prompt.reviewer.noneReady')
+                    : t('prompt.reviewer.progress', { ready, total })}
               </span>
             </button>
           </div>
-          <p className="reviewer-prompt-note">
-            Switch seats from the toolbar whenever you like. Each paper remembers the seat you last
-            read it in and switches back to it when you return, so if you are Reviewer 1 on some
-            papers and Reviewer 2 on others, you only choose once per paper. Press F1 to read Help
-            before choosing.
-          </p>
+          <p className="reviewer-prompt-note">{t('prompt.reviewer.note')}</p>
         </div>
       </div>
     </div>

@@ -1,3 +1,5 @@
+import { useT } from '../i18n'
+
 /**
  * The app's only spinner: a CSS-only ring, sized in `em` so it sits on the text
  * baseline next to a phase line. It exists to say "the app has not frozen" while
@@ -7,5 +9,6 @@
  * With `prefers-reduced-motion` it pulses instead of spinning.
  */
 export function Spinner() {
-  return <span className="spinner" role="status" aria-label="Working" />
+  const t = useT()
+  return <span className="spinner" role="status" aria-label={t('widget.spinner.working')} />
 }

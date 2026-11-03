@@ -1,4 +1,5 @@
 import { STRICT_MANAGER, consolidationGateMissing, useStore } from '../state/store'
+import { useT } from '../i18n'
 
 // [impl->req~con-500~1]
 // [impl->req~con-510~1]
@@ -8,20 +9,21 @@ export function StrictGate() {
   const paperId = useStore((s) => s.currentPaperId)
   const manager = useStore((s) => s.strictPerson === STRICT_MANAGER)
   const override = useStore((s) => s.overrideConsolidationGate)
+  const t = useT()
   if (!missing || !paperId) return null
 
   const openAnyway = () => {
-    const message = `These persons have not finished this paper: ${missing}. Open Consolidation anyway?`
+    const message = t('strict.gate.confirm', { names: missing })
     if (window.confirm(message)) override(paperId)
   }
 
   return (
     <div className="panel annotations empty" role="status">
-      <p>Consolidation opens when all assigned persons have finished this paper.</p>
-      <p>Not finished yet: {missing}</p>
+      <p>{t('strict.gate.body')}</p>
+      <p>{t('strict.gate.missing', { names: missing })}</p>
       {manager && (
         <button type="button" onClick={openAnyway}>
-          Open anyway
+          {t('strict.gate.openAnyway')}
         </button>
       )}
     </div>

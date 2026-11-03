@@ -2,7 +2,7 @@ import { describe, it, expect, afterEach, vi } from 'vitest'
 import { createElement, isValidElement, type ReactElement } from 'react'
 import { renderToStaticMarkup } from 'react-dom/server'
 import { LANGUAGES } from './state/settings'
-import { MESSAGES, getLanguage, rich, setLanguage, t, type MessageKey } from './i18n'
+import { MESSAGES, getLanguage, rich, setLanguage, t, tp, type MessageKey } from './i18n'
 
 const placeholders = (text: string) => [...text.matchAll(/\{(\w+)\}/g)].map((m) => m[1]).sort()
 const tags = (text: string) => [...text.matchAll(/<\/?(\w+)>/g)].map((m) => m[0]).sort()
@@ -65,6 +65,15 @@ describe('t', () => {
     } finally {
       MESSAGES.de['settings.title'] = saved
     }
+  })
+})
+
+// [utest->req~ui-120~1]
+describe('tp', () => {
+  it('picks the plural form and fills {count}', () => {
+    expect(tp('strict.picker.papers', 1)).toBe('1 paper')
+    expect(tp('strict.picker.papers', 0)).toBe('0 papers')
+    expect(tp('strict.picker.papers', 2)).toBe('2 papers')
   })
 })
 

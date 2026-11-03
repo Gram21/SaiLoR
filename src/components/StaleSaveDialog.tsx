@@ -2,6 +2,7 @@ import { useStore } from '../state/store'
 import { seatLabel, type Project } from '../model/project'
 import { DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
 import { ConflictResolutionDialog } from './ConflictResolutionDialog'
+import { t, useT } from '../i18n'
 
 // [impl->req~plt-135~1]
 /** How many clashing files the dialog names before it stops counting. */
@@ -12,19 +13,19 @@ const MAX_LISTED = 10
 export function describeClash(path: string, project: Project | null): string {
   const folder = `${project?.annotationsDir ?? DEFAULT_ANNOTATIONS_DIR}/`
   const m = path.startsWith(folder) ? /^(.+)\/([^/]+)\.json$/.exec(path.slice(folder.length)) : null
-  if (!m) return 'The project file (schema, settings, and the list of papers)'
+  if (!m) return t('app.clash.projectFile')
   const [, id, name] = m
   const paper = project?.papers.find((p) => p.id === id)?.title || id
   const seat = /^(?:reviewer|screening)-(\d+)$/.exec(name)
   const marks = /^(?:screening-)?marks-(\d+)$/.exec(name)
   // [impl->req~plt-136~1]
   const part = seat
-    ? `${project ? seatLabel(project, seat[1]) : `Reviewer ${seat[1]}`}'s answers`
+    ? t('app.clash.answers', { seat: project ? seatLabel(project, seat[1]) : t('toolbar.reviewer.name', { n: seat[1] }) })
     : marks
-      ? `${project ? seatLabel(project, marks[1]) : `Reviewer ${marks[1]}`}'s PDF highlights and notes`
+      ? t('app.clash.marks', { seat: project ? seatLabel(project, marks[1]) : t('toolbar.reviewer.name', { n: marks[1] }) })
       : /^(?:screening-)?marks-consolidated$/.test(name)
-        ? "Consolidation's PDF highlights and notes"
-        : "Consolidation's answers"
+        ? t('app.clash.consolidatedMarks')
+        : t('app.clash.consolidatedAnswers')
   return `${paper} — ${part}`
 }
 
@@ -45,6 +46,7 @@ export function StaleSaveDialog() {
   const backToStaleChoice = useStore((s) => s.backToStaleChoice)
   const dismissStaleSave = useStore((s) => s.dismissStaleSave)
   const dismissStaleSaveError = useStore((s) => s.dismissStaleSaveError)
+  const t = useT()
   if (!staleSave || staleSave.dismissed) return null
 
   if (staleSave.merge) {
@@ -52,16 +54,14 @@ export function StaleSaveDialog() {
       <ConflictResolutionDialog
         merge={staleSave.merge}
         labels={{
-          title: 'Combine with the changes on disk',
-          intro:
-            'You and the version on disk both changed these fields. Everything else has already been ' +
-            "combined: a field only one side changed kept that side's value.",
-          theirsValue: 'the value on disk',
-          useAllTheirs: 'Use all from disk',
-          cancel: 'Back',
-          cancelTitle: 'Go back to choosing how to save — nothing has been saved yet',
-          finish: 'Combine and save',
-          finishTitle: 'Save the project with the values chosen above',
+          title: t('app.staleSave.merge.title'),
+          intro: t('app.staleSave.merge.intro'),
+          theirsValue: t('app.staleSave.merge.theirsValue'),
+          useAllTheirs: t('app.staleSave.merge.useAll'),
+          cancel: t('app.staleSave.merge.back'),
+          cancelTitle: t('app.staleSave.merge.backTitle'),
+          finish: t('app.staleSave.merge.finish'),
+          finishTitle: t('app.staleSave.merge.finishTitle'),
         }}
         error={staleSave.error}
         onResolve={resolveStaleConflict}
@@ -78,35 +78,28 @@ export function StaleSaveDialog() {
 
   return (
     <div className="modal-overlay">
-      <div className="modal stale-save-dialog" role="dialog" aria-modal="true" aria-label="Files changed on disk">
+      <div className="modal stale-save-dialog" role="dialog" aria-modal="true" aria-label={t('app.staleSave.aria')}>
         <div className="modal-head">
-          <strong>Someone else changed these files</strong>
+          <strong>{t('app.staleSave.title')}</strong>
         </div>
         <div className="modal-body">
-          <p>
-            Since you opened or last saved this project, these files were changed on disk — by a
-            teammate&apos;s save in a shared folder, a git pull outside SaiLoR, or a second copy of the
-            project. Nothing has been saved yet.
-          </p>
+          <p>{t('app.staleSave.body')}</p>
           <ul className="stale-save-files">
             {listed.map((p) => (
               <li key={p} title={p}>
                 {describeClash(p, project)}
               </li>
             ))}
-            {rest > 0 && <li>…and {rest} more</li>}
+            {rest > 0 && <li>{t('app.staleSave.more', { count: rest })}</li>}
           </ul>
           <div className="stale-save-choices">
             <button type="button" disabled={busy} onClick={() => void resolveStaleSave('overwrite')}>
-              <strong>Overwrite with my version</strong>
-              <span>Your version of these files replaces the one on disk. What the other person changed in them is lost.</span>
+              <strong>{t('app.staleSave.overwrite')}</strong>
+              <span>{t('app.staleSave.overwriteHint')}</span>
             </button>
             <button type="button" disabled={busy} onClick={() => void resolveStaleSave('discard')}>
-              <strong>Keep theirs, drop my changes to these files</strong>
-              <span>
-                These files stay as they are on disk, and your unsaved edits to them are thrown away. Your
-                edits to other files are still saved.
-              </span>
+              <strong>{t('app.staleSave.discard')}</strong>
+              <span>{t('app.staleSave.discardHint')}</span>
             </button>
             <button
               type="button"
@@ -114,17 +107,13 @@ export function StaleSaveDialog() {
               disabled={busy || staleSave.refusal !== null}
               onClick={() => void resolveStaleSave('combine')}
             >
-              <strong>Combine both</strong>
-              <span>
-                Merge field by field. A field only one of you changed keeps that change; where you both
-                changed the same field, you choose.
-              </span>
+              <strong>{t('app.staleSave.combine')}</strong>
+              <span>{t('app.staleSave.combineHint')}</span>
             </button>
           </div>
           {staleSave.refusal && (
             <p className="stale-save-refusal" role="alert">
-              These changes can&apos;t be combined field by field. {staleSave.refusal} Choose one of the
-              other two.
+              {t('app.staleSave.refusal', { reason: staleSave.refusal })}
             </p>
           )}
           {staleSave.error && (
@@ -133,8 +122,8 @@ export function StaleSaveDialog() {
             </p>
           )}
           <div className="modal-actions">
-            <button type="button" onClick={dismissStaleSave} title="You will be asked again the next time you save">
-              Not now
+            <button type="button" onClick={dismissStaleSave} title={t('app.staleSave.laterTitle')}>
+              {t('app.staleSave.later')}
             </button>
           </div>
         </div>

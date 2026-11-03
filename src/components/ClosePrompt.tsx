@@ -1,5 +1,6 @@
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
+import { useT } from '../i18n'
 
 /**
  * Asked when closing a project that has unsaved changes. Mirrors the native
@@ -12,6 +13,7 @@ export function ClosePrompt() {
   const resolve = useStore((s) => s.resolveClosePrompt)
   const projectTitle = useStore((s) => s.projectTitle)
   const projectName = useStore((s) => s.projectName)
+  const t = useT()
 
   useEffect(() => {
     if (!open) return
@@ -33,35 +35,35 @@ export function ClosePrompt() {
         aria-modal="true"
       >
         <div className="modal-body">
-          <h3>Save the changes to "{projectTitle || projectName}"?</h3>
-          <p>Your changes will be lost if you don't save them.</p>
+          <h3>{t('prompt.close.title', { name: projectTitle || projectName })}</h3>
+          <p>{t('prompt.close.body')}</p>
         </div>
         <div className="close-prompt-actions">
           <button
             type="button"
-            title="Cancel — go back without closing the project"
+            title={t('prompt.close.cancelTitle')}
             onClick={() => void resolve('cancel')}
             disabled={busy}
           >
-            Cancel
+            {t('common.cancel')}
           </button>
           <button
             type="button"
-            title="Close the project and discard the unsaved changes"
+            title={t('prompt.close.discardTitle')}
             onClick={() => void resolve('discard')}
             disabled={busy}
           >
-            Don't Save
+            {t('prompt.close.discard')}
           </button>
           <button
             type="button"
             className="primary"
-            title="Save the changes, then close the project"
+            title={t('prompt.close.saveTitle')}
             onClick={() => void resolve('save')}
             disabled={busy}
             autoFocus
           >
-            {busy ? 'Saving…' : 'Save'}
+            {busy ? t('prompt.close.saving') : t('common.save')}
           </button>
         </div>
       </div>

@@ -2,6 +2,7 @@ import { useState } from 'react'
 import { getPlatform } from '../platform'
 import { copyText } from '../clipboard'
 import type { MenuItem } from '../components/Dropdown'
+import { useT } from '../i18n'
 
 /**
  * The "Copy to clipboard" / "Save to file…" pair behind an Export button —
@@ -18,6 +19,7 @@ export function useExportTextMenu(getText: () => string, suggestedFileName: stri
   // Session-only local state: nothing here is worth surviving a re-render of
   // the dialog itself, let alone a reload.
   const [status, setStatus] = useState<string | null>(null)
+  const t = useT()
 
   const announce = (message: string) => {
     setStatus(message)
@@ -27,21 +29,21 @@ export function useExportTextMenu(getText: () => string, suggestedFileName: stri
   const items: MenuItem[] = [
     {
       type: 'item',
-      label: 'Copy to clipboard',
+      label: t('app.export.copy'),
       onSelect: () => {
-        void copyText(getText()).then((ok) => announce(ok ? 'Copied to clipboard.' : 'Could not copy to the clipboard.'))
+        void copyText(getText()).then((ok) => announce(ok ? t('app.export.copied') : t('app.export.copyFailed')))
       },
     },
     {
       type: 'item',
-      label: 'Save to file…',
+      label: t('app.export.saveFile'),
       onSelect: () => {
         void (async () => {
           const platform = getPlatform()
           const path = await platform.pickTextExportPath(suggestedFileName)
           if (!path) return // cancelled
           const res = await platform.writeTextFile(path, getText())
-          announce(res.ok ? `Saved to ${res.path}` : `Could not save: ${res.error}`)
+          announce(res.ok ? t('app.export.saved', { path: res.path }) : t('app.export.saveFailed', { error: res.error }))
         })()
       },
     },

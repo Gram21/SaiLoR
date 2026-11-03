@@ -15,6 +15,7 @@ import { SidebarToggle } from './SidebarToggle'
 import { StrictPersonBar } from './StrictPersonBar'
 import type { GitProbe, GitRepoInfo } from '../git/types'
 import { aiSeatId, seatLabel } from '../model/project'
+import { t, tp, useT, type MessageKey } from '../i18n'
 
 /** Shown on every git entry point in the browser build, where `getGit()` is
  *  always `null` (see `PlatformAdapter.getGit()` and architecture.md's "Git"
@@ -23,14 +24,14 @@ import { aiSeatId, seatLabel } from '../model/project'
  *  prompt or not). Shown as a disabled control's tooltip, not by hiding the
  *  control — a reviewer who reaches for it should learn why it doesn't work
  *  and what to do instead, not wonder whether they misremembered it existing. */
-const GIT_BROWSER_DISABLED_HINT = 'Git support is disabled in the browser version. Use the SaiLoR desktop app if you need it.'
+const GIT_BROWSER_DISABLED_HINT: MessageKey = 'toolbar.git.browserDisabled'
 // [impl->req~ui-30~1]
 /** Desktop, no project open (the start screen): git acts on the open
  *  project's file, so there is nothing to act on yet. */
-const GIT_NO_PROJECT_HINT = 'Open a project in a git repository to use Git.'
+const GIT_NO_PROJECT_HINT: MessageKey = 'toolbar.git.noProject'
 /** Desktop, a project is open but its file is not inside a git work tree:
  *  there is nothing to commit, pull or push. */
-const GIT_NO_REPO_HINT = "This project isn't in a git repository — there's nothing to commit, pull or push."
+const GIT_NO_REPO_HINT: MessageKey = 'toolbar.git.noRepo'
 
 /** Above this many reviewers the pill row would crowd the toolbar, so the
  * switch becomes a dropdown instead. At or below it, pills stay — a row of
@@ -68,10 +69,10 @@ export function gitButtonState(
     : probeUnavailable
       ? probe!.error
       : !project
-        ? GIT_NO_PROJECT_HINT
+        ? t(GIT_NO_PROJECT_HINT)
         : !repo
-          ? GIT_NO_REPO_HINT
-          : `Commit, pull and push this project — ${repo.branch ?? 'detached HEAD'}`
+          ? t(GIT_NO_REPO_HINT)
+          : t('toolbar.git.enabled', { branch: repo.branch ?? t('toolbar.git.detached') })
   const disabled = !git || probeUnavailable || !project || !repo || busy || editorOpen
   return { disabled, title }
 }
@@ -81,15 +82,14 @@ export interface AiButtonState {
   title: string
 }
 
-const AI_NO_PROJECT_HINT = 'Open a project to annotate with AI.'
-const AI_CONSOLIDATION_HINT =
-  'AI has no place in Consolidation — it reconciles what the reviewers already said, not a fresh opinion.'
-const AI_REVIEWER_UNSET_HINT = 'Pick a reviewer first — there is nothing to annotate as "the reviewer" yet'
-const AI_PROJECT_DISABLED_HINT = 'AI is turned off for this project in its settings.'
-const AI_ENABLED_HINT = 'Annotate papers with AI'
+const AI_NO_PROJECT_HINT: MessageKey = 'toolbar.ai.noProject'
+const AI_CONSOLIDATION_HINT: MessageKey = 'toolbar.ai.consolidation'
+const AI_REVIEWER_UNSET_HINT: MessageKey = 'toolbar.ai.reviewerUnset'
+const AI_PROJECT_DISABLED_HINT: MessageKey = 'toolbar.ai.projectDisabled'
+const AI_ENABLED_HINT: MessageKey = 'toolbar.ai.enabled'
 // [impl->req~llm-80~1]
 // [impl->req~llm-320~1]
-const AI_SCREENING_ENABLED_HINT = 'Propose include/exclude decisions with AI'
+const AI_SCREENING_ENABLED_HINT: MessageKey = 'toolbar.ai.screening'
 
 // [impl->req~llm-470~1]
 // [impl->req~llm-630~1]
@@ -118,16 +118,16 @@ export function aiButtonState(
   const blockConsolidation = isConsolidation && !hasAiSeat
   const blockReviewerUnset = reviewerUnset && !hasAiSeat
   const title = !project
-    ? AI_NO_PROJECT_HINT
+    ? t(AI_NO_PROJECT_HINT)
     : blockConsolidation
-      ? AI_CONSOLIDATION_HINT
+      ? t(AI_CONSOLIDATION_HINT)
       : blockReviewerUnset
-        ? AI_REVIEWER_UNSET_HINT
+        ? t(AI_REVIEWER_UNSET_HINT)
         : !aiEnabled
-          ? AI_PROJECT_DISABLED_HINT
+          ? t(AI_PROJECT_DISABLED_HINT)
           : screening
-            ? AI_SCREENING_ENABLED_HINT
-            : AI_ENABLED_HINT
+            ? t(AI_SCREENING_ENABLED_HINT)
+            : t(AI_ENABLED_HINT)
   const disabled = !project || blockConsolidation || blockReviewerUnset || !aiEnabled || busy || editorOpen
   return { disabled, title }
 }
@@ -135,6 +135,7 @@ export function aiButtonState(
 // [impl->req~ui-20~1]
 /** Top bar: file/Git on the left, the reviewer seat in the middle, then save status, review tools (Validate, AI), appearance controls and help. */
 export function Toolbar() {
+  const t = useT()
   const requestOpenProject = useStore((s) => s.requestOpenProject)
   const requestOpenRecent = useStore((s) => s.requestOpenRecent)
   const save = useStore((s) => s.save)
@@ -182,7 +183,7 @@ export function Toolbar() {
   const ownStashes = useGitStore((s) => s.stashes.filter((e) => e.origin !== 'other').length)
   const openClone = useGitStore((s) => s.openClone)
   const openGitPanel = useGitStore((s) => s.openPanel)
-  const gitBtn = gitButtonState(!!git, gitProbe, !!project, gitRepo, busy, editorOpen, GIT_BROWSER_DISABLED_HINT)
+  const gitBtn = gitButtonState(!!git, gitProbe, !!project, gitRepo, busy, editorOpen, t(GIT_BROWSER_DISABLED_HINT))
 
   // A transient "Saved" confirmation, shown a few seconds after every
   // successful save (manual or autosaved) and then hidden again — `dirty`
@@ -196,7 +197,7 @@ export function Toolbar() {
     return () => clearTimeout(t)
   }, [lastSavedAt])
 
-  const modKey = getPlatform().kind !== 'browser' && isMac() ? '⌘' : 'Ctrl'
+  const modKey = getPlatform().kind !== 'browser' && isMac() ? '⌘' : t('toolbar.key.ctrl')
 
   const reviewerCount = project?.reviewers ?? 1
   const showReviewerSwitch = !!project && reviewerCount > 1
@@ -217,12 +218,12 @@ export function Toolbar() {
   // The closed dropdown must still read "you are Reviewer 3" — a caret alone
   // would defeat the point of showing the active seat at all.
   const reviewerDropdownLabel = reviewerUnset
-    ? 'Pick a reviewer'
+    ? t('toolbar.reviewer.pick')
     : currentReviewer === 'consolidation'
-      ? 'Consolidation'
+      ? t('toolbar.reviewer.consolidation')
       : project
         ? seatLabel(project, currentReviewer!)
-        : `Reviewer ${currentReviewer}`
+        : t('toolbar.reviewer.name', { n: currentReviewer! })
 
   const reviewerMenuItems: MenuItem[] = [
     ...reviewerIds.map<MenuItem>((rid) => ({
@@ -232,10 +233,10 @@ export function Toolbar() {
           className={`reviewer-menu-label${currentReviewer === rid ? ' is-current' : ''}`}
         >
           {currentReviewer === rid ? '✓ ' : ''}
-          {project ? seatLabel(project, rid) : `Reviewer ${rid}`}
+          {project ? seatLabel(project, rid) : t('toolbar.reviewer.name', { n: rid })}
         </span>
       ),
-      hint: `${project ? seatLabel(project, rid) : `Reviewer ${rid}`} — annotate independently; only you see this until Consolidation`,
+      hint: t('toolbar.reviewer.hint', { seat: project ? seatLabel(project, rid) : t('toolbar.reviewer.name', { n: rid }) }),
       disabled: busy,
       onSelect: () => selectReviewer(rid),
     })),
@@ -250,30 +251,30 @@ export function Toolbar() {
             currentReviewer === 'consolidation' ? ' is-current' : ''
           }`}
         >
-          {currentReviewer === 'consolidation' ? '✓ ' : ''}Consolidation
+          {currentReviewer === 'consolidation' ? '✓ ' : ''}{t('toolbar.reviewer.consolidation')}
         </span>
       ),
-      hint: "Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains.",
+      hint: t('toolbar.reviewer.consolidationHint'),
       disabled: busy,
       onSelect: () => selectReviewer(CONSOLIDATION_SEAT),
     },
   ]
 
   const openItems: MenuItem[] = [
-    { type: 'item', label: 'Open file…', shortcut: `${modKey}+O`, onSelect: () => requestOpenProject() },
+    { type: 'item', label: t('toolbar.open.file'), shortcut: `${modKey}+O`, onSelect: () => requestOpenProject() },
     {
       type: 'item',
-      label: 'Import from remote git…',
+      label: t('toolbar.git.importRemote'),
       hint: !git
-        ? GIT_BROWSER_DISABLED_HINT
+        ? t(GIT_BROWSER_DISABLED_HINT)
         : gitProbe && !gitProbe.available
           ? gitProbe.error
-          : 'Clone a repository and open a project from it',
+          : t('toolbar.git.importHint'),
       disabled: !git || busy || (gitProbe !== null && !gitProbe.available),
       onSelect: () => openClone(),
     },
     { type: 'separator' },
-    { type: 'header', label: 'Recent projects' },
+    { type: 'header', label: t('toolbar.recent.header') },
     ...(recents.length > 0
       ? recents.map<MenuItem>((r) => {
           const label = r.title || r.name
@@ -283,37 +284,37 @@ export function Toolbar() {
           return {
             type: 'item',
             // The title when the project sets one, else the bare file name.
-            label: missing ? `${label} (not found)` : label,
+            label: missing ? t('toolbar.recent.missing', { label }) : label,
             // The path on hover is what tells two same-named projects apart.
-            hint: missing ? `Not found — ${where}` : `${label}\n${where}`,
+            hint: missing ? t('toolbar.recent.missingHint', { where }) : `${label}\n${where}`,
             disabled: missing,
             onSelect: () => requestOpenRecent(r.id),
             onRemove: () => forgetRecent(r.id),
-            removeTitle: 'Remove from recent projects',
+            removeTitle: t('toolbar.recent.remove'),
           }
         })
-      : [{ type: 'item', label: 'No recent files', disabled: true, onSelect: () => {} } as MenuItem]),
+      : [{ type: 'item', label: t('toolbar.recent.none'), disabled: true, onSelect: () => {} } as MenuItem]),
   ]
 
   // [impl->req~git-420~1]
   // [impl->req~git-430~1]
   // [impl->req~plt-62~1]
   const saveItems: MenuItem[] = [
-    { type: 'item', label: 'Save', shortcut: `${modKey}+S`, disabled: !project, onSelect: () => void save() },
+    { type: 'item', label: t('common.save'), shortcut: `${modKey}+S`, disabled: !project, onSelect: () => void save() },
     {
       type: 'item',
-      label: 'Save as…',
-      shortcut: `${modKey}+Shift+S`,
+      label: t('toolbar.save.saveAs'),
+      shortcut: t('toolbar.save.saveAsShortcut', { mod: modKey }),
       disabled: !project,
       onSelect: () => void saveAs(),
     },
     { type: 'separator' },
     {
       type: 'item',
-      label: `${autosaveEnabled ? '✓ ' : ''}Autosave every 5 minutes`,
+      label: `${autosaveEnabled ? '✓ ' : ''}${t('toolbar.save.autosave')}`,
       hint: autosaveEnabled
-        ? 'Unsaved changes are saved automatically every 5 minutes. Click to turn off.'
-        : 'Automatically save unsaved changes every 5 minutes, in addition to Ctrl+S.',
+        ? t('toolbar.save.autosaveOn')
+        : t('toolbar.save.autosaveOff'),
       onSelect: () => setAutosaveEnabled(!autosaveEnabled),
     },
   ]
@@ -333,8 +334,8 @@ export function Toolbar() {
           type="button"
           className="icon-btn"
           style={project ? undefined : { visibility: 'hidden' }}
-          title="Close project"
-          aria-label="Close project"
+          title={t('toolbar.close.title')}
+          aria-label={t('toolbar.close.title')}
           aria-hidden={!project}
           tabIndex={project ? undefined : -1}
           onClick={requestCloseProject}
@@ -346,16 +347,16 @@ export function Toolbar() {
         <button
           type="button"
           className="app-title"
-          title={`Settings (${modKey}+,)`}
-          aria-label="Settings"
+          title={t('toolbar.settings.title', { mod: modKey })}
+          aria-label={t('toolbar.settings.label')}
           onClick={() => setUserSettingsOpen(true)}
         >
           SaiLoR
         </button>
 
         <div className="toolbar-actions">
-          <Dropdown label="Open" title="Open a project" disabled={busy} items={openItems} />
-          <Dropdown label="Save" title="Save the project" disabled={busy} items={saveItems} />
+          <Dropdown label={t('toolbar.open.label')} title={t('toolbar.open.title')} disabled={busy} items={openItems} />
+          <Dropdown label={t('common.save')} title={t('toolbar.save.title')} disabled={busy} items={saveItems} />
           <span className="toolbar-sep" aria-hidden="true" />
           {/* Always rendered, disabled with an honest reason rather than hidden —
               the browser (no local git at all), the desktop with no git binary, the
@@ -390,15 +391,15 @@ export function Toolbar() {
             <div
               className={`reviewer-dropdown${reviewerUnset ? ' unselected' : ''}`}
               role="group"
-              aria-label="Reviewer"
+              aria-label={t('toolbar.reviewer.group')}
             >
-              {reviewerUnset && <span className="reviewer-switch-prompt">Pick a reviewer:</span>}
+              {reviewerUnset && <span className="reviewer-switch-prompt">{t('toolbar.reviewer.pickPrompt')}</span>}
               <Dropdown
                 className={`reviewer-dropdown-trigger${
                   currentReviewer === 'consolidation' ? ' is-consolidation' : ''
                 }`}
                 label={reviewerDropdownLabel}
-                title={reviewerUnset ? undefined : 'Switch reviewer'}
+                title={reviewerUnset ? undefined : t('toolbar.reviewer.switch')}
                 disabled={busy}
                 items={reviewerMenuItems}
               />
@@ -407,15 +408,15 @@ export function Toolbar() {
             <div
               className={`reviewer-switch${reviewerUnset ? ' unselected' : ''}`}
               role="group"
-              aria-label="Reviewer"
+              aria-label={t('toolbar.reviewer.group')}
             >
-              {reviewerUnset && <span className="reviewer-switch-prompt">Pick a reviewer:</span>}
+              {reviewerUnset && <span className="reviewer-switch-prompt">{t('toolbar.reviewer.pickPrompt')}</span>}
               {reviewerIds.map((rid) => (
                 <button
                   key={rid}
                   type="button"
                   className={`reviewer-btn${currentReviewer === rid ? ' active' : ''}`}
-                  title={`${project ? seatLabel(project, rid) : `Reviewer ${rid}`} — annotate independently; only you see this until Consolidation`}
+                  title={t('toolbar.reviewer.hint', { seat: project ? seatLabel(project, rid) : t('toolbar.reviewer.name', { n: rid }) })}
                   disabled={busy}
                   onClick={() => selectReviewer(rid)}
                 >
@@ -427,21 +428,21 @@ export function Toolbar() {
                 className={`reviewer-btn reviewer-btn-consolidation${
                   currentReviewer === 'consolidation' ? ' active' : ''
                 }`}
-                title="Consolidation — compare every reviewer's answers and record the final, agreed result. This is what the project's saved output actually contains."
+                title={t('toolbar.reviewer.consolidationHint')}
                 disabled={busy}
                 onClick={() => selectReviewer(CONSOLIDATION_SEAT)}
               >
-                Consolidation
+                {t('toolbar.reviewer.consolidation')}
               </button>
             </div>
           ))}
         {project && !editorOpen && (
           <label
             className="read-only-toggle"
-            title="View-only mode: look at the annotations without being able to change anything"
+            title={t('toolbar.readOnly.title')}
           >
             <input type="checkbox" checked={readOnly} onChange={(e) => setReadOnly(e.target.checked)} />
-            View only
+            {t('toolbar.readOnly.label')}
           </label>
         )}
       </div>
@@ -452,7 +453,7 @@ export function Toolbar() {
           {/* Always in the layout (even empty); `aria-live` carries it to a
               screen reader the same moment it becomes visible. */}
           <span className="save-status" role="status" aria-live="polite">
-            {showSaved ? 'Saved' : ''}
+            {showSaved ? t('toolbar.save.saved') : ''}
           </span>
         </div>
 
@@ -464,11 +465,11 @@ export function Toolbar() {
           <button
             type="button"
             className="toolbar-notice"
-            title="Changes parked in a stash — open Git to restore or delete them"
+            title={t('toolbar.stash.title')}
             onClick={() => void openGitPanel()}
             disabled={gitBtn.disabled}
           >
-            {ownStashes} stashed
+            {t('toolbar.stash.count', { count: ownStashes })}
           </button>
         )}
         {/* The repository already knows this, and until now only said so
@@ -479,11 +480,11 @@ export function Toolbar() {
           <button
             type="button"
             className="toolbar-warning"
-            title="Someone has pushed work you have not pulled yet — open Git to pull it"
+            title={t('toolbar.behind.title')}
             onClick={() => void openGitPanel()}
             disabled={gitBtn.disabled}
           >
-            ↓ {behind} to pull
+            {t('toolbar.behind.label', { count: behind })}
           </button>
         )}
         {/* Stays for as long as the project is open. The load-time banner is
@@ -494,10 +495,10 @@ export function Toolbar() {
           <button
             type="button"
             className="toolbar-warning"
-            title={`${corruptFiles.length === 1 ? 'One annotation file' : `${corruptFiles.length} annotation files`} could not be read — click for the list`}
+            title={tp('toolbar.corrupt.title', corruptFiles.length)}
             onClick={showCorruptFiles}
           >
-            ⚠ {corruptFiles.length} unreadable
+            {t('toolbar.corrupt.label', { count: corruptFiles.length })}
           </button>
         )}
 
@@ -507,14 +508,14 @@ export function Toolbar() {
             than hidden; `aiButtonState` owns the AI precedence, and a paper
             with no PDF is not one of those reasons — the dialog itself
             handles that case once opened. */}
-        <div className="toolbar-tools" role="group" aria-label="Review tools">
+        <div className="toolbar-tools" role="group" aria-label={t('toolbar.review.group')}>
           <button
             type="button"
             className="tb-btn"
             title={
               reviewerUnset
-                ? 'Pick a reviewer first — there is nothing to validate as "the reviewer" yet'
-                : "Check every paper's annotations against the schema"
+                ? t('toolbar.validate.pickReviewer')
+                : t('toolbar.validate.title')
             }
             onClick={runValidation}
             // Validation is about the annotations, so it means nothing while the
@@ -522,28 +523,28 @@ export function Toolbar() {
             disabled={!project || busy || editorOpen || reviewerUnset}
           >
             <Icon name="check" />
-            Validate
+            {t('toolbar.validate.label')}
           </button>
           {project?.aiEnabled && (
             <button
               type="button"
               className="tb-btn tb-btn-ai"
-              title={readOnly ? 'View-only mode — switch it off to run the AI' : aiBtn.title}
+              title={readOnly ? t('toolbar.readOnly.aiHint') : aiBtn.title}
               onClick={() => void openAiDialog()}
               disabled={aiBtn.disabled || readOnly}
             >
               <Icon name="spark" />
-              AI
+              {t('toolbar.ai.label')}
             </button>
           )}
         </div>
 
         <div className="toolbar-view">
-          <div className="font-controls" role="group" aria-label="Font size">
+          <div className="font-controls" role="group" aria-label={t('toolbar.font.group')}>
             <button
               type="button"
               className="icon-btn"
-              title={`Decrease app font size (${modKey}+Shift+-)`}
+              title={t('toolbar.font.decrease', { mod: modKey })}
               onClick={decreaseFont}
             >
               A−
@@ -551,7 +552,7 @@ export function Toolbar() {
             <button
               type="button"
               className="icon-btn"
-              title={`Reset app font size (${modKey}+Shift+0)`}
+              title={t('toolbar.font.reset', { mod: modKey })}
               onClick={resetFont}
             >
               A
@@ -559,7 +560,7 @@ export function Toolbar() {
             <button
               type="button"
               className="icon-btn"
-              title={`Increase app font size (${modKey}+Shift++)`}
+              title={t('toolbar.font.increase', { mod: modKey })}
               onClick={increaseFont}
             >
               A+
@@ -568,8 +569,8 @@ export function Toolbar() {
           <button
             type="button"
             className="icon-btn"
-            title={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
-            aria-label="Toggle theme"
+            title={theme === 'dark' ? t('toolbar.theme.toLight') : t('toolbar.theme.toDark')}
+            aria-label={t('toolbar.theme.toggle')}
             onClick={toggleTheme}
           >
             {theme === 'dark' ? '☀' : '☾'}
@@ -577,8 +578,8 @@ export function Toolbar() {
           <button
             type="button"
             className="icon-btn"
-            title="Help (F1)"
-            aria-label="Help"
+            title={t('toolbar.help.title')}
+            aria-label={t('toolbar.help.label')}
             onClick={() => setHelpOpen(true)}
           >
             ?
