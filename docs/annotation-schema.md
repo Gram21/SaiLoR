@@ -132,6 +132,26 @@ off, or reviewers dropped below 2), so re-enabling either restores the choice ra
 Written out only when `true`. A human may still open the AI's seat to look at or correct its work —
 the annotation panel notes when you are.
 
+**`config.strict`, `config.persons` and `config.assignments`: strict mode.** Optional. Strict mode
+gives each person only the papers assigned to them, on a fixed seat. It applies only to an
+annotation project with `config.reviewers` of at least `2`. See
+[§9 Strict mode](#strict-mode) for the full behavior.
+
+```jsonc
+"strict": true,
+"persons": [{ "id": "ann", "name": "Ann" }, { "id": "bob", "name": "Bob" }],
+"assignments": {
+  "smith2021": [{ "person": "ann", "seat": 1 }, { "person": "bob", "seat": 2 }]
+}
+```
+
+- `strict` is `true` or `false`. The app writes it only when it is `true`.
+- Each person needs a non-empty `id` and `name`. Ids and names must be unique.
+- `assignments` maps a paper id to a list of `{ "person", "seat" }` entries. A seat is a whole
+  number from `1`. One paper cannot assign the same seat or the same person twice.
+- If a key is not valid, the project does not open, and the error names the problem.
+- An assignment to a seat above `config.reviewers` stays in the file, but the app ignores it.
+
 **`protocol` — the review's own protocol.** Optional. A record of the research questions, the
 search that ran, and the criteria behind the review — kept *inside* the project file so a
 pre-registered protocol travels with the data it produced. Every part is optional:
@@ -959,6 +979,32 @@ What changes is that it becomes **invisible and excluded** for as long as the co
 Raise `config.reviewers` back to 3 (or higher) and Reviewer 3's tree — and their seat in the
 switch — reappears exactly as it was left. Treat lowering the count as *hiding* a reviewer's work,
 not discarding it; if you actually want it gone, that has to be done by hand.
+
+### Strict mode
+
+Strict mode is a workflow aid for a team. Set it up in the project editor's *Strict mode* section.
+There you add persons, assign them to papers and seats, and see the finished count of each person.
+
+**Warning:** Strict mode is a workflow aid, not security. Anyone can pick a different person or
+edit the files.
+
+When you open a strict mode project, the app asks *Who are you?*:
+
+- If you select a person, the paper list shows only the papers assigned to that person. The seat
+  is set for each paper, so the reviewer switch is not shown.
+- If you select *Manager*, you see all papers and all seats, including Consolidation.
+
+The app remembers the choice on this computer, for this project only. The toolbar shows
+*Working as* with the name.
+
+- *Switch person* opens the dialog again. It is available only when you have no unsaved changes.
+- *Finish* marks your seat as finished on all your assigned papers and saves the project. After
+  the save, only the Manager can remove the *finished* mark.
+
+Consolidation of a paper opens only when all assigned persons have finished their seat on that
+paper. Until then, the Consolidation seat lists the persons who have not finished. The Manager
+can select *Open anyway* and confirm, to open it earlier. This override lasts until the project
+is opened again.
 
 ### Validating
 
