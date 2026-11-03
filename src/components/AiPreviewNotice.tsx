@@ -1,12 +1,13 @@
 // [impl->req~llm-750~1]
+import { useT } from '../i18n'
 import '../styles/ai.css'
 
 /** Shown at the top of every AI window: the feature is not final yet. */
 export function AiPreviewNotice() {
+  const t = useT()
   return (
     <p className="ai-preview-notice" role="note">
-      <strong>Preview feature.</strong> AI support is still in development and may change or behave
-      unexpectedly. Check every proposal yourself before you apply it.
+      <strong>{t('ai.preview.title')}</strong> {t('ai.preview.text')}
     </p>
   )
 }

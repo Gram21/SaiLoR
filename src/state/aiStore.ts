@@ -1,6 +1,7 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { getPlatform } from '../platform'
+import { t, getLanguage } from '../i18n'
 import { useStore, currentTree, currentFinished, type AiBatchApplyResult } from './store'
 import { unansweredFields, type FieldTarget } from '../llm/fields'
 import { buildSystemPrompt, buildAgentSystemPrompt, buildUserText, buildUserPdfCaption, type Delivery } from '../llm/prompt'
@@ -441,12 +442,10 @@ const MIN_PAPER_TOKENS = 256
 const THINK_RESERVE = 4096
 
 export const AGENT_MIN_CONTEXT = 32_000
-const AGENT_CONTEXT_REASON = 'Agent mode needs a model with a context window of at least 32k tokens'
-const OLLAMA_CONTEXT_REASON =
-  "Set 'Context to use' for this model in the model settings (Ollama's default window is often only 4,096 tokens and would silently cut the paper)"
 // [impl->req~llm-741~1]
-export const LOCAL_TRUNCATED_MESSAGE =
-  "The local model cut off the start of the prompt because its context window is too small. Raise 'Context to use' in the model settings or use a shorter paper."
+export function localTruncatedMessage(): string {
+  return t('ai.error.localTruncated')
+}
 
 // [impl->req~llm-740~1]
 /**
@@ -462,7 +461,7 @@ export function fitForChat(cfg: LlmConfig, fixedText: string, paperText: string)
   if (budget === null) return { text: paperText }
   if (budget < MIN_PAPER_TOKENS) {
     throw new Error(
-      `The model's window (${cfg.contextTokens!.toLocaleString('en-US')} tokens) is too small for this schema/prompt; raise the context or use fewer examples.`,
+      t('ai.fit.windowTooSmall', { tokens: cfg.contextTokens!.toLocaleString(getLanguage()) }),
     )
   }
   const f = fitPaperText(paperText, budget)
@@ -473,10 +472,10 @@ export function fitForChat(cfg: LlmConfig, fixedText: string, paperText: string)
 // [impl->req~llm-740~1]
 /** The review note for a trimmed paper. */
 export function describeFit(model: string, fit: PaperFit): string {
-  const pages = fit.pagesKept <= 1 ? 'page 1' : `pages 1–${fit.pagesKept}`
+  const pages = fit.pagesKept <= 1 ? t('ai.fit.pageOne') : t('ai.fit.pageRange', { last: fit.pagesKept })
   return (
-    `Paper trimmed to fit ${model}'s input window: ${pages} of ${fit.pagesTotal} sent` +
-    (fit.droppedReferences ? ', references dropped' : '')
+    t('ai.fit.trimmed', { model, pages, total: fit.pagesTotal }) +
+    (fit.droppedReferences ? `, ${t('ai.fit.referencesDropped')}` : '')
   )
 }
 
@@ -488,18 +487,18 @@ function worseFit(a: PaperFit | undefined, b: PaperFit | undefined): PaperFit | 
 // [impl->req~llm-743~1]
 /** Why Agent mode cannot use this model, or null. Its tool results pile up in the window. */
 export function agentContextReason(cfg: Pick<LlmConfig, 'contextTokens'>): string | null {
-  return cfg.contextTokens !== undefined && cfg.contextTokens < AGENT_MIN_CONTEXT ? AGENT_CONTEXT_REASON : null
+  return cfg.contextTokens !== undefined && cfg.contextTokens < AGENT_MIN_CONTEXT ? t('ai.agent.contextReason') : null
 }
 
 // [impl->req~llm-741~1]
 // [impl->req~llm-743~1]
 /** Why a run with these models must not start, or null. */
 export function startBlocker(mode: AiMode, annotator: LlmConfig, judge?: LlmConfig | null): string | null {
-  if (annotator.provider === 'ollama' && !annotator.contextTokens) return OLLAMA_CONTEXT_REASON
+  if (annotator.provider === 'ollama' && !annotator.contextTokens) return t('ai.ollama.contextReason')
   if (mode !== 'agent') return null
   const own = agentContextReason(annotator)
   if (own) return own
-  return judge && agentContextReason(judge) ? `${AGENT_CONTEXT_REASON} (the judge model is too small)` : null
+  return judge && agentContextReason(judge) ? `${t('ai.agent.contextReason')} ${t('ai.agent.judgeTooSmall')}` : null
 }
 
 /** True when the model runs on this machine (app-managed, or a loopback server). */
@@ -510,9 +509,9 @@ export function isLocalModel(cfg: LlmConfig): boolean {
 // [impl->req~llm-741~1]
 /** Where a paper goes for this model, for the consent line. */
 export function destinationNote(cfg: LlmConfig): string {
-  if (isLocalModel(cfg)) return 'This model runs on your machine; nothing leaves it.'
+  if (isLocalModel(cfg)) return t('ai.dest.local')
   const host = cfg.systemOneFlavor === 'cloudflare' ? 'api.cloudflare.com' : hostOf(baseOf(cfg))
-  return `It leaves this machine and goes over the network to ${host}.`
+  return t('ai.dest.remote', { host })
 }
 
 function hostOf(url: string): string {
@@ -538,7 +537,7 @@ export async function ensureLocalModel(cfg: LlmConfig, onStarting: () => void): 
     await rt.start(id)
   } catch (err) {
     const msg = (err instanceof Error ? err.message : String(err)).replace(/^Error invoking remote method '[^']*': (Error: )?/, '')
-    throw new Error(`Could not start ${cfg.model || 'the local model'}: ${msg}`)
+    throw new Error(t('ai.local.couldNotStart', { model: cfg.model || t('ai.local.fallbackModel'), message: msg }))
   }
 }
 
@@ -1568,7 +1567,7 @@ export const useAiStore = create<AiState>()(
         if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
         const parsed = parseSystemOneResponse(SYSTEMONE_VERIFY_ASKED, safeJson(res.body))
         const p = parsed.probabilities.verify?.true
-        if (p === undefined) throw new Error('The provider answered, but the reply had no usable answer.')
+        if (p === undefined) throw new Error(t('ai.verify.noAnswer'))
         return `P(true) = ${p.toFixed(2)}`
       }
 
@@ -1584,14 +1583,9 @@ export const useAiStore = create<AiState>()(
       const text = extractText(config.provider, json).trim()
       if (!text) {
         if (wasTruncated(config.provider, json)) {
-          throw new Error(
-            `${PROVIDERS[config.provider].label} used its whole reply budget on internal ` +
-              'reasoning and never got to an answer. This model reasons more than most before ' +
-              'replying — if it keeps happening, try a lower reasoning-effort setting for this ' +
-              'model, if the provider offers one.',
-          )
+          throw new Error(t('ai.verify.reasoningBudget', { provider: PROVIDERS[config.provider].label }))
         }
-        throw new Error('The provider answered, but the reply was empty.')
+        throw new Error(t('ai.verify.empty'))
       }
       return text
     },
@@ -1659,7 +1653,7 @@ export const useAiStore = create<AiState>()(
       if (!isUsable(config)) {
         set((s) => {
           s.phase = 'error'
-          s.error = 'This target has no API key. Add one in the settings (gear icon).'
+          s.error = t('ai.error.noKey')
         })
         return
       }
@@ -1670,7 +1664,7 @@ export const useAiStore = create<AiState>()(
       if (mode === 'agent' && judgeId && (!judgeCfg || !isUsable(judgeCfg))) {
         set((s) => {
           s.phase = 'error'
-          s.error = 'The judge target has no API key. Add one in the settings (gear icon).'
+          s.error = t('ai.error.judgeNoKey')
         })
         return
       }
@@ -1688,7 +1682,7 @@ export const useAiStore = create<AiState>()(
       if (mode !== 'classify' && crossCheckId && (!crossCheckCfg || !isUsable(crossCheckCfg))) {
         set((s) => {
           s.phase = 'error'
-          s.error = 'The cross-check model has no API key. Add one in the settings (gear icon).'
+          s.error = t('ai.error.crossCheckNoKey')
         })
         return
       }
@@ -1708,7 +1702,7 @@ export const useAiStore = create<AiState>()(
       const callLlm: CallLlm = withRetry(getPlatform().callLlm, {
         onRetry: (info) => {
           set((s) => {
-            s.retryNotice = `Rate-limited, retrying in ${Math.ceil(info.delayMs / 1000)}s…`
+            s.retryNotice = t('ai.retry.rateLimited', { seconds: Math.ceil(info.delayMs / 1000) })
           })
         },
       })
@@ -1838,7 +1832,7 @@ export const useAiStore = create<AiState>()(
       const callLlm: CallLlm = withRetry(getPlatform().callLlm, {
         onRetry: (info) => {
           set((s) => {
-            s.retryNotice = `Rate-limited, retrying in ${Math.ceil(info.delayMs / 1000)}s…`
+            s.retryNotice = t('ai.retry.rateLimited', { seconds: Math.ceil(info.delayMs / 1000) })
           })
         },
       })
@@ -1912,9 +1906,9 @@ export const useAiStore = create<AiState>()(
     editRow: (index, raw) => {
       const project = useStore.getState().project
       const row = get().rows[index]
-      if (!project || !row) return 'This proposal is no longer available.'
+      if (!project || !row) return t('ai.edit.noProposal')
       const resolved = resolvePath(project.schema, row.suggestion.path, { maxUnboundedIndex: MAX_UNBOUNDED_INDEX })
-      if (!resolved) return 'This field no longer exists in the schema.'
+      if (!resolved) return t('ai.edit.noField')
       const result = coerce(resolved.def, raw)
       if (!result.ok) return result.reason
       set((s) => {
@@ -2136,15 +2130,11 @@ async function runOnePaperPrompt(
     // Distinguish "model proposed nothing" from "ran out of budget before
     // answering" — same empty text, different problem and fix.
     if (!extractedText.trim() && wasTruncated(config.provider, json)) {
-      throw new Error(
-        `${PROVIDERS[config.provider].label} used its whole reply budget on internal ` +
-          'reasoning and never got to an answer for this paper. If this keeps happening, try ' +
-          'a lower reasoning-effort setting for this model, if the provider offers one.',
-      )
+      throw new Error(t('ai.paper.reasoningBudget', { provider: PROVIDERS[config.provider].label }))
     }
     const parsed = parseChatResponse(config.provider, json, req)
     // Never use an answer given to a prompt the server cut the front off.
-    if (parsed.inputTruncated) throw new Error(LOCAL_TRUNCATED_MESSAGE)
+    if (parsed.inputTruncated) throw new Error(localTruncatedMessage())
     return { text: extractedText, usage: parsed.usage }
   }
 
@@ -2342,13 +2332,13 @@ async function runOnePaperClassify(
   const ineligible = targets.filter((t) => !systemOneEligible(t))
   const { plan, result } = await askSystemOne(config, paper, paperText, targets, callLlm, signal, setPhase)
 
-  const info = plan.notHandled.map((n) => `left to you: ${n.path} — ${n.reason}`)
+  const info = plan.notHandled.map((n) => t('ai.classify.leftToYou', { note: `${n.path} — ${n.reason}` }))
   if (plan.requests.length > 0 && plan.state.mode !== 'full') {
-    const window = systemOneProfileFor(config).contextTokens.toLocaleString('en-US')
+    const window = systemOneProfileFor(config).contextTokens.toLocaleString(getLanguage())
     info.push(
       plan.state.mode === 'abstract-only'
-        ? `${config.model} saw title + abstract only — its input window is ${window} tokens`
-        : `${config.model} saw the title, abstract and the start of the paper text only — its input window is ${window} tokens`,
+        ? t('ai.classify.sawAbstract', { model: config.model, window })
+        : t('ai.classify.sawStart', { model: config.model, window }),
     )
   }
   return {
@@ -2356,7 +2346,7 @@ async function runOnePaperClassify(
       fields: result.suggestions,
       skipped: [
         ...result.skipped,
-        ...ineligible.map((t) => ({ path: t.path, reason: 'not handled in Classify mode' })),
+        ...ineligible.map((target) => ({ path: target.path, reason: t('ai.classify.notHandled') })),
       ],
       rejected: [],
     },
@@ -2404,11 +2394,7 @@ async function runCrossCheck(
 }
 
 function scannedError(): Error & { scanned: true } {
-  const err = new Error(
-    'No text could be extracted from this PDF — it looks like a scan of a printed ' +
-      'paper. Switch this target to "Send the PDF itself" in the settings, if your ' +
-      'provider supports it.',
-  ) as Error & { scanned: true }
+  const err = new Error(t('ai.scan.noText')) as Error & { scanned: true }
   err.scanned = true
   return err
 }

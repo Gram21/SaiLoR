@@ -19,6 +19,7 @@ import type { LlmConfig } from '../llm/types'
 import { ComboBox } from './ComboBox'
 import { Spinner } from './Spinner'
 import { AiPreviewNotice } from './AiPreviewNotice'
+import { useT, t, tp, rich, type MessageKey, type PluralKey } from '../i18n'
 import '../styles/ai.css'
 
 /**
@@ -27,10 +28,9 @@ import '../styles/ai.css'
  * never start ticked (a wrongly excluded paper silently leaves the review).
  */
 
-const ENGINE_INFO: Record<ScreeningEngine, string> = {
-  prompt: 'A chat model reads the title and abstract against your protocol and replies with a decision, reason, quote and confidence.',
-  classify:
-    'A System One decision model answers two closed questions per paper (the decision, then the exclusion reason) with a calibrated probability. No written justification.',
+const ENGINE_INFO: Record<ScreeningEngine, MessageKey> = {
+  prompt: 'ai.screening.engine.prompt',
+  classify: 'ai.screening.engine.classify',
 }
 
 function modelOption(c: LlmConfig): { id: string; label: string } {
@@ -38,19 +38,19 @@ function modelOption(c: LlmConfig): { id: string; label: string } {
 }
 
 function allPapersWarning(count: number, local: boolean): string {
-  return (
-    `This sends ${count} paper${count === 1 ? '' : 's'} — one request per paper. Your provider charges ` +
-    'your API key for every request, so cost scales with the number of papers. Every paper’s title, ' +
-    `authors and abstract ${local ? 'stay on your machine' : 'leave this machine'}. You can cancel at any time and keep whatever has finished so far.`
-  )
+  return t('ai.screening.allWarning', {
+    papers: tp('ai.papers.count', count),
+    location: t(local ? 'ai.screening.stayLocal' : 'ai.screening.leaveLocal'),
+  })
 }
 
-function Notes({ label, items }: { label: string; items: ScreeningNote[] }) {
+function Notes({ summary, items }: { summary: PluralKey; items: ScreeningNote[] }) {
+  useT()
   if (items.length === 0) return null
   return (
     <details className="ai-notes ai-notes-rejected">
       <summary>
-        {items.length} paper{items.length === 1 ? '' : 's'} {label}
+        {tp(summary, items.length)}
       </summary>
       <ul className="ai-note-list">
         {items.map((e, i) => (
@@ -65,6 +65,7 @@ function Notes({ label, items }: { label: string; items: ScreeningNote[] }) {
 }
 
 export function AiScreeningDialog() {
+  const t = useT()
   const s = useAiScreeningStore()
   const configs = useAiStore((a) => a.configs)
   const modelSettingsOpen = useAiStore((a) => a.settingsOpen)
@@ -99,11 +100,11 @@ export function AiScreeningDialog() {
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Screen with AI"
+        aria-label={t('ai.screening.dialogTitle')}
       >
         <div className="modal-head">
-          <strong>Screen with AI</strong>
-          <button type="button" className="icon-btn" onClick={() => s.closeDialog()} title="Close" aria-label="Close">
+          <strong>{t('ai.screening.dialogTitle')}</strong>
+          <button type="button" className="icon-btn" onClick={() => s.closeDialog()} title={t('common.close')} aria-label={t('common.close')}>
             ×
           </button>
         </div>
@@ -112,20 +113,14 @@ export function AiScreeningDialog() {
           <AiPreviewNotice />
           {s.phase === 'setup' && (
             <>
-              <div className="ai-label">What</div>
+              <div className="ai-label">{t('ai.section.what')}</div>
               <p className="ai-scope">
-                {s.allPapers ? (
-                  <>
-                    Screening <strong>{s.candidates.length} undecided paper{s.candidates.length === 1 ? '' : 's'}</strong>.
-                  </>
-                ) : (
-                  <>
-                    Screening the current paper only: <strong>{currentPaper?.title ?? '—'}</strong>
-                  </>
-                )}
+                {s.allPapers
+                  ? rich('ai.screening.scopeAll', { papers: tp('ai.screening.undecided', s.candidates.length) })
+                  : rich('ai.screening.scopeCurrent', { title: currentPaper?.title ?? '—' })}
               </p>
               {!s.allPapers && !s.currentUndecided && (
-                <p className="ai-note">This paper already has a decision in this seat — nothing to propose.</p>
+                <p className="ai-note">{t('ai.screening.decided')}</p>
               )}
               <label className="ai-toggle-row">
                 <input
@@ -133,14 +128,14 @@ export function AiScreeningDialog() {
                   checked={s.allPapers}
                   onChange={(e) => (e.target.checked ? setPendingAll(true) : (s.setAllPapers(false), setPendingAll(false)))}
                 />
-                Screen all undecided papers
+                {t('ai.screening.allUndecided')}
               </label>
               {pendingAll && !s.allPapers && (
                 <div className="ai-confirm">
                   <p className="ai-note">{allPapersWarning(s.candidates.length, !!selected && isLocalModel(selected))}</p>
                   <div className="ai-foot">
                     <button type="button" onClick={() => setPendingAll(false)}>
-                      Current paper only
+                      {t('ai.action.currentOnly')}
                     </button>
                     <button
                       type="button"
@@ -151,29 +146,29 @@ export function AiScreeningDialog() {
                         setPendingAll(false)
                       }}
                     >
-                      Screen all {s.candidates.length} papers
+                      {t('ai.screening.screenAll', { count: s.candidates.length })}
                     </button>
                   </div>
                 </div>
               )}
               {s.allPapers && <p className="ai-note">{allPapersWarning(s.candidates.length, !!selected && isLocalModel(selected))}</p>}
               <p className="ai-note">
-                Papers without an abstract are read from the first pages of their PDF; with neither they are skipped.
+                {t('ai.screening.noAbstract')}
               </p>
 
               <div className="ai-label" id="ais-engine-label">
-                How
+                {t('ai.section.how')}
               </div>
               <div className="ai-mode-row" role="radiogroup" aria-labelledby="ais-engine-label">
                 <label>
                   <input type="radio" name="ais-engine" checked={s.engine === 'prompt'} onChange={() => s.setEngine('prompt')} />
-                  Prompt
+                  {t('ai.mode.prompt')}
                 </label>
                 <label
                   title={
                     configs.some((c) => c.provider === 'systemone')
                       ? undefined
-                      : 'Add a System One model in AI models settings to enable Classify.'
+                      : t('ai.screening.classifyHint')
                   }
                 >
                   <input
@@ -183,19 +178,19 @@ export function AiScreeningDialog() {
                     disabled={!configs.some((c) => c.provider === 'systemone')}
                     onChange={() => s.setEngine('classify')}
                   />
-                  Classify
+                  {t('ai.mode.classify')}
                 </label>
               </div>
-              <p className="ai-note">{ENGINE_INFO[s.engine]}</p>
+              <p className="ai-note">{t(ENGINE_INFO[s.engine])}</p>
 
               <div className="ai-label" id="ais-model-label">
-                Model
+                {t('ai.section.model')}
               </div>
               {pool.length === 0 ? (
                 <div className="ai-empty-configs">
-                  <p>No suitable AI model is set up yet.</p>
+                  <p>{t('ai.screening.noModel')}</p>
                   <button type="button" className="primary" onClick={openSettings}>
-                    Set up a model…
+                    {t('ai.action.setUp')}
                   </button>
                 </div>
               ) : (
@@ -207,7 +202,7 @@ export function AiScreeningDialog() {
                       if (id) s.selectConfig(id)
                     }}
                   />
-                  <button type="button" className="icon-btn" onClick={openSettings} title="AI models" aria-label="AI models">
+                  <button type="button" className="icon-btn" onClick={openSettings} title={t('ai.models.title')} aria-label={t('ai.models.title')}>
                     ⚙
                   </button>
                 </div>
@@ -215,34 +210,35 @@ export function AiScreeningDialog() {
 
               {s.targetSeat && project.reviewers > 1 && (
                 <p className="ai-note">
-                  Decisions go into <strong>{seatLabel(project, s.targetSeat)}</strong>.
+                  {rich('ai.screening.seat', { seat: seatLabel(project, s.targetSeat) })}
                 </p>
               )}
 
               <p className="ai-consent">
                 {selected ? (
-                  <>
-                    The title, authors and abstract (or an excerpt of the PDF) of {s.allPapers ? 'each paper' : 'this paper'} will be
-                    sent to <strong>{PROVIDERS[selected.provider].label}</strong> ({selected.model}). {destinationNote(selected)}{' '}
-                    Nothing is written into the project until you press Apply.
-                  </>
+                  rich('ai.screening.consent', {
+                    scope: t(s.allPapers ? 'ai.consent.scopeEach' : 'ai.consent.scopeThis'),
+                    provider: PROVIDERS[selected.provider].label,
+                    model: selected.model,
+                    destination: destinationNote(selected),
+                  })
                 ) : (
-                  'Nothing is sent until you choose a model and press Start.'
+                  t('ai.screening.nothingSent')
                 )}
               </p>
 
               {blocker && <p className="ai-note ai-error">{blocker}</p>}
 
               <details className="ai-prompt">
-                <summary>Options</summary>
+                <summary>{t('ai.options.summary')}</summary>
                 {s.allPapers && (
                   <div className="ai-target-row">
-                    <label htmlFor="ais-concurrency">Papers at once</label>
+                    <label htmlFor="ais-concurrency">{t('ai.concurrency.label')}</label>
                     <select
                       id="ais-concurrency"
                       value={s.concurrency}
                       onChange={(e) => s.setConcurrency(Number(e.target.value))}
-                      title="More at once is faster, but hits your provider's rate limits sooner."
+                      title={t('ai.screening.concurrencyTitle')}
                     >
                       {[1, 2, 3, 4].map((n) => (
                         <option key={n} value={n}>
@@ -253,7 +249,7 @@ export function AiScreeningDialog() {
                   </div>
                 )}
                 <div className="ai-target-row">
-                  <label htmlFor="ais-threshold">Pre-tick Includes at confidence ≥</label>
+                  <label htmlFor="ais-threshold">{t('ai.screening.threshold')}</label>
                   <input
                     id="ais-threshold"
                     type="number"
@@ -271,16 +267,16 @@ export function AiScreeningDialog() {
 
               <div className="ai-foot">
                 <button type="button" onClick={() => s.closeDialog()}>
-                  Close
+                  {t('common.close')}
                 </button>
                 <button
                   type="button"
                   className="primary"
                   disabled={!selected || scopeCount === 0 || !!blocker}
                   onClick={() => void s.run()}
-                  title={blocker ?? (!selected ? 'Choose a model first' : scopeCount === 0 ? 'No undecided paper in scope' : 'Send the request(s)')}
+                  title={blocker ?? (!selected ? t('ai.screening.chooseModel') : scopeCount === 0 ? t('ai.screening.noUndecided') : t('ai.screening.sendRequests'))}
                 >
-                  Start
+                  {t('ai.action.start')}
                 </button>
               </div>
             </>
@@ -290,15 +286,15 @@ export function AiScreeningDialog() {
             <>
               <div className="ai-running" role="status">
                 <Spinner />
-                <span className="ai-phase">{s.startNotice ?? 'Screening…'}</span>
+                <span className="ai-phase">{s.startNotice ?? t('ai.screening.running')}</span>
               </div>
               <p className="ai-note">
-                {s.done} of {s.total} done
+                {t('ai.screening.progress', { done: s.done, total: s.total })}
               </p>
               {s.retryNotice && <p className="ai-note ai-retry">{s.retryNotice}</p>}
               <div className="ai-foot">
-                <button type="button" onClick={() => s.cancel()} title="Stop; papers that finished stay available for review">
-                  Cancel
+                <button type="button" onClick={() => s.cancel()} title={t('ai.screening.cancelTitle')}>
+                  {t('common.cancel')}
                 </button>
               </div>
             </>
@@ -306,35 +302,32 @@ export function AiScreeningDialog() {
 
           {s.phase === 'review' && (
             <>
-              <Notes label="failed" items={s.errors} />
-              <Notes label="skipped" items={s.skipped} />
-              <Notes label="with notes" items={s.infos} />
+              <Notes summary="ai.runErrors.failed" items={s.errors} />
+              <Notes summary="ai.screening.skipped" items={s.skipped} />
+              <Notes summary="ai.screening.withNotes" items={s.infos} />
               {s.rows.length === 0 ? (
                 <>
-                  <p>The model proposed no decisions.</p>
+                  <p>{t('ai.screening.noDecisions')}</p>
                   <div className="ai-foot">
                     <button type="button" className="primary" onClick={() => s.closeDialog()}>
-                      Close
+                      {t('common.close')}
                     </button>
                   </div>
                 </>
               ) : (
                 <>
-                  <p className="ai-note">
-                    Exclude proposals never start ticked; Include proposals start ticked only at confidence ≥ {s.threshold}.
-                    A tick writes the decision only if the paper is still undecided.
-                  </p>
+                  <p className="ai-note">{t('ai.screening.explain', { threshold: s.threshold })}</p>
                   <div className="ai-review-head">
                     <div className="ai-select-all">
                       <button type="button" onClick={() => s.setAllChecked(true)}>
-                        Select all
+                        {t('ai.action.selectAll')}
                       </button>
                       <button type="button" onClick={() => s.setAllChecked(false)}>
-                        Select none
+                        {t('ai.action.selectNone')}
                       </button>
                     </div>
                     <span className="ai-count">
-                      {checked} of {s.rows.length} selected · {excludeCount} Exclude
+                      {t('ai.screening.excludeCount', { checked, total: s.rows.length, excluded: excludeCount })}
                     </span>
                   </div>
                   <div className="ai-table-wrap">
@@ -342,14 +335,14 @@ export function AiScreeningDialog() {
                       <thead>
                         <tr>
                           <th scope="col" className="ai-col-check">
-                            <span className="ai-sr-only">Apply</span>
+                            <span className="ai-sr-only">{t('common.apply')}</span>
                           </th>
-                          <th scope="col">Paper</th>
-                          <th scope="col">Proposed</th>
-                          <th scope="col">Justification</th>
-                          <th scope="col">Engine</th>
+                          <th scope="col">{t('ai.table.paper')}</th>
+                          <th scope="col">{t('ai.screening.proposed')}</th>
+                          <th scope="col">{t('ai.screening.justification')}</th>
+                          <th scope="col">{t('ai.screening.engine')}</th>
                           <th scope="col" className="ai-col-conf">
-                            Confidence
+                            {t('ai.table.confidence')}
                           </th>
                         </tr>
                       </thead>
@@ -361,7 +354,7 @@ export function AiScreeningDialog() {
                                 type="checkbox"
                                 checked={r.checked}
                                 onChange={() => s.toggleRow(r.paperId)}
-                                aria-label={`Apply ${r.proposal.decision} to ${r.paperTitle}`}
+                                aria-label={t('ai.screening.applyFor', { decision: r.proposal.decision, paper: r.paperTitle })}
                               />
                             </td>
                             <td>{r.paperTitle}</td>
@@ -379,7 +372,7 @@ export function AiScreeningDialog() {
                                 </div>
                               )}
                             </td>
-                            <td>{r.engine === 'classify' ? 'Classify' : 'Prompt'}</td>
+                            <td>{t(r.engine === 'classify' ? 'ai.mode.classify' : 'ai.mode.prompt')}</td>
                             <td className="ai-col-conf">
                               {r.proposal.confidence === null ? '—' : r.proposal.confidence.toFixed(2)}
                             </td>
@@ -390,22 +383,21 @@ export function AiScreeningDialog() {
                   </div>
                   {s.usage.calls > 0 && (
                     <p className="ai-note ai-usage">
-                      {s.usage.calls} request{s.usage.calls === 1 ? '' : 's'} · {s.usage.inputTokens} input / {s.usage.outputTokens}{' '}
-                      output tokens{s.cost !== null && ` · ≈ $${s.cost.toFixed(2)}`}
+                      {tp('ai.usage.requests', s.usage.calls)} · {t('ai.usage.tokens', { input: s.usage.inputTokens, output: s.usage.outputTokens })}{s.cost !== null && ` · ≈ $${s.cost.toFixed(2)}`}
                     </p>
                   )}
                   <div className="ai-foot">
-                    <button type="button" onClick={() => s.closeDialog()} title="Discard all proposals without applying them">
-                      Discard
+                    <button type="button" onClick={() => s.closeDialog()} title={t('ai.review.discardTitle')}>
+                      {t('ai.action.discard')}
                     </button>
                     <button
                       type="button"
                       className="primary"
                       disabled={checked === 0}
                       onClick={() => s.apply()}
-                      title={checked === 0 ? 'Select at least one proposal to apply' : `Apply ${checked} selected decision${checked === 1 ? '' : 's'}`}
+                      title={checked === 0 ? t('ai.review.applyNone') : tp('ai.screening.applyCount', checked)}
                     >
-                      Apply {checked}
+                      {t('ai.review.applyButton', { count: checked })}
                     </button>
                   </div>
                 </>
@@ -416,13 +408,13 @@ export function AiScreeningDialog() {
           {s.phase === 'applied' && s.applied && (
             <>
               <p>
-                Recorded {s.applied.written} decision{s.applied.written === 1 ? '' : 's'}, marked as AI-written.
-                {s.applied.skipped > 0 && ` ${s.applied.skipped} not written (already decided).`}
+                {tp('ai.screening.recorded', s.applied.written)}
+                {s.applied.skipped > 0 && ` ${t('ai.screening.notWritten', { count: s.applied.skipped })}`}
               </p>
-              <p className="ai-note">One undo step reverts the whole batch.</p>
+              <p className="ai-note">{t('ai.screening.undoOne')}</p>
               <div className="ai-foot">
                 <button type="button" className="primary" onClick={() => s.closeDialog()}>
-                  Close
+                  {t('common.close')}
                 </button>
               </div>
             </>

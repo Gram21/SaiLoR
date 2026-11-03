@@ -32,6 +32,7 @@ import type { ResolvedDef } from '../model/schema'
 import { ComboBox } from './ComboBox'
 import { Spinner } from './Spinner'
 import { AiPreviewNotice } from './AiPreviewNotice'
+import { useT, t, tp, rich, getLanguage, type MessageKey } from '../i18n'
 import '../styles/ai.css'
 
 /**
@@ -51,11 +52,12 @@ function pathLabel(raw: string): string {
 
 /** The model's value, as a reviewer reads it — a boolean is a tick, not the word "true". */
 function ValueCell({ value }: { value: FieldValue }) {
+  const t = useT()
   if (typeof value === 'boolean') {
     return (
-      <span className={value ? 'ai-bool yes' : 'ai-bool no'} title={value ? 'Yes' : 'No'}>
+      <span className={value ? 'ai-bool yes' : 'ai-bool no'} title={value ? t('ai.value.yes') : t('ai.value.no')}>
         {value ? '✓' : '✗'}
-        <span className="ai-sr-only">{value ? 'Yes' : 'No'}</span>
+        <span className="ai-sr-only">{value ? t('ai.value.yes') : t('ai.value.no')}</span>
       </span>
     )
   }
@@ -81,13 +83,14 @@ function EditControl({
   value: FieldValue
   onChange: (v: FieldValue) => void
 }) {
+  const t = useT()
   if (def?.type === 'boolean') {
     return (
       <input
         type="checkbox"
         checked={value === true}
         onChange={(e) => onChange(e.target.checked)}
-        aria-label="Edited value"
+        aria-label={t('ai.edit.value')}
       />
     )
   }
@@ -97,7 +100,7 @@ function EditControl({
         value={typeof value === 'string' ? value : null}
         options={def.options}
         onChange={(v) => onChange(v)}
-        ariaLabel="Edited value"
+        ariaLabel={t('ai.edit.value')}
       />
     )
   }
@@ -107,7 +110,7 @@ function EditControl({
         type="number"
         value={value === null || value === undefined ? '' : String(value)}
         onChange={(e) => onChange(e.target.value === '' ? null : Number(e.target.value))}
-        aria-label="Edited value"
+        aria-label={t('ai.edit.value')}
       />
     )
   }
@@ -116,7 +119,7 @@ function EditControl({
       type="text"
       value={value === null || value === undefined ? '' : String(value)}
       onChange={(e) => onChange(e.target.value)}
-      aria-label="Edited value"
+      aria-label={t('ai.edit.value')}
     />
   )
 }
@@ -175,13 +178,17 @@ function estimateLine(
   }
   const cost =
     mode === 'agent' && judgeCfg ? estimateCostSplit(est, selected, judgeCfg) : estimateCost(est, selected)
-  const tokens =
-    `Estimated${mode === 'classify' && systemOne.approx ? ' (≈, from the current paper’s fields)' : ''}: ~${est.low.inputTokens.toLocaleString()}–${est.high.inputTokens.toLocaleString()} input tokens, ` +
-    `~${est.low.outputTokens.toLocaleString()}–${est.high.outputTokens.toLocaleString()} output tokens, ` +
-    `${est.requests.low}–${est.requests.high} request${est.requests.high === 1 ? '' : 's'}`
+  const loc = getLanguage()
+  const tokens = t(mode === 'classify' && systemOne.approx ? 'ai.estimate.tokensApprox' : 'ai.estimate.tokens', {
+    inLow: est.low.inputTokens.toLocaleString(loc),
+    inHigh: est.high.inputTokens.toLocaleString(loc),
+    outLow: est.low.outputTokens.toLocaleString(loc),
+    outHigh: est.high.outputTokens.toLocaleString(loc),
+    requests: tp('ai.estimate.requests', est.requests.high, { range: `${est.requests.low}–${est.requests.high}` }),
+  })
   return cost
-    ? `${tokens} (≈ $${cost.low.toFixed(2)}–$${cost.high.toFixed(2)}). Rough estimate, not a quote.`
-    : `${tokens}. Add prices in AI models settings to see a cost estimate. Rough estimate, not a quote.`
+    ? t('ai.estimate.withCost', { tokens, low: `$${cost.low.toFixed(2)}`, high: `$${cost.high.toFixed(2)}` })
+    : t('ai.estimate.noCost', { tokens })
 }
 
 /** Mid-range tokens per extracted page, between cost.ts's low and high guesses. */
@@ -195,26 +202,20 @@ function trimHint(selected: LlmConfig, mode: AiMode, pages: number | undefined, 
   const budget = chatInputBudget(selected, { systemTokens: 2000 + fewShotTokens })
   if (budget === null || pages * TOKENS_PER_PAGE <= budget) return null
   const fit = Math.max(1, Math.floor(budget / TOKENS_PER_PAGE))
-  return `The current paper (${pages} pages) may be trimmed to fit ${selected.model}'s input window: roughly its first ${fit} pages would be sent.`
+  return t('ai.trim.hint', { pages, model: selected.model, fit })
 }
 
-const PHASE_LINE: Record<string, string> = {
-  starting: 'Starting local model…',
-  reading: 'Reading the PDF…',
-  parsing: 'Reading the answer…',
+const PHASE_LINE: Record<string, MessageKey> = {
+  starting: 'ai.phase.starting',
+  reading: 'ai.phase.reading',
+  parsing: 'ai.phase.parsing',
 }
 
 // [impl->req~llm-380~1]
-const MODE_INFO: Record<AiMode, string> = {
-  prompt: 'One request per paper: the model reads the paper once and proposes values.',
-  agent:
-    'The model searches and re-reads the paper with tools, may look things up on the web ' +
-    '(OpenAlex, Crossref, web pages the paper refers to), and a second AI pass (a judge) checks ' +
-    'every value — anything it flags is redone, up to 3 rounds. This takes considerably longer ' +
-    'and costs considerably more: typically 5–15 model requests per paper instead of one.',
-  classify:
-    'Fast and very cheap. Only yes/no and single-choice fields; returns a probability per ' +
-    'answer but no quotes from the paper — check each value yourself.',
+const MODE_INFO: Record<AiMode, MessageKey> = {
+  prompt: 'ai.mode.info.prompt',
+  agent: 'ai.mode.info.agent',
+  classify: 'ai.mode.info.classify',
 }
 
 /** A model with no price entered yet — shown next to a role picker so a blank
@@ -232,21 +233,18 @@ function modelOption(c: LlmConfig): { id: string; label: string } {
  *  accurate whichever mode is selected — shown both in the one-time confirmation
  *  and, once confirmed, as a standing reminder under the toggle. */
 function allPapersWarning(mode: AiMode, count: number, recheck: boolean, local: boolean): string {
-  const perPaper = mode === 'agent' ? 'many requests per paper' : 'one request per paper'
-  const time = mode === 'agent' ? 'several minutes per paper' : 'about a minute per paper'
-  const cost = mode === 'agent' ? ', several times higher than prompt mode' : ''
-  return (
-    `This sends ${count} paper${count === 1 ? '' : 's'} — ${perPaper}. Your provider charges ` +
-    `your API key for every request, so cost scales with the number of papers${cost}. Rough ` +
-    `estimate: ${time}. ${local ? "Every paper's content stays on your machine. " : "Every paper's content leaves this machine. "}` +
-    (recheck
-      ? "Re-check is on, so this includes papers you marked finished and adds a second request per paper. "
-      : '') +
-    'You can cancel at any time and keep whatever has finished so far.'
-  )
+  return t('ai.allPapers.warning', {
+    papers: tp('ai.papers.count', count),
+    perPaper: t(mode === 'agent' ? 'ai.allPapers.perPaper.agent' : 'ai.allPapers.perPaper.prompt'),
+    cost: mode === 'agent' ? `, ${t('ai.allPapers.costAgent')}` : '',
+    time: t(mode === 'agent' ? 'ai.allPapers.time.agent' : 'ai.allPapers.time.prompt'),
+    location: t(local ? 'ai.allPapers.local' : 'ai.allPapers.remote'),
+    recheck: recheck ? ` ${t('ai.allPapers.recheck')}` : '',
+  })
 }
 
 export function AiDialog() {
+  const t = useT()
   const open = useAiStore((s) => s.open)
   const minimized = useAiStore((s) => s.minimized)
   const configs = useAiStore((s) => s.configs)
@@ -382,9 +380,9 @@ export function AiDialog() {
         type="button"
         className="ai-peek-back"
         onClick={() => setMinimized(false)}
-        title="Reopen the AI review table"
+        title={t('ai.peek.reopenTitle')}
       >
-        ← Back to AI review
+        {t('ai.peek.back')}
       </button>
     )
   }
@@ -448,7 +446,7 @@ export function AiDialog() {
           { requests: Math.max(1, s1Plan?.requests.length ?? 1), approx: allPapers },
         )
       : scopePaperIds.some((id) => pageCountsLoading[id])
-        ? 'Estimating…'
+        ? t('ai.estimate.pending')
         : null
   const trimText =
     selected && currentPaper ? trimHint(selected, mode, pageCounts[currentPaper.id], fewShotTokens) : null
@@ -475,8 +473,8 @@ export function AiDialog() {
       type="button"
       className="icon-btn"
       onClick={() => setSettingsOpen(true)}
-      title="AI models"
-      aria-label="AI models"
+      title={t('ai.models.title')}
+      aria-label={t('ai.models.title')}
     >
       ⚙
     </button>
@@ -497,16 +495,16 @@ export function AiDialog() {
         onClick={(e) => e.stopPropagation()}
         role="dialog"
         aria-modal="true"
-        aria-label="Annotate with AI"
+        aria-label={t('ai.dialog.title')}
       >
         <div className="modal-head">
-          <strong>Annotate with AI</strong>
+          <strong>{t('ai.dialog.title')}</strong>
           <button
             type="button"
             className="icon-btn"
             onClick={() => closeDialog()}
-            title="Close"
-            aria-label="Close"
+            title={t('common.close')}
+            aria-label={t('common.close')}
           >
             ×
           </button>
@@ -519,25 +517,23 @@ export function AiDialog() {
               {resumeAvailable && (
                 <div className="ai-confirm">
                   <p className="ai-note">
-                    An all-papers run stopped after {resumeAvailable.doneIds.length} of{' '}
-                    {resumeAvailable.allPaperIds.length} papers (
-                    {new Date(resumeAvailable.startedAt).toLocaleString()}).
+                    {t('ai.resume.stopped', { done: resumeAvailable.doneIds.length, total: resumeAvailable.allPaperIds.length, date: new Date(resumeAvailable.startedAt).toLocaleString(getLanguage()) })}
                   </p>
                   <div className="ai-foot">
                     <button
                       type="button"
                       onClick={() => dismissResume()}
-                      title="Discard the saved progress and start over"
+                      title={t('ai.resume.discardTitle')}
                     >
-                      Discard
+                      {t('ai.action.discard')}
                     </button>
                     <button
                       type="button"
                       className="primary"
                       onClick={() => void resumeBatch()}
-                      title="Continue the saved run where it left off"
+                      title={t('ai.resume.resumeTitle')}
                     >
-                      Resume
+                      {t('ai.action.resume')}
                     </button>
                   </div>
                 </div>
@@ -545,35 +541,29 @@ export function AiDialog() {
 
               {configs.length === 0 && (
                 <div className="ai-empty-configs">
-                  <p>No AI model is set up yet.</p>
+                  <p>{t('ai.empty.noModel')}</p>
                   <button
                     type="button"
                     className="primary"
                     onClick={() => setSettingsOpen(true)}
-                    title="Open AI models settings to add one"
+                    title={t('ai.empty.setUpTitle')}
                   >
-                    Set up a model…
+                    {t('ai.action.setUp')}
                   </button>
                 </div>
               )}
 
               {/* What: scope (current paper vs. all papers) and which fields will be asked. */}
               <div className="ai-label" id="ai-what-label">
-                What
+                {t('ai.section.what')}
               </div>
               <p className="ai-scope">
-                {allPapers ? (
-                  <>
-                    Annotating <strong>{candidates.length} paper{candidates.length === 1 ? '' : 's'}</strong>.
-                  </>
-                ) : (
-                  <>
-                    Annotating the current paper only: <strong>{currentPaper?.title ?? '—'}</strong>
-                  </>
-                )}
+                {allPapers
+                  ? rich('ai.scope.all', { papers: tp('ai.papers.count', candidates.length) })
+                  : rich('ai.scope.current', { title: currentPaper?.title ?? '—' })}
               </p>
               {!allPapers && currentPaper && !currentPaperHasPdf && (
-                <p className="ai-note">This paper has no PDF — there is nothing to send.</p>
+                <p className="ai-note">{t('ai.scope.noPdf')}</p>
               )}
 
               <label className="ai-toggle-row">
@@ -582,15 +572,15 @@ export function AiDialog() {
                   checked={allPapers}
                   onChange={(e) => onToggleAllPapers(e.target.checked)}
                 />
-                Annotate all papers
+                {t('ai.toggle.allPapers')}
               </label>
 
               {pendingAllPapers && !allPapers && (
                 <div className="ai-confirm">
                   <p className="ai-note">{allPapersWarning(mode, candidates.length, recheck, !!selected && isLocalModel(selected))}</p>
                   <div className="ai-foot">
-                    <button type="button" onClick={() => setPendingAllPapers(false)} title="Keep annotating only the current paper">
-                      Current paper only
+                    <button type="button" onClick={() => setPendingAllPapers(false)} title={t('ai.allPapers.keepCurrentTitle')}>
+                      {t('ai.action.currentOnly')}
                     </button>
                     <button
                       type="button"
@@ -600,9 +590,9 @@ export function AiDialog() {
                         setPendingAllPapers(false)
                       }}
                       disabled={candidates.length === 0}
-                      title="Turn on all-papers annotation"
+                      title={t('ai.allPapers.enableTitle')}
                     >
-                      Annotate all {candidates.length} papers
+                      {t('ai.allPapers.annotateAll', { count: candidates.length })}
                     </button>
                   </div>
                 </div>
@@ -612,36 +602,34 @@ export function AiDialog() {
               <p className="ai-targets">
                 {targets.length === 0
                   ? recheck && answeredCount > 0
-                    ? 'Every field of this paper is already filled in — only the re-check will run.'
-                    : 'Every field of this paper is already filled in — there is nothing to propose.'
-                  : `${targets.length} empty field${targets.length === 1 ? '' : 's'} will be proposed.`}
+                    ? t('ai.targets.onlyRecheck')
+                    : t('ai.targets.none')
+                  : tp('ai.targets.count', targets.length)}
               </p>
 
               {targets.length > 0 && (
                 <details className="ai-prompt">
-                  <summary>Which fields will the AI fill in? ({targets.length})</summary>
+                  <summary>{t('ai.targets.summary', { count: targets.length })}</summary>
                   <p className="ai-note">
-                    Only these empty fields are sent to the AI; fields that already have a value
-                    are never touched.
-                    {allPapers &&
-                      ' In all-papers mode, each paper is asked only about its own empty fields — this is just the current paper’s list, as an example.'}
+                    {t('ai.targets.note')}
+                    {allPapers && ` ${t('ai.targets.allPapersNote')}`}
                   </p>
                   <ul className="ai-field-list">
-                    {targets.map((t) => (
-                      <li key={t.path}>
-                        <span className="ai-field-path">{pathLabel(t.path)}</span>
-                        <span className="ai-field-type">{t.def.type}</span>
-                        {t.def.options && t.def.options.length > 0 && (
+                    {targets.map((target) => (
+                      <li key={target.path}>
+                        <span className="ai-field-path">{pathLabel(target.path)}</span>
+                        <span className="ai-field-type">{target.def.type}</span>
+                        {target.def.options && target.def.options.length > 0 && (
                           <span className="ai-field-options">
-                            one of: {t.def.options.join(' · ')}
+                            {t('ai.targets.oneOf', { options: target.def.options.join(' · ') })}
                           </span>
                         )}
-                        {mode === 'classify' && !systemOneEligible(t) && (
-                          <span className="ai-note-reason">not handled in Classify mode</span>
+                        {mode === 'classify' && !systemOneEligible(target) && (
+                          <span className="ai-note-reason">{t('ai.classify.notHandled')}</span>
                         )}
-                        {notHandled.has(t.path) && (
+                        {notHandled.has(target.path) && (
                           <span className="ai-note-reason">
-                            not handled by {selected?.model}: {notHandled.get(t.path)}
+                            {t('ai.targets.notHandledBy', { model: selected?.model ?? '', reason: notHandled.get(target.path) ?? '' })}
                           </span>
                         )}
                       </li>
@@ -652,7 +640,7 @@ export function AiDialog() {
 
               {/* How: prompt / agent / classify. */}
               <div className="ai-label" id="ai-mode-label">
-                How
+                {t('ai.section.how')}
               </div>
               <div className="ai-mode-row" role="radiogroup" aria-labelledby="ai-mode-label">
                 <label>
@@ -662,7 +650,7 @@ export function AiDialog() {
                     checked={mode === 'prompt'}
                     onChange={() => setMode('prompt')}
                   />
-                  Prompt
+                  {t('ai.mode.prompt')}
                 </label>
                 <label title={agentReason ?? undefined}>
                   <input
@@ -672,12 +660,12 @@ export function AiDialog() {
                     disabled={!!agentReason}
                     onChange={() => setMode('agent')}
                   />
-                  Agent
+                  {t('ai.mode.agent')}
                 </label>
                 <label
                   title={
                     systemOneConfigs.length === 0
-                      ? 'Add a System One model in AI models settings to enable Classify mode.'
+                      ? t('ai.mode.classifyHint')
                       : undefined
                   }
                 >
@@ -688,18 +676,18 @@ export function AiDialog() {
                     disabled={systemOneConfigs.length === 0}
                     onChange={() => setMode('classify')}
                   />
-                  Classify
+                  {t('ai.mode.classify')}
                 </label>
               </div>
-              <p className="ai-note">{MODE_INFO[mode]}</p>
+              <p className="ai-note">{t(MODE_INFO[mode])}</p>
 
               {/* Models: assign a library model to each role. */}
               <div className="ai-label" id="ai-models-label">
-                Models
+                {t('ai.section.models')}
               </div>
 
               <div className="ai-label" id="ai-annotator-label">
-                Annotator
+                {t('ai.section.annotator')}
               </div>
               <div className="ai-target-row" role="group" aria-labelledby="ai-annotator-label">
                 <ComboBox
@@ -711,12 +699,12 @@ export function AiDialog() {
                 />
                 {gearButton}
               </div>
-              {priceHint(selected) && <p className="ai-note">no price set</p>}
+              {priceHint(selected) && <p className="ai-note">{t('ai.price.none')}</p>}
 
               {mode === 'agent' && (
                 <>
                   <div className="ai-label" id="ai-judge-label">
-                    Judge
+                    {t('ai.section.judge')}
                   </div>
                   <div className="ai-target-row" role="group" aria-labelledby="ai-judge-label">
                     <ComboBox
@@ -724,76 +712,76 @@ export function AiDialog() {
                       options={[
                         {
                           id: '',
-                          label: `Same as annotator${selected ? ` (${selected.name})` : ''}`,
+                          label: selected ? t('ai.judge.sameAsNamed', { name: selected.name }) : t('ai.judge.sameAs'),
                         },
                         ...chatConfigs.map(modelOption),
                       ]}
                       onChange={(id) => selectJudge(id || null)}
                     />
                   </div>
-                  <p className="ai-note">
-                    A different model — ideally a different provider or family — catches mistakes the
-                    annotator's own model is prone to repeat when it reviews itself. A cheaper model
-                    here keeps judge costs down.
-                  </p>
-                  {priceHint(judgeCfg) && <p className="ai-note">no price set</p>}
+                  <p className="ai-note">{t('ai.judge.note')}</p>
+                  {priceHint(judgeCfg) && <p className="ai-note">{t('ai.price.none')}</p>}
                 </>
               )}
 
               {mode !== 'classify' && systemOneConfigs.length > 0 && (
                 <>
                   <div className="ai-label" id="ai-crosscheck-label">
-                    Cross-check (optional)
+                    {t('ai.section.crossCheck')}
                   </div>
                   <div className="ai-target-row" role="group" aria-labelledby="ai-crosscheck-label">
                     <ComboBox
                       value={crossCheckId ?? ''}
-                      options={[{ id: '', label: 'None' }, ...systemOneConfigs.map(modelOption)]}
+                      options={[{ id: '', label: t('ai.crossCheck.none') }, ...systemOneConfigs.map(modelOption)]}
                       onChange={(id) => selectCrossCheck(id || null)}
                     />
                   </div>
-                  <p className="ai-note">
-                    Asks this System One model the same yes/no or single-choice fields
-                    independently and flags disagreements for review.
-                  </p>
-                  {priceHint(crossCheckCfg) && <p className="ai-note">no price set</p>}
+                  <p className="ai-note">{t('ai.crossCheck.note')}</p>
+                  {priceHint(crossCheckCfg) && <p className="ai-note">{t('ai.price.none')}</p>}
                 </>
               )}
 
               {aiSeat && project && (
                 <p className="ai-note">
-                  Answers go into the AI's own seat: <strong>{seatLabel(project, aiSeat)}</strong>.
+                  {rich('ai.seat.note', { seat: seatLabel(project, aiSeat) })}
                 </p>
               )}
 
               <p className="ai-consent">
                 {selected ? (
                   <>
-                    {mode === 'classify'
-                      ? `The title, abstract and extracted text of ${allPapers ? 'each paper' : 'this paper'} (truncated to fit) will be sent to `
-                      : deliveryOf(selected) === 'pdf'
-                        ? `This paper${allPapers ? "'s" : '’s'} PDF file will be sent to `
-                        : `The text of ${allPapers ? 'each paper' : 'this paper'} will be extracted and sent to `}
-                    <strong>{PROVIDERS[selected.provider].label}</strong> ({selected.model}).{' '}
-                    {destinationNote(selected)} Nothing is written into the project until you press Apply.
-                    {mode === 'agent' &&
-                      ' Agent mode may also send search terms or URLs chosen by the model to OpenAlex, Crossref, or other sites; these can contain short phrases from the paper, but never the paper file itself.'}
+                    {rich(
+                      mode === 'classify'
+                        ? 'ai.consent.classify'
+                        : deliveryOf(selected) === 'pdf'
+                          ? allPapers
+                            ? 'ai.consent.pdfEach'
+                            : 'ai.consent.pdfThis'
+                          : 'ai.consent.text',
+                      {
+                        scope: t(allPapers ? 'ai.consent.scopeEach' : 'ai.consent.scopeThis'),
+                        provider: PROVIDERS[selected.provider].label,
+                        model: selected.model,
+                        destination: destinationNote(selected),
+                      },
+                    )}
+                    {mode === 'agent' && ` ${t('ai.consent.agentSearch')}`}
                     {mode === 'agent' &&
                       judgeCfg &&
                       judgeCfg.provider !== selected.provider &&
-                      ` The judge's review is sent to ${PROVIDERS[judgeCfg.provider].label} (${judgeCfg.model}) as well — it also sees the paper.`}
+                      ` ${t('ai.consent.judge', { provider: PROVIDERS[judgeCfg.provider].label, model: judgeCfg.model })}`}
                     {webSearchOn &&
-                      ` Search queries chosen by the model are handled by ${PROVIDERS[selected.provider].label}.`}
+                      ` ${t('ai.consent.webSearch', { provider: PROVIDERS[selected.provider].label })}`}
                     {mode !== 'classify' &&
                       crossCheckCfg &&
-                      ` The cross-check fields are sent to ${PROVIDERS[crossCheckCfg.provider].label} (${crossCheckCfg.model}) as well.`}
+                      ` ${t('ai.consent.crossCheck', { provider: PROVIDERS[crossCheckCfg.provider].label, model: crossCheckCfg.model })}`}
                     {mode !== 'classify' &&
                       fewShot &&
                       fewShotAvailable > 0 &&
-                      ` …plus the annotations (and abstracts) of ${Math.min(fewShotCount, fewShotAvailable)} of your finished papers as examples.`}
+                      ` ${t('ai.consent.fewShot', { count: Math.min(fewShotCount, fewShotAvailable) })}`}
                   </>
                 ) : (
-                  'Nothing is sent until you choose an annotator model and press Start.'
+                  t('ai.consent.nothingSent')
                 )}
               </p>
 
@@ -803,7 +791,7 @@ export function AiDialog() {
 
               {/* Options: everything a run doesn't strictly need to choose. */}
               <details className="ai-prompt">
-                <summary>Options</summary>
+                <summary>{t('ai.options.summary')}</summary>
 
                 {mode !== 'classify' && (
                   <>
@@ -814,16 +802,14 @@ export function AiDialog() {
                         disabled={fewShotAvailable === 0}
                         onChange={(e) => setFewShot(e.target.checked)}
                       />
-                      Show the AI my finished papers as examples
+                      {t('ai.fewShot.toggle')}
                     </label>
                     <p className="ai-note">
-                      {fewShotAvailable === 0
-                        ? 'No finished papers are available yet as examples.'
-                        : `${fewShotAvailable} finished paper${fewShotAvailable === 1 ? '' : 's'} available.`}
+                      {fewShotAvailable === 0 ? t('ai.fewShot.none') : tp('ai.fewShot.available', fewShotAvailable)}
                     </p>
                     {fewShot && fewShotAvailable > 0 && (
                       <div className="ai-target-row">
-                        <label htmlFor="ai-fewshot-count">Show up to</label>
+                        <label htmlFor="ai-fewshot-count">{t('ai.fewShot.showUpTo')}</label>
                         <select
                           id="ai-fewshot-count"
                           value={fewShotCount}
@@ -847,12 +833,11 @@ export function AiDialog() {
                     disabled={mode !== 'prompt'}
                     onChange={(e) => setRecheck(e.target.checked)}
                   />
-                  Also re-check fields I've already filled
+                  {t('ai.recheck.toggle')}
                 </label>
                 <p className="ai-note">
-                  The AI double-checks values already entered in this seat and flags likely mistakes.
-                  Nothing is changed unless you tick a proposed replacement.
-                  {mode !== 'prompt' && ' Available in Prompt mode only.'}
+                  {t('ai.recheck.note')}
+                  {mode !== 'prompt' && ` ${t('ai.recheck.promptOnly')}`}
                 </p>
 
                 {mode === 'agent' && (
@@ -864,12 +849,12 @@ export function AiDialog() {
                         disabled={!webSearchSupported}
                         onChange={(e) => setWebSearch(e.target.checked)}
                       />
-                      Let the model search the web
+                      {t('ai.webSearch.toggle')}
                     </label>
                     <p className="ai-note">
                       {webSearchSupported
                         ? WEB_SEARCH_NOTE
-                        : "The selected model's provider has no built-in web search (supported: Anthropic, OpenRouter)"}
+                        : t('ai.webSearch.unsupported')}
                     </p>
                   </>
                 )}
@@ -881,24 +866,22 @@ export function AiDialog() {
                     disabled={!feedbackPossible}
                     onChange={(e) => setSaveFeedback(e.target.checked)}
                   />
-                  Save feedback about the annotation schema
+                  {t('ai.feedback.toggle')}
                 </label>
                 <p className="ai-note">
-                  Saves which fields the AI left empty, got flagged or that you corrected, plus the
-                  model's remarks on unclear field descriptions, to annotations/feedback/ in the
-                  project folder (field values only, no paper text) — useful for improving the schema.
+                  {t('ai.feedback.note')}
                   {!feedbackPossible &&
-                    (getPlatform().kind !== 'browser' ? ' Save the project first.' : ' Desktop app only.')}
+                    ` ${getPlatform().kind !== 'browser' ? t('ai.feedback.saveFirst') : t('ai.feedback.desktopOnly')}`}
                 </p>
 
                 {allPapers && (
                   <div className="ai-target-row">
-                    <label htmlFor="ai-concurrency">Papers at once</label>
+                    <label htmlFor="ai-concurrency">{t('ai.concurrency.label')}</label>
                     <select
                       id="ai-concurrency"
                       value={concurrency}
                       onChange={(e) => setConcurrency(Number(e.target.value))}
-                      title="More at once is faster, but hits your provider's rate limits sooner — retries back off automatically."
+                      title={t('ai.concurrency.title')}
                     >
                       {[1, 2, 3, 4].map((n) => (
                         <option key={n} value={n}>
@@ -911,7 +894,7 @@ export function AiDialog() {
 
                 {allPapers && (
                   <div className="ai-target-row">
-                    <label htmlFor="ai-spend-cap">Stop when spent exceeds $</label>
+                    <label htmlFor="ai-spend-cap">{t('ai.spendCap.label')}</label>
                     <input
                       id="ai-spend-cap"
                       type="number"
@@ -920,11 +903,11 @@ export function AiDialog() {
                       disabled={!capKnown}
                       value={spendCap ?? ''}
                       onChange={(e) => setSpendCap(e.target.value === '' ? null : Number(e.target.value))}
-                      placeholder={capKnown ? 'no limit' : 'set prices to enable'}
+                      placeholder={capKnown ? t('ai.spendCap.noLimit') : t('ai.spendCap.setPrices')}
                       title={
                         capKnown
-                          ? 'Stop starting new papers once the running cost estimate passes this amount.'
-                          : 'Add prices to the model(s) in AI models settings to enable a spending cap.'
+                          ? t('ai.spendCap.titleOn')
+                          : t('ai.spendCap.titleOff')
                       }
                     />
                   </div>
@@ -932,7 +915,7 @@ export function AiDialog() {
 
                 {(mode === 'classify' || crossCheckCfg) && (
                   <div className="ai-target-row">
-                    <label htmlFor="ai-threshold">Unticked below confidence</label>
+                    <label htmlFor="ai-threshold">{t('ai.threshold.label')}</label>
                     <input
                       id="ai-threshold"
                       type="number"
@@ -943,8 +926,8 @@ export function AiDialog() {
                       onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
                       title={
                         mode === 'classify'
-                          ? 'A classify-mode row below this probability starts unticked.'
-                          : 'A cross-check disagreement at or above this probability starts the row unticked.'
+                          ? t('ai.threshold.titleClassify')
+                          : t('ai.threshold.titleCross')
                       }
                     />
                   </div>
@@ -952,17 +935,17 @@ export function AiDialog() {
               </details>
 
               <div className="ai-foot">
-                <button type="button" onClick={() => closeDialog()} title="Cancel without sending anything">
-                  Cancel
+                <button type="button" onClick={() => closeDialog()} title={t('ai.setup.cancelTitle')}>
+                  {t('common.cancel')}
                 </button>
                 <button
                   type="button"
                   className="primary"
                   onClick={() => void run()}
                   disabled={!selected || !canStart}
-                  title={blocker ?? 'Send the paper(s) to the selected AI model'}
+                  title={blocker ?? t('ai.start.title')}
                 >
-                  Start
+                  {t('ai.action.start')}
                 </button>
               </div>
             </>
@@ -974,16 +957,16 @@ export function AiDialog() {
                 <Spinner />
                 <span className="ai-phase">
                   {phase === 'calling'
-                    ? `Waiting for ${selected?.model ?? 'the model'}…`
-                    : PHASE_LINE[phase]}
+                    ? t('ai.phase.calling', { model: selected?.model ?? t('ai.phase.theModel') })
+                    : t(PHASE_LINE[phase])}
                 </span>
                 <span className="ai-elapsed">{elapsed}s</span>
               </div>
               {batchTotal > 1 && (
                 <>
                   <p className="ai-note">
-                    {batchDone} of {batchTotal} papers done
-                    {capKnown && ` · $${spentSoFar.toFixed(2)} spent so far`}
+                    {t('ai.batch.progress', { done: batchDone, total: batchTotal })}
+                    {capKnown && ` · ${t('ai.batch.spent', { amount: `$${spentSoFar.toFixed(2)}` })}`}
                   </p>
                   {inFlightPapers.length > 0 && (
                     <ul className="ai-note-list ai-inflight-list">
@@ -993,9 +976,9 @@ export function AiDialog() {
                           <button
                             type="button"
                             onClick={() => skipPaper(p.id)}
-                            title="Skip this paper only — the rest of the batch keeps going, and this one stays eligible to run later"
+                            title={t('ai.inflight.skipTitle')}
                           >
-                            Skip
+                            {t('ai.action.skip')}
                           </button>
                         </li>
                       ))}
@@ -1011,13 +994,10 @@ export function AiDialog() {
                   ))}
                 </ul>
               )}
-              <p className="ai-note">
-                This can take a while, especially in agent mode or with many papers. You can
-                cancel at any time.
-              </p>
+              <p className="ai-note">{t('ai.running.hint')}</p>
               <div className="ai-foot">
-                <button type="button" onClick={() => cancel()} title="Cancel the request in progress">
-                  Cancel
+                <button type="button" onClick={() => cancel()} title={t('ai.running.cancelTitle')}>
+                  {t('common.cancel')}
                 </button>
               </div>
             </>
@@ -1030,10 +1010,9 @@ export function AiDialog() {
                   <button
                     type="button"
                     onClick={() => void resumeBatch()}
-                    title="Continue this run — the papers already done are kept"
+                    title={t('ai.review.continueTitle')}
                   >
-                    Continue with the remaining {batchTotal - batchDone} paper
-                    {batchTotal - batchDone === 1 ? '' : 's'}
+                    {tp('ai.review.continueRemaining', batchTotal - batchDone)}
                   </button>
                 </p>
               )}
@@ -1042,13 +1021,13 @@ export function AiDialog() {
 
               {rows.length === 0 && recheckRows.length === 0 ? (
                 <>
-                  <p>The model proposed no values.</p>
+                  <p>{t('ai.review.noValues')}</p>
                   <RunErrors errors={runErrors} />
                   {notes.map((n) => (
                     <ReviewNotes key={n.paperId} notes={n} />
                   ))}
                   <div className="ai-foot">
-                    <button type="button" className="primary" onClick={() => closeDialog()} title="Close this dialog">
+                    <button type="button" className="primary" onClick={() => closeDialog()} title={t('ai.dialog.closeTitle')}>
                       Close
                     </button>
                   </div>
@@ -1059,15 +1038,15 @@ export function AiDialog() {
                     <>
                       <div className="ai-review-head">
                         <div className="ai-select-all">
-                          <button type="button" onClick={() => setAllRows(true)} title="Select all proposed rows">
-                            Select all
+                          <button type="button" onClick={() => setAllRows(true)} title={t('ai.review.selectAllTitle')}>
+                            {t('ai.action.selectAll')}
                           </button>
-                          <button type="button" onClick={() => setAllRows(false)} title="Deselect all proposed rows">
-                            Select none
+                          <button type="button" onClick={() => setAllRows(false)} title={t('ai.review.selectNoneTitle')}>
+                            {t('ai.action.selectNone')}
                           </button>
                         </div>
                         <span className="ai-count">
-                          {checkedCount} of {rows.length} selected
+                          {t('ai.review.selected', { checked: checkedCount, total: rows.length })}
                         </span>
                       </div>
 
@@ -1075,17 +1054,12 @@ export function AiDialog() {
 
                       {spendCapHit && (
                         <p className="ai-note ai-cap-hit">
-                          Stopped at the spending limit (${spentSoFar.toFixed(2)} spent).
+                          {t('ai.spendCap.hit', { amount: `$${spentSoFar.toFixed(2)}` })}
                         </p>
                       )}
 
                       {attentionRows.length > 0 && (
-                        <p className="ai-note">
-                          {attentionRows.length} row{attentionRows.length === 1 ? '' : 's'} start
-                          {attentionRows.length === 1 ? 's' : ''} unticked: low confidence, flagged by
-                          the judge, the cross-check disagrees, or the value came from a web search
-                          whose quote is unchecked.
-                        </p>
+                        <p className="ai-note">{tp('ai.review.attention', attentionRows.length)}</p>
                       )}
                       <label className="ai-toggle-row">
                         <input
@@ -1094,7 +1068,7 @@ export function AiDialog() {
                           disabled={attentionRows.length === 0}
                           onChange={(e) => setAttentionOnly(e.target.checked)}
                         />
-                        Show only rows that need attention
+                        {t('ai.review.attentionOnly')}
                       </label>
 
                       <ReviewTable
@@ -1123,17 +1097,15 @@ export function AiDialog() {
 
                   {(usage.calls > 0 || usage.inputTokens > 0 || usage.outputTokens > 0) && (
                     <p className="ai-note ai-usage">
-                      {usage.calls} request{usage.calls === 1 ? '' : 's'} · {usage.inputTokens} input
-                      / {usage.outputTokens} output tokens
-                      {totalWebSearches > 0 &&
-                        ` · ${totalWebSearches} web search${totalWebSearches === 1 ? '' : 'es'}`}
+                      {tp('ai.usage.requests', usage.calls)} · {t('ai.usage.tokens', { input: usage.inputTokens, output: usage.outputTokens })}
+                      {totalWebSearches > 0 && ` · ${tp('ai.usage.webSearches', totalWebSearches)}`}
                       {capKnown && ` · ≈ $${spentSoFar.toFixed(2)}`}
                     </p>
                   )}
 
                   <div className="ai-foot">
-                    <button type="button" onClick={() => discardBatch()} title="Discard all proposals without applying them">
-                      Discard
+                    <button type="button" onClick={() => discardBatch()} title={t('ai.review.discardTitle')}>
+                      {t('ai.action.discard')}
                     </button>
                     <button
                       type="button"
@@ -1142,11 +1114,11 @@ export function AiDialog() {
                       disabled={applyCount === 0}
                       title={
                         applyCount === 0
-                          ? 'Select at least one proposal to apply'
-                          : `Apply ${applyCount} selected proposal${applyCount === 1 ? '' : 's'}`
+                          ? t('ai.review.applyNone')
+                          : tp('ai.review.applyCount', applyCount)
                       }
                     >
-                      Apply {applyCount}
+                      {t('ai.review.applyButton', { count: applyCount })}
                     </button>
                   </div>
                 </>
@@ -1157,32 +1129,26 @@ export function AiDialog() {
           {phase === 'applied' && applied && (
             <>
               <p>
-                Filled {applied.filled - (applied.replaced ?? 0)} field
-                {applied.filled - (applied.replaced ?? 0) === 1 ? '' : 's'}
-                {applied.replaced ? `, replaced ${applied.replaced} answer${applied.replaced === 1 ? '' : 's'}` : ''} in{' '}
-                {applied.papers} paper{applied.papers === 1 ? '' : 's'}.
-                {applied.skipped > 0 && ` ${applied.skipped} were skipped.`}
+                {t('ai.applied.summary', {
+                  fields: tp('ai.applied.fields', applied.filled - (applied.replaced ?? 0)),
+                  replaced: applied.replaced ? `, ${tp('ai.applied.replaced', applied.replaced)}` : '',
+                  papers: tp('ai.papers.count', applied.papers),
+                })}
+                {applied.skipped > 0 && ` ${t('ai.applied.skipped', { count: applied.skipped })}`}
               </p>
               {applied.skipped > 0 && (
-                <p className="ai-note">
-                  A proposal is skipped when it was left unchecked, the field is no longer empty
-                  (or, for a replacement, was changed since the check), or its path no longer
-                  exists in the schema.
-                </p>
+                <p className="ai-note">{t('ai.applied.skipNote')}</p>
               )}
-              <p className="ai-note">
-                Everything was written as a single change: <kbd>Ctrl</kbd>/<kbd>Cmd</kbd>+
-                <kbd>Z</kbd> undoes the whole fill in one step.
-              </p>
+              <p className="ai-note">{rich('ai.applied.undo')}</p>
               {feedbackResult && (
                 <p className="ai-note">
                   {'path' in feedbackResult
-                    ? `Feedback saved to ${feedbackResult.path}`
-                    : `Couldn't save feedback: ${feedbackResult.error}`}
+                    ? t('ai.feedback.saved', { path: feedbackResult.path })
+                    : t('ai.feedback.failed', { error: feedbackResult.error })}
                 </p>
               )}
               <div className="ai-foot">
-                <button type="button" className="primary" onClick={() => closeDialog()} title="Close this dialog">
+                <button type="button" className="primary" onClick={() => closeDialog()} title={t('ai.dialog.closeTitle')}>
                   Close
                 </button>
               </div>
@@ -1191,15 +1157,12 @@ export function AiDialog() {
 
           {phase === 'error' && (
             <>
-              <p className="ai-error">{error ?? 'Something went wrong.'}</p>
-              <p className="ai-note">
-                Nothing was written to the project. If the model’s key, model name or URL is wrong,
-                fix it in AI models settings and try again.
-              </p>
+              <p className="ai-error">{error ?? t('ai.error.generic')}</p>
+              <p className="ai-note">{t('ai.error.nothingWritten')}</p>
               <div className="ai-foot">
                 {gearButton}
                 <span className="ai-foot-gap" />
-                <button type="button" onClick={() => closeDialog()} title="Close this dialog">
+                <button type="button" onClick={() => closeDialog()} title={t('ai.dialog.closeTitle')}>
                   Close
                 </button>
                 {!scanned && (
@@ -1208,9 +1171,9 @@ export function AiDialog() {
                     className="primary"
                     onClick={() => void run()}
                     disabled={!selected || !canStart}
-                    title="Retry sending the paper to the selected AI model"
+                    title={t('ai.error.retryTitle')}
                   >
-                    Try again
+                    {t('ai.action.tryAgain')}
                   </button>
                 )}
               </div>
@@ -1223,11 +1186,12 @@ export function AiDialog() {
 }
 
 function RunErrors({ errors }: { errors: { paperId: string; paperTitle: string; message: string }[] }) {
+  useT()
   if (errors.length === 0) return null
   return (
     <details className="ai-notes ai-notes-rejected">
       <summary>
-        {errors.length} paper{errors.length === 1 ? '' : 's'} failed
+        {tp('ai.runErrors.failed', errors.length)}
       </summary>
       <ul className="ai-note-list">
         {errors.map((e) => (
@@ -1245,20 +1209,19 @@ function RunErrors({ errors }: { errors: { paperId: string; paperTitle: string; 
 /** Papers the reviewer skipped mid-batch (REQ-LLM-590) — not a failure, just
  *  a note that they're still eligible for a later run/resume. */
 function SkippedPapers({ papers }: { papers: PaperSkip[] }) {
+  useT()
   if (papers.length === 0) return null
   return (
-    <p className="ai-note">
-      {papers.length} paper{papers.length === 1 ? '' : 's'} skipped — eligible to run again with
-      "annotate all papers" or Resume.
-    </p>
+    <p className="ai-note">{tp('ai.skipped.summary', papers.length)}</p>
   )
 }
 
 // [impl->req~llm-410~1]
 function JudgeCell({ row }: { row: ReviewRow }) {
+  const t = useT()
   const judge = row.suggestion.judge
   if (!judge) return <span className="ai-dash">—</span>
-  const label = judge.verdict === 'accept' ? 'Accepted' : judge.verdict === 'revise' ? 'Needs revision' : 'Rejected'
+  const label = judge.verdict === 'accept' ? t('ai.judge.accepted') : judge.verdict === 'revise' ? t('ai.judge.revise') : t('ai.judge.rejected')
   return (
     <>
       <span className={`ai-judge-verdict ai-judge-${judge.verdict}`}>{label}</span>
@@ -1299,6 +1262,7 @@ function ReviewTable({
   onEvidenceClick: (row: ReviewRow) => void
   onEdit: (index: number, raw: unknown) => string | null
 }) {
+  const t = useT()
   // Group rows by paper, preserving first-seen order — the run processes
   // papers in that order, so this reads the same as the progress line did.
   const order: string[] = []
@@ -1339,16 +1303,16 @@ function ReviewTable({
         <thead>
           <tr>
             <th scope="col" className="ai-col-check">
-              <span className="ai-sr-only">Apply</span>
+              <span className="ai-sr-only">{t('common.apply')}</span>
             </th>
-            <th scope="col">Field</th>
-            <th scope="col">Proposed value</th>
-            <th scope="col">Evidence</th>
-            {mode === 'agent' && <th scope="col">Source</th>}
-            {mode === 'agent' && <th scope="col">Check</th>}
-            {hasCrossCheck && <th scope="col">Cross-check</th>}
+            <th scope="col">{t('ai.table.field')}</th>
+            <th scope="col">{t('ai.table.proposed')}</th>
+            <th scope="col">{t('ai.table.evidence')}</th>
+            {mode === 'agent' && <th scope="col">{t('ai.table.source')}</th>}
+            {mode === 'agent' && <th scope="col">{t('ai.table.check')}</th>}
+            {hasCrossCheck && <th scope="col">{t('ai.table.crossCheck')}</th>}
             <th scope="col" className="ai-col-conf">
-              Confidence
+              {t('ai.table.confidence')}
             </th>
           </tr>
         </thead>
@@ -1380,7 +1344,7 @@ function ReviewTable({
                           type="checkbox"
                           checked={row.checked}
                           onChange={(e) => onToggle(i, e.target.checked)}
-                          aria-label={`Apply the proposal for ${label}`}
+                          aria-label={t('ai.table.applyFor', { field: label })}
                         />
                       </td>
                       <th scope="row" className="ai-field">
@@ -1395,11 +1359,11 @@ function ReviewTable({
                               onChange={setDraft}
                             />
                             <div className="ai-edit-actions">
-                              <button type="button" onClick={() => saveEdit(i)} title="Save this edited value">
-                                Save
+                              <button type="button" onClick={() => saveEdit(i)} title={t('ai.edit.saveTitle')}>
+                                {t('common.save')}
                               </button>
-                              <button type="button" onClick={cancelEdit} title="Discard this edit">
-                                Cancel
+                              <button type="button" onClick={cancelEdit} title={t('ai.edit.discardTitle')}>
+                                {t('common.cancel')}
                               </button>
                             </div>
                             {editError && <div className="ai-note-reason ai-edit-error">{editError}</div>}
@@ -1409,16 +1373,16 @@ function ReviewTable({
                             <ValueCell value={row.edited && row.editedValue !== undefined ? row.editedValue : row.suggestion.value} />
                             {row.edited && (
                               <div className="ai-note-reason">
-                                edited · AI proposed: <ValueCell value={row.suggestion.value} />
+                                {t('ai.edit.edited')} <ValueCell value={row.suggestion.value} />
                               </div>
                             )}
                             <button
                               type="button"
                               className="ai-edit-btn"
                               onClick={() => startEdit(i, row)}
-                              title="Edit this proposed value before applying"
+                              title={t('ai.edit.title')}
                             >
-                              Edit
+                              {t('common.edit')}
                             </button>
                           </>
                         )}
@@ -1430,7 +1394,7 @@ function ReviewTable({
                               type="button"
                               className="ai-evidence-link"
                               onClick={() => onEvidenceClick(row)}
-                              title="Show this passage in the PDF"
+                              title={t('ai.evidence.show')}
                             >
                               <q>{row.suggestion.evidence}</q>
                             </button>
@@ -1439,7 +1403,7 @@ function ReviewTable({
                           )
                         ) : (
                           <span className="ai-dash">
-                            {row.suggestion.source === 'system-one' ? 'no quote (System One)' : 'no quote given'}
+                            {row.suggestion.source === 'system-one' ? t('ai.evidence.noQuoteSystemOne') : t('ai.evidence.none')}
                           </span>
                         )}
                       </td>
@@ -1448,11 +1412,11 @@ function ReviewTable({
                           {row.suggestion.source && row.suggestion.source !== 'paper' ? (
                             row.suggestion.source
                           ) : (
-                            <span className="ai-dash">paper</span>
+                            <span className="ai-dash">{t('ai.source.paper')}</span>
                           )}
                           {row.suggestion.webUnverified && (
                             <div>
-                              <span className="ai-judge-verdict ai-judge-revise">web · quote unchecked</span>
+                              <span className="ai-judge-verdict ai-judge-revise">{t('ai.source.webUnverified')}</span>
                             </div>
                           )}
                         </td>
@@ -1471,7 +1435,7 @@ function ReviewTable({
                               </span>
                             ) : (
                               <span className="ai-judge-verdict ai-judge-reject">
-                                classifier says {String(row.crossCheck.s1Value)}, p={row.crossCheck.p.toFixed(2)}
+                                {t('ai.crossCheck.says', { value: String(row.crossCheck.s1Value), p: row.crossCheck.p.toFixed(2) })}
                               </span>
                             )
                           ) : (
@@ -1507,6 +1471,7 @@ function RecheckSection({
   onToggle: (index: number, checked: boolean) => void
   onEvidenceClick: (row: RecheckRow) => void
 }) {
+  const t = useT()
   if (rows.length === 0) return null
   const indexed = rows.map((r, i) => ({ r, i }))
   const disagree = indexed.filter(({ r }) => r.outcome.verdict === 'disagree')
@@ -1515,29 +1480,26 @@ function RecheckSection({
   const papers = new Set(rows.map((r) => r.paperId)).size
   return (
     <section className="ai-recheck">
-      <strong>Re-check of existing answers</strong>
-      <p className="ai-note">
-        The AI double-checked values already entered in this seat. Nothing is overwritten unless
-        you tick a proposed replacement — replacements start unticked.
-      </p>
+      <strong>{t('ai.recheck.heading')}</strong>
+      <p className="ai-note">{t('ai.recheck.explain')}</p>
       {disagree.length === 0 ? (
-        <p className="ai-note">The AI found no answer it disagrees with.</p>
+        <p className="ai-note">{t('ai.recheck.noneDisagree')}</p>
       ) : (
         <div className="ai-table-wrap">
           <table className="ai-table">
             <thead>
               <tr>
                 <th scope="col" className="ai-col-check">
-                  <span className="ai-sr-only">Replace</span>
+                  <span className="ai-sr-only">{t('ai.recheck.replace')}</span>
                 </th>
-                {papers > 1 && <th scope="col">Paper</th>}
-                <th scope="col">Field</th>
-                <th scope="col">Current value</th>
-                <th scope="col">AI proposes</th>
-                <th scope="col">Reason</th>
-                <th scope="col">Evidence</th>
+                {papers > 1 && <th scope="col">{t('ai.table.paper')}</th>}
+                <th scope="col">{t('ai.table.field')}</th>
+                <th scope="col">{t('ai.table.current')}</th>
+                <th scope="col">{t('ai.table.aiProposes')}</th>
+                <th scope="col">{t('ai.table.reason')}</th>
+                <th scope="col">{t('ai.table.evidence')}</th>
                 <th scope="col" className="ai-col-conf">
-                  Confidence
+                  {t('ai.table.confidence')}
                 </th>
               </tr>
             </thead>
@@ -1551,7 +1513,7 @@ function RecheckSection({
                         type="checkbox"
                         checked={r.checked}
                         onChange={(e) => onToggle(i, e.target.checked)}
-                        aria-label={`Replace the current answer for ${label}`}
+                        aria-label={t('ai.recheck.replaceFor', { field: label })}
                       />
                     </td>
                     {papers > 1 && <td>{r.paperTitle}</td>}
@@ -1570,7 +1532,7 @@ function RecheckSection({
                         type="button"
                         className="ai-evidence-link"
                         onClick={() => onEvidenceClick(r)}
-                        title="Show this passage in the PDF"
+                        title={t('ai.evidence.show')}
                       >
                         <q>{r.outcome.evidence}</q>
                       </button>
@@ -1586,7 +1548,7 @@ function RecheckSection({
       {rest.length > 0 && (
         <details className="ai-notes">
           <summary>
-            {agreed} answer{agreed === 1 ? '' : 's'} confirmed, {rest.length - agreed} unsure
+            {t('ai.recheck.summary', { confirmed: tp('ai.recheck.confirmedCount', agreed), unsure: rest.length - agreed })}
           </summary>
           <ul className="ai-note-list">
             {rest.map(({ r, i }) => (
@@ -1596,7 +1558,7 @@ function RecheckSection({
                   {pathLabel(r.outcome.path)}
                 </span>
                 <span className="ai-note-reason">
-                  {r.outcome.verdict === 'agree' ? 'confirmed' : 'unsure'}
+                  {r.outcome.verdict === 'agree' ? t('ai.recheck.verdictConfirmed') : t('ai.recheck.verdictUnsure')}
                   {r.outcome.reason ? ` — ${r.outcome.reason}` : ''}
                 </span>
               </li>
@@ -1615,6 +1577,7 @@ function RecheckSection({
  * something the app refused to write.
  */
 function ReviewNotes({ notes }: { notes: PaperNotes }) {
+  const t = useT()
   return (
     <>
       {notes.info?.map((m, i) => (
@@ -1625,8 +1588,7 @@ function ReviewNotes({ notes }: { notes: PaperNotes }) {
       {notes.skipped.length > 0 && (
         <details className="ai-notes">
           <summary>
-            {notes.paperTitle}: the model left {notes.skipped.length} field
-            {notes.skipped.length === 1 ? '' : 's'} empty
+            {tp('ai.notes.skipped', notes.skipped.length, { title: notes.paperTitle })}
           </summary>
           <ul className="ai-note-list">
             {notes.skipped.map((s, i) => (
@@ -1642,11 +1604,10 @@ function ReviewNotes({ notes }: { notes: PaperNotes }) {
       {notes.rejected.length > 0 && (
         <details className="ai-notes ai-notes-rejected">
           <summary>
-            {notes.paperTitle}: {notes.rejected.length} proposal
-            {notes.rejected.length === 1 ? ' was' : 's were'} rejected
+            {tp('ai.notes.rejected', notes.rejected.length, { title: notes.paperTitle })}
           </summary>
           <p className="ai-note">
-            These came back from the model but did not fit the schema, so they were never offered.
+            {t('ai.notes.rejectedNote')}
           </p>
           <ul className="ai-note-list">
             {notes.rejected.map((r, i) => (

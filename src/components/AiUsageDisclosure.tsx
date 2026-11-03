@@ -6,6 +6,7 @@
 import type { AiUsageRecord, Project } from '../model/project'
 import { seatLabel } from '../model/project'
 import { PROVIDERS } from '../llm/providers'
+import { useT, tp, getLanguage } from '../i18n'
 
 function providerLabel(id: string): string {
   return (PROVIDERS as Record<string, { label: string } | undefined>)[id]?.label ?? id
@@ -24,34 +25,35 @@ interface Props {
  * seat filtering (`AnnotationPanel.tsx`'s `relevantAiUsage`).
  */
 export function AiUsageDisclosure({ project, records }: Props) {
+  const t = useT()
   if (records.length === 0) return null
   return (
     <details className="ai-usage-disclosure">
-      <summary>✦ AI-assisted ({records.length}×)</summary>
+      <summary>{t('ai.usageDisclosure.summary', { count: records.length })}</summary>
       <ul>
         {records.map((r, i) => (
           <li key={i}>
-            {new Date(r.appliedAt).toLocaleString()} — {r.mode ?? 'prompt'} — {providerLabel(r.provider)} · {r.model}
+            {new Date(r.appliedAt).toLocaleString(getLanguage())} — {r.mode ?? 'prompt'} — {providerLabel(r.provider)} · {r.model}
             {r.judge && (
               <>
-                {' '}— judge {providerLabel(r.judge.provider)} · {r.judge.model}
+                {' '}— {t('ai.usageDisclosure.judge', { provider: providerLabel(r.judge.provider), model: r.judge.model })}
               </>
             )}
-            {typeof r.rounds === 'number' && <> — {r.rounds} round{r.rounds === 1 ? '' : 's'}</>}
+            {typeof r.rounds === 'number' && <> — {tp('ai.usageDisclosure.rounds', r.rounds)}</>}
             {r.verdicts && (
               <>
-                {' '}— {r.verdicts.accept} accepted, {r.verdicts.revise} revised, {r.verdicts.reject} rejected
+                {' '}— {t('ai.usageDisclosure.verdicts', { accepted: r.verdicts.accept, revised: r.verdicts.revise, rejected: r.verdicts.reject })}
               </>
             )}
             {typeof r.fewShot === 'number' && r.fewShot > 0 && (
-              <> — {r.fewShot} example{r.fewShot === 1 ? '' : 's'}</>
+              <> — {tp('ai.usageDisclosure.examples', r.fewShot)}</>
             )}
             {typeof r.edited === 'number' && r.edited > 0 && (
-              <> — {r.edited} edited</>
+              <> — {t('ai.usageDisclosure.edited', { count: r.edited })}</>
             )}
-            {typeof r.rechecked === 'number' && r.rechecked > 0 && <> — {r.rechecked} replaced</>}
+            {typeof r.rechecked === 'number' && r.rechecked > 0 && <> — {t('ai.usageDisclosure.replaced', { count: r.rechecked })}</>}
             {typeof r.webSearches === 'number' && r.webSearches > 0 && (
-              <> — {r.webSearches} web search{r.webSearches === 1 ? '' : 'es'}</>
+              <> — {tp('ai.usage.webSearches', r.webSearches)}</>
             )}
             {r.reviewer && <> — {seatLabel(project, r.reviewer)}</>}
           </li>

@@ -3,6 +3,7 @@
 import { create } from 'zustand'
 import { immer } from 'zustand/middleware/immer'
 import { getPlatform } from '../platform'
+import { t } from '../i18n'
 import { useStore, currentTree } from './store'
 import {
   useAiStore,
@@ -10,7 +11,7 @@ import {
   ensureLocalModel,
   fitForChat,
   startBlocker,
-  LOCAL_TRUNCATED_MESSAGE,
+  localTruncatedMessage,
 } from './aiStore'
 import { withRetry, runPool, type CallLlm } from '../llm/retry'
 import { buildRequest, extractText, extractError, wasTruncated } from '../llm/providers'
@@ -272,7 +273,7 @@ export const useAiScreeningStore = create<ScreeningAiState>()(
       const callLlm: CallLlm = withRetry(getPlatform().callLlm, {
         onRetry: (info) =>
           set((s) => {
-            s.retryNotice = `Rate-limited, retrying in ${Math.ceil(info.delayMs / 1000)}s…`
+            s.retryNotice = t('ai.retry.rateLimited', { seconds: Math.ceil(info.delayMs / 1000) })
           }),
       })
       const note = (p: Paper, message: string): ScreeningNote => ({ paperId: p.id, paperTitle: p.title, message })
@@ -300,10 +301,10 @@ export const useAiScreeningStore = create<ScreeningAiState>()(
             const text = await screeningText(paper)
             if (stale() || ctrl.signal.aborted) return
             if (!text) {
-              set((s) => { s.skipped.push(note(paper, 'no abstract')) })
+              set((s) => { s.skipped.push(note(paper, t('ai.screening.noAbstractSkip'))) })
               return
             }
-            const onStarting = () => set((s) => { s.startNotice = 'Starting local model…' })
+            const onStarting = () => set((s) => { s.startNotice = t('ai.phase.starting') })
             const { outcome, usage, notes } =
               engine === 'classify'
                 ? await classifyOne(config, paper, text, reasons, protocol, callLlm, ctrl.signal, onStarting)
@@ -315,7 +316,7 @@ export const useAiScreeningStore = create<ScreeningAiState>()(
               s.usage.calls++
               s.usage.inputTokens += usage.inputTokens
               s.usage.outputTokens += usage.outputTokens
-              if (!outcome.ok) s.errors.push(note(paper, `Proposal rejected: ${outcome.reason}`))
+              if (!outcome.ok) s.errors.push(note(paper, t('ai.screening.rejected', { reason: outcome.reason })))
               else {
                 s.rows.push({
                   paperId: paper.id,
@@ -436,11 +437,11 @@ async function promptOne(
   const json = safeJson(res.body)
   const reply = extractText(config.provider, json)
   if (!reply.trim()) {
-    throw new Error(wasTruncated(config.provider, json) ? 'The model ran out of reply budget before answering.' : 'The model sent an empty reply.')
+    throw new Error(wasTruncated(config.provider, json) ? t('ai.screening.budget') : t('ai.screening.empty'))
   }
   const parsed = parseChatResponse(config.provider, json, req)
   // Never use an answer given to a prompt the server cut the front off.
-  if (parsed.inputTruncated) throw new Error(LOCAL_TRUNCATED_MESSAGE)
+  if (parsed.inputTruncated) throw new Error(localTruncatedMessage())
   return {
     outcome: parseScreeningAnswer(reply, reasons),
     usage: parsed.usage,
@@ -463,7 +464,7 @@ async function classifyOne(
   await ensureLocalModel(config, onStarting)
   const res = await callLlm(request, signal)
   if (!res.ok) throw new Error(extractError(config.provider, res.status, res.body))
-  return { ...parseScreeningSystemOne(asked, safeJson(res.body)), notes: notes.map((n) => `left to you: ${n.replace(': ', ' — ')}`) }
+  return { ...parseScreeningSystemOne(asked, safeJson(res.body)), notes: notes.map((n) => t('ai.classify.leftToYou', { note: n.replace(': ', ' — ') })) }
 }
 
 function readStr(key: string): string | null {
