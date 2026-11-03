@@ -211,6 +211,39 @@ const FA: &[(&str, &str)] = &[
 ];
 
 // [impl->req~plt-400~1]
+/// Chinese (Simplified) texts of the native menu labels and the About dialog.
+const ZH: &[(&str, &str)] = &[
+    ("File", "文件"),
+    ("Edit", "编辑"),
+    ("View", "显示"),
+    ("Window", "窗口"),
+    ("Help", "帮助"),
+    ("Settings…", "设置…"),
+    ("Close project", "关闭项目"),
+    ("Quit", "退出"),
+    ("Quit SaiLoR", "退出 SaiLoR"),
+    ("Undo", "撤销"),
+    ("Redo", "重做"),
+    ("Cut", "剪切"),
+    ("Copy", "拷贝"),
+    ("Paste", "粘贴"),
+    ("Select All", "全选"),
+    ("Reload", "重新加载"),
+    ("Full Screen", "进入全屏幕"),
+    ("Minimize", "最小化"),
+    ("Maximize/Restore", "最大化/还原"),
+    ("Zoom", "缩放"),
+    ("Close", "关闭"),
+    ("Close Window", "关闭窗口"),
+    ("Services", "服务"),
+    ("Hide SaiLoR", "隐藏 SaiLoR"),
+    ("Hide Others", "隐藏其他"),
+    ("Project on GitHub", "GitHub 上的项目"),
+    ("About SaiLoR", "关于 SaiLoR"),
+    ("Version", "版本"),
+];
+
+// [impl->req~plt-400~1]
 /// The menu tables by UI language code. English needs no table.
 const TABLES: &[(&str, &[(&str, &str)])] = &[
     ("de", DE),
@@ -219,6 +252,7 @@ const TABLES: &[(&str, &[(&str, &str)])] = &[
     ("ja", JA),
     ("es", ES),
     ("fa", FA),
+    ("zh", ZH),
 ];
 
 // [impl->req~plt-400~1]

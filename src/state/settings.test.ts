@@ -139,6 +139,8 @@ describe('autosave', () => {
 describe('language', () => {
   it.each([
     ['de-AT', 'de'],
+    ['zh-CN', 'zh'],
+    ['zh-TW', 'zh'],
     ['fa-IR', 'fa'],
     ['es-MX', 'es'],
     ['it-CH', 'it'],
