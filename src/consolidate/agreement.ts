@@ -1,7 +1,8 @@
 import type { Project } from '../model/project'
 import type { MetricInput, Ratings } from './metrics'
-import { projectVerdicts } from './disagreements'
+import { projectVerdicts, type FieldVerdict } from './disagreements'
 import { SCREENING_DECISION } from '../screening/schema'
+import { isRepeatable } from './align'
 
 /**
  * Reduces a project down to the opaque `raters`/`units` shape `metrics.ts`
@@ -25,6 +26,13 @@ export interface AgreementInput {
    * apart from every other field.
    */
   perField: FieldAgreement[]
+  /**
+   * One unit per entry of a repeatable node on one paper, pooled per node. A
+   * reviewer's category is every sub-field answer they gave under that entry,
+   * so two reviewers agree on an entry only when all its sub-fields agree.
+   * Kept apart from `input` so flat-field coefficients never change.
+   */
+  perEntry: FieldAgreement[]
 }
 
 /** One schema field's own slice of the agreement input. */
@@ -76,7 +84,8 @@ export function agreementInput(project: Project): AgreementInput {
   // be a lie here.
   const decisionOnly = project.screening !== null
 
-  for (const verdict of projectVerdicts(project)) {
+  const verdicts = projectVerdicts(project)
+  for (const verdict of verdicts) {
     if (decisionOnly && !(verdict.path.length === 0 && verdict.name === SCREENING_DECISION)) continue
 
     if (verdict.answeredBy.length < 2) {
@@ -97,12 +106,50 @@ export function agreementInput(project: Project): AgreementInput {
     bucket.units.push(ratings)
   }
 
-  const perField: FieldAgreement[] = [...perFieldUnits.entries()].map(([key, { label, units: u }]) => ({
+  const toAgreement = ([key, { label, units: u }]: [string, { label: string; units: Ratings[] }]): FieldAgreement => ({
     key,
     label,
     input: { raters, units: u },
     unitCount: u.length,
-  }))
+  })
+  const perField = [...perFieldUnits.entries()].map(toAgreement)
 
-  return { input: { raters, units }, unitCount: units.length, skipped, perField }
+  const perEntry = [...entryUnits(project.schema, decisionOnly ? [] : verdicts, raters).entries()].map(toAgreement)
+
+  return { input: { raters, units }, unitCount: units.length, skipped, perField, perEntry }
+}
+
+function entryUnits(schema: Project['schema'], verdicts: FieldVerdict[], raters: string[]) {
+  const entries = new Map<string, { key: string; label: string; answers: Record<string, string[]> }>()
+  for (const verdict of verdicts) {
+    let level = schema
+    verdict.path.forEach((seg, k) => {
+      const def = level.find((d) => d.name === seg.name)
+      level = def?.children ?? []
+      if (!def || !isRepeatable(def)) return
+      const names = verdict.path.slice(0, k + 1).map((s) => s.name)
+      const id = JSON.stringify([verdict.paperId, verdict.path.slice(0, k + 1)])
+      let entry = entries.get(id)
+      if (!entry) {
+        entry = { key: names.join('/'), label: names.join(' › '), answers: {} }
+        entries.set(id, entry)
+      }
+      const suffix = [...verdict.path.slice(k + 1).map((s) => s.name), verdict.name].join('/')
+      for (const r of verdict.answeredBy) (entry.answers[r] ??= []).push(`${suffix}=${verdict.categories[r]}`)
+    })
+  }
+
+  const buckets = new Map<string, { label: string; units: Ratings[] }>()
+  for (const { key, label, answers } of entries.values()) {
+    const ratings: Ratings = {}
+    for (const r of raters) ratings[r] = answers[r] ? JSON.stringify([...answers[r]].sort()) : null
+    if (raters.filter((r) => ratings[r] !== null).length < 2) continue
+    let bucket = buckets.get(key)
+    if (!bucket) {
+      bucket = { label, units: [] }
+      buckets.set(key, bucket)
+    }
+    bucket.units.push(ratings)
+  }
+  return buckets
 }

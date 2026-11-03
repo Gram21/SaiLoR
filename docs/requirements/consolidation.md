@@ -290,3 +290,9 @@ for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/consolidate/disagreements.ts` (`onlyIn`), `src/components/DisagreementOverview.tsx`, `src/components/ConsolidationDialog.tsx`, `src/consolidate/disagreements.test.ts`, `src/components/ConsolidationDialog.test.tsx`
 - **Status:** Implemented
+
+### REQ-CON-440: Compute agreement per repeated entry
+- **Description:** The system shall compute agreement per sub-field and per entry of a repeatable node. An entry counts as one unit when at least two reviewers recorded an answer in it. Two reviewers agree on an entry only when all their sub-field answers in that entry agree. Per-entry units shall not change the pooled or per-field values. Entry order shall not change any agreement value. The agreement dialog shall show a "Per entry" table.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/consolidate/agreement.ts` (`perEntry`), `src/components/AgreementDialog.tsx`, `src/consolidate/agreement.test.ts`, `src/consolidate/agreement.property.test.ts`, `src/components/AgreementDialog.test.tsx`
+- **Status:** Implemented
