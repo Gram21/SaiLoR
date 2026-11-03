@@ -46,7 +46,7 @@ import { MergeBranchPrompt } from './components/MergeBranchPrompt'
 import { DeleteBranchPrompt } from './components/DeleteBranchPrompt'
 import { GitHistoryDialog } from './components/GitHistoryDialog'
 import { shortenPath } from './platform/recents'
-import { Splitter } from './components/Splitter'
+import { Splitter, offsetFromStart } from './components/Splitter'
 import { useKeybindings } from './hooks/useKeybindings'
 import { useDirtyGuard } from './hooks/useDirtyGuard'
 import { useCloseGuard } from './hooks/useCloseGuard'
@@ -162,12 +162,12 @@ export function App() {
   const resizeLeft = (clientX: number) => {
     const rect = workspaceRef.current?.getBoundingClientRect()
     if (!rect) return
-    setPanes((p) => ({ ...p, left: clamp(clientX - rect.left, PANE_LEFT_MIN, PANE_LEFT_MAX) }))
+    setPanes((p) => ({ ...p, left: clamp(offsetFromStart(clientX, rect), PANE_LEFT_MIN, PANE_LEFT_MAX) }))
   }
   const resizeRight = (clientX: number) => {
     const rect = workspaceRef.current?.getBoundingClientRect()
     if (!rect) return
-    setPanes((p) => ({ ...p, right: clamp(rect.right - clientX, PANE_RIGHT_MIN, PANE_RIGHT_MAX) }))
+    setPanes((p) => ({ ...p, right: clamp(rect.width - offsetFromStart(clientX, rect), PANE_RIGHT_MIN, PANE_RIGHT_MAX) }))
   }
 
   // Build the grid template from the current pane widths.

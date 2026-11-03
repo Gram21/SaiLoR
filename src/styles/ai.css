@@ -56,7 +56,7 @@
   margin: 14px 0;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  border-inline-start: 3px solid var(--accent);
   border-radius: 8px;
   background: var(--accent-weak);
   color: var(--text);
@@ -94,7 +94,7 @@
   margin: 8px 0;
   padding: 8px 12px;
   border: 1px solid var(--border);
-  border-left: 3px solid var(--danger);
+  border-inline-start: 3px solid var(--danger);
   border-radius: 8px;
   background: var(--bg);
 }
@@ -132,7 +132,7 @@
 }
 
 .ai-usage {
-  text-align: right;
+  text-align: end;
 }
 
 .ai-note {
@@ -216,7 +216,7 @@
   font-size: 1.05rem;
 }
 .ai-elapsed {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
 }
@@ -234,7 +234,7 @@
   gap: 6px;
 }
 .ai-count {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--muted);
   font-size: 0.85rem;
 }
@@ -254,7 +254,7 @@
 .ai-table th,
 .ai-table td {
   padding: 8px 10px;
-  text-align: left;
+  text-align: start;
   vertical-align: top;
   border-bottom: 1px solid var(--border);
 }
@@ -283,7 +283,7 @@
 .ai-col-conf {
   width: 1%;
   white-space: nowrap;
-  text-align: right;
+  text-align: end;
   font-variant-numeric: tabular-nums;
 }
 
@@ -369,7 +369,7 @@
   border-top: 1px solid var(--border);
 }
 .ai-foot-gap {
-  margin-right: auto;
+  margin-inline-end: auto;
 }
 
 /* --- LLM settings dialog -------------------------------------------------- */
@@ -518,7 +518,7 @@
 }
 .model-picker-status {
   position: absolute;
-  right: 8px;
+  inset-inline-end: 8px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--muted);
@@ -644,7 +644,7 @@
   padding: 0;
   font: inherit;
   color: inherit;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 .ai-evidence-link:hover q {
@@ -655,7 +655,7 @@
    `minimized` in aiStore. */
 .ai-peek-back {
   position: fixed;
-  right: 16px;
+  inset-inline-end: 16px;
   bottom: 16px;
   z-index: 250;
   padding: 8px 14px;
@@ -680,7 +680,7 @@
   margin: 0 0 12px;
   padding: 8px 10px;
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  border-inline-start: 3px solid var(--accent);
   border-radius: 4px;
   font-size: 0.85rem;
   line-height: 1.45;

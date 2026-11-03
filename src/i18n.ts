@@ -28,9 +28,18 @@ export const LANGUAGE_NAMES: Record<Language, string> = {
   ja: '日本語',
 }
 
+const RTL: ReadonlySet<string> = new Set(['fa'])
+
 let current: Language = loadLanguage()
 const listeners = new Set<() => void>()
-if (typeof document !== 'undefined') document.documentElement.lang = current
+
+// [impl->req~ui-140~1]
+function applyToDocument(lang: Language): void {
+  if (typeof document === 'undefined') return
+  document.documentElement.lang = lang
+  document.documentElement.dir = RTL.has(lang) ? 'rtl' : 'ltr'
+}
+applyToDocument(current)
 
 export function getLanguage(): Language {
   return current
@@ -41,7 +50,7 @@ export function setLanguage(lang: Language): void {
   saveLanguage(lang)
   if (lang === current) return
   current = lang
-  if (typeof document !== 'undefined') document.documentElement.lang = lang
+  applyToDocument(lang)
   for (const listener of listeners) listener()
 }
 

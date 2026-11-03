@@ -372,3 +372,10 @@ export. See the [index](index.md) for the glossary.
 - **Evidence:** `src/locales/en.json`, `src/locales/de.json`, `src/i18n.ts` (`MESSAGES`)
 - **Verified by:** `src/i18n.test.ts` (`language files`)
 - **Status:** Implemented
+
+### REQ-UI-140: Right-to-left layout
+- **Description:** When the active language is written right to left, the system shall set the `dir` attribute of the document to `rtl`. For all other languages, it shall set `dir` to `ltr`. Persian is the only right-to-left language. In a right-to-left layout, the panes, toolbars, menus and dialogs shall be mirrored. A drag on a pane divider shall move the divider with the pointer. Code, keyboard keys and the PDF pages shall stay left to right.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/i18n.ts` (`applyToDocument`), `src/components/Splitter.tsx` (`offsetFromStart`), `src/App.tsx`, `src/styles/index.css`
+- **Verified by:** `src/i18n.test.ts` (`sets the text direction of the document from the language`), `src/components/Splitter.test.tsx` (`offsetFromStart`)
+- **Status:** Implemented. The mirrored layout was checked only in jsdom, not in the desktop WebViews.

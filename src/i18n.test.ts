@@ -56,6 +56,16 @@ describe('t', () => {
     expect(localStorage.setItem).toHaveBeenCalledWith('slr.language', 'de')
   })
 
+  // [utest->req~ui-140~1]
+  it('sets the text direction of the document from the language', () => {
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() })
+    setLanguage('fa')
+    expect(document.documentElement.lang).toBe('fa')
+    expect(document.documentElement.dir).toBe('rtl')
+    setLanguage('en')
+    expect(document.documentElement.dir).toBe('ltr')
+  })
+
   it('falls back to English when a text is empty', () => {
     const saved = MESSAGES.de['settings.title']
     MESSAGES.de['settings.title'] = ''

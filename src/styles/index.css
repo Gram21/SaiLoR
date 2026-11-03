@@ -61,6 +61,15 @@ body {
   background: var(--bg);
 }
 
+[dir='rtl'] :is(code, kbd, pre, samp, .react-pdf__Page) {
+  direction: ltr;
+  unicode-bidi: isolate;
+}
+
+[dir='rtl'] :is(input, textarea) {
+  unicode-bidi: plaintext;
+}
+
 button {
   font: inherit;
   color: var(--text);
@@ -255,7 +264,7 @@ button.primary.danger {
   color: var(--muted);
 }
 .save-status {
-  margin-left: 8px;
+  margin-inline-start: 8px;
   color: var(--ok);
   font-size: 0.85em;
 }
@@ -309,11 +318,11 @@ body.resizing * {
 .panel {
   min-height: 0;
   overflow: auto;
-  border-right: 1px solid var(--border);
+  border-inline-end: 1px solid var(--border);
   background: var(--panel-bg);
 }
 .panel:last-child {
-  border-right: none;
+  border-inline-end: none;
 }
 .panel.empty {
   display: flex;
@@ -447,7 +456,7 @@ body.resizing * {
   min-width: 0;
   padding: 5px 9px;
   /* Reserve room for the clear, case and mode triggers so typed text can never run under them. */
-  padding-right: 106px;
+  padding-inline-end: 106px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
@@ -469,7 +478,7 @@ body.resizing * {
 .paper-search-mode {
   position: absolute;
   top: 50%;
-  right: 4px;
+  inset-inline-end: 4px;
   transform: translateY(-50%);
   width: 40px;
   height: 22px;
@@ -502,7 +511,7 @@ button.paper-search-mode:hover {
 .paper-search-case {
   position: absolute;
   top: 50%;
-  right: 48px;
+  inset-inline-end: 48px;
   transform: translateY(-50%);
   width: 28px;
   height: 22px;
@@ -529,7 +538,7 @@ button.paper-search-case:hover {
 .paper-search-clear {
   position: absolute;
   top: 50%;
-  right: 78px;
+  inset-inline-end: 78px;
   transform: translateY(-50%);
   width: 20px;
   height: 22px;
@@ -787,7 +796,7 @@ button.paper-search-clear:hover {
 .pdf-search-count {
   flex: 0 0 auto;
   min-width: 48px;
-  text-align: right;
+  text-align: end;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
@@ -810,7 +819,7 @@ button.paper-search-clear:hover {
   background: var(--panel-bg);
 }
 .pdf-annotation-toolbar-export {
-  margin-left: auto;
+  margin-inline-start: auto;
 }
 .pdf-zoom {
   display: flex;
@@ -871,7 +880,7 @@ button.paper-search-clear:hover {
   position: absolute;
   width: 8px;
   height: 8px;
-  margin-left: -4px;
+  margin-inline-start: -4px;
   margin-top: -4px;
   border-radius: 50%;
   background: var(--accent);
@@ -1220,7 +1229,7 @@ button.paper-search-clear:hover {
 .screening-summary-table th,
 .screening-summary-table td {
   padding: 6px 8px;
-  text-align: left;
+  text-align: start;
   border-bottom: 1px solid var(--border);
 }
 .screening-summary-table th {
@@ -1232,7 +1241,7 @@ button.paper-search-clear:hover {
 }
 .screening-summary-table td:last-child,
 .screening-summary-table th:last-child {
-  text-align: right;
+  text-align: end;
   font-variant-numeric: tabular-nums;
 }
 .screening-summary-unknown td {
@@ -1243,18 +1252,18 @@ button.paper-search-clear:hover {
 /* ---- Screening import dialog ---- */
 .screening-import-counts {
   margin: 0 0 12px;
-  padding-left: 18px;
+  padding-inline-start: 18px;
 }
 .screening-import-reasons {
   margin: 4px 0 0;
-  padding-left: 18px;
+  padding-inline-start: 18px;
   color: var(--muted);
   font-size: 0.9em;
 }
 .screening-import-notice {
   padding: 8px 12px;
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  border-inline-start: 3px solid var(--accent);
   border-radius: 6px;
   background: var(--panel-bg);
   font-size: 0.9em;
@@ -1282,7 +1291,7 @@ button.paper-search-clear:hover {
 }
 .screening-import-kind-hint {
   margin: 4px 0 0;
-  padding-left: 24px;
+  padding-inline-start: 24px;
   color: var(--muted);
   font-size: 0.9em;
 }
@@ -1393,7 +1402,7 @@ button.paper-search-clear:hover {
   outline: none;
 }
 .info-dot {
-  margin-left: 4px;
+  margin-inline-start: 4px;
   color: var(--muted);
   font-size: 0.8em;
   vertical-align: baseline;
@@ -1435,7 +1444,8 @@ button.paper-search-clear:hover {
   align-items: center;
   justify-content: space-between;
   gap: 8px;
-  padding: 5px 4px 5px 10px;
+  padding-block: 5px;
+  padding-inline: 10px 4px;
   border-bottom: 1px solid var(--border);
   font-weight: 600;
 }
@@ -1509,9 +1519,9 @@ button.paper-search-clear:hover {
   color: var(--danger);
 }
 .anno-children {
-  margin-left: 10px;
-  padding-left: 8px;
-  border-left: 2px solid var(--border);
+  margin-inline-start: 10px;
+  padding-inline-start: 8px;
+  border-inline-start: 2px solid var(--border);
 }
 .anno-instance-field {
   padding: 4px 0;
@@ -1562,12 +1572,12 @@ button.paper-search-clear:hover {
 }
 .combo-input {
   width: 100%;
-  padding-right: 40px;
+  padding-inline-end: 40px;
   cursor: pointer;
 }
 .combo-clear {
   position: absolute;
-  right: 22px;
+  inset-inline-end: 22px;
   top: 50%;
   transform: translateY(-50%);
   border: none;
@@ -1585,7 +1595,7 @@ button.paper-search-clear:hover {
 }
 .combo-caret {
   position: absolute;
-  right: 8px;
+  inset-inline-end: 8px;
   top: 50%;
   transform: translateY(-50%);
   color: var(--muted);
@@ -1697,7 +1707,7 @@ button.paper-search-clear:hover {
 .link-count {
   font-size: 0.65em;
   font-weight: 700;
-  margin-left: 2px;
+  margin-inline-start: 2px;
 }
 .field-link-wrap {
   position: relative;
@@ -1773,7 +1783,7 @@ button.paper-search-clear:hover {
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  text-align: left;
+  text-align: start;
   font-size: 0.85rem;
   padding: 2px 4px;
   border: none;
@@ -1826,7 +1836,7 @@ button.paper-search-clear:hover {
    title — a second, redundant cue besides the toolbar switch, worth the
    repetition since it is what makes a multi-reviewer file trustworthy. */
 .reviewer-badge {
-  margin-left: 8px;
+  margin-inline-start: 8px;
   padding: 1px 8px;
   border-radius: 999px;
   background: var(--accent-weak);
@@ -1848,7 +1858,7 @@ button.paper-search-clear:hover {
 }
 .ai-usage-disclosure ul {
   margin: 4px 0 0;
-  padding-left: 18px;
+  padding-inline-start: 18px;
 }
 
 /* Consolidation-only "compare every reviewer's answer" button, next to grab-btn. */
@@ -1898,7 +1908,7 @@ button.paper-search-clear:hover {
 
 /* The * marking a required field in the annotation form. */
 .anno-required {
-  margin-left: 2px;
+  margin-inline-start: 2px;
   color: var(--danger);
   text-decoration: none;
   cursor: help;
@@ -1923,7 +1933,7 @@ button.paper-search-clear:hover {
   justify-content: space-between;
   gap: 10px;
   width: 100%;
-  text-align: left;
+  text-align: start;
   font-weight: 600;
 }
 .validation-paper .count {
@@ -1948,7 +1958,7 @@ button.paper-search-clear:hover {
   gap: 2px 8px;
   width: 100%;
   padding: 6px 0;
-  text-align: left;
+  text-align: start;
   background: none;
   border: none;
   border-radius: 4px;
@@ -2017,11 +2027,11 @@ button.paper-search-clear:hover {
   gap: 8px;
   width: 100%;
   padding: 4px 0;
-  text-align: left;
+  text-align: start;
   font-weight: 600;
 }
 .validation-section-header .count {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--muted);
   font-weight: 400;
   white-space: nowrap;
@@ -2075,7 +2085,8 @@ button.validation-jump:hover {
   width: 100%;
   min-width: 0;
   /* Reserve room for the clear and case triggers so typed text can't run under them. */
-  padding: 5px 62px 5px 9px;
+  padding-block: 5px;
+  padding-inline: 9px 62px;
   border: 1px solid var(--border);
   border-radius: 6px;
   background: var(--bg);
@@ -2090,7 +2101,7 @@ button.validation-jump:hover {
 .validation-search-clear {
   position: absolute;
   top: 50%;
-  right: 34px;
+  inset-inline-end: 34px;
   transform: translateY(-50%);
   width: 20px;
   height: 22px;
@@ -2111,7 +2122,7 @@ button.validation-search-clear:hover {
 .validation-search-case {
   position: absolute;
   top: 50%;
-  right: 4px;
+  inset-inline-end: 4px;
   transform: translateY(-50%);
   width: 28px;
   height: 22px;
@@ -2143,7 +2154,7 @@ button.validation-search-case:hover {
 
 /* Mode badge in the help dialog's title ("Annotating" / "Editing the …"). */
 .help-mode {
-  margin-left: 8px;
+  margin-inline-start: 8px;
   padding: 2px 8px;
   border: 1px solid var(--border);
   border-radius: 999px;
@@ -2197,7 +2208,7 @@ button.validation-search-case:hover {
   border: none;
   background: none;
   color: var(--accent);
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 .help-toc-link:hover {
@@ -2239,7 +2250,8 @@ button.validation-search-case:hover {
   color: var(--accent);
 }
 .help-faq-body {
-  padding: 0 0 4px 16px;
+  padding: 0 0 4px;
+  padding-inline-start: 16px;
   color: var(--muted);
 }
 .help-faq-body p {
@@ -2314,7 +2326,7 @@ button.validation-search-case:hover {
   /* Wide enough for a useful slice of the path now the buttons are larger. */
   width: 100%;
   max-width: 460px;
-  text-align: left;
+  text-align: start;
 }
 .welcome-recents-label {
   color: var(--muted);
@@ -2357,7 +2369,7 @@ button.validation-search-case:hover {
   max-width: 100%;
   /* Belt and braces: nothing may paint outside the button. */
   overflow: hidden;
-  text-align: left;
+  text-align: start;
   padding: 8px 12px;
   border: 1px solid var(--border);
   border-radius: 6px;
@@ -2416,7 +2428,7 @@ button.validation-search-case:hover {
   background: var(--panel-bg);
 }
 .recent-missing {
-  margin-left: 8px;
+  margin-inline-start: 8px;
   padding: 1px 6px;
   border-radius: 999px;
   background: color-mix(in srgb, var(--danger) 25%, transparent);
@@ -2510,7 +2522,7 @@ button.validation-search-case:hover {
 }
 .error-details {
   margin: 12px 0 0;
-  padding-left: 18px;
+  padding-inline-start: 18px;
   color: var(--danger);
   font-family: ui-monospace, monospace;
   font-size: 0.857rem;
@@ -2535,7 +2547,7 @@ button.validation-search-case:hover {
 .menu {
   position: absolute;
   top: calc(100% + 4px);
-  left: 0;
+  inset-inline-start: 0;
   z-index: 50;
   min-width: 200px;
   max-width: 320px;
@@ -2546,8 +2558,8 @@ button.validation-search-case:hover {
   box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
 }
 .menu-right {
-  left: auto;
-  right: 0;
+  inset-inline-start: auto;
+  inset-inline-end: 0;
 }
 .menu-item {
   display: flex;
@@ -2559,7 +2571,7 @@ button.validation-search-case:hover {
   border: none;
   border-radius: 6px;
   background: transparent;
-  text-align: left;
+  text-align: start;
 }
 .menu-item:hover:not(:disabled) {
   background: var(--accent-weak);
@@ -2652,7 +2664,7 @@ button.validation-search-case:hover {
 }
 .modal-body ul {
   margin: 0;
-  padding-left: 18px;
+  padding-inline-start: 18px;
 }
 .settings-row {
   display: flex;
@@ -2709,7 +2721,7 @@ kbd {
   width: min(480px, 92vw);
 }
 .consolidation-field-path {
-  margin-left: 8px;
+  margin-inline-start: 8px;
   color: var(--muted);
   font-weight: 400;
   font-size: 0.85em;
@@ -2733,7 +2745,7 @@ kbd {
   gap: 10px;
   width: 100%;
   margin-bottom: 6px;
-  text-align: left;
+  text-align: start;
 }
 .consolidation-reviewer {
   font-weight: 600;
@@ -2741,7 +2753,7 @@ kbd {
 .consolidation-value {
   color: var(--muted);
   overflow-wrap: anywhere;
-  text-align: right;
+  text-align: end;
 }
 /* The row whose value matches what's currently consolidated — orientation,
    not an endorsement of that reviewer being "right". */
@@ -2889,7 +2901,7 @@ kbd {
   margin: 0 0 14px;
   padding: 8px 12px;
   border: 1px solid var(--border);
-  border-left: 3px solid var(--ai-mark);
+  border-inline-start: 3px solid var(--ai-mark);
   border-radius: 6px;
   background: var(--panel-bg);
 }
@@ -2940,7 +2952,7 @@ kbd {
   display: flex;
   align-items: baseline;
   gap: 8px;
-  text-align: right;
+  text-align: end;
 }
 .agreement-value {
   font-variant-numeric: tabular-nums;
@@ -2973,8 +2985,9 @@ kbd {
 }
 .agreement-perfield-table th,
 .agreement-perfield-table td {
-  padding: 4px 10px 4px 0;
-  text-align: left;
+  padding: 4px 0;
+  padding-inline-end: 10px;
+  text-align: start;
   white-space: nowrap;
   border-bottom: 1px solid var(--border);
 }
@@ -3014,7 +3027,7 @@ kbd {
   width: 100%;
   padding: 6px 0;
   border-bottom: 1px solid var(--border);
-  text-align: left;
+  text-align: start;
 }
 .disagreement-rows li:last-child .disagreement-row {
   border-bottom: none;
@@ -3040,7 +3053,7 @@ kbd {
   font-style: italic;
 }
 .disagreement-reviewer {
-  margin-right: 4px;
+  margin-inline-end: 4px;
   color: var(--text);
   font-weight: 600;
 }
@@ -3070,7 +3083,7 @@ kbd {
   width: 100%;
   padding: 8px 0;
   border-bottom: 1px solid var(--border);
-  text-align: left;
+  text-align: start;
 }
 .consolidation-overview-papers li:last-child button {
   border-bottom: none;
@@ -3184,7 +3197,7 @@ kbd {
 }
 .repo-setup-paths {
   margin: 0 0 10px;
-  padding-left: 20px;
+  padding-inline-start: 20px;
   font-size: 0.9em;
 }
 .repo-setup-note {
@@ -3204,7 +3217,7 @@ kbd {
    modal: nothing about it needs an answer. */
 .toast {
   position: fixed;
-  right: 16px;
+  inset-inline-end: 16px;
   bottom: 16px;
   z-index: 250;
   max-width: 360px;
@@ -3213,7 +3226,7 @@ kbd {
   gap: 8px;
   padding: 10px 12px;
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  border-inline-start: 3px solid var(--accent);
   border-radius: 6px;
   background: var(--panel-bg);
   color: var(--text);
@@ -3222,7 +3235,7 @@ kbd {
   line-height: 1.4;
 }
 .toast-error {
-  border-left-color: var(--danger);
+  border-inline-start-color: var(--danger);
 }
 .toast-text {
   flex: 1 1 auto;
@@ -3238,7 +3251,7 @@ kbd {
 }
 .stale-save-files {
   margin: 0 0 12px;
-  padding-left: 20px;
+  padding-inline-start: 20px;
   font-size: 0.9em;
 }
 .stale-save-choices {
@@ -3253,7 +3266,7 @@ kbd {
   align-items: flex-start;
   gap: 2px;
   padding: 10px 14px;
-  text-align: left;
+  text-align: start;
   border-radius: 6px;
 }
 .stale-save-choices button span {

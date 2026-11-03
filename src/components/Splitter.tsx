@@ -7,6 +7,11 @@ interface SplitterProps {
   onResizeEnd?: () => void
 }
 
+// [impl->req~ui-140~1]
+export function offsetFromStart(clientX: number, rect: DOMRect): number {
+  return document.documentElement.dir === 'rtl' ? rect.right - clientX : clientX - rect.left
+}
+
 // [impl->req~ui-40~1]
 /** A vertical drag handle for resizing adjacent panes. */
 export function Splitter({ onResize, onResizeEnd }: SplitterProps) {

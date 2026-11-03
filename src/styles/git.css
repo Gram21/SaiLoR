@@ -151,7 +151,7 @@
   color: var(--muted);
   font-weight: normal;
   font-size: 0.85rem;
-  margin-left: 6px;
+  margin-inline-start: 6px;
 }
 
 .git-branch-select {
@@ -253,7 +253,7 @@
  *  restraint `.git-header-action-btn` uses for the rarer merge/history
  *  actions, just sized to sit inline with a compact row instead of a header. */
 .git-change-row > .icon-btn {
-  margin-right: 8px;
+  margin-inline-end: 8px;
   flex: none;
 }
 .git-change-code {
@@ -417,7 +417,7 @@
   color: var(--muted);
   font-weight: normal;
   font-size: 0.85rem;
-  margin-left: 8px;
+  margin-inline-start: 8px;
 }
 
 .git-merge-bulk {
@@ -428,7 +428,7 @@
 
 .git-notes {
   margin: 0 0 10px;
-  padding-left: 18px;
+  padding-inline-start: 18px;
   color: var(--muted);
   font-size: 0.9rem;
 }
@@ -471,7 +471,7 @@
   color: var(--text);
   font-weight: 600;
   font-size: 0.9rem;
-  text-align: left;
+  text-align: start;
 }
 .git-merge-group-head:hover {
   border-color: var(--accent);
@@ -550,7 +550,7 @@
   font-weight: 600;
 }
 .git-merge-undecided-badge {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--ai-mark);
 }
 
@@ -629,7 +629,7 @@
   border: none;
   color: inherit;
   font: inherit;
-  text-align: left;
+  text-align: start;
   cursor: pointer;
 }
 .git-history-date {
@@ -651,7 +651,8 @@
   flex: none;
 }
 .git-history-diff {
-  padding: 0 10px 10px 34px; /* clears the chevron column above */
+  padding: 0 0 10px; /* clears the chevron column above */
+  padding-inline: 34px 10px;
 }
 
 /* Stashed changes — see GitStashSection.tsx. */

@@ -111,7 +111,7 @@
   padding-top: 4px;
   color: var(--muted);
   font-variant-numeric: tabular-nums;
-  text-align: right;
+  text-align: end;
 }
 
 /* ---- Fields ---- */

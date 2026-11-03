@@ -1,7 +1,7 @@
 import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, vi } from 'vitest'
 import { render, fireEvent } from '@testing-library/react'
-import { Splitter } from './Splitter'
+import { Splitter, offsetFromStart } from './Splitter'
 
 // jsdom has no PointerEvent constructor, so RTL's fireEvent.pointer* falls
 // back to a bare Event that drops clientX. Polyfill with a MouseEvent
@@ -51,5 +51,19 @@ describe('Splitter', () => {
 
     fireEvent.pointerMove(window, { clientX: 70 })
     expect(onResize).toHaveBeenCalledTimes(1)
+  })
+})
+
+// [utest->req~ui-140~1]
+describe('offsetFromStart', () => {
+  it('measures from the left edge, or from the right edge in a right-to-left document', () => {
+    const rect = { left: 100, right: 900, width: 800 } as DOMRect
+    expect(offsetFromStart(300, rect)).toBe(200)
+    document.documentElement.dir = 'rtl'
+    try {
+      expect(offsetFromStart(300, rect)).toBe(600)
+    } finally {
+      document.documentElement.dir = 'ltr'
+    }
   })
 })

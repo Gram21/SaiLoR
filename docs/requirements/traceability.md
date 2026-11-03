@@ -188,6 +188,7 @@ inspection only.
 | REQ-UI-110 | Language setting | Functional · Usability | `src/components/SettingsDialog.tsx` (`LanguageSection`, `SETTINGS_SECTIONS`)<br>`src/state/settings.ts` (`loadLanguage`, `saveLanguage`)<br>`src/i18n.ts` (`setLanguage`, `useLanguage`) | `src/state/settings.test.ts` (`language`)<br>`src/components/SettingsDialog.test.tsx` (`switches the dialog to German and stores the choice`) | — | `user-guide/getting-started.md` §Changing the language |
 | REQ-UI-120 | Translated user interface | Functional · Usability | `src/i18n.ts` (`t`, `tp`, `rich`, `useT`)<br>`src/locales/en.json`<br>`src/locales/de.json`<br>`src/components/` | `src/i18n.test.ts` (`t`, `tp`, `rich`) | — | `docs/translations.md` |
 | REQ-UI-130 | Complete language files | Non-functional · Maintainability: Testability | `src/locales/en.json`<br>`src/locales/de.json`<br>`src/i18n.ts` (`MESSAGES`) | `src/i18n.test.ts` (`language files`) | — | `docs/translations.md` |
+| REQ-UI-140 | Right-to-left layout | Functional · Usability | `src/i18n.ts` (`applyToDocument`)<br>`src/components/Splitter.tsx` (`offsetFromStart`)<br>`src/App.tsx`<br>`src/styles/index.css` | `src/i18n.test.ts` (`sets the text direction of the document from the language`)<br>`src/components/Splitter.test.tsx` (`offsetFromStart`) | — | `docs/translations.md` |
 
 ## Screening ([screening.md](screening.md))
 

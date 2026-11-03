@@ -162,9 +162,10 @@
   display: flex;
   flex-direction: column;
   gap: 4px;
-  margin: 2px 0 6px 40px;
-  padding-left: 10px;
-  border-left: 2px dashed var(--border);
+  margin: 2px 0 6px;
+  margin-inline-start: 40px;
+  padding-inline-start: 10px;
+  border-inline-start: 2px dashed var(--border);
 }
 .schema-option {
   display: flex;
@@ -185,9 +186,9 @@
 }
 
 .schema-children {
-  margin-left: 14px;
-  padding-left: 10px;
-  border-left: 2px solid var(--border);
+  margin-inline-start: 14px;
+  padding-inline-start: 10px;
+  border-inline-start: 2px solid var(--border);
 }
 
 .schema-empty {
@@ -273,7 +274,7 @@
   display: flex;
   align-items: center;
   gap: 8px;
-  margin-right: auto;
+  margin-inline-end: auto;
 }
 
 /* Wider than the shared 680px: a condition is a field picker beside its match
@@ -312,7 +313,7 @@
    alone stops telling you where the group starts and ends. */
 .visible-if-group:not(.visible-if-group-root) {
   border: 1px solid var(--border);
-  border-left: 3px solid var(--accent);
+  border-inline-start: 3px solid var(--accent);
   border-radius: 8px;
   background: var(--bg);
   padding: 6px 8px;
@@ -420,12 +421,13 @@
 .visible-if-summary {
   margin: 10px 0 0;
   padding: 6px 8px;
-  border-left: 2px solid var(--accent);
+  border-inline-start: 2px solid var(--accent);
   font-style: italic;
 }
 
 .schema-move-note {
-  margin: 2px 0 6px 28px;
+  margin: 2px 0 6px;
+  margin-inline-start: 28px;
   font-size: 0.85em;
   color: var(--muted);
 }
@@ -433,16 +435,17 @@
   display: flex;
   flex-wrap: wrap;
   gap: 4px 12px;
-  margin: 2px 0 6px 28px;
+  margin: 2px 0 6px;
+  margin-inline-start: 28px;
   padding: 0;
   border: none;
   font-size: 0.85em;
   color: var(--muted);
 }
 .schema-unique-by legend {
-  float: left;
+  float: inline-start;
   padding: 0;
-  margin-right: 8px;
+  margin-inline-end: 8px;
 }
 .schema-unique-by label {
   display: inline-flex;

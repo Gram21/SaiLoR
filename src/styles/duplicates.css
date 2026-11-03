@@ -18,7 +18,7 @@
   color: var(--muted);
   font-weight: normal;
   font-size: 0.85rem;
-  margin-left: 8px;
+  margin-inline-start: 8px;
 }
 
 .dup-review-bulk {
@@ -46,7 +46,7 @@
    used) — a row here is exactly as undecided-and-blocking-Import as a merge
    conflict is undecided-and-blocking-Finish. */
 .dup-row.is-undecided {
-  border-left: 3px solid var(--ai-mark);
+  border-inline-start: 3px solid var(--ai-mark);
 }
 
 .dup-row-head {
@@ -63,7 +63,7 @@
   color: var(--muted);
 }
 .dup-row-undecided-badge {
-  margin-left: auto;
+  margin-inline-start: auto;
   color: var(--ai-mark);
 }
 
