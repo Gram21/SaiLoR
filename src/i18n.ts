@@ -1,6 +1,7 @@
 import { Fragment, createElement, useSyncExternalStore, type ReactNode } from 'react'
 import en from './locales/en.json'
 import de from './locales/de.json'
+import es from './locales/es.json'
 import it from './locales/it.json'
 import pt from './locales/pt.json'
 import ja from './locales/ja.json'
@@ -12,11 +13,12 @@ export type Params = Record<string, string | number>
 export type TagRenderers = Record<string, (children: ReactNode) => ReactNode>
 
 // [impl->req~ui-130~1]
-export const MESSAGES: Record<Language, Record<MessageKey, string>> = { en, de, it, pt, ja }
+export const MESSAGES: Record<Language, Record<MessageKey, string>> = { en, de, es, it, pt, ja }
 
 export const LANGUAGE_NAMES: Record<Language, string> = {
   en: 'English',
   de: 'Deutsch',
+  es: 'Español',
   it: 'Italiano',
   pt: 'Português',
   ja: '日本語',
