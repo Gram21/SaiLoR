@@ -2,7 +2,7 @@
 CARGO := cargo
 
 .PHONY: help setup install dev web build build-debug probe test test-js test-rust test-integration \
-        lint fmt typecheck check clean report docker-linux docker-gui-build docker-gui
+        lint fmt typecheck check clean trace report docker-linux docker-gui-build docker-gui
 
 help: ## Show this help
 	@awk 'BEGIN{FS=":.*## "} /^[a-zA-Z_-]+:.*## /{printf "  %-18s %s\n",$$1,$$2}' $(MAKEFILE_LIST)
@@ -54,6 +54,26 @@ check: typecheck lint test ## Run type check, lint and all unit tests
 clean: ## Remove build output
 	rm -rf dist dist-probe
 	$(CARGO) clean --manifest-path src-tauri/Cargo.toml
+
+OFT_VERSION := 4.11.0
+OFT_SHA256 := f094cd314f0fc4236f513f66fb39260a16f72e2320beb6b4fdeb7940b9b8cf87
+OFT_DIR := .cache/oft
+OFT_JAR := $(OFT_DIR)/openfasttrace-$(OFT_VERSION).jar
+OFT_SOURCES := src src-tauri/src samples/git-scenarios e2e
+
+$(OFT_JAR):
+	mkdir -p $(@D)
+	curl -fsSL -o $@.part https://repo1.maven.org/maven2/org/itsallcode/openfasttrace/openfasttrace/$(OFT_VERSION)/openfasttrace-$(OFT_VERSION).jar
+	echo "$(OFT_SHA256)  $@.part" | shasum -a 256 -c -
+	mv $@.part $@
+
+# The OFT command line reads no .tsx files, so each one is linked as .tsx.ts under $(OFT_DIR)/tsx.
+trace: $(OFT_JAR) ## Check requirement trace links with OpenFastTrace (report in .cache/oft/)
+	@test -d docs/requirements-oft || { echo "docs/requirements-oft is missing: run python3 scripts/oft/convert-requirements.py"; exit 1; }
+	rm -rf $(OFT_DIR)/tsx
+	find $(OFT_SOURCES) -name '*.tsx' | while read -r f; do mkdir -p "$(OFT_DIR)/tsx/$$(dirname "$$f")"; ln -s "$(CURDIR)/$$f" "$(OFT_DIR)/tsx/$$f.ts"; done
+	java -jar $(OFT_JAR) trace -o html -f $(OFT_DIR)/trace.html docs/requirements-oft $(OFT_SOURCES) $(OFT_DIR)/tsx || true
+	java -jar $(OFT_JAR) trace -c BLACK_AND_WHITE -f $(OFT_DIR)/trace.txt docs/requirements-oft $(OFT_SOURCES) $(OFT_DIR)/tsx; s=$$?; tail -n 1 $(OFT_DIR)/trace.txt; exit $$s
 
 report: ## Build the technical report PDF
 	$(MAKE) -C technical-report

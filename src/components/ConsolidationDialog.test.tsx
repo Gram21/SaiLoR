@@ -93,3 +93,49 @@ describe('ConsolidationDialog: guard stranded equivalence marks (REQ-CON-370)', 
     expect(st().consolidationTarget).toBeNull()
   })
 })
+
+describe('ConsolidationDialog: remap repeated entries by hand (REQ-CON-420)', () => {
+  it('pairs a different reviewer entry with the compared entry', async () => {
+    const finding = (claim: string) => ({ children: { Claim: [{ value: claim }] } })
+    st().loadFromText(
+      JSON.stringify({
+        version: 1,
+        config: {
+          schema: [{ name: 'Findings', max: null, children: [{ name: 'Claim', type: 'string' }] }],
+          reviewers: 2,
+        },
+        papers: [
+          {
+            id: 'p1',
+            title: 'A Paper',
+            authors: [],
+            pdf: 'a.pdf',
+            annotations: {},
+            reviews: {
+              '1': { Findings: [finding('Alpha'), finding('Beta')] },
+              '2': { Findings: [finding('Beta'), finding('Alpha')] },
+            },
+          },
+        ],
+      }),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+    st().selectReviewer('consolidation')
+    st().alignConsolidationNode('p1', 'Findings', false)
+    useStore.setState({
+      consolidationTarget: { path: [{ name: 'Findings', index: 0 }], name: 'Claim', index: 0 },
+    })
+    render(<ConsolidationDialog />)
+    expect(screen.getByRole('button', { name: 'Reviewer 2 Alpha' })).toBeInTheDocument()
+
+    await userEvent.selectOptions(screen.getByLabelText('Reviewer 2 entry'), 'Entry 1: Beta')
+    expect(st().project!.papers[0].alignment['Findings'][0]).toEqual({ members: { '1': 0, '2': 0 }, manual: true })
+    expect(screen.getByRole('button', { name: 'Reviewer 2 Beta' })).toBeInTheDocument()
+    expect(screen.queryByText(/^Only in/)).not.toBeInTheDocument()
+
+    await userEvent.selectOptions(screen.getByLabelText('Reviewer 2 entry'), 'No entry')
+    expect(screen.getByText('Only in Reviewer 1')).toBeInTheDocument()
+  })
+})

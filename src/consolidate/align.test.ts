@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { resolveSchema, type AnnotationDef } from '../model/schema'
 import { normalizeTree, type AnnotationValueTree } from '../model/annotations'
-import { alignNode, type NodeAlignment } from './align'
+import { alignNode, widenAlignment, type NodeAlignment } from './align'
 
 /** Resolve a schema and normalise each reviewer's raw tree against it. */
 function setup(defs: AnnotationDef[], raw: Record<string, AnnotationValueTree>) {
@@ -485,5 +485,21 @@ describe('single-entry repeatable fields', () => {
     const alignment = alignNode(schema, reviews, 'Findings')['Findings']
 
     expect(alignment.slots).toHaveLength(2)
+  })
+})
+
+describe('widenAlignment', () => {
+  it('keeps the manual marker on slots it widens', () => {
+    const { schema, reviews } = setup(
+      [{ name: 'Findings', max: null, children: [{ name: 'Claim', type: 'string' }] }],
+      {
+        '1': { Findings: [{ children: { Claim: [{ value: 'Alpha' }] } }] },
+        '2': { Findings: [{ children: { Claim: [{ value: 'Beta' }] } }] },
+        '3': { Findings: [{ children: { Claim: [{ value: 'Alpha' }] } }] },
+      },
+    )
+    const existing = { Findings: [{ members: { '1': 0, '2': 0 }, manual: true as const }] }
+    const widened = widenAlignment(schema, existing, reviews, new Map())
+    expect(widened.alignment['Findings']).toEqual([{ members: { '1': 0, '2': 0, '3': 0 }, manual: true }])
   })
 })

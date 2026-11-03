@@ -316,6 +316,27 @@ the project editor. See the [index](index.md) for the glossary.
 - **Verified by:** `src-tauri/src/feedback.rs` (`name_and_content_rules`, `write_never_overwrites_and_lists_sorted`), `src/model/annotationsDir.test.ts` (reserved feedback folder)
 - **Status:** Implemented
 
+### REQ-DAT-400: Unique option for repeatable schema nodes
+- **Description:** The system shall accept `unique: true` on a repeatable schema node (`max` above 1 or `null`) and an optional `uniqueBy` list of direct child names on a unique node with children. The system shall compare free text trimmed, with collapsed spaces and case-insensitive, and all other values exactly. The system shall never compare empty entries. Without `uniqueBy`, all child fields decide equality. The system shall reject `unique` on a non-repeatable node, `uniqueBy` without `unique` or without children, and unknown `uniqueBy` names, with a message that names the node path.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/schema.ts` (`assertUniqueOptions`), `src/model/unique.ts` (`entryKey`, `duplicateIndexes`), `src/model/project.ts` (`dehydrateSchema`)
+- **Verified by:** `src/model/unique.test.ts` (`unique schema option`, `duplicateIndexes`)
+- **Status:** Implemented
+
+### REQ-DAT-410: Refuse duplicate entries on edit and AI suggestion
+- **Description:** When an edit in the annotation form would make an entry of a unique node equal to another entry, the system shall refuse the write and show an inline hint that names the other entry. An edit that leaves an existing repeat unchanged shall not be refused. When AI suggestions are parsed, applied in a batch, or adopted as unanimous values, the system shall drop each suggestion that repeats an entry or an earlier suggestion, and shall list the dropped suggestion with the reason in the AI notes.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/unique.ts` (`duplicateOnWrite`, `dropDuplicateSuggestions`), `src/state/store.ts` (`setFieldValue`, `applyAiSuggestionsBatch`, `adoptUnanimousValues`), `src/state/aiStore.ts` (`executeBatch`), `src/components/Field.tsx`
+- **Verified by:** `src/model/unique.test.ts` (`duplicateOnWrite`, `dropDuplicateSuggestions`), `src/components/Field.test.tsx` (`Field: unique repeatable field`), `src/state/store.ai.test.ts` (`applyAiSuggestionsBatch: unique fields`), `src/state/aiStore.run.test.ts` (`run: unique fields`)
+- **Status:** Implemented
+
+### REQ-DAT-420: Report duplicates in validation and consolidation
+- **Description:** The system shall report each entry of a unique node that repeats an earlier entry as a "Duplicate entry" validation issue, and shall not delete the entry. When a consolidation value would repeat another entry of a unique node, the system shall refuse it, keep the dialog open, and show a hint.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/validate.ts` (`validateTree`), `src/components/ValidationDialog.tsx`, `src/state/store.ts` (`resolveConsolidationValue`), `src/components/ConsolidationDialog.tsx`
+- **Verified by:** `src/model/unique.test.ts` (`validatePaper duplicate issues`)
+- **Status:** Implemented
+
 ## Project editor
 
 ### REQ-EDT-10: Validate drafts before save
@@ -410,43 +431,50 @@ the project editor. See the [index](index.md) for the glossary.
 - **Evidence:** `src/components/PapersEditor.tsx:43-343`
 - **Status:** Implemented
 
-### REQ-EDT-100: Store strict mode settings
+### REQ-EDT-100: Unique toggle and compare-by picker
+- **Description:** The system shall show a Unique checkbox only on a repeatable schema node. When Unique is set on a node with children, the system shall show one checkbox per child to select the `uniqueBy` fields. The selection shall follow child renames. The system shall save `unique` only on a repeatable node and `uniqueBy` only with at least one selected child.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/SchemaTreeEditor.tsx`, `src/state/editorStore.ts` (`toAnnotationDefs`, `fromAnnotationDefs`)
+- **Verified by:** `src/components/SchemaTreeEditor.test.tsx` (`SchemaTreeEditor: unique option`)
+- **Status:** Implemented
+
+### REQ-EDT-110: Store strict mode settings
 - **Description:** The system shall store strict mode in the optional project keys `config.strict`, `config.persons` and `config.assignments`, write each key only when it holds a value, and open and save a project without these keys unchanged.
 - **Type:** Functional (ISO 25010: Functional Suitability, Compatibility)
 - **Evidence:** `src/model/strict.ts` (`parseStrictConfig`, `strictConfigJson`), `src/model/project.ts` (`loadProject`, `serializeProject`, `splitProjectFiles`)
 - **Status:** Implemented
 
-### REQ-EDT-110: Validate strict mode settings on load
+### REQ-EDT-120: Validate strict mode settings on load
 - **Description:** When a project has strict mode keys, the system shall refuse to open the project and list each problem if `config.strict` is not a boolean, a person has an empty or duplicate identifier or name, an assignment names an unknown person, an assignment seat is not a positive whole number, or one paper has the same seat or the same person twice. The system shall ignore assignments for paper identifiers that the project does not contain. The system shall keep assignments for seats above the reviewer count in the file and ignore them until the count is raised again.
 - **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
 - **Evidence:** `src/model/strict.ts` (`parseStrictConfig`), `src/state/editorStore.ts` (`validateDraft`)
 - **Status:** Implemented
 
-### REQ-EDT-120: Manage persons in the project editor
+### REQ-EDT-130: Manage persons in the project editor
 - **Description:** For an annotation project with more than one reviewer, the project editor shall let the user turn strict mode on and off, add a person, rename a person and remove a person. When a person has finished work on a paper, the system shall refuse to remove that person.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/StrictModeEditor.tsx` (`StrictModeEditor`), `src/state/editorStore.ts` (`setStrictEnabled`, `addPerson`, `renamePerson`, `removePerson`)
 - **Status:** Implemented
 
-### REQ-EDT-130: Assign papers to persons
+### REQ-EDT-140: Assign papers to persons
 - **Description:** The project editor shall let the user assign a person to each numbered seat of each paper and clear that assignment. The system shall refuse to change an assignment whose work is finished.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/StrictModeEditor.tsx` (`StrictModeEditor`), `src/state/editorStore.ts` (`setAssignment`)
 - **Status:** Implemented
 
-### REQ-EDT-140: Assign persons in bulk
+### REQ-EDT-150: Assign persons in bulk
 - **Description:** When the user requests a bulk assignment of N persons per paper, the system shall fill the free seats of each paper that has no assignment, in turn over the persons (round robin), and shall not use the AI seat.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/strict.ts` (`bulkAssign`), `src/state/editorStore.ts` (`bulkAssignStrict`)
 - **Status:** Implemented
 
-### REQ-EDT-150: Show work per person
+### REQ-EDT-160: Show work per person
 - **Description:** The strict mode section of the project editor shall show, for each person, the number of assigned papers and the number of finished papers.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/strict.ts` (`personCounts`), `src/components/StrictModeEditor.tsx` (`StrictModeEditor`)
 - **Status:** Implemented
 
-### REQ-EDT-160: Reopen finished work
+### REQ-EDT-170: Reopen finished work
 - **Description:** The project editor shall let the user reopen the finished work of a person on a paper. Reopening shall remove the finished flag of that seat on that paper.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/StrictModeEditor.tsx` (`StrictModeEditor`), `src/state/editorStore.ts` (`reopenWork`)

@@ -30,7 +30,18 @@ interface FieldProps {
 /** Renders the editable control for a single field instance, plus a "grab from PDF" button. */
 export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   const setFieldValue = useStore((s) => s.setFieldValue)
-  const set = (v: FieldValue) => setFieldValue(path, def.name, index, v)
+  const [hint, setHint] = useState<string | null>(null)
+  const [draft, setDraft] = useState<string | null>(null)
+  const set = (v: FieldValue, typed?: string) => {
+    const refused = setFieldValue(path, def.name, index, v)
+    setHint(refused)
+    setDraft(refused !== null && typed !== undefined ? typed : null)
+  }
+  const hintNote = hint && (
+    <p className="field-dup-hint" role="alert">
+      {hint}
+    </p>
+  )
 
   // Reaching the control at all — clicking it, or tabbing into it — is the
   // reviewer confirming they have seen what the AI put there, so the mark goes.
@@ -126,19 +137,22 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
 
   if (def.type === 'boolean') {
     return (
-      <div className="field-row">
-        <input
-          type="checkbox"
-          className={`field-checkbox${markClass}${deferredClass}${verdictClass}`}
-          checked={value === true}
-          aria-label={ariaLabel}
-          onFocus={confirm}
-          onClick={confirm}
-          onChange={(e) => set(e.target.checked)}
-        />
-        {linkBtn}
-        {compareBtn}
-      </div>
+      <>
+        <div className="field-row">
+          <input
+            type="checkbox"
+            className={`field-checkbox${markClass}${deferredClass}${verdictClass}`}
+            checked={value === true}
+            aria-label={ariaLabel}
+            onFocus={confirm}
+            onClick={confirm}
+            onChange={(e) => set(e.target.checked)}
+          />
+          {linkBtn}
+          {compareBtn}
+        </div>
+        {hintNote}
+      </>
     )
   }
 
@@ -147,51 +161,58 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   const canGrab = def.type === 'number' || def.type === 'year' || (def.type === 'string' && !isEnum)
 
   return (
-    <div className="field-row">
-      {def.type === 'number' || def.type === 'year' ? (
-        <input
-          type="number"
-          className={`field-input${markClass}${deferredClass}${verdictClass}`}
-          value={value === null || value === undefined ? '' : String(value)}
-          aria-label={ariaLabel}
-          // Bounded, whole-number control for `year` — catches an implausible value
-          // or decimal before it's saved, rather than only reporting it later.
-          {...(def.type === 'year' ? { min: YEAR_MIN, max: YEAR_MAX, step: 1 } : {})}
-          onFocus={confirm}
-          onClick={confirm}
-          onChange={(e) => set(e.target.value === '' ? null : Number(e.target.value))}
-        />
-      ) : isEnum ? (
-        <ComboBox
-          value={typeof value === 'string' ? value : null}
-          options={def.options!}
-          onChange={(v) => set(v)}
-          className={`${markClass}${deferredClass}${verdictClass}`.trim()}
-          onInteract={confirm}
-          ariaLabel={ariaLabel}
-        />
-      ) : (
-        <StringField
-          value={value === null || value === undefined ? '' : String(value)}
-          onChange={(v) => set(v === '' ? null : v)}
-          className={`${markClass}${deferredClass}${verdictClass}`}
-          onInteract={confirm}
-          ariaLabel={ariaLabel}
-        />
-      )}
-      {canGrab && (
-        <button
-          type="button"
-          className="grab-btn"
-          title="Insert the text currently selected in the PDF"
-          onClick={grabFromPdf}
-        >
-          ⧉
-        </button>
-      )}
-      {linkBtn}
-      {compareBtn}
-    </div>
+    <>
+      <div className="field-row">
+        {def.type === 'number' || def.type === 'year' ? (
+          <input
+            type="number"
+            className={`field-input${markClass}${deferredClass}${verdictClass}`}
+            value={draft ?? (value === null || value === undefined ? '' : String(value))}
+            aria-label={ariaLabel}
+            // Bounded, whole-number control for `year` — catches an implausible value
+            // or decimal before it's saved, rather than only reporting it later.
+            {...(def.type === 'year' ? { min: YEAR_MIN, max: YEAR_MAX, step: 1 } : {})}
+            onFocus={confirm}
+            onClick={confirm}
+            onBlur={() => setDraft(null)}
+            onChange={(e) =>
+              set(e.target.value === '' ? null : Number(e.target.value), e.target.value)
+            }
+          />
+        ) : isEnum ? (
+          <ComboBox
+            value={typeof value === 'string' ? value : null}
+            options={def.options!}
+            onChange={(v) => set(v)}
+            className={`${markClass}${deferredClass}${verdictClass}`.trim()}
+            onInteract={confirm}
+            ariaLabel={ariaLabel}
+          />
+        ) : (
+          <StringField
+            value={draft ?? (value === null || value === undefined ? '' : String(value))}
+            onChange={(v) => set(v === '' ? null : v, v)}
+            onLeave={() => setDraft(null)}
+            className={`${markClass}${deferredClass}${verdictClass}`}
+            onInteract={confirm}
+            ariaLabel={ariaLabel}
+          />
+        )}
+        {canGrab && (
+          <button
+            type="button"
+            className="grab-btn"
+            title="Insert the text currently selected in the PDF"
+            onClick={grabFromPdf}
+          >
+            ⧉
+          </button>
+        )}
+        {linkBtn}
+        {compareBtn}
+      </div>
+      {hintNote}
+    </>
   )
 }
 
@@ -429,11 +450,12 @@ interface StringFieldProps {
   onChange: (v: string) => void
   className?: string
   onInteract?: () => void
+  onLeave?: () => void
   ariaLabel?: string
 }
 
 /** Auto-expanding text field: single-line when idle, grows downward (capped) while focused. */
-function StringField({ value, onChange, className = '', onInteract, ariaLabel }: StringFieldProps) {
+function StringField({ value, onChange, className = '', onInteract, onLeave, ariaLabel }: StringFieldProps) {
   const ref = useRef<HTMLTextAreaElement>(null)
   const [expanded, setExpanded] = useState(false)
 
@@ -469,6 +491,7 @@ function StringField({ value, onChange, className = '', onInteract, ariaLabel }:
       onBlur={() => {
         setExpanded(false)
         if (ref.current) ref.current.style.height = ''
+        onLeave?.()
       }}
       onChange={(e) => onChange(e.target.value)}
     />

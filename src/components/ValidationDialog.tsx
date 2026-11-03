@@ -7,6 +7,7 @@ const KIND_LABEL: Record<IssueKind, string> = {
   type: 'Wrong type',
   enum: 'Not an allowed value',
   cardinality: 'Wrong number of entries',
+  duplicate: 'Duplicate entry',
   screening: 'Screening',
   orphaned: 'Hidden by a schema change',
   'schema-version': 'Unknown schema version',

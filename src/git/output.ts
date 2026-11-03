@@ -1,4 +1,4 @@
-import type { GitFileChange, GitRun } from './types'
+import type { GitFileChange, GitRun, MergePreview } from './types'
 
 /**
  * Turning what git printed into data the UI can render — kept separate from
@@ -141,4 +141,45 @@ export function gitErrorText(run: GitRun): string {
   if (stderr) return stdout ? `${stderr}\n${stdout}` : stderr
   if (stdout) return stdout
   return run.code === null ? 'git could not be started.' : `git exited with code ${run.code}.`
+}
+
+const PREVIEW_LIST_MAX = 10
+
+function listed(items: string[]): string {
+  const shown = items.slice(0, PREVIEW_LIST_MAX).join(', ')
+  return items.length > PREVIEW_LIST_MAX ? `${shown} and ${items.length - PREVIEW_LIST_MAX} more` : shown
+}
+
+/** The confirm text for a merge or pull dry run. `relPath` is the repository-relative project file. */
+export function mergePreviewText(
+  preview: Extract<MergePreview, { kind: 'preview' }>,
+  relPath: string,
+  action: string,
+): string {
+  const lines = [`${action}?`, '']
+  lines.push(
+    preview.fastForward
+      ? `Your branch has no commits that ${preview.ref} lacks, so git moves it forward. No merge commit is made.`
+      : `Both sides have new commits, so SaiLoR makes a merge commit with ${preview.ref}.`,
+  )
+  const annotations = preview.files.filter((f) => f !== relPath)
+  if (preview.files.length === 0) lines.push('No project or annotation file changes.')
+  if (preview.files.includes(relPath)) lines.push('The project file changes.')
+  if (annotations.length > 0) lines.push(`${annotations.length} annotation file(s) change.`)
+  if (preview.papers.length > 0) lines.push(`Papers with changes: ${listed(preview.papers)}.`)
+  lines.push('')
+  if (preview.conflictsElsewhere.length > 0) {
+    lines.push(
+      `Git expects conflicts in files that SaiLoR cannot merge: ${listed(preview.conflictsElsewhere)}. ` +
+        'The merge will stop and change nothing.',
+    )
+  } else if (preview.conflicts.length > 0) {
+    lines.push(
+      `Git expects conflicts in ${listed(preview.conflicts)}. You resolve them in the merge dialog before anything is committed.`,
+    )
+  } else {
+    lines.push('Git expects no conflicts.')
+  }
+  lines.push('SaiLoR saves a backup of your branch first. Use "Undo last merge" to go back.')
+  return lines.join('\n')
 }

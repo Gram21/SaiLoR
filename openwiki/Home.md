@@ -3,9 +3,36 @@ type: landing
 title: SaiLoR Developer Documentation
 description: Home page for SaiLoR developer documentation. SaiLoR 2.0 is a Tauri desktop tool for conducting Systematic Literature Reviews (SLRs), storing the annotation schema and paper metadata in project.json and each reviewer's/consolidation's annotation data in a sibling annotations/ folder. Links to quickstart, architecture, data model, and operations pages.
 tags: [home, overview, documentation]
-verified:
-  - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
+sources:
+  - id: openwiki-source-164e2da859b5277df81c7d94
+    resource: repo://.github/workflows/ci.yml
+  - id: openwiki-source-6d3ac2bdfb0e76882a670989
+    resource: repo://.github/workflows/openwiki.yml
+  - id: openwiki-source-794b8a6d2fa178d64fce49a3
+    resource: repo://.github/workflows/wiki-import.yml
+  - id: openwiki-source-a7a8965ff53d3530162adf6d
+    resource: repo://.github/workflows/wiki-publish.yml
+  - id: openwiki-source-cfc82c903899c2457ec703b0
+    resource: repo://docs/annotation-schema.md
+  - id: openwiki-source-5b54a58d1b51cd490b0e7162
+    resource: repo://package.json
+  - id: openwiki-source-23775c3de52f3ab95a13cb8b
+    resource: repo://README.md
+  - id: openwiki-source-0744bbc5adcd6bd563690bde
+    resource: repo://scripts/ci.sh
+  - id: openwiki-source-99b0214e9f2113a0f6a2cf92
+    resource: repo://src-tauri/src/main.rs
+  - id: openwiki-source-54631e6ebf1d3b815c4a5eed
+    resource: repo://src/App.tsx
+  - id: openwiki-source-68e9e61da0efb614946dda70
+    resource: repo://src/model/project.ts
+  - id: openwiki-source-776dd28cc442c205e0a91460
+    resource: repo://src/platform/index.ts
+  - id: openwiki-source-6caeef66ec21bf4ae91fe55c
+    resource: repo://src/platform/tauri.ts
+  - id: openwiki-source-9b49ad2f97827d5ed9890232
+    resource: repo://src/platform/unsupported.ts
+generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
 ---
 
 # SaiLoR — Developer Documentation
@@ -46,11 +73,14 @@ as the project file authoring reference.
 | **[Data Model](concepts/data-model.md)** | The project on-disk format (meta-only `project.json` plus a sibling `annotations/` folder), the in-memory TypeScript types, PDF marks, stored consolidation alignment, annotation state/finished flags, and the load → normalize → edit → prune → serialize lifecycle that keeps a hand-edited JSON safe. |
 | **[Testing Strategy](testing.md)** | The test layers — Vitest unit tests, the real-git integration suite, Rust unit tests in `src-tauri/`, and the tauri-driver e2e probe — plus the wiki-link check and what CI gates on. |
 | **[Build, CI, and Release](operations/build-release.md)** | The Make targets and `tauri build` pipeline, CI (renderer script, Rust lint/tests, per-OS build matrix + probe, tauri-driver e2e), the release workflow with the signed updater feed and Zenodo archive, the Linux Docker build, and how these wiki pages are kept in sync. |
+<!-- openwiki: broken internal link [operations/tauri-shell.md] file "operations/tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 | **[Tauri Shell, IPC and Self-Update](operations/tauri-shell.md)** | The Rust desktop shell — the command inventory, the `slr-file://` protocol and its security model, session authorization allowlists, OS-keychain API-key handling, and the signed self-update flow. |
 | **[Multi-Reviewer Consolidation](workflows/consolidation.md)** | Entry matching across reviewer seats, the stored alignment persisted in the project, growing/freezing the consolidated tree, agreement statistics, and the compare/adopt UI. |
 | **[Git Integration](workflows/git-integration.md)** | Clone-to-import, commit/pull/push, the field-level three-way merge, the security gates, and the reproducible git scenarios used as tests. |
 | **[AI-Assisted Annotation](workflows/llm-annotation.md)** | The provider abstraction and its four modes (prompt, agent + judge, classify/System One, re-check), the key-never-in-the-renderer invariant, the aiStore run loop, and the AI-usage disclosure records. |
+<!-- openwiki: broken internal link [workflows/ai-screening.md] file "workflows/ai-screening.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 | **[AI-Assisted Screening](workflows/ai-screening.md)** | The aiScreeningStore flow: one Include/Exclude proposal per paper from title+abstract, prompt vs System One engines, and the review table where the human approves each proposal before anything is written. |
+<!-- openwiki: broken internal link [workflows/local-models.md] file "workflows/local-models.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 | **[Local Models and Ollama](workflows/local-models.md)** | Running models fully offline: the managed llama.cpp runtime with hash-verified downloads, the local model catalog, hardware probing, and connecting to a user-run Ollama server. |
 | **[PDF Viewer and Marks](workflows/pdf-viewing.md)** | The pdf.js-based viewer: rendering and zoom, text-selection capture for field grabbing, highlights/notes with per-seat persistence and evidence linking, reading-position persistence, and mark export into real PDF annotations. |
 | **[Screening Mode](workflows/screening.md)** | The derived Decision/Reason schema, tri-state status, PRISMA-style counts, the screening UI, and the screening → annotation project hand-off. |
@@ -66,6 +96,7 @@ Editing a page on the wiki is still fine: a second Action imports wiki edits bac
 and commits them to `main`, so the two do not drift. A third, `openwiki.yml`, regenerates these
 pages from the code on a weekly Monday 06:00 UTC schedule (and on demand via `workflow_dispatch`),
 delegating the update to the `ardoco/actions` reusable OpenWiki workflow rather than running the
+<!-- openwiki: broken internal link [operations/build-release.md#wiki-sync-mechanics] heading anchor "wiki-sync-mechanics" does not exist in "operations/build-release.md". Fix the href or restore the target, then delete this comment. -->
 steps inline. See [Operations → Wiki sync](operations/build-release.md#wiki-sync-mechanics) for
 the mechanics — including the three independent loop-prevention guards that stop the two sync
 Actions triggering each other forever: the shared `concurrency: wiki-sync` group (so the two

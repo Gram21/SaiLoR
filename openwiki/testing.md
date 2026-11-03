@@ -3,9 +3,110 @@ type: testing-strategy
 title: Testing Strategy
 description: The four test layers and how to run them — Vitest unit tests, the real-git jsdom integration suite, Rust unit tests in src-tauri, and the tauri-driver e2e probe — plus the wiki-link check, the reproducible git-scenario rig, and what CI gates on.
 tags: [testing, vitest, rust, cargo, integration-tests, e2e, tauri-driver, git-scenarios, ci, react-testing-library]
-verified:
-  - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
+sources:
+  - id: openwiki-source-164e2da859b5277df81c7d94
+    resource: repo://.github/workflows/ci.yml
+  - id: openwiki-source-4d1d392666be6dfdd7a91a2e
+    resource: repo://.github/workflows/release.yml
+  - id: openwiki-source-87c40e58e3e1d9dab55c989c
+    resource: repo://e2e/index.html
+  - id: openwiki-source-be5016284e234fc51433b055
+    resource: repo://e2e/main.tsx
+  - id: openwiki-source-fcc2f35df23dc8a50c340699
+    resource: repo://e2e/probe.test.mjs
+  - id: openwiki-source-012f2c78e3b1446dfc35803f
+    resource: repo://Makefile
+  - id: openwiki-source-5b54a58d1b51cd490b0e7162
+    resource: repo://package.json
+  - id: openwiki-source-07dd0af8081c429934bc52d8
+    resource: repo://samples/git-scenarios/base.ts
+  - id: openwiki-source-12e7b51b4ae7b829b3cd8ee2
+    resource: repo://samples/git-scenarios/builder.ts
+  - id: openwiki-source-4f3594d8e6f96ba96e9a9692
+    resource: repo://samples/git-scenarios/cli.ts
+  - id: openwiki-source-ddcc85194596cb12392767d7
+    resource: repo://samples/git-scenarios/README.md
+  - id: openwiki-source-8a9a9ea16b72417721f00f3b
+    resource: repo://samples/git-scenarios/scenarios.ts
+  - id: openwiki-source-3d45af94526bb3c5ba8c440d
+    resource: repo://scripts/check-wiki-links.js
+  - id: openwiki-source-0744bbc5adcd6bd563690bde
+    resource: repo://scripts/ci.sh
+  - id: openwiki-source-ca67060e890937010b96de80
+    resource: repo://src-tauri/Cargo.toml
+  - id: openwiki-source-01c53dda6993c5a703b98d53
+    resource: repo://src-tauri/src/git.rs
+  - id: openwiki-source-99b0214e9f2113a0f6a2cf92
+    resource: repo://src-tauri/src/main.rs
+  - id: openwiki-source-5e350144821ef45403557db2
+    resource: repo://src-tauri/src/project.rs
+  - id: openwiki-source-e7abf856466c7e9265c41eff
+    resource: repo://src-tauri/src/protocol.rs
+  - id: openwiki-source-bab2e053a92fbd20f310fe9e
+    resource: repo://src-tauri/src/update.rs
+  - id: openwiki-source-a5cbb79a6f7cc28f24d51fdc
+    resource: repo://src-tauri/src/webfetch.rs
+  - id: openwiki-source-0f89b6f9b7d0d7dbcdbcf75e
+    resource: repo://src-tauri/tauri.probe.conf.json
+  - id: openwiki-source-f64baa47d0739b549a305da2
+    resource: repo://src/components/GitDialog.test.ts
+  - id: openwiki-source-e02c847ed393322ddcd5831b
+    resource: repo://src/components/PaperList.test.ts
+  - id: openwiki-source-3fa0668cb4d4938f16354d23
+    resource: repo://src/components/PapersEditor.test.ts
+  - id: openwiki-source-9957bff2c603f15a9cfec6f4
+    resource: repo://src/components/PdfViewer.test.ts
+  - id: openwiki-source-eaac95052536f1fc57e720e5
+    resource: repo://src/components/ScreeningPanel.test.tsx
+  - id: openwiki-source-0326a563f0dd5b14b22b0730
+    resource: repo://src/components/Toolbar.test.ts
+  - id: openwiki-source-1c77bb67540dbe4d8cda61b7
+    resource: repo://src/git/merge.test.ts
+  - id: openwiki-source-6522f2703f223ff98862dc04
+    resource: repo://src/git/ref.test.ts
+  - id: openwiki-source-374a0a015f9404a7da5d05da
+    resource: repo://src/model/model.test.ts
+  - id: openwiki-source-24c09c3b54387889db23d752
+    resource: repo://src/platform/adapter.ts
+  - id: openwiki-source-776dd28cc442c205e0a91460
+    resource: repo://src/platform/index.ts
+  - id: openwiki-source-9b49ad2f97827d5ed9890232
+    resource: repo://src/platform/unsupported.ts
+  - id: openwiki-source-f7ba393ad43763486ceb8572
+    resource: repo://src/state/gitStore.test.ts
+  - id: openwiki-source-fe32e46a358a2106c141c8f8
+    resource: repo://src/state/store.ai.test.ts
+  - id: openwiki-source-16015ca2b5e31342f25b3aad
+    resource: repo://src/state/store.marks.test.ts
+  - id: openwiki-source-38684af70a28fa56af27cf8e
+    resource: repo://src/state/store.test.ts
+  - id: openwiki-source-89409d7a9c0280067e058c1a
+    resource: repo://src/state/store.ts
+  - id: openwiki-source-ad89e4b33ca7c46aa4f601da
+    resource: repo://src/test/integration/annotationSplit.integration.test.tsx
+  - id: openwiki-source-0c2cf9efb3a6a56942fd02d7
+    resource: repo://src/test/integration/annotationWorkflow.integration.test.tsx
+  - id: openwiki-source-b41f582420766a25540a8c88
+    resource: repo://src/test/integration/branchSwitch.integration.test.tsx
+  - id: openwiki-source-53ef7107c19ecc162c30a798
+    resource: repo://src/test/integration/discard.integration.test.tsx
+  - id: openwiki-source-ad522d5bd954cffe8c9b3c21
+    resource: repo://src/test/integration/fetchPolicy.integration.test.tsx
+  - id: openwiki-source-1f0e1d2b44ac9234304cb63e
+    resource: repo://src/test/integration/gitScenarios.integration.test.tsx
+  - id: openwiki-source-9a55020f0c1b47e4d7e69432
+    resource: repo://src/test/integration/pull.integration.test.tsx
+  - id: openwiki-source-ec5d94faab1290fa27f62da5
+    resource: repo://src/test/integration/screeningImport.integration.test.tsx
+  - id: openwiki-source-3bb48bcdee793d7c98d5d0b3
+    resource: repo://src/test/integration/stashOps.integration.test.tsx
+  - id: openwiki-source-5e1b077422a94ae165e88e4e
+    resource: repo://vite.config.ts
+  - id: openwiki-source-742c2ed7fe09ab88b9fb143a
+    resource: repo://vite.probe.config.ts
+  - id: openwiki-source-9b13c737ac155b0b0c8d76b9
+    resource: repo://vitest.integration.config.ts
+generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
 ---
 
 # Testing Strategy
@@ -281,6 +382,7 @@ Representative coverage:
   **`net.rs`**, **`hardware.rs`**, **`feedback.rs`** and **`shell.rs`** each
   carry their own module.
 
+<!-- openwiki: broken internal link [operations/tauri-shell.md] file "operations/tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 See [Tauri Shell, IPC and Self-Update](operations/tauri-shell.md) for what the
 tested modules *do*; the point for this page is that the shell's trust boundary
 (refs, relpaths, URLs, the protocol, authorization) is pinned on the Rust side

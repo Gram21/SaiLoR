@@ -97,6 +97,7 @@ export function GitDialog() {
   const runDiscard = useGitStore((s) => s.runDiscard)
   const runPush = useGitStore((s) => s.runPush)
   const runPull = useGitStore((s) => s.runPull)
+  const runUndoMerge = useGitStore((s) => s.runUndoMerge)
   const openMergeBranchPrompt = useGitStore((s) => s.openMergeBranchPrompt)
   const openDeleteBranchPrompt = useGitStore((s) => s.openDeleteBranchPrompt)
   const openHistory = useGitStore((s) => s.openHistory)
@@ -311,10 +312,24 @@ export function GitDialog() {
               <button
                 type="button"
                 disabled={working || dirty || !repo.upstream}
-                onClick={() => void runPull()}
+                onClick={() => void runPull((summary) => window.confirm(summary))}
                 title="Pull the latest changes from the remote"
               >
                 Pull
+              </button>
+              <button
+                type="button"
+                disabled={working || dirty}
+                onClick={() => {
+                  const ok = window.confirm(
+                    'Undo the last merge or pull? Your branch goes back to the backup that SaiLoR saved ' +
+                      'before it. If you already pushed the merge, the remote still has it.',
+                  )
+                  if (ok) void runUndoMerge()
+                }}
+                title="Move the branch back to where it was before the last merge or pull"
+              >
+                Undo last merge
               </button>
               <button
                 type="button"

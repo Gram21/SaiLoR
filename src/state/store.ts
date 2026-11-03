@@ -10,7 +10,7 @@ import {
   type AiUsageRecord,
   aiSeatId,
 } from '../model/project'
-import { alignedReviews, type StoredAlignment, type StoredSlot } from '../model/alignment'
+import { alignedReviews, reviewerEntriesAt, type StoredAlignment, type StoredSlot } from '../model/alignment'
 import {
   hasAnnotations,
   makeInstance,
@@ -26,6 +26,7 @@ import { growConsolidated, toStoredAlignment, storedAsTreeAlignment } from '../c
 import { unanimousFills } from '../consolidate/unanimous'
 import { consolidatorHasAnswered, consolidationMark } from '../consolidate/readiness'
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
+import { dropDuplicateSuggestions, duplicateOnWrite } from '../model/unique'
 import { formatPath, displayPath, resolvePath, parsePath, MAX_UNBOUNDED_INDEX, type ResolvedPath } from '../llm/paths'
 import { isUnanswered } from '../llm/fields'
 import type { Suggestion } from '../llm/types'
@@ -186,7 +187,7 @@ export function shiftCanonicalPath(
  * where the path doesn't resolve, so the caller can skip the fixup rather
  * than fabricate a slot list that was never computed.
  */
-function alignmentSlotsAt(
+export function alignmentSlotsAt(
   alignment: StoredAlignment,
   path: PathSeg[],
   name: string,
@@ -201,6 +202,23 @@ function alignmentSlotsAt(
     level = slots[slotIndex].children ?? {}
   }
   return level[name]
+}
+
+function hasManualSlot(slots: StoredSlot[] | undefined): boolean {
+  return !!slots?.some((slot) => slot.manual === true || Object.values(slot.children ?? {}).some(hasManualSlot))
+}
+
+function withoutReviewer(alignment: StoredAlignment, reviewer: string): StoredAlignment {
+  const out: StoredAlignment = {}
+  for (const [name, slots] of Object.entries(alignment)) {
+    out[name] = slots.map((slot) => {
+      const next: StoredSlot = { ...slot, members: { ...slot.members } }
+      delete next.members[reviewer]
+      if (slot.children) next.children = withoutReviewer(slot.children, reviewer)
+      return next
+    })
+  }
+  return out
 }
 
 /** The reviewer scope for a mark key: `null` for a single-reviewer project
@@ -908,7 +926,8 @@ interface AppState {
   readOnly: boolean
   setReadOnly: (readOnly: boolean) => void
 
-  setFieldValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
+  /** Returns a hint and writes nothing when the value would repeat an entry of a `unique` node. */
+  setFieldValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => string | null
   addInstance: (path: PathSeg[], def: ResolvedDef) => void
   removeInstance: (path: PathSeg[], name: string, index: number) => void
   /** Tick/untick "annotation finished" for the current paper/seat (see
@@ -1007,7 +1026,7 @@ interface AppState {
   openConsolidation: (path: PathSeg[], name: string, index: number, returnToDisagreements?: boolean) => void
   closeConsolidation: () => void
   /** Store a chosen reviewer value and resolve that disagreement in one undo step. */
-  resolveConsolidationValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => void
+  resolveConsolidationValue: (path: PathSeg[], name: string, index: number, value: FieldValue) => string | null
   /** Mark a field for a different, manually entered Consolidation value. */
   deferConsolidationValue: (path: PathSeg[], name: string, index: number) => void
   /**
@@ -1018,6 +1037,20 @@ interface AppState {
    * one per node) — driven by `useConsolidationAlignment`, a node at a time.
    */
   alignConsolidationNode: (paperId: string, nodeName: string, coalesce: boolean) => boolean
+  /**
+   * The consolidator puts `reviewer`'s own entry `entryIndex` (or no entry, for
+   * `null`) into consolidated slot `slotIndex` of node `name` below `path`. A
+   * sibling slot that held that entry takes the slot's previous entry instead.
+   * Both slots are marked `manual`, so later automatic matching keeps them.
+   */
+  remapConsolidationEntry: (
+    paperId: string,
+    path: PathSeg[],
+    name: string,
+    slotIndex: number,
+    reviewer: string,
+    entryIndex: number | null,
+  ) => void
   /**
    * Fills consolidated fields still unanswered with the value every reviewer
    * gave (marked like an AI fill). Returns how many. Must run after
@@ -2434,11 +2467,13 @@ export const useStore = create<AppState>()(
       }),
 
     setFieldValue: (path, name, index, value) => {
-      if (get().readOnly) return
+      if (get().readOnly) return null
       const prev = get()
-      if (!prev.project) return
+      if (!prev.project) return null
       // Multi-reviewer, nobody picked yet: nothing to attribute this edit to.
-      if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
+      if (prev.project.reviewers > 1 && prev.currentReviewer === null) return null
+      const hint = duplicateHint(prev, path, name, index, value)
+      if (hint) return hint
       // Collapse consecutive edits of the same field into one undo step.
       const key = `${JSON.stringify(path)}|${name}|${index}`
       const coalesce = key === lastFieldKey
@@ -2480,6 +2515,7 @@ export const useStore = create<AppState>()(
         }
         s.dirty = true
       })
+      return null
     },
 
     addInstance: (path, def) => {
@@ -2946,9 +2982,14 @@ export const useStore = create<AppState>()(
           if (!at || peekValue(readTree, at.path, at.name, at.index) !== expectedCurrent) continue
           accepted.push({ at, value: suggestion.value, replace: true })
         }
-        skipped += itemCount - accepted.length
-        if (accepted.length > 0) {
-          planned.push({ paperId: item.paperId, reviewer: item.reviewer, usage: item.usage, accepted })
+        const kept = dropDuplicateSuggestions(
+          schema,
+          readTree,
+          accepted.map((a) => ({ path: a.at.canonical, value: a.value, a })),
+        ).kept.map((k) => k.a)
+        skipped += itemCount - kept.length
+        if (kept.length > 0) {
+          planned.push({ paperId: item.paperId, reviewer: item.reviewer, usage: item.usage, accepted: kept })
         }
       }
       if (planned.length === 0) return { filled: 0, skipped, papers: 0 }
@@ -3185,10 +3226,12 @@ export const useStore = create<AppState>()(
       }),
 
     resolveConsolidationValue: (path, name, index, value) => {
-      if (get().readOnly) return
+      if (get().readOnly) return null
       const prev = get()
       const paper = currentPaper(prev)
-      if (!prev.project || !paper || prev.currentReviewer !== 'consolidation') return
+      if (!prev.project || !paper || prev.currentReviewer !== 'consolidation') return null
+      const hint = duplicateHint(prev, path, name, index, value)
+      if (hint) return hint
       const canonical = fieldPath(path, name, index)
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       lastFieldKey = null
@@ -3206,6 +3249,7 @@ export const useStore = create<AppState>()(
         delete s.deferredConsolidations[deferredConsolidationKey(draft.id, canonical)]
         s.dirty = true
       })
+      return null
     },
 
     deferConsolidationValue: (path, name, index) => {
@@ -3239,7 +3283,7 @@ export const useStore = create<AppState>()(
       // paper) — so a frozen node still runs `widenAlignment` below instead of
       // returning outright: it only adds a reviewer absent from every slot's
       // `members`, never moves one already there.
-      const frozen = consolidatorHasAnswered(def, paper.annotations)
+      const frozen = consolidatorHasAnswered(def, paper.annotations) || hasManualSlot(paper.alignment[nodeName])
 
       // Only numbered reviewers who've actually written something vote — the
       // consolidated tree being built from them can't match against itself,
@@ -3293,6 +3337,64 @@ export const useStore = create<AppState>()(
       return changed
     },
 
+    remapConsolidationEntry: (paperId, path, name, slotIndex, reviewer, entryIndex) => {
+      if (get().readOnly) return
+      const prev = get()
+      const project = prev.project
+      if (!project || project.reviewers <= 1) return
+      const paper = project.papers.find((p) => p.id === paperId)
+      if (!paper) return
+      let def: ResolvedDef | undefined
+      let level = project.schema
+      for (const seg of [...path, { name }]) {
+        def = level.find((d) => d.name === seg.name)
+        level = def?.children ?? []
+      }
+      const slots = alignmentSlotsAt(paper.alignment, path, name, (_slots, seg) => seg.index)
+      if (!def || !slots || slotIndex < 0 || slotIndex >= slots.length) return
+      const before = slots[slotIndex].members[reviewer]
+      if (before === (entryIndex ?? undefined)) return
+      const own = (r: string) => reviewerEntriesAt(paper.alignment, paper.reviews[r], path, name, r)
+      if (entryIndex !== null && (!Number.isInteger(entryIndex) || entryIndex < 0 || entryIndex >= own(reviewer).length)) {
+        return
+      }
+      const snap: HistoryEntry = { project, paperId: prev.currentPaperId }
+
+      set((s) => {
+        const draft = s.project!.papers.find((p) => p.id === paperId)
+        const draftSlots = draft && alignmentSlotsAt(draft.alignment, path, name, (_slots, seg) => seg.index)
+        if (!draftSlots) return
+        const touched = [slotIndex]
+        const other = entryIndex === null ? -1 : draftSlots.findIndex((slot) => slot.members[reviewer] === entryIndex)
+        if (other >= 0) {
+          if (before === undefined) delete draftSlots[other].members[reviewer]
+          else draftSlots[other].members[reviewer] = before
+          touched.push(other)
+        }
+        if (entryIndex === null) delete draftSlots[slotIndex].members[reviewer]
+        else draftSlots[slotIndex].members[reviewer] = entryIndex
+
+        for (const at of touched) {
+          const slot = draftSlots[at]
+          slot.manual = true
+          if (def.children.length === 0) continue
+          const childTrees: Record<string, AnnotationValueTree | undefined> = {}
+          for (const [r, index] of Object.entries(slot.members)) childTrees[r] = own(r)[index]?.children
+          const refit = widenAlignment(def.children, withoutReviewer(slot.children ?? {}, reviewer), childTrees, new Map()).alignment
+          const present: Record<string, AnnotationValueTree> = {}
+          for (const [r, tree] of Object.entries(childTrees)) if (tree) present[r] = tree
+          for (const child of alignableNodes(def.children)) {
+            if (!refit[child]) Object.assign(refit, toStoredAlignment(alignNode(def.children, present, child)))
+          }
+          if (Object.keys(refit).length > 0) slot.children = refit
+          else delete slot.children
+        }
+        pushPast(s, snap)
+        s.dirty = true
+      })
+      lastFieldKey = null
+    },
+
     adoptUnanimousValues: (paperId, coalesce) => {
       if (get().readOnly) return 0
       const prev = get()
@@ -3309,11 +3411,15 @@ export const useStore = create<AppState>()(
 
       // Through the mapping, not raw: `unanimousFills` reads every reviewer at
       // one index, which only means "the same entry" in slot space.
-      const fills = unanimousFills(
+      const fills = dropDuplicateSuggestions(
         project.schema,
-        alignedReviews(project.schema, paper.alignment, reviews),
         paper.annotations,
-      )
+        unanimousFills(
+          project.schema,
+          alignedReviews(project.schema, paper.alignment, reviews),
+          paper.annotations,
+        ).map((f) => ({ ...f, path: f.canonical, segs: f.path })),
+      ).kept
       if (fills.length === 0) return 0
 
       const snap: HistoryEntry = { project, paperId: prev.currentPaperId }
@@ -3322,7 +3428,7 @@ export const useStore = create<AppState>()(
         if (!draft) return
         if (!coalesce) pushPast(s, snap)
         for (const fill of fills) {
-          const container = containerAt(draft.annotations, fill.path)
+          const container = containerAt(draft.annotations, fill.segs)
           const inst = container[fill.name]?.[fill.index]
           if (!inst) continue
           inst.value = fill.value
@@ -3796,6 +3902,19 @@ function noteFieldTouchForPendingMarkLink(s: AppState, canonical: string): void 
 
 /** Back to the event loop, so a progress count paints and the window stays live. */
 const yieldToBrowser = (): Promise<void> => new Promise((resolve) => setTimeout(resolve, 0))
+
+function duplicateHint(
+  s: AppState,
+  path: PathSeg[],
+  name: string,
+  index: number,
+  value: FieldValue,
+): string | null {
+  const paper = currentPaper(s)
+  const tree = paper && currentTree(s.project!, s.currentReviewer, paper)
+  if (!tree) return null
+  return duplicateOnWrite(s.project!.schema, tree, [...path, { name, index }], value)
+}
 
 function currentPaper(s: AppState) {
   if (!s.project || !s.currentPaperId) return null

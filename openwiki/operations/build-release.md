@@ -2,9 +2,44 @@
 type: "Reference"
 title: "Build, CI, and Release"
 openwiki_generated: true
-verified:
-  - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
+sources:
+  - id: openwiki-source-164e2da859b5277df81c7d94
+    resource: repo://.github/workflows/ci.yml
+  - id: openwiki-source-6d4b4e707b8d60b6ccfa3425
+    resource: repo://.github/workflows/openwiki-update.yml
+  - id: openwiki-source-6d3ac2bdfb0e76882a670989
+    resource: repo://.github/workflows/openwiki.yml
+  - id: openwiki-source-4d1d392666be6dfdd7a91a2e
+    resource: repo://.github/workflows/release.yml
+  - id: openwiki-source-b1eed8badb7e60418dbf126b
+    resource: repo://.github/workflows/technical-report.yml
+  - id: openwiki-source-794b8a6d2fa178d64fce49a3
+    resource: repo://.github/workflows/wiki-import.yml
+  - id: openwiki-source-a7a8965ff53d3530162adf6d
+    resource: repo://.github/workflows/wiki-publish.yml
+  - id: openwiki-source-0c106052b3286e779bed85e7
+    resource: repo://docker-compose.dev.yml
+  - id: openwiki-source-30fe91f795b085eaf5406186
+    resource: repo://Dockerfile.tauri-linux
+  - id: openwiki-source-012f2c78e3b1446dfc35803f
+    resource: repo://Makefile
+  - id: openwiki-source-5b54a58d1b51cd490b0e7162
+    resource: repo://package.json
+  - id: openwiki-source-0744bbc5adcd6bd563690bde
+    resource: repo://scripts/ci.sh
+  - id: openwiki-source-ca67060e890937010b96de80
+    resource: repo://src-tauri/Cargo.toml
+  - id: openwiki-source-0abfee918aaf0d7e3ea712fc
+    resource: repo://src-tauri/tauri.conf.json
+  - id: openwiki-source-0f89b6f9b7d0d7dbcdbcf75e
+    resource: repo://src-tauri/tauri.probe.conf.json
+  - id: openwiki-source-e21deef9fc8d5382b74674ba
+    resource: repo://src-tauri/tauri.release.conf.json
+  - id: openwiki-source-5e1b077422a94ae165e88e4e
+    resource: repo://vite.config.ts
+  - id: openwiki-source-742c2ed7fe09ab88b9fb143a
+    resource: repo://vite.probe.config.ts
+generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
 ---
 
 
@@ -67,6 +102,7 @@ there is no electron-builder section anymore.
   `https://github.com/Gram21/SaiLoR/releases/latest/download/latest.json` with
   its embedded `pubkey` and `requireSignedVersion: true`. Windows main and the
   renderer talk to the shell as described in
+<!-- openwiki: broken internal link [tauri-shell.md] file "tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
   [Tauri Shell](tauri-shell.md).
 - **`src-tauri/tauri.release.conf.json`** — merged over the base for release
   builds: restricts `bundle.targets` to `app, dmg, nsis, appimage, deb, rpm` and
@@ -200,6 +236,7 @@ The jobs:
    on Zenodo is permanent.
 
 The updater flow at runtime is covered by
+<!-- openwiki: broken internal link [tauri-shell.md] file "tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 [Tauri Shell](tauri-shell.md) and the `plugins.updater` config above: the app
 fetches `latest.json`, whose signatures were produced at release time by
 `createUpdaterArtifacts`, and the updater verifies them against the baked-in

@@ -143,6 +143,11 @@ export function DisagreementOverview() {
                             {formatValue(v.def, v.values[r])}
                           </span>
                         ))}
+                        {v.onlyIn.length > 0 && (
+                          <span className="disagreement-only">
+                            Only in {v.onlyIn.map((r) => `R${r}`).join(', ')}
+                          </span>
+                        )}
                       </span>
                     </button>
                   </li>

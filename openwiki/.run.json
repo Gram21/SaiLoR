@@ -223,7 +223,7 @@
           "The page is Electron-era at its baseline: its fetch-vs-parse story says the Electron main process (electron/main.ts) is the only thing that talks to git. That file is deleted; the git plumbing now lives in the Rust shell (src-tauri/src/git.rs, ~100KB: spawn/clone/fetch/push/commit/log/branch/stash operations) reached through Tauri commands, with project/git snapshots returned as RawProject ({text, files, siblings}) and reassembled into whole-project text by assembleProject in src/platform/tauri.ts. Rewrite the plumbing layer accordingly; resolve the page's claims by re-anchoring them to src-tauri/src/git.rs, src-tauri/src/project.rs, and src/platform/tauri.ts instead of electron/main.ts.",
           "Update the front-matter description/tags and the sources list to the current files; keep the page's four-layer narrative structure (security gates → fetch/parse → merge → state machine) if it still fits."
         ],
-        "status": "pending"
+        "status": "skipped"
       },
       {
         "id": "067d0649-8535-4da5-8eef-1450e34c76d0",
@@ -268,7 +268,8 @@
           "The web build is discontinued: `npm run dev` renders only the isTauri() discontinuation screen; say so explicitly and route readers to architecture.md for why the PlatformAdapter seam survives as one real + one inert implementation.",
           "Verify every file path and command mentioned against the current tree before writing it; the page is the entry point, so any stale path here misroutes every future task. Cross-check commands against Makefile, scripts/ci.sh, and scripts/setup.sh/setup.ps1."
         ],
-        "status": "pending"
+        "status": "complete",
+        "completedBy": "openwiki/0.7.3"
       }
     ],
     "deletePages": [

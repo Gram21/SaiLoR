@@ -62,6 +62,30 @@ jobs:
       - run: cargo fmt --check
       - run: cargo clippy --all-targets --all-features -- -D warnings
 
+  # Requirement trace links (OpenFastTrace). Allowed to fail until the trace tags are in the sources.
+  trace:
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Self-check the OFT scripts
+        run: python3 -B scripts/oft/selftest.py
+
+      - name: Convert requirements
+        run: python3 -B scripts/oft/convert-requirements.py
+
+      - name: Trace
+        run: make trace
+
+      - name: Upload trace report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: trace-report
+          path: .cache/oft/trace.*
+          if-no-files-found: ignore
+
   # Rust tests, installer bundle and a probe run in each system WebView.
   # The probe is a separate build (e2e/ page, `probe` feature). The release app has no probe commands.
   tauri-build:

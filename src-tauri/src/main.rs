@@ -177,6 +177,8 @@ fn main() {
             git::git_pull_finish,
             git::git_pull_abort,
             git::git_merge_begin,
+            git::git_merge_preview,
+            git::git_undo_merge,
             git::git_log_begin,
             git::git_log_diff,
             git::git_annotation_authors,

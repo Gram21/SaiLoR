@@ -1267,6 +1267,8 @@ export function dehydrateSchema(defs: ResolvedDef[]): unknown[] {
     if (d.options !== undefined) out.options = d.options
     if (d.required) out.required = true
     if (d.visibleIf !== undefined) out.visibleIf = compactVisibleIf(d.visibleIf)
+    if (d.unique) out.unique = true
+    if (d.uniqueBy !== undefined) out.uniqueBy = d.uniqueBy
     if (d.children.length > 0) out.children = dehydrateSchema(d.children)
     return out
   })

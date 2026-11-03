@@ -50,7 +50,8 @@ export interface NodeAlignment {
 export type TreeAlignment = Record<string, NodeAlignment>
 
 /**
- * Nudges an otherwise-tied pairing towards the reviewers' original order, when
+ * Nudges an otherwise-tied pairing towards the same position in content order
+ * (see `contentOrder`), so the result never depends on recording order, when
  * entries share no comparable content and the matcher would otherwise shuffle
  * them arbitrarily. Small enough that any real agreement outranks it.
  */
@@ -155,7 +156,9 @@ function listSim(
 ): Sim {
   if (listA.length === 0 || listB.length === 0) return NO_EVIDENCE
 
-  const sims = listA.map((a) => listB.map((b) => instanceSim(def, a, b, cache)))
+  const rowsA = contentOrder(listA).map((i) => listA[i])
+  const rowsB = contentOrder(listB).map((i) => listB[i])
+  const sims = rowsA.map((a) => rowsB.map((b) => instanceSim(def, a, b, cache)))
   const weights = sims.map((row) => row.map(agreementMass))
   const rowToCol = maxWeightAssignment(weights)
 
@@ -189,6 +192,48 @@ function simAgainstSlot(
 
 function newSlot(): AlignedSlot {
   return { members: {}, children: {}, agreement: 0, evidence: 0 }
+}
+
+/**
+ * A reviewer's entry indices sorted by content, so matching sees the same
+ * input whatever order the reviewer recorded the entries in. Equal entries
+ * keep their recorded order: they are interchangeable, and this keeps
+ * blank lists paired by position. The key ignores nested entry order too.
+ */
+function contentOrder(list: InstanceNode[]): number[] {
+  const keys = list.map(contentKey)
+  return list
+    .map((_, i) => i)
+    .sort((x, y) => (keys[x] < keys[y] ? -1 : keys[x] > keys[y] ? 1 : x - y))
+}
+
+function contentKey(inst: InstanceNode | undefined): string {
+  if (!inst || typeof inst !== 'object') return ''
+  const children = inst.children ?? {}
+  const nested = Object.keys(children)
+    .sort()
+    .map((name) => {
+      const list = children[name]
+      return [name, Array.isArray(list) ? list.map(contentKey).sort() : []]
+    })
+  return JSON.stringify([inst.value ?? null, nested])
+}
+
+/**
+ * Display order for slots: by the reviewer who opened the slot (fold-in
+ * order), then by that reviewer's own index. Keeps the anchor's recorded
+ * order first and new slots after it, as before matching became
+ * order-independent.
+ */
+function sortSlots<T extends { members: Record<string, number> }>(slots: T[], reviewers: string[]): T[] {
+  const key = (slot: T): [number, number] => {
+    const opener = reviewers.findIndex((r) => slot.members[r] !== undefined)
+    return [opener < 0 ? reviewers.length : opener, opener < 0 ? 0 : slot.members[reviewers[opener]]]
+  }
+  return slots
+    .map((slot) => ({ slot, k: key(slot) }))
+    .sort((a, b) => a.k[0] - b.k[0] || a.k[1] - b.k[1])
+    .map((x) => x.slot)
 }
 
 /**
@@ -231,21 +276,22 @@ function alignList(
   }
 
   const [anchor, ...rest] = reviewers
-  const slots: AlignedSlot[] = lists[anchor].map((_, i) => {
+  let slots: AlignedSlot[] = contentOrder(lists[anchor]).map((i) => {
     const slot = newSlot()
     slot.members[anchor] = i
     return slot
   })
 
   for (const reviewer of rest) {
-    const entries = lists[reviewer]
+    const order = contentOrder(lists[reviewer])
+    const entries = order.map((i) => lists[reviewer][i])
     if (entries.length === 0) continue
     const baseSlotCount = slots.length
     const weights = entries.map((entry, i) => {
       const row = slots.map((slot, s) => {
         const sim = simAgainstSlot(def, entry, slot, lists, cache)
         // Nothing comparable either way: no grounds to pair them and none to
-        // separate them, so fall back to the order the reviewers already used.
+        // separate them, so fall back to the same position in content order.
         if (sim.weight === 0) return i === s ? ORDER_TIE_BREAK : 0
         // Not the same entry (see `MIN_MATCH_SCORE`) — score 0, not the real
         // mass, so the new-slot column below can win instead.
@@ -260,14 +306,15 @@ function alignList(
     maxWeightAssignment(weights).forEach((col, entryIndex) => {
       if (col < 0) return
       if (col < baseSlotCount) {
-        slots[col].members[reviewer] = entryIndex
+        slots[col].members[reviewer] = order[entryIndex]
         return
       }
       const slot = newSlot()
-      slot.members[reviewer] = entryIndex
+      slot.members[reviewer] = order[entryIndex]
       slots.push(slot)
     })
   }
+  slots = sortSlots(slots, reviewers)
 
   for (const slot of slots) {
     scoreSlot(def, slot, lists, cache)
@@ -427,7 +474,8 @@ export function widenAlignment(
       childTrees[reviewer] = lists[reviewer]?.[index]?.children
     }
     const widenedChildren = widenAlignment(def.children, slot.children ?? {}, childTrees, cache)
-    const nextSlot: StoredSlot = { members: nextMembers }
+    const nextSlot: StoredSlot = { ...slot, members: nextMembers }
+    delete nextSlot.children
     if (Object.keys(widenedChildren.alignment).length > 0) nextSlot.children = widenedChildren.alignment
     out[def.name] = [nextSlot]
     if (memberAdded || widenedChildren.changed) changed = true
@@ -461,20 +509,17 @@ function widenList(
   if (singlePairing(def, lists) && existingSlots.length === 1) {
     const members = { ...existingSlots[0].members }
     for (const r of newcomers) members[r] = 0
-    return { slots: [{ members }], changed: true }
+    return { slots: [{ ...existingSlots[0], members }], changed: true }
   }
 
-  // Plain member-bag copies — `simAgainstSlot` only reads `.members`;
-  // `children` passes through untouched until a slot is actually widened below.
-  const slots: StoredSlot[] = existingSlots.map((s) => {
-    const slot: StoredSlot = { members: { ...s.members } }
-    if (s.children) slot.children = s.children
-    return slot
-  })
+  // Member-bag copies — `simAgainstSlot` only reads `.members`; `children` and
+  // any other stored keys pass through untouched until a slot is widened below.
+  const slots: StoredSlot[] = existingSlots.map((s) => ({ ...s, members: { ...s.members } }))
   let changed = false
 
   for (const reviewer of newcomers) {
-    const entries = lists[reviewer]
+    const order = contentOrder(lists[reviewer])
+    const entries = order.map((i) => lists[reviewer][i])
     const asAlignedSlots: AlignedSlot[] = slots.map((s) => ({
       members: s.members,
       children: {},
@@ -492,15 +537,17 @@ function widenList(
       for (let j = 0; j < entries.length; j++) row.push(NEW_SLOT_WEIGHT)
       return row
     })
+    const opened: number[] = []
     maxWeightAssignment(weights).forEach((col, entryIndex) => {
       if (col < 0) return
       changed = true
       if (col < baseSlotCount) {
-        slots[col].members[reviewer] = entryIndex
+        slots[col].members[reviewer] = order[entryIndex]
       } else {
-        slots.push({ members: { [reviewer]: entryIndex } })
+        opened.push(order[entryIndex])
       }
     })
+    for (const index of opened.sort((x, y) => x - y)) slots.push({ members: { [reviewer]: index } })
   }
 
   // Only recurse into slots a newcomer actually landed in — keeps this a pure

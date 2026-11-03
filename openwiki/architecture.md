@@ -4,6 +4,14 @@ title: SaiLoR Architecture
 description: Deep dive into SaiLoR's architecture — the Tauri shell (renderer vs Rust process split), why the web SPA runtime was discontinued (desktop-only now), the PlatformAdapter seam over the SlrBridge/Tauri transport, the split project.json + annotations/ on-disk storage format, the four Zustand stores, the Zustand store with undo/redo (incl. PDF marks), reading-position persistence, the component tree, multi-reviewer consolidation with stored alignment, git integration (the Rust shell spawns git), the src-tauri Rust module map, and build wiring.
 tags: [architecture, platform-adapter, state-management, tauri, rust-backend, git, split-storage]
 sources:
+  - id: openwiki-source-99b0214e9f2113a0f6a2cf92
+    resource: repo://src-tauri/src/main.rs
+  - id: openwiki-source-5e350144821ef45403557db2
+    resource: repo://src-tauri/src/project.rs
+  - id: openwiki-source-e7abf856466c7e9265c41eff
+    resource: repo://src-tauri/src/protocol.rs
+  - id: openwiki-source-0abfee918aaf0d7e3ea712fc
+    resource: repo://src-tauri/tauri.conf.json
   - id: openwiki-source-54631e6ebf1d3b815c4a5eed
     resource: repo://src/App.tsx
   - id: openwiki-source-e9545c0696c205b4aba178dd
@@ -16,16 +24,16 @@ sources:
     resource: repo://src/main.tsx
   - id: openwiki-source-24c09c3b54387889db23d752
     resource: repo://src/platform/adapter.ts
-  - id: openwiki-source-8ad2b0f0a4c94c31ba4f1e94d7e21f01
+  - id: openwiki-source-c5f69fb184c9942bb27eaf58
     resource: repo://src/platform/bridge.ts
+  - id: openwiki-source-d1afade4641722495f434a61
+    resource: repo://src/platform/desktop.ts
   - id: openwiki-source-776dd28cc442c205e0a91460
     resource: repo://src/platform/index.ts
   - id: openwiki-source-9b49ad2f97827d5ed9890232
     resource: repo://src/platform/unsupported.ts
-  - id: openwiki-source-5c1e2a34b8f04b7e8bd1e0c9d2a3f6a1
-    resource: repo://src/platform/tauri.ts
-  - id: openwiki-source-1f9d3b7c2e5a46f09cb87d34a2e6b8c4
-    resource: repo://src/platform/desktop.ts
+  - id: openwiki-source-876d93ca738ea8e9f2e60629
+    resource: repo://src/state/aiScreeningStore.ts
   - id: openwiki-source-c1ab92e18d72fec6435ab66e
     resource: repo://src/state/aiStore.ts
   - id: openwiki-source-f222dc1d70cd27df6524150a
@@ -36,10 +44,6 @@ sources:
     resource: repo://src/state/settings.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
-  - id: openwiki-source-3b7e91c4d2f84a6f9e0b1c5d8a2f7e63
-    resource: repo://src-tauri/src/main.rs
-  - id: openwiki-source-4c8a2f61b9e04d738fa1b5c2e6d9a0f7
-    resource: repo://src-tauri/tauri.conf.json
   - id: openwiki-source-81cf84df6b5988f0684554d1
     resource: repo://tsconfig.app.json
   - id: openwiki-source-98d5ddb014a0fd4d678f6f2a
@@ -48,10 +52,7 @@ sources:
     resource: repo://tsconfig.node.json
   - id: openwiki-source-5e1b077422a94ae165e88e4e
     resource: repo://vite.config.ts
-generated: { by: "openwiki/0.5.2", at: "2026-09-23T12:49:55.013Z" }
-verified:
-  - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
+generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
 ---
 
 # Architecture

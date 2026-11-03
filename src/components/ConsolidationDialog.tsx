@@ -1,11 +1,12 @@
 import { useEffect, useState } from 'react'
-import { useStore, selectCurrentPaper, fieldPath, peekValue } from '../state/store'
+import { useStore, selectCurrentPaper, fieldPath, peekValue, alignmentSlotsAt, type PathSeg } from '../state/store'
 import { resolvePath, displayPath } from '../llm/paths'
-import { emptyValue, type FieldValue } from '../model/annotations'
-import { alignedReviews } from '../model/alignment'
+import { emptyValue, type FieldValue, type InstanceNode } from '../model/annotations'
+import { alignedReviews, reviewerEntriesAt } from '../model/alignment'
+import { isRepeatable } from '../consolidate/align'
 import { isEmptyValue } from '../model/validate'
 import { comparable } from '../consolidate/unanimous'
-import { formatValue } from '../consolidate/disagreements'
+import { formatValue, paperVerdicts } from '../consolidate/disagreements'
 import { SCREENING_DECISION } from '../screening/schema'
 import { seatLabel } from '../model/project'
 import type { ResolvedDef } from '../model/schema'
@@ -72,11 +73,13 @@ export function ConsolidationDialog() {
   const resolveConsolidationValue = useStore((s) => s.resolveConsolidationValue)
   const deferConsolidationValue = useStore((s) => s.deferConsolidationValue)
   const toggleFieldEquality = useStore((s) => s.toggleFieldEquality)
+  const remapConsolidationEntry = useStore((s) => s.remapConsolidationEntry)
 
   // Raised when leaving would strand the field, rather than letting it go and
   // hoping the reviewer noticed. Local, not store state: it belongs to this
   // dialog's lifetime and means nothing once it closes.
   const [confirmingClose, setConfirmingClose] = useState(false)
+  const [duplicateHint, setDuplicateHint] = useState<string | null>(null)
 
   // Re-resolve against the live schema (not just trust what opened the popup) —
   // the schema could in principle have changed underneath it. Derived up here,
@@ -129,6 +132,30 @@ export function ConsolidationDialog() {
     value: peekValue(lined[reviewer] ?? {}, target.path, target.name, target.index),
   }))
 
+  const full: PathSeg[] = [...target.path, { name: target.name, index: target.index }]
+  let entryAt = -1
+  let level = project.schema
+  full.forEach((seg, i) => {
+    const node = level.find((d) => d.name === seg.name)
+    if (node && isRepeatable(node)) entryAt = i
+    level = node?.children ?? []
+  })
+  const entryPath = full.slice(0, Math.max(entryAt, 0))
+  const entrySeg = entryAt >= 0 ? full[entryAt] : null
+  const entrySlot = entrySeg
+    ? alignmentSlotsAt(paper.alignment, entryPath, entrySeg.name, (_slots, seg) => seg.index)?.[entrySeg.index]
+    : undefined
+  const onlyIn = entrySlot
+    ? (paperVerdicts(project.schema, paper, project.reviewers).find((v) => v.canonical === canonical)?.onlyIn ?? [])
+    : []
+  const preview = (inst: InstanceNode) => {
+    const value = Object.values(inst.children ?? {})
+      .flat()
+      .map((child) => child.value)
+      .find((v) => v !== null && v !== undefined && v !== '' && !(Array.isArray(v) && v.length === 0))
+    return value === undefined ? '' : `: ${String(value).slice(0, 40)}`
+  }
+
   const answered = rows
     .map((r) => r.value)
     .filter((v) => !isEmptyValue(def.type, v ?? emptyValue(def.type)))
@@ -160,7 +187,11 @@ export function ConsolidationDialog() {
     if (isEmptyValue(def.type, taken)) {
       deferConsolidationValue(target.path, target.name, target.index)
     } else {
-      resolveConsolidationValue(target.path, target.name, target.index, taken)
+      const refused = resolveConsolidationValue(target.path, target.name, target.index, taken)
+      if (refused) {
+        setDuplicateHint(refused)
+        return
+      }
     }
     closeConsolidation()
   }
@@ -192,6 +223,9 @@ export function ConsolidationDialog() {
               <span className={`help-mode ${agreement === 'agree' ? 'ok' : 'bad'}`}>
                 {agreement === 'agree' ? 'Reviewers agree' : 'Reviewers disagree'}
               </span>
+            )}
+            {onlyIn.length > 0 && (
+              <span className="help-mode">Only in {onlyIn.map((r) => seatLabel(project, r)).join(', ')}</span>
             )}
           </strong>
           <button type="button" className="icon-btn" title="Close" onClick={requestClose} aria-label="Close">
@@ -234,6 +268,39 @@ export function ConsolidationDialog() {
           >
             Enter a different value
           </button>
+          {entrySeg && entrySlot && (
+            <div className="consolidation-mapping">
+              <p>Compared entries of {entrySeg.name}:</p>
+              {reviewerIds.map((reviewer) => (
+                <label key={reviewer}>
+                  {seatLabel(project, reviewer)}
+                  <select
+                    aria-label={`${seatLabel(project, reviewer)} entry`}
+                    value={entrySlot.members[reviewer] ?? ''}
+                    onChange={(e) =>
+                      remapConsolidationEntry(
+                        paper.id,
+                        entryPath,
+                        entrySeg.name,
+                        entrySeg.index,
+                        reviewer,
+                        e.target.value === '' ? null : Number(e.target.value),
+                      )
+                    }
+                  >
+                    <option value="">No entry</option>
+                    {reviewerEntriesAt(paper.alignment, paper.reviews[reviewer], entryPath, entrySeg.name, reviewer).map(
+                      (inst, i) => (
+                        <option key={i} value={i}>
+                          {`Entry ${i + 1}${preview(inst)}`}
+                        </option>
+                      ),
+                    )}
+                  </select>
+                </label>
+              ))}
+            </div>
+          )}
           {canDeclareEqual && (
             <>
               <label className="consolidation-equal">
@@ -254,6 +321,12 @@ export function ConsolidationDialog() {
                   : 'Marking answers equivalent settles that the reviewers agreed. Pick one of them above as well, so the consolidated result records what they agreed on.'}
               </p>
             </>
+          )}
+
+          {duplicateHint && (
+            <p className="field-dup-hint" role="alert">
+              {duplicateHint}
+            </p>
           )}
 
           {confirmingClose && (

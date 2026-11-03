@@ -472,3 +472,103 @@ describe('AI is not usable from the Consolidation seat', () => {
     ).toBe(1)
   })
 })
+
+describe('remapConsolidationEntry', () => {
+  beforeEach(() => {
+    st().loadFromText(projectText(2, swapped), null, 'test.json')
+    st().selectPaper('p1')
+    st().selectReviewer('consolidation')
+    st().alignConsolidationNode('p1', 'Findings', false)
+  })
+
+  const slots = () => st().project!.papers[0].alignment['Findings']
+
+  it('swaps the entry out of the slot that held it and marks both slots manual', () => {
+    st().remapConsolidationEntry('p1', [], 'Findings', 0, '2', 2)
+    expect(slots()).toEqual([
+      { members: { '1': 0, '2': 2 }, manual: true },
+      { members: { '1': 1, '2': 1 }, manual: true },
+      { members: { '1': 2, '2': 0 } },
+    ])
+    expect(claimsOf('2')).toEqual(['Gamma', 'Alpha', 'Beta'])
+    expect(st().dirty).toBe(true)
+  })
+
+  it('leaves a slot without the reviewer on "no entry"', () => {
+    st().remapConsolidationEntry('p1', [], 'Findings', 0, '2', null)
+    expect(slots()[0]).toEqual({ members: { '1': 0 }, manual: true })
+    expect(slots()[1]).toEqual({ members: { '1': 1, '2': 2 } })
+  })
+
+  it('ignores an index the reviewer does not have', () => {
+    const depth = st().past.length
+    st().remapConsolidationEntry('p1', [], 'Findings', 0, '2', 3)
+    st().remapConsolidationEntry('p1', [], 'Findings', 5, '2', 0)
+    expect(st().past.length).toBe(depth)
+    expect(slots()[0]).toEqual({ members: { '1': 0, '2': 1 } })
+  })
+
+  it('keeps the manual mapping when matching runs again', () => {
+    st().remapConsolidationEntry('p1', [], 'Findings', 0, '2', 2)
+    const kept = JSON.stringify(slots())
+    expect(st().alignConsolidationNode('p1', 'Findings', false)).toBe(false)
+    expect(JSON.stringify(slots())).toBe(kept)
+  })
+
+  it('is one undo press', () => {
+    const depth = st().past.length
+    st().remapConsolidationEntry('p1', [], 'Findings', 0, '2', 2)
+    expect(st().past.length).toBe(depth + 1)
+    st().undo()
+    expect(slots()[0]).toEqual({ members: { '1': 0, '2': 1 } })
+  })
+
+  it('rematches nested entries for the new pair', () => {
+    const nested = [
+      {
+        name: 'Findings',
+        max: null,
+        children: [
+          { name: 'Claim', type: 'string' as const },
+          { name: 'Notes', max: null, children: [{ name: 'Text', type: 'string' as const }] },
+        ],
+      },
+    ]
+    const note = (text: string) => ({ children: { Text: [{ value: text }] } })
+    const entry = (claim: string, notes: string[]) => ({
+      children: { Claim: [{ value: claim }], Notes: notes.map(note) },
+    })
+    st().loadFromText(
+      JSON.stringify({
+        version: 1,
+        config: { schema: nested, reviewers: 2 },
+        papers: [
+          {
+            id: 'p1',
+            title: 'T',
+            authors: [],
+            pdf: 'a.pdf',
+            annotations: {},
+            reviews: {
+              '1': { Findings: [entry('Alpha', ['Table 4', 'RQ2']), entry('Beta', ['see appendix'])] },
+              '2': { Findings: [entry('Beta', ['see appendix']), entry('Alpha', ['RQ2', 'Table 4'])] },
+            },
+          },
+        ],
+      }),
+      null,
+      'test.json',
+    )
+    st().selectPaper('p1')
+    st().selectReviewer('consolidation')
+    st().alignConsolidationNode('p1', 'Findings', false)
+    expect(slots()[0].members).toEqual({ '1': 0, '2': 1 })
+
+    st().remapConsolidationEntry('p1', [], 'Findings', 0, '2', 0)
+    const notes = slots()[0].children!['Notes']
+    expect(notes.map((s) => s.members['1']).filter((i) => i !== undefined).sort()).toEqual([0, 1])
+    expect(notes.map((s) => s.members['2']).filter((i) => i !== undefined)).toEqual([0])
+    const other = slots()[1].children!['Notes']
+    expect(other.map((s) => s.members['2']).filter((i) => i !== undefined).sort()).toEqual([0, 1])
+  })
+})

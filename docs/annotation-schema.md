@@ -173,6 +173,8 @@ thing you want to record. A node is written as a JSON object (its technical name
 | `max`         | number or `null`                       | no       | `1`     | Maximum occurrences. A positive whole number, or `null` for **unbounded**.                |
 | `options`     | array of strings                       | no       | —       | Turns a `string` field into an **enum dropdown** of allowed values (see §3.2).            |
 | `required`    | boolean                                | no       | `false` | Marks a **field** the reviewer must fill in. Shows a `*` next to the name; an empty one is reported by validation. Only valid on a node with a `type` — **and never on a `boolean`**: an unticked checkbox is already a real answer (`false`), so a boolean is never "empty" and `required` on one can never fire. The editor doesn't offer it there, and a stray one in a hand-edited file is dropped on load (not an error). |
+| `unique`      | boolean                                | no       | `false` | Each entry of a **repeatable** node may appear only once (see §3.5). Only valid when `max` is above `1` or `null`. |
+| `uniqueBy`    | array of strings                       | no       | all children | For a `unique` node with `children`: the child names that decide if two entries are the same. |
 | `description` | string                                 | no       | —       | A help note. The name shows an ⓘ marker and reveals this text on hover.                    |
 | `visibleIf`   | string or object                       | no       | —       | Hides this node until another field is answered — or holds a specific value. Combine several conditions with AND/OR (see §3.6). |
 
@@ -383,6 +385,54 @@ You can bound a repeatable group as well. Between one and three threats:
   ]
 }
 ```
+
+#### Unique entries: `unique` and `uniqueBy`
+
+Set `"unique": true` on a repeatable node to allow each entry only once.
+Use it for lists such as keywords, tools, or authors.
+
+```json
+{ "name": "Keywords", "type": "string", "min": 0, "max": null, "unique": true }
+```
+
+The app compares entries with these rules:
+
+| Value                 | Comparison                                                   |
+| --------------------- | ------------------------------------------------------------ |
+| Free text             | Trimmed, inner spaces collapsed, case-insensitive. `" NLP"` equals `"nlp"`. |
+| Choice (`options`)    | Exact match.                                                 |
+| Number, year, boolean | Exact match.                                                 |
+| Empty entry           | Never compared. You can add empty entries at any time.       |
+
+For a group, all child fields decide equality by default.
+To compare only some child fields, list their names in `uniqueBy`:
+
+```json
+{
+  "name": "Authors",
+  "min": 0,
+  "max": null,
+  "unique": true,
+  "uniqueBy": ["Name"],
+  "children": [
+    { "name": "Name", "type": "string" },
+    { "name": "Role", "type": "string" }
+  ]
+}
+```
+
+Here, two entries with the same `Name` are duplicates, even if `Role` is different.
+
+The app applies `unique` in these places:
+
+- **Annotation form.** The form refuses a value that repeats another entry. A hint under the field names the other entry.
+- **AI suggestions.** The app drops a suggestion that repeats an entry. The review notes show the dropped suggestion and the reason.
+- **Consolidation.** The app refuses a merged value that repeats another entry. The dialog stays open and shows a hint.
+- **Validation.** Validation reports existing duplicates as "Duplicate entry". The app does not delete them.
+
+In the project editor, tick **Unique** on a repeatable field.
+If the field has child fields, tick the child fields to compare under **Compare entries by**.
+If you tick no child field, the app compares all child fields.
 
 ### 3.6 Conditional visibility: `visibleIf`
 
@@ -797,6 +847,9 @@ If a project won't open, it's almost always one of these:
   non‑empty `children` (to be a group), or both. A bare `{ "name": "X" }` is invalid.
 - **`options` on a non‑string node.** The `options` enum list only applies to `type: "string"`
   nodes, and must be an array of strings. Using it anywhere else is rejected.
+- **`unique` on a node that is not repeatable.** Set `max` above `1` or to `null`, or remove `unique`.
+- **Wrong `uniqueBy`.** `uniqueBy` needs `"unique": true` and `children`. Each name in
+  `uniqueBy` must be the name of a direct child.
 - **Comments or trailing commas.** JSON allows neither. Remove any `//` lines and any comma that
   sits before a closing `]` or `}`.
 - **Wrong or missing `pdf` path.** Every paper needs a non-empty `pdf`, and the path is relative

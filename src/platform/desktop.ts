@@ -448,6 +448,8 @@ export class DesktopAdapter implements PlatformAdapter {
     finishPull: (root, relPath, working) => withBaselineDropped(() => bridge().gitPullFinish(root, relPath, working)),
     abortPull: (root) => withBaselineDropped(() => bridge().gitPullAbort(root)),
     beginMerge: (root, relPath, ref) => withBaselineDropped(() => bridge().gitMergeBegin(root, relPath, ref)),
+    undoMerge: (root, relPath) => withBaselineDropped(() => bridge().gitUndoMerge(root, relPath)),
+    previewMerge: (root, relPath, ref) => bridge().gitMergePreview(root, relPath, ref),
     logBegin: (root, relPath) => bridge().gitLogBegin(root, relPath),
     logDiff: (root, relPath, rev) => bridge().gitLogDiff(root, relPath, rev),
     headContent: (root, relPath) => bridge().gitHeadContent(root, relPath),

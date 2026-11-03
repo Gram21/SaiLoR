@@ -54,14 +54,14 @@ per category so requirements can be inserted without renumbering.
 
 | Category | Requirements |
 |---|---|
-| Data model & editor (DAT/EDT) | 61 |
-| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 54 |
+| Data model & editor (DAT/EDT) | 65 |
+| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 56 |
 | Screening (SCR) | 39 |
-| Consolidation (CON) | 44 |
-| Git integration (GIT) | 59 |
+| Consolidation (CON) | 48 |
+| Git integration (GIT) | 63 |
 | LLM annotation (LLM) | 88 |
 | Platform & shell (PLT) | 49 |
-| **Total** | **394** |
+| **Total** | **408** |
 
 ## Method & evidence notes
 
@@ -119,6 +119,6 @@ per category so requirements can be inserted without renumbering.
   Electron-era paths removed, and test links added for REQ-LLM-40, REQ-LLM-80, REQ-UI-20, REQ-GIT-90,
   REQ-GIT-120, REQ-GIT-220, REQ-GIT-380 and REQ-GIT-400. REQ-GIT-530 (git output cap) and REQ-PLT-360
   (update install refused with unsaved changes) added. Coverage counts recounted with `trace_stats.py`.
-- **Strict mode with persons (2026-11-03).** REQ-EDT-100 to REQ-EDT-160 added for the strict mode settings,
-  their validation and the person management in the project editor. REQ-CON-410 to REQ-CON-480 added for the
+- **Strict mode with persons (2026-11-03).** REQ-EDT-110 to REQ-EDT-170 added for the strict mode settings,
+  their validation and the person management in the project editor. REQ-CON-450 to REQ-CON-520 added for the
   person dialog, the paper and seat limits, Finish and the consolidation gate.
