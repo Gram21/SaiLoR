@@ -409,3 +409,45 @@ the project editor. See the [index](index.md) for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/PapersEditor.tsx:43-343`
 - **Status:** Implemented
+
+### REQ-EDT-100: Store strict mode settings
+- **Description:** The system shall store strict mode in the optional project keys `config.strict`, `config.persons` and `config.assignments`, write each key only when it holds a value, and open and save a project without these keys unchanged.
+- **Type:** Functional (ISO 25010: Functional Suitability, Compatibility)
+- **Evidence:** `src/model/strict.ts` (`parseStrictConfig`, `strictConfigJson`), `src/model/project.ts` (`loadProject`, `serializeProject`, `splitProjectFiles`)
+- **Status:** Implemented
+
+### REQ-EDT-110: Validate strict mode settings on load
+- **Description:** When a project has strict mode keys, the system shall refuse to open the project and list each problem if `config.strict` is not a boolean, a person has an empty or duplicate identifier or name, an assignment names an unknown person, an assignment seat is not a positive whole number, or one paper has the same seat or the same person twice. The system shall ignore assignments for paper identifiers that the project does not contain. The system shall keep assignments for seats above the reviewer count in the file and ignore them until the count is raised again.
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `src/model/strict.ts` (`parseStrictConfig`), `src/state/editorStore.ts` (`validateDraft`)
+- **Status:** Implemented
+
+### REQ-EDT-120: Manage persons in the project editor
+- **Description:** For an annotation project with more than one reviewer, the project editor shall let the user turn strict mode on and off, add a person, rename a person and remove a person. When a person has finished work on a paper, the system shall refuse to remove that person.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/StrictModeEditor.tsx` (`StrictModeEditor`), `src/state/editorStore.ts` (`setStrictEnabled`, `addPerson`, `renamePerson`, `removePerson`)
+- **Status:** Implemented
+
+### REQ-EDT-130: Assign papers to persons
+- **Description:** The project editor shall let the user assign a person to each numbered seat of each paper and clear that assignment. The system shall refuse to change an assignment whose work is finished.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/StrictModeEditor.tsx` (`StrictModeEditor`), `src/state/editorStore.ts` (`setAssignment`)
+- **Status:** Implemented
+
+### REQ-EDT-140: Assign persons in bulk
+- **Description:** When the user requests a bulk assignment of N persons per paper, the system shall fill the free seats of each paper that has no assignment, in turn over the persons (round robin), and shall not use the AI seat.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/strict.ts` (`bulkAssign`), `src/state/editorStore.ts` (`bulkAssignStrict`)
+- **Status:** Implemented
+
+### REQ-EDT-150: Show work per person
+- **Description:** The strict mode section of the project editor shall show, for each person, the number of assigned papers and the number of finished papers.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/strict.ts` (`personCounts`), `src/components/StrictModeEditor.tsx` (`StrictModeEditor`)
+- **Status:** Implemented
+
+### REQ-EDT-160: Reopen finished work
+- **Description:** The project editor shall let the user reopen the finished work of a person on a paper. Reopening shall remove the finished flag of that seat on that paper.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/StrictModeEditor.tsx` (`StrictModeEditor`), `src/state/editorStore.ts` (`reopenWork`)
+- **Status:** Implemented

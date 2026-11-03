@@ -46,6 +46,9 @@ per category so requirements can be inserted without renumbering.
 | **Stash** | Uncommitted changes that git has parked outside the working tree. |
 | **Carry-over** | The stash SaiLoR creates to move uncommitted project changes across a branch switch. |
 | **Managed block** | The delimited section of a `.gitattributes` or `.gitignore` that SaiLoR maintains; content outside it belongs to the user and is never changed. |
+| **Strict mode** | An optional project setting that limits each person to the papers and seats assigned to that person. It is a workflow aid, not a security control. |
+| **Person** | A named member of the review team in strict mode. A person is different from a seat: one person can hold different seats on different papers. |
+| **Assignment** | The link from a paper and a numbered seat to one person in strict mode. |
 
 ## Coverage summary
 
@@ -116,3 +119,6 @@ per category so requirements can be inserted without renumbering.
   Electron-era paths removed, and test links added for REQ-LLM-40, REQ-LLM-80, REQ-UI-20, REQ-GIT-90,
   REQ-GIT-120, REQ-GIT-220, REQ-GIT-380 and REQ-GIT-400. REQ-GIT-530 (git output cap) and REQ-PLT-360
   (update install refused with unsaved changes) added. Coverage counts recounted with `trace_stats.py`.
+- **Strict mode with persons (2026-11-03).** REQ-EDT-100 to REQ-EDT-160 added for the strict mode settings,
+  their validation and the person management in the project editor. REQ-CON-410 to REQ-CON-480 added for the
+  person dialog, the paper and seat limits, Finish and the consolidation gate.

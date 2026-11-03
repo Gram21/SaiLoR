@@ -272,3 +272,51 @@ for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/store.align.test.ts:442-464`
 - **Status:** Implemented
+
+### REQ-CON-410: Ask who is working
+- **Description:** When a project with active strict mode opens and no valid person is remembered for that project, the system shall show a blocking dialog that lists the persons and a Manager choice. The system shall remember the choice for that project on that computer.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/PersonPicker.tsx` (`PersonPicker`), `src/state/store.ts` (`strictPerson`, `choosePerson`)
+- **Status:** Implemented
+
+### REQ-CON-420: Show only assigned papers
+- **Description:** While a person works in strict mode, the paper list and paper navigation shall show and select only the papers assigned to that person.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/strict.ts` (`personPapers`), `src/components/PaperList.tsx`, `src/hooks/useKeybindings.ts` (`stepPaper`), `src/state/store.ts` (`selectPaper`)
+- **Status:** Implemented
+
+### REQ-CON-430: Fix the seat of a person
+- **Description:** While a person works in strict mode, the system shall set the seat to the seat that the person has on the current paper and shall hide the seat switch.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/strict.ts` (`assignedSeat`), `src/state/store.ts` (`choosePerson`, `selectPaper`, `selectReviewer`), `src/components/Toolbar.tsx`
+- **Status:** Implemented
+
+### REQ-CON-440: Switch person without unsaved changes
+- **Description:** The system shall let the user switch to a different person or to the Manager only when the project has no unsaved changes.
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `src/components/StrictPersonBar.tsx` (`StrictPersonBar`), `src/state/store.ts` (`switchPerson`, `choosePerson`)
+- **Status:** Implemented
+
+### REQ-CON-450: Finish the work of a person
+- **Description:** When a person selects Finish and confirms, the system shall set the finished flag of the person's seat on every assigned paper and save the project. A person shall not remove a finished flag that is saved on disk; the Manager reopens work in the project editor.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/components/StrictPersonBar.tsx` (`StrictPersonBar`), `src/state/store.ts` (`finishPersonWork`, `setAnnotationFinished`)
+- **Status:** Implemented
+
+### REQ-CON-460: Gate consolidation until all persons finish
+- **Description:** In strict mode, when the Consolidation seat opens a paper on which an assigned person has not finished, the system shall hide the consolidation form, stop the automatic alignment and list the persons who have not finished.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/strict.ts` (`missingFinishers`), `src/state/store.ts` (`consolidationGateMissing`), `src/components/AnnotationPanel.tsx`, `src/hooks/useConsolidationAlignment.ts`
+- **Status:** Implemented
+
+### REQ-CON-470: Override the consolidation gate
+- **Description:** While the Manager works in strict mode, the system shall let the Manager open a gated paper for consolidation after a confirmation. The override shall last until the project is opened again.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/store.ts` (`overrideConsolidationGate`, `consolidationOverrides`), `src/components/AnnotationPanel.tsx`
+- **Status:** Implemented
+
+### REQ-CON-480: State that strict mode is not security
+- **Description:** The person dialog, the strict mode section of the project editor and the documentation shall state that strict mode is a workflow aid and does not protect data against a person who edits the files or picks a different person.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/PersonPicker.tsx`, `src/components/StrictModeEditor.tsx`, `docs/annotation-schema.md` §9
+- **Status:** Implemented
