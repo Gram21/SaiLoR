@@ -34,6 +34,7 @@ export function useCloseGuard() {
 
     // File > Close project. The store asks first when changes are unsaved.
     slr.onCloseProject(() => useStore.getState().requestCloseProject())
+    slr.onOpenSettings(() => useStore.getState().setUserSettingsOpen(true))
 
     // Self-update progress (see `checkForNativeUpdate` in src/platform/bridge.ts).
     slr.onNativeUpdateProgress((p) => useStore.getState().noteUpdateProgress(p.percent))

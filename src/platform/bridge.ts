@@ -119,6 +119,8 @@ export interface SlrBridge {
   requestReload(): void
   /** File > Close project from the menu bar. */
   onCloseProject(cb: () => void): void
+  /** Settings from the menu bar. */
+  onOpenSettings(cb: () => void): void
 
   // Git: the user's own git binary. See `PlatformAdapter.getGit`.
   gitProbe(): Promise<GitProbe>

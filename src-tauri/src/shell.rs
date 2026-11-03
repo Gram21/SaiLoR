@@ -64,6 +64,7 @@ fn action(id: &str) -> Option<Action> {
         "app:undo" => Action::Emit("app:undo"),
         "app:redo" => Action::Emit("app:redo"),
         "app:closeProject" => Action::Emit("app:closeProject"),
+        "app:settings" => Action::Emit("app:settings"),
         _ => return None,
     })
 }
@@ -253,7 +254,8 @@ fn copy_new(from: &Path, to: &Path) -> std::io::Result<()> {
     Ok(())
 }
 
-/// The default macOS menu, with the app history for Undo and Redo (`app:undo`, `app:redo`).
+/// The default macOS menu, with Settings in the app menu (`app:settings`) and the app
+/// history for Undo and Redo (`app:undo`, `app:redo`).
 /// The page sees Cmd+Z first; the menu item fires only when the page did not handle it.
 #[cfg(target_os = "macos")]
 fn macos_menu(app: &App) -> tauri::Result<()> {
@@ -261,11 +263,27 @@ fn macos_menu(app: &App) -> tauri::Result<()> {
     let Some(menu) = app.menu() else {
         return Ok(());
     };
+    let app_name = app.package_info().name.clone();
     for item in menu.items()? {
         let MenuItemKind::Submenu(sub) = item else {
             continue;
         };
         match sub.text()?.as_str() {
+            name if name == app_name => {
+                sub.insert_items(
+                    &[
+                        &MenuItem::with_id(
+                            app,
+                            "app:settings",
+                            "Settings…",
+                            true,
+                            Some("CmdOrCtrl+,"),
+                        )?,
+                        &PredefinedMenuItem::separator(app)?,
+                    ],
+                    2,
+                )?;
+            }
             "Edit" => {
                 sub.remove_at(0)?;
                 sub.remove_at(0)?;
@@ -295,6 +313,8 @@ fn menu(app: &App) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
         "File",
         true,
         &[
+            &MenuItem::with_id(app, "app:settings", "Settings…", true, Some("CmdOrCtrl+,"))?,
+            &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "app:closeProject", "Close project", true, None::<&str>)?,
             &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(app, "app:quit", "Quit", true, Some("CmdOrCtrl+Q"))?,
@@ -432,7 +452,7 @@ mod tests {
         assert_eq!(action("app:maximize"), Some(Action::ToggleMaximize));
         assert_eq!(action("app:github"), Some(Action::Github));
         assert_eq!(action("app:about"), Some(Action::About));
-        for event in ["app:undo", "app:redo", "app:closeProject"] {
+        for event in ["app:undo", "app:redo", "app:closeProject", "app:settings"] {
             assert_eq!(action(event), Some(Action::Emit(event)));
         }
         assert_eq!(action("tauri:quit"), None);

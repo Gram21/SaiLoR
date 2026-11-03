@@ -29,6 +29,7 @@ describe('useCloseGuard', () => {
       onCloseProject: vi.fn((cb: () => void) => {
         onClose = cb
       }),
+      onOpenSettings: vi.fn(),
     }
     tauriWindow.__TAURI_INTERNALS__ = {}
     setBridge(bridge as unknown as SlrBridge)
@@ -38,5 +39,31 @@ describe('useCloseGuard', () => {
 
     expect(requestCloseProject).toHaveBeenCalledOnce()
     useStore.setState({ requestCloseProject: original })
+  })
+
+  it('opens Settings from the menu bar (REQ-UI-100)', () => {
+    useStore.setState({ userSettingsOpen: false })
+    let onSettings: () => void = () => {}
+    const bridge = {
+      setDirty: vi.fn(),
+      onRequestSave: vi.fn(),
+      saveComplete: vi.fn(),
+      onUndo: vi.fn(),
+      onRedo: vi.fn(),
+      onNativeUpdateProgress: vi.fn(),
+      onNativeUpdateDownloaded: vi.fn(),
+      onNativeUpdateError: vi.fn(),
+      onCloseProject: vi.fn(),
+      onOpenSettings: vi.fn((cb: () => void) => {
+        onSettings = cb
+      }),
+    }
+    tauriWindow.__TAURI_INTERNALS__ = {}
+    setBridge(bridge as unknown as SlrBridge)
+
+    renderHook(() => useCloseGuard())
+    onSettings()
+
+    expect(useStore.getState().userSettingsOpen).toBe(true)
   })
 })
