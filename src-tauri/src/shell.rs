@@ -112,8 +112,41 @@ const PT: &[(&str, &str)] = &[
 ];
 
 // [impl->req~plt-400~1]
+/// Japanese texts of the native menu labels and the About dialog.
+const JA: &[(&str, &str)] = &[
+    ("File", "ファイル"),
+    ("Edit", "編集"),
+    ("View", "表示"),
+    ("Window", "ウィンドウ"),
+    ("Help", "ヘルプ"),
+    ("Settings…", "設定…"),
+    ("Close project", "プロジェクトを閉じる"),
+    ("Quit", "終了"),
+    ("Quit SaiLoR", "SaiLoR を終了"),
+    ("Undo", "元に戻す"),
+    ("Redo", "やり直す"),
+    ("Cut", "カット"),
+    ("Copy", "コピー"),
+    ("Paste", "ペースト"),
+    ("Select All", "すべてを選択"),
+    ("Reload", "再読み込み"),
+    ("Full Screen", "フルスクリーン"),
+    ("Minimize", "最小化"),
+    ("Maximize/Restore", "最大化/元のサイズに戻す"),
+    ("Zoom", "拡大/縮小"),
+    ("Close", "閉じる"),
+    ("Close Window", "ウィンドウを閉じる"),
+    ("Services", "サービス"),
+    ("Hide SaiLoR", "SaiLoR を非表示"),
+    ("Hide Others", "ほかを非表示"),
+    ("Project on GitHub", "GitHub のプロジェクト"),
+    ("About SaiLoR", "SaiLoR について"),
+    ("Version", "バージョン"),
+];
+
+// [impl->req~plt-400~1]
 /// The menu tables by UI language code. English needs no table.
-const TABLES: &[(&str, &[(&str, &str)])] = &[("de", DE), ("it", IT), ("pt", PT)];
+const TABLES: &[(&str, &[(&str, &str)])] = &[("de", DE), ("it", IT), ("pt", PT), ("ja", JA)];
 
 // [impl->req~plt-400~1]
 /// The text of a menu label in the active language. English is the fallback.

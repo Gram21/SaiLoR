@@ -142,6 +142,7 @@ describe('language', () => {
     ['it-CH', 'it'],
     ['pt-BR', 'pt'],
     ['pt-PT', 'pt'],
+    ['ja-JP', 'ja'],
     ['ko-KR', 'en'],
   ])('uses the supported browser language of %s, else English', (browser, lang) => {
     vi.stubGlobal('navigator', { language: browser })
