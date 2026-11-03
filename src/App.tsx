@@ -62,7 +62,8 @@ import {
   PANE_RIGHT_MIN,
   PANE_RIGHT_MAX,
 } from './state/settings'
-import { rich, useT } from './i18n'
+import { rich, useLanguage, useT } from './i18n'
+import { getBridge } from './platform/bridge'
 
 export function App() {
   const t = useT()
@@ -106,6 +107,12 @@ export function App() {
 
   const workspaceRef = useRef<HTMLDivElement>(null)
   const [panes, setPanes] = useState(loadPaneWidths)
+  const language = useLanguage()
+
+  // [impl->req~plt-400~1]
+  useEffect(() => {
+    if (isTauri()) getBridge().setLanguage(language)
+  }, [language])
 
   // Look for a newer release once per launch (the result is cached for a day).
   useEffect(() => {

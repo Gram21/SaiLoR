@@ -208,6 +208,7 @@ fn main() {
             close::app_set_dirty,
             close::app_save_complete,
             close::app_reload,
+            shell::app_set_language,
         ])
         .build(tauri::generate_context!())
         .expect("tauri build failed")

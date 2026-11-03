@@ -2,12 +2,77 @@
 
 use crate::close;
 use std::path::Path;
-use tauri::menu::{MenuItem, PredefinedMenuItem};
+use std::sync::atomic::{AtomicBool, Ordering::Relaxed};
+use tauri::menu::{AboutMetadata, Menu, MenuItem, PredefinedMenuItem, Submenu};
 use tauri::webview::NewWindowResponse;
-use tauri::{App, AppHandle, Emitter, Manager, Url, WebviewWindowBuilder};
+use tauri::{App, AppHandle, Emitter, Manager, Url, WebviewWindowBuilder, Wry};
 use tauri_plugin_dialog::{DialogExt, MessageDialogKind};
 
 const REPO_URL: &str = "https://github.com/Gram21/SaiLoR";
+
+static GERMAN: AtomicBool = AtomicBool::new(false);
+
+// [impl->req~plt-400~1]
+/// German texts of the native menu labels and the About dialog.
+const DE: &[(&str, &str)] = &[
+    ("File", "Datei"),
+    ("Edit", "Bearbeiten"),
+    ("View", "Ansicht"),
+    ("Window", "Fenster"),
+    ("Help", "Hilfe"),
+    ("Settings…", "Einstellungen…"),
+    ("Close project", "Projekt schließen"),
+    ("Quit", "Beenden"),
+    ("Quit SaiLoR", "SaiLoR beenden"),
+    ("Undo", "Rückgängig"),
+    ("Redo", "Wiederholen"),
+    ("Cut", "Ausschneiden"),
+    ("Copy", "Kopieren"),
+    ("Paste", "Einfügen"),
+    ("Select All", "Alles auswählen"),
+    ("Reload", "Neu laden"),
+    ("Full Screen", "Vollbild"),
+    ("Minimize", "Minimieren"),
+    ("Maximize/Restore", "Maximieren/Wiederherstellen"),
+    ("Zoom", "Zoomen"),
+    ("Close", "Schließen"),
+    ("Close Window", "Fenster schließen"),
+    ("Services", "Dienste"),
+    ("Hide SaiLoR", "SaiLoR ausblenden"),
+    ("Hide Others", "Andere ausblenden"),
+    ("Project on GitHub", "Projekt auf GitHub"),
+    ("About SaiLoR", "Über SaiLoR"),
+    ("Version", "Version"),
+];
+
+// [impl->req~plt-400~1]
+/// The text of a menu label in the active language. English is the fallback.
+fn tr(en: &'static str) -> &'static str {
+    if GERMAN.load(Relaxed) {
+        if let Some((_, de)) = DE.iter().find(|(k, _)| *k == en) {
+            return de;
+        }
+    }
+    en
+}
+
+// [impl->req~plt-400~1]
+/// The renderer sends the UI language at start and after each change.
+#[tauri::command]
+pub fn app_set_language(app: AppHandle, lang: String) -> Result<(), String> {
+    GERMAN.store(lang == "de", Relaxed);
+    app.set_menu(build_menu(&app).map_err(|e| e.to_string())?)
+        .map(|_| ())
+        .map_err(|e| e.to_string())
+}
+
+fn build_menu<M: Manager<Wry>>(app: &M) -> tauri::Result<Menu<Wry>> {
+    if cfg!(target_os = "macos") {
+        macos_menu(app)
+    } else {
+        menu(app)
+    }
+}
 
 // [impl->req~plt-250~1]
 /// Only these schemes leave the app, in the system browser.
@@ -93,8 +158,8 @@ fn run(app: &AppHandle, action: Action) {
         Action::About => {
             let mut dialog = app
                 .dialog()
-                .message(format!("Version {}", app.package_info().version))
-                .title("About SaiLoR")
+                .message(format!("{} {}", tr("Version"), app.package_info().version))
+                .title(tr("About SaiLoR"))
                 .kind(MessageDialogKind::Info);
             if let Some(w) = &window {
                 dialog = dialog.parent(w);
@@ -165,10 +230,7 @@ pub fn setup(app: &mut App) -> Result<(), Box<dyn std::error::Error>> {
             NewWindowResponse::Deny
         })
         .build()?;
-    #[cfg(target_os = "macos")]
-    macos_menu(app)?;
-    #[cfg(not(target_os = "macos"))]
-    app.set_menu(menu(app)?)?;
+    app.set_menu(build_menu(app.handle())?)?;
     app.on_menu_event(|app, e| {
         if let Some(act) = action(e.id().as_ref()) {
             run(app, act);
@@ -272,119 +334,178 @@ fn copy_new(from: &Path, to: &Path) -> std::io::Result<()> {
 // [impl->req~plt-120~1]
 // [impl->req~plt-310~1]
 // [impl->req~plt-370~1]
+// [impl->req~plt-400~1]
 /// The default macOS menu, with Settings in the app menu (`app:settings`) and the app
 /// history for Undo and Redo (`app:undo`, `app:redo`).
 /// The page sees Cmd+Z first; the menu item fires only when the page did not handle it.
-#[cfg(target_os = "macos")]
-fn macos_menu(app: &App) -> tauri::Result<()> {
-    use tauri::menu::MenuItemKind;
-    let Some(menu) = app.menu() else {
-        return Ok(());
+fn macos_menu<M: Manager<Wry>>(app: &M) -> tauri::Result<Menu<Wry>> {
+    use tauri::menu::{HELP_SUBMENU_ID, WINDOW_SUBMENU_ID};
+    let info = app.package_info();
+    let about = AboutMetadata {
+        name: Some(info.name.clone()),
+        version: Some(info.version.to_string()),
+        copyright: app.config().bundle.copyright.clone(),
+        authors: app.config().bundle.publisher.clone().map(|p| vec![p]),
+        ..Default::default()
     };
-    let app_name = app.package_info().name.clone();
-    for item in menu.items()? {
-        let MenuItemKind::Submenu(sub) = item else {
-            continue;
-        };
-        match sub.text()?.as_str() {
-            name if name == app_name => {
-                sub.insert_items(
-                    &[
-                        &MenuItem::with_id(
-                            app,
-                            "app:settings",
-                            "Settings…",
-                            true,
-                            Some("CmdOrCtrl+,"),
-                        )?,
-                        &PredefinedMenuItem::separator(app)?,
-                    ],
-                    2,
-                )?;
-            }
-            "Edit" => {
-                sub.remove_at(0)?;
-                sub.remove_at(0)?;
-                sub.prepend_items(&[
-                    &MenuItem::with_id(app, "app:undo", "Undo", true, Some("CmdOrCtrl+Z"))?,
-                    &MenuItem::with_id(app, "app:redo", "Redo", true, Some("CmdOrCtrl+Shift+Z"))?,
-                ])?;
-            }
-            "View" => {
-                sub.prepend_items(&[
-                    &MenuItem::with_id(app, "app:reload", "Reload", true, Some("CmdOrCtrl+R"))?,
-                    &PredefinedMenuItem::separator(app)?,
-                ])?;
-            }
-            _ => {}
-        }
-    }
-    Ok(())
+    let app_menu = Submenu::with_items(
+        app,
+        info.name.clone(),
+        true,
+        &[
+            &PredefinedMenuItem::about(app, Some(tr("About SaiLoR")), Some(about))?,
+            &PredefinedMenuItem::separator(app)?,
+            &MenuItem::with_id(
+                app,
+                "app:settings",
+                tr("Settings…"),
+                true,
+                Some("CmdOrCtrl+,"),
+            )?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::services(app, Some(tr("Services")))?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::hide(app, Some(tr("Hide SaiLoR")))?,
+            &PredefinedMenuItem::hide_others(app, Some(tr("Hide Others")))?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::quit(app, Some(tr("Quit SaiLoR")))?,
+        ],
+    )?;
+    let file = Submenu::with_items(
+        app,
+        tr("File"),
+        true,
+        &[&PredefinedMenuItem::close_window(
+            app,
+            Some(tr("Close Window")),
+        )?],
+    )?;
+    let edit = Submenu::with_items(
+        app,
+        tr("Edit"),
+        true,
+        &[
+            &MenuItem::with_id(app, "app:undo", tr("Undo"), true, Some("CmdOrCtrl+Z"))?,
+            &MenuItem::with_id(app, "app:redo", tr("Redo"), true, Some("CmdOrCtrl+Shift+Z"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::cut(app, Some(tr("Cut")))?,
+            &PredefinedMenuItem::copy(app, Some(tr("Copy")))?,
+            &PredefinedMenuItem::paste(app, Some(tr("Paste")))?,
+            &PredefinedMenuItem::select_all(app, Some(tr("Select All")))?,
+        ],
+    )?;
+    let view = Submenu::with_items(
+        app,
+        tr("View"),
+        true,
+        &[
+            &MenuItem::with_id(app, "app:reload", tr("Reload"), true, Some("CmdOrCtrl+R"))?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::fullscreen(app, Some(tr("Full Screen")))?,
+        ],
+    )?;
+    let window = Submenu::with_id_and_items(
+        app,
+        WINDOW_SUBMENU_ID,
+        tr("Window"),
+        true,
+        &[
+            &PredefinedMenuItem::minimize(app, Some(tr("Minimize")))?,
+            &PredefinedMenuItem::maximize(app, Some(tr("Zoom")))?,
+            &PredefinedMenuItem::separator(app)?,
+            &PredefinedMenuItem::close_window(app, Some(tr("Close Window")))?,
+        ],
+    )?;
+    let help = Submenu::with_id_and_items(app, HELP_SUBMENU_ID, tr("Help"), true, &[])?;
+    Menu::with_items(app, &[&app_menu, &file, &edit, &view, &window, &help])
 }
 
 // [impl->req~ui-100~1]
 // [impl->req~plt-120~1]
 // [impl->req~plt-310~1]
 // [impl->req~plt-370~1]
+// [impl->req~plt-400~1]
 /// Windows and Linux have no default menu bar. This builds the Electron menus.
-#[cfg(not(target_os = "macos"))]
-fn menu(app: &App) -> tauri::Result<tauri::menu::Menu<tauri::Wry>> {
-    use tauri::menu::{Menu, Submenu};
+fn menu<M: Manager<Wry>>(app: &M) -> tauri::Result<Menu<Wry>> {
     let file = Submenu::with_items(
         app,
-        "File",
+        tr("File"),
         true,
         &[
-            &MenuItem::with_id(app, "app:settings", "Settings…", true, Some("CmdOrCtrl+,"))?,
+            &MenuItem::with_id(
+                app,
+                "app:settings",
+                tr("Settings…"),
+                true,
+                Some("CmdOrCtrl+,"),
+            )?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "app:closeProject", "Close project", true, None::<&str>)?,
+            &MenuItem::with_id(
+                app,
+                "app:closeProject",
+                tr("Close project"),
+                true,
+                None::<&str>,
+            )?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "app:quit", "Quit", true, Some("CmdOrCtrl+Q"))?,
+            &MenuItem::with_id(app, "app:quit", tr("Quit"), true, Some("CmdOrCtrl+Q"))?,
         ],
     )?;
     let edit = Submenu::with_items(
         app,
-        "Edit",
+        tr("Edit"),
         true,
         &[
-            &MenuItem::with_id(app, "app:undo", "Undo", true, Some("CmdOrCtrl+Z"))?,
-            &MenuItem::with_id(app, "app:redo", "Redo", true, Some("CmdOrCtrl+Shift+Z"))?,
+            &MenuItem::with_id(app, "app:undo", tr("Undo"), true, Some("CmdOrCtrl+Z"))?,
+            &MenuItem::with_id(app, "app:redo", tr("Redo"), true, Some("CmdOrCtrl+Shift+Z"))?,
             &PredefinedMenuItem::separator(app)?,
-            &PredefinedMenuItem::cut(app, None)?,
-            &PredefinedMenuItem::copy(app, None)?,
-            &PredefinedMenuItem::paste(app, None)?,
-            &PredefinedMenuItem::select_all(app, None)?,
+            &PredefinedMenuItem::cut(app, Some(tr("Cut")))?,
+            &PredefinedMenuItem::copy(app, Some(tr("Copy")))?,
+            &PredefinedMenuItem::paste(app, Some(tr("Paste")))?,
+            &PredefinedMenuItem::select_all(app, Some(tr("Select All")))?,
         ],
     )?;
     let view = Submenu::with_items(
         app,
-        "View",
+        tr("View"),
         true,
         &[
-            &MenuItem::with_id(app, "app:reload", "Reload", true, Some("CmdOrCtrl+R"))?,
+            &MenuItem::with_id(app, "app:reload", tr("Reload"), true, Some("CmdOrCtrl+R"))?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "app:fullscreen", "Full Screen", true, Some("F11"))?,
+            &MenuItem::with_id(app, "app:fullscreen", tr("Full Screen"), true, Some("F11"))?,
         ],
     )?;
     let window = Submenu::with_items(
         app,
-        "Window",
+        tr("Window"),
         true,
         &[
-            &MenuItem::with_id(app, "app:minimize", "Minimize", true, None::<&str>)?,
-            &MenuItem::with_id(app, "app:maximize", "Maximize/Restore", true, None::<&str>)?,
+            &MenuItem::with_id(app, "app:minimize", tr("Minimize"), true, None::<&str>)?,
+            &MenuItem::with_id(
+                app,
+                "app:maximize",
+                tr("Maximize/Restore"),
+                true,
+                None::<&str>,
+            )?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "app:closeWindow", "Close", true, None::<&str>)?,
+            &MenuItem::with_id(app, "app:closeWindow", tr("Close"), true, None::<&str>)?,
         ],
     )?;
     let help = Submenu::with_items(
         app,
-        "Help",
+        tr("Help"),
         true,
         &[
-            &MenuItem::with_id(app, "app:github", "Project on GitHub", true, None::<&str>)?,
+            &MenuItem::with_id(
+                app,
+                "app:github",
+                tr("Project on GitHub"),
+                true,
+                None::<&str>,
+            )?,
             &PredefinedMenuItem::separator(app)?,
-            &MenuItem::with_id(app, "app:about", "About SaiLoR", true, None::<&str>)?,
+            &MenuItem::with_id(app, "app:about", tr("About SaiLoR"), true, None::<&str>)?,
         ],
     )?;
     Menu::with_items(app, &[&file, &edit, &view, &window, &help])
@@ -484,6 +605,33 @@ mod tests {
             assert_eq!(action(event), Some(Action::Emit(event)));
         }
         assert_eq!(action("tauri:quit"), None);
+    }
+
+    // [utest->req~plt-400~1]
+    #[test]
+    fn every_menu_label_has_a_german_entry() {
+        let needle = format!("{}(\"", "tr");
+        let source = include_str!("shell.rs");
+        let labels: Vec<&str> = source
+            .split(needle.as_str())
+            .skip(1)
+            .filter_map(|rest| rest.split('"').next())
+            .collect();
+        assert!(labels.len() > 20, "{labels:?}");
+        for label in &labels {
+            let de = DE.iter().find(|(en, _)| en == label);
+            assert!(
+                de.is_some_and(|(_, de)| !de.is_empty()),
+                "no German text for {label}"
+            );
+        }
+        for (en, _) in DE {
+            assert!(labels.contains(en), "unused German entry {en}");
+        }
+        GERMAN.store(true, Relaxed);
+        assert_eq!(tr("Edit"), "Bearbeiten");
+        GERMAN.store(false, Relaxed);
+        assert_eq!(tr("Edit"), "Edit");
     }
 
     fn tmp(name: &str) -> std::path::PathBuf {

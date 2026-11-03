@@ -209,6 +209,8 @@ export const tauriBridge: SlrBridge = {
   onCloseProject: replace('app:closeProject'),
   // [impl->req~ui-100~1]
   onOpenSettings: replace('app:settings'),
+  // [impl->req~plt-400~1]
+  setLanguage: send('app:setLanguage', 'lang'),
 
   gitProbe: call('git:probe'),
   gitPickCloneDir: call('git:pickCloneDir'),

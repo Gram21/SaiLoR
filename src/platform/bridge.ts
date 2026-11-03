@@ -122,6 +122,8 @@ export interface SlrBridge {
   onCloseProject(cb: () => void): void
   /** Settings from the menu bar. */
   onOpenSettings(cb: () => void): void
+  /** Native menus and the About dialog in the UI language. */
+  setLanguage(lang: string): void
 
   // Git: the user's own git binary. See `PlatformAdapter.getGit`.
   gitProbe(): Promise<GitProbe>

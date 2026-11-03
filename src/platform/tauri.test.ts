@@ -104,6 +104,7 @@ describe('tauriBridge', () => {
     expect(capability.permissions).toContain('core:window:allow-set-title')
   })
 
+  // [utest->req~plt-400~1]
   it('invokes exactly the commands main.rs registers', () => {
     const main = readFileSync('src-tauri/src/main.rs', 'utf-8')
     const handler = main.slice(main.indexOf('generate_handler!['))
