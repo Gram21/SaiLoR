@@ -85,6 +85,16 @@ describe('tp', () => {
     expect(tp('strict.picker.papers', 0)).toBe('0 papers')
     expect(tp('strict.picker.papers', 2)).toBe('2 papers')
   })
+
+  it('uses the one form for a count other than 1 only when it shows the count', () => {
+    vi.stubGlobal('localStorage', { getItem: () => null, setItem: vi.fn(), removeItem: vi.fn() })
+    setLanguage('fr')
+    expect(tp('strict.picker.papers', 0)).toBe('0 article')
+    expect(tp('toolbar.corrupt.title', 0)).toBe(
+      '0 fichiers d’annotation n’ont pas pu être lus — cliquez pour voir la liste',
+    )
+    expect(tp('toolbar.corrupt.title', 1)).toBe(t('toolbar.corrupt.title_one'))
+  })
 })
 
 // [utest->req~ui-120~1]

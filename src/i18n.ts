@@ -80,8 +80,10 @@ export function t(key: MessageKey, params?: Params): string {
 
 // [impl->req~ui-120~1]
 export function tp(key: PluralKey, count: number, params?: Params): string {
-  const exact = `${key}_${new Intl.PluralRules(current).select(count)}`
-  return t((exact in MESSAGES.en ? exact : `${key}_other`) as MessageKey, { count, ...params })
+  const form = new Intl.PluralRules(current).select(count)
+  const exact = `${key}_${form}` as MessageKey
+  const usable = exact in MESSAGES.en && (form !== 'one' || count === 1 || t(exact).includes('{count}'))
+  return t(usable ? exact : (`${key}_other` as MessageKey), { count, ...params })
 }
 
 const TAG = /<(\w+)>([\s\S]*?)<\/\1>/
