@@ -265,6 +265,7 @@ inspection only.
 | REQ-CON-380 | Export disagreements per paper | Functional · Functional Suitability | `src/consolidate/exportDisagreements.ts:13-34` | `src/consolidate/exportDisagreements.test.ts:54-121` | — | `openwiki/workflows/consolidation.md` §Resolution UI flow / §Disagreement export |
 | REQ-CON-390 | Export disagreements project-wide | Functional · Functional Suitability | `src/consolidate/exportDisagreements.ts:36-51`<br>`src/components/ConsolidationOverview.tsx:86-89` | `src/consolidate/exportDisagreements.test.ts:123-177` | commit `9125ee0` | `openwiki/workflows/consolidation.md` §Resolution UI flow / §Disagreement export |
 | REQ-CON-400 | Disable AI suggestions for Consolidation seat | Functional · Functional Suitability | — | `src/state/store.align.test.ts:442-464` | — | `openwiki/workflows/consolidation.md` §Resolution UI flow / §Disagreement export |
+| REQ-CON-410 | Align repeated entries independent of entry order | Functional · Functional Suitability | `src/consolidate/align.ts` (`contentOrder`, `sortSlots`) | `src/consolidate/align.property.test.ts` | — | — |
 
 ## Git integration ([git-integration.md](git-integration.md))
 

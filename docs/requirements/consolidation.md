@@ -272,3 +272,9 @@ for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/store.align.test.ts:442-464`
 - **Status:** Implemented
+
+### REQ-CON-410: Align repeated entries independent of entry order
+- **Description:** When aligning the entries of a repeatable node, the system shall pair entries by best sub-field match, and shall produce the same pairing and the same agreement scores for any order in which the reviewers recorded their entries, including the order of nested entries.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/consolidate/align.ts` (`contentOrder`, `sortSlots`), `src/consolidate/align.property.test.ts`
+- **Status:** Implemented
