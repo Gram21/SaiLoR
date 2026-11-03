@@ -57,6 +57,20 @@ const FETCH_COMMAND_KEYS: &str = r"^(core\.(sshcommand|gitproxy|askpass)|credent
 const BRANCH_SWITCH_STASH_MESSAGE: &str = "sailor: switching branch";
 const MANUAL_STASH_PREFIX: &str = "sailor stash: ";
 const STASH_LIST_FORMAT: &str = "%gd%x09%H%x09%cI%x09%gs%x00";
+const BACKUP_REFS: &str = "refs/sailor/backup/";
+const RESULT_REFS: &str = "refs/sailor/result/";
+const BACKUPS_KEPT: usize = 10;
+const IN_PROGRESS: [(&str, &str, &str); 5] = [
+    ("rebase-merge", "A rebase", "git rebase --abort"),
+    ("rebase-apply", "A rebase", "git rebase --abort"),
+    ("MERGE_HEAD", "A merge", "git merge --abort"),
+    (
+        "CHERRY_PICK_HEAD",
+        "A cherry-pick",
+        "git cherry-pick --abort",
+    ),
+    ("REVERT_HEAD", "A revert", "git revert --abort"),
+];
 const CARRY_OVER_STRANDED: &str = "Your uncommitted changes were not lost — they are kept as a stash. Open Git and use \"Stashed changes\" to restore them.";
 
 const SETUP_AUTHOR: &str = "SaiLoR <noreply@sailor.invalid>";
@@ -947,11 +961,130 @@ fn error(message: impl Into<String>) -> Value {
     json!({ "kind": "error", "message": message.into() })
 }
 
+/// Why a merge, pull, or undo must not start now: a lock, an operation in progress, or a detached HEAD.
+fn merge_preflight(root: &Path) -> Option<String> {
+    let mut args = vec!["rev-parse", "--git-path", "index.lock"];
+    for (name, _, _) in IN_PROGRESS {
+        args.extend(["--git-path", name]);
+    }
+    let paths = git(root, &args);
+    if !paths.ok {
+        return Some(error_text(&paths));
+    }
+    let mut found = paths.stdout.lines().map(|p| root.join(p));
+    if let Some(lock) = found.next().filter(|p| p.exists()) {
+        return Some(format!(
+            "Another git program is working in this repository now (the file {} exists). \
+             Wait until it stops and try again. If no git program runs, delete that file and try again.",
+            lock.display()
+        ));
+    }
+    for ((_, what, abort), path) in IN_PROGRESS.iter().zip(found) {
+        if path.exists() {
+            return Some(format!(
+                "{what} is in progress in this repository. Finish it, or stop it with `{abort}`, then try again."
+            ));
+        }
+    }
+    if detached_refusal(root).is_some() {
+        return Some(
+            "HEAD is not on a branch (detached HEAD), so a merge would belong to no branch. \
+             Check out a branch first and try again."
+                .into(),
+        );
+    }
+    None
+}
+
+fn newest_stamp(root: &Path, prefix: &str) -> Option<String> {
+    let r = git(
+        root,
+        &[
+            "for-each-ref",
+            "--sort=-refname",
+            "--count=1",
+            "--format=%(refname:lstrip=3)",
+            prefix,
+        ],
+    );
+    r.ok.then(|| non_empty(r.out())).flatten()
+}
+
+/// Saves HEAD as `refs/sailor/backup/<millis>` and prunes all but the newest backups.
+fn save_backup(root: &Path) -> Result<String, String> {
+    let millis = std::time::SystemTime::now()
+        .duration_since(std::time::UNIX_EPOCH)
+        .map_err(err)?
+        .as_millis();
+    let stamp = format!("{millis:013}");
+    let saved = git_owned(
+        root,
+        &[
+            "update-ref".into(),
+            format!("{BACKUP_REFS}{stamp}"),
+            "HEAD".into(),
+        ],
+    );
+    if !saved.ok {
+        return Err(format!(
+            "SaiLoR could not save a backup of HEAD, so it did not merge. {}",
+            error_text(&saved)
+        ));
+    }
+    let all = git(
+        root,
+        &[
+            "for-each-ref",
+            "--sort=-refname",
+            "--format=%(refname:lstrip=3)",
+            BACKUP_REFS,
+        ],
+    );
+    for old in all.stdout.lines().skip(BACKUPS_KEPT) {
+        drop_backup(root, old);
+    }
+    Ok(stamp)
+}
+
+fn drop_backup(root: &Path, stamp: &str) {
+    for prefix in [BACKUP_REFS, RESULT_REFS] {
+        git_owned(
+            root,
+            &["update-ref".into(), "-d".into(), format!("{prefix}{stamp}")],
+        );
+    }
+}
+
+fn record_result(root: &Path, stamp: &str) {
+    git_owned(
+        root,
+        &[
+            "update-ref".into(),
+            format!("{RESULT_REFS}{stamp}"),
+            "HEAD".into(),
+        ],
+    );
+}
+
 /// `beginMergeInto`: up to the point where the reviewer has to decide.
 fn begin_merge_into(root: &Path, rel_path: &str, r: &str) -> Result<Value, String> {
     if git(root, &["merge-base", "--is-ancestor", r, "HEAD"]).ok {
         return Ok(json!({ "kind": "up-to-date" }));
     }
+    let stamp = match save_backup(root) {
+        Ok(stamp) => stamp,
+        Err(message) => return Ok(error(message)),
+    };
+    let started = begin_merge_after_backup(root, rel_path, r);
+    match started.as_ref().ok().and_then(|v| v["kind"].as_str()) {
+        Some("fast-forwarded") => record_result(root, &stamp),
+        Some("merge") => {}
+        _ => drop_backup(root, &stamp),
+    }
+    started
+}
+
+fn begin_merge_after_backup(root: &Path, rel_path: &str, r: &str) -> Result<Value, String> {
     if git(root, &["merge-base", "--is-ancestor", "HEAD", r]).ok {
         let ff = git(root, &["merge", "--ff-only", r]);
         return Ok(if ff.ok {
@@ -1016,6 +1149,151 @@ fn is_remote_tracking_ref(root: &Path, r: &str) -> bool {
         &["rev-parse", "--symbolic-full-name", "--verify", "-q", r],
     );
     run.ok && run.out().starts_with("refs/remotes/")
+}
+
+/// Checks shared by `pull_begin` and `merge_preview`; `Ok` is the upstream to merge.
+fn pull_target(root: &Path, rel_path: &str) -> Result<String, Value> {
+    if let Some(message) = merge_preflight(root) {
+        return Err(error(message));
+    }
+    let dirty = merge_blocking_dirty(root, rel_path);
+    if !dirty.is_empty() {
+        return Err(json!({ "kind": "dirty", "paths": dirty }));
+    }
+    let up = git(
+        root,
+        &["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
+    );
+    if !up.ok {
+        let b = git(root, &["symbolic-ref", "--short", "-q", "HEAD"]);
+        let branch = if b.ok { non_empty(b.out()) } else { None };
+        return Err(json!({ "kind": "no-upstream", "branch": branch }));
+    }
+    let fetch = run_git(&["fetch"], Some(root), NETWORK_TIMEOUT, &[]);
+    if !fetch.ok {
+        return Err(error(error_text(&fetch)));
+    }
+    Ok(up.out().to_string())
+}
+
+/// Checks shared by `merge_begin` and `merge_preview`, after `assert_ref`.
+fn merge_target(root: &Path, rel_path: &str, r: &str) -> Result<(), Value> {
+    if let Some(message) = merge_preflight(root) {
+        return Err(error(message));
+    }
+    let dirty = merge_blocking_dirty(root, rel_path);
+    if !dirty.is_empty() {
+        return Err(json!({ "kind": "dirty", "paths": dirty }));
+    }
+    if r.starts_with("refs/remotes/") || is_remote_tracking_ref(root, r) {
+        let fetch = run_git(&["fetch"], Some(root), NETWORK_TIMEOUT, &[]);
+        if !fetch.ok {
+            return Err(error(error_text(&fetch)));
+        }
+    }
+    let commit = format!("{r}^{{commit}}");
+    if !git(root, &["rev-parse", "--verify", "-q", &commit]).ok {
+        return Err(error(format!("There is no branch named {r}.")));
+    }
+    Ok(())
+}
+
+fn changed_between(root: &Path, from: &str, to: &str) -> Vec<String> {
+    let r = git(
+        root,
+        &["diff", "--name-only", "-z", "--no-renames", from, to, "--"],
+    );
+    r.stdout
+        .split('\0')
+        .filter(|p| !p.is_empty())
+        .map(String::from)
+        .collect()
+}
+
+/// Paths that `git merge r` would leave conflicted, or the paths both sides changed if git is too old.
+fn expected_conflicts(root: &Path, base: &str, r: &str) -> Vec<String> {
+    let tree = git(
+        root,
+        &[
+            "merge-tree",
+            "--write-tree",
+            "--name-only",
+            "--no-messages",
+            "-z",
+            "HEAD",
+            r,
+        ],
+    );
+    if tree.ok {
+        return vec![];
+    }
+    if tree.code == Some(1) {
+        let mut paths: Vec<String> = vec![];
+        for p in tree.stdout.split('\0').skip(1).filter(|p| !p.is_empty()) {
+            if !paths.iter().any(|q| q == p) {
+                paths.push(p.to_string());
+            }
+        }
+        return paths;
+    }
+    let ours = changed_between(root, base, "HEAD");
+    changed_between(root, base, r)
+        .into_iter()
+        .filter(|p| ours.contains(p))
+        .collect()
+}
+
+/// `mergePreview`: what `begin_merge_into(r)` would change, without touching the working tree.
+fn merge_preview_of(root: &Path, rel_path: &str, r: &str) -> Value {
+    if git(root, &["merge-base", "--is-ancestor", r, "HEAD"]).ok {
+        return json!({ "kind": "up-to-date" });
+    }
+    let base_run = git(root, &["merge-base", "HEAD", r]);
+    let Some(base) = base_run.ok.then(|| non_empty(base_run.out())).flatten() else {
+        return error(format!(
+            "HEAD and {r} share no history, so git cannot merge them."
+        ));
+    };
+    let fast_forward = base == git(root, &["rev-parse", "HEAD"]).out();
+    let meta = |rev: &str| {
+        let shown = git_owned(root, &["show".into(), format!("{rev}:{rel_path}")]);
+        serde_json::from_str(&shown.stdout).unwrap_or(Value::Null)
+    };
+    let (mine, other) = (own_matcher(&meta("HEAD")), own_matcher(&meta(r)));
+    let prefix = format!("{}/", project_rel_dir(root, rel_path));
+    let own_rest = |p: &str| {
+        p.strip_prefix(&prefix)
+            .filter(|rest| mine(rest) || other(rest))
+            .map(String::from)
+    };
+    let in_project = |p: &String| p == rel_path || own_rest(p).is_some();
+    let files: Vec<String> = changed_between(root, &base, r)
+        .into_iter()
+        .filter(in_project)
+        .collect();
+    let mut papers: Vec<String> = vec![];
+    for rest in files.iter().filter_map(|p| own_rest(p)) {
+        let id = rest.split('/').next().unwrap_or_default().to_string();
+        if !papers.contains(&id) {
+            papers.push(id);
+        }
+    }
+    let (conflicts, elsewhere): (Vec<String>, Vec<String>) = if fast_forward {
+        (vec![], vec![])
+    } else {
+        expected_conflicts(root, &base, r)
+            .into_iter()
+            .partition(in_project)
+    };
+    json!({
+        "kind": "preview",
+        "ref": r,
+        "fastForward": fast_forward,
+        "files": files,
+        "papers": papers,
+        "conflicts": conflicts,
+        "conflictsElsewhere": elsewhere,
+    })
 }
 
 // ---- Stash operations (src/git/stashOps.ts) ----
@@ -1390,24 +1668,10 @@ pub fn push(session: &Mutex<Session>, root: &str) -> Result<GitRun, String> {
 pub fn pull_begin(session: &Mutex<Session>, root: &str, rel_path: &str) -> Result<Value, String> {
     let root = assert_root(session, root)?;
     assert_rel_path(rel_path)?;
-    let dirty = merge_blocking_dirty(&root, rel_path);
-    if !dirty.is_empty() {
-        return Ok(json!({ "kind": "dirty", "paths": dirty }));
+    match pull_target(&root, rel_path) {
+        Ok(up) => begin_merge_into(&root, rel_path, &up),
+        Err(refused) => Ok(refused),
     }
-    let up = git(
-        &root,
-        &["rev-parse", "--abbrev-ref", "--symbolic-full-name", "@{u}"],
-    );
-    if !up.ok {
-        let b = git(&root, &["symbolic-ref", "--short", "-q", "HEAD"]);
-        let branch = if b.ok { non_empty(b.out()) } else { None };
-        return Ok(json!({ "kind": "no-upstream", "branch": branch }));
-    }
-    let fetch = run_git(&["fetch"], Some(&root), NETWORK_TIMEOUT, &[]);
-    if !fetch.ok {
-        return Ok(error(error_text(&fetch)));
-    }
-    begin_merge_into(&root, rel_path, up.out())
 }
 
 pub fn merge_begin(
@@ -1419,21 +1683,78 @@ pub fn merge_begin(
     let root = assert_root(session, root)?;
     assert_rel_path(rel_path)?;
     assert_ref(r)?;
+    match merge_target(&root, rel_path, r) {
+        Ok(()) => begin_merge_into(&root, rel_path, r),
+        Err(refused) => Ok(refused),
+    }
+}
+
+/// The dry run before `pull_begin` (no `r`) or `merge_begin`: same refusals, no merge.
+pub fn merge_preview(
+    session: &Mutex<Session>,
+    root: &str,
+    rel_path: &str,
+    r: Option<&str>,
+) -> Result<Value, String> {
+    let root = assert_root(session, root)?;
+    assert_rel_path(rel_path)?;
+    let target = match r {
+        Some(r) => {
+            assert_ref(r)?;
+            merge_target(&root, rel_path, r).map(|()| r.to_string())
+        }
+        None => pull_target(&root, rel_path),
+    };
+    Ok(match target {
+        Ok(r) => merge_preview_of(&root, rel_path, &r),
+        Err(refused) => refused,
+    })
+}
+
+/// Moves the branch back to the backup taken before the last merge or pull SaiLoR completed.
+pub fn undo_merge(session: &Mutex<Session>, root: &str, rel_path: &str) -> Result<GitRun, String> {
+    let root = assert_root(session, root)?;
+    assert_rel_path(rel_path)?;
+    if let Some(message) = merge_preflight(&root) {
+        return Ok(GitRun::failed(message));
+    }
+    let Some(stamp) = newest_stamp(&root, RESULT_REFS) else {
+        return Ok(GitRun::failed(
+            "There is no merge or pull to undo. SaiLoR can only undo a merge or pull that it made.",
+        ));
+    };
+    let sha = |r: String| {
+        let run = git_owned(
+            &root,
+            &["rev-parse".into(), "--verify".into(), "-q".into(), r],
+        );
+        run.ok.then(|| run.out().to_string())
+    };
+    let backup = format!("{BACKUP_REFS}{stamp}");
+    let (Some(result), Some(_)) = (sha(format!("{RESULT_REFS}{stamp}")), sha(backup.clone()))
+    else {
+        return Ok(GitRun::failed(
+            "The backup of the last merge is missing, so SaiLoR cannot undo it.",
+        ));
+    };
+    if sha("HEAD".into()).as_deref() != Some(result.as_str()) {
+        return Ok(GitRun::failed(
+            "The branch changed after the last merge or pull (for example, a new commit or a branch switch). \
+             Undo would remove that work, so SaiLoR does not undo the merge.",
+        ));
+    }
     let dirty = merge_blocking_dirty(&root, rel_path);
     if !dirty.is_empty() {
-        return Ok(json!({ "kind": "dirty", "paths": dirty }));
+        return Ok(GitRun::failed(format!(
+            "Undo needs a clean working tree. Commit, stash, or discard these changes first: {}.",
+            dirty.join(", ")
+        )));
     }
-    if r.starts_with("refs/remotes/") || is_remote_tracking_ref(&root, r) {
-        let fetch = run_git(&["fetch"], Some(&root), NETWORK_TIMEOUT, &[]);
-        if !fetch.ok {
-            return Ok(error(error_text(&fetch)));
-        }
+    let reset = git_owned(&root, &["reset".into(), "--keep".into(), backup]);
+    if reset.ok {
+        drop_backup(&root, &stamp);
     }
-    let commit = format!("{r}^{{commit}}");
-    if !git(&root, &["rev-parse", "--verify", "-q", &commit]).ok {
-        return Ok(error(format!("There is no branch named {r}.")));
-    }
-    begin_merge_into(&root, rel_path, r)
+    Ok(reset)
 }
 
 /// Runs `f`, turning an `Err` into a failed run the renderer can show.
@@ -1453,13 +1774,31 @@ pub fn pull_finish(
         write_contents(session, &root, &root.join(rel_path), working)?;
         let mut paths = vec![rel_path.to_string()];
         paths.extend(own_changed_paths(&root, rel_path, &working.meta_text)?);
+        for p in &paths {
+            let file = root.join(p);
+            if file.exists()
+                && serde_json::from_str::<Value>(&read_lossy(&file).map_err(err)?).is_err()
+            {
+                return Ok(GitRun::failed(format!(
+                    "{p} is not valid JSON after the merge, so SaiLoR did not commit it. Abort the merge and try again."
+                )));
+            }
+        }
         let mut add: Vec<String> = vec!["add".into(), "--".into()];
         add.extend(paths);
         let added = git_owned(&root, &add);
         if !added.ok {
             return Ok(added);
         }
-        Ok(git(&root, &["commit", "--no-edit"]))
+        let committed = git(&root, &["commit", "--no-edit"]);
+        if let Some(stamp) = committed
+            .ok
+            .then(|| newest_stamp(&root, BACKUP_REFS))
+            .flatten()
+        {
+            record_result(&root, &stamp);
+        }
+        Ok(committed)
     }))
 }
 
@@ -2037,6 +2376,28 @@ pub async fn git_merge_begin(
     r#ref: String,
 ) -> Result<Value, String> {
     blocking(app, move |s| merge_begin(s, &root, &rel_path, &r#ref)).await
+}
+
+#[tauri::command]
+pub async fn git_merge_preview(
+    app: AppHandle,
+    root: String,
+    rel_path: String,
+    r#ref: Option<String>,
+) -> Result<Value, String> {
+    blocking(app, move |s| {
+        merge_preview(s, &root, &rel_path, r#ref.as_deref())
+    })
+    .await
+}
+
+#[tauri::command]
+pub async fn git_undo_merge(
+    app: AppHandle,
+    root: String,
+    rel_path: String,
+) -> Result<GitRun, String> {
+    blocking(app, move |s| undo_merge(s, &root, &rel_path)).await
 }
 
 #[tauri::command]
@@ -2913,6 +3274,329 @@ mod tests {
             "error"
         );
         assert!(merge_begin(&s, &root(&a), "p.json", "main^").is_err());
+    }
+
+    /// Two clones of a bare remote that share `p.json` with `papers` papers and one reviewer file each.
+    fn bare_pair(name: &str, papers: usize) -> (PathBuf, PathBuf, Mutex<Session>) {
+        let base = tmp(name);
+        sh(&base, &["init", "-q", "--bare", "-b", "main", "remote.git"]);
+        let remote = root(&base.join("remote.git"));
+        let (a, b) = (base.join("a"), base.join("b"));
+        sh(&base, &["clone", "-q", &remote, "a"]);
+        configure(&a);
+        let ids: Vec<Value> = (0..papers)
+            .map(|i| json!({ "id": format!("p{i}") }))
+            .collect();
+        put(&a, "p.json", &json!({ "papers": ids }).to_string());
+        for i in 0..papers {
+            put(
+                &a,
+                &format!("annotations/p{i}/reviewer-1.json"),
+                r#"{"seed":true}"#,
+            );
+        }
+        commit_all(&a, "seed");
+        sh(&a, &["push", "-q", "-u", "origin", "main"]);
+        let s = Mutex::new(Session::default());
+        let r = clone(&s, &remote, &root(&b));
+        assert_eq!(r["ok"], true, "{r}");
+        configure(&b);
+        for d in [&a, &b] {
+            info(&s, &d.join("p.json").display().to_string()).unwrap();
+        }
+        (a, b, s)
+    }
+
+    fn assert_openable(d: &Path) {
+        assert!(
+            sh(d, &["status", "--porcelain"]).is_empty(),
+            "{}",
+            d.display()
+        );
+        let opened =
+            project::read_project(&Mutex::new(Session::default()), &d.join("p.json")).unwrap();
+        let raw: Value = serde_json::from_str(&opened.text).unwrap();
+        let ids = project::paper_ids(&raw);
+        assert!(ids.iter().all(|id| project::paper_id_ok(id)), "{ids:?}");
+        assert_eq!(
+            ids.iter().collect::<HashSet<_>>().len(),
+            ids.len(),
+            "{ids:?}"
+        );
+        assert!(!opened.files.is_empty());
+        for f in &opened.files {
+            let v: Value =
+                serde_json::from_str(&f.text).unwrap_or_else(|e| panic!("{}: {e}", f.rel_path));
+            assert!(v.is_object(), "{}", f.rel_path);
+        }
+    }
+
+    /// What the renderer's merge does at its simplest: union of papers and files, ours wins a clash.
+    fn resolve_ours(m: &Value) -> Contents {
+        let text = |side: &str| m[side]["text"].as_str().unwrap().to_string();
+        let mut papers: Vec<Value> = vec![];
+        for side in ["ours", "theirs"] {
+            let raw: Value = serde_json::from_str(&text(side)).unwrap();
+            for p in raw["papers"].as_array().unwrap() {
+                if !papers.contains(p) {
+                    papers.push(p.clone());
+                }
+            }
+        }
+        let mut files: Vec<(String, String)> = vec![];
+        for side in ["ours", "theirs"] {
+            for f in m[side]["files"].as_array().unwrap() {
+                let rel = f["relPath"].as_str().unwrap().to_string();
+                if !files.iter().any(|(r, _)| *r == rel) {
+                    files.push((rel, f["text"].as_str().unwrap().to_string()));
+                }
+            }
+        }
+        let pairs: Vec<(&str, &str)> = files
+            .iter()
+            .map(|(r, t)| (r.as_str(), t.as_str()))
+            .collect();
+        contents(&json!({ "papers": papers }).to_string(), &pairs)
+    }
+
+    /// Previews, then pulls; returns the pull's kind.
+    fn sync(s: &Mutex<Session>, d: &Path) -> String {
+        let preview = merge_preview(s, &root(d), "p.json", None).unwrap();
+        let start = pull_begin(s, &root(d), "p.json").unwrap();
+        let kind = start["kind"].as_str().unwrap().to_string();
+        match kind.as_str() {
+            "up-to-date" => assert_eq!(preview["kind"], "up-to-date", "{preview}"),
+            "fast-forwarded" => assert_eq!(preview["fastForward"], true, "{preview}"),
+            "merge" => {
+                assert_eq!(preview["fastForward"], false, "{preview}");
+                assert_eq!(preview["conflictsElsewhere"], json!([]), "{preview}");
+                let done = pull_finish(s, &root(d), "p.json", &resolve_ours(&start)).unwrap();
+                assert!(done.ok, "{}", done.stderr);
+            }
+            _ => panic!("{start}"),
+        }
+        assert_openable(d);
+        kind
+    }
+
+    #[test]
+    fn generated_merges_between_clones_of_a_bare_remote_stay_openable() {
+        let (a, b, s) = bare_pair("git-fuzz", 6);
+        let mut seed: u64 = 0x005a_110e;
+        let mut next = |n: u64| {
+            seed = seed
+                .wrapping_mul(6_364_136_223_846_793_005)
+                .wrapping_add(1_442_695_040_888_963_407);
+            (seed >> 33) % n
+        };
+        let mut kinds: HashSet<String> = HashSet::new();
+        let mut saw_conflict = false;
+        for round in 0..14u64 {
+            for (d, reviewer) in [(&a, 1), (&b, 2)] {
+                for _ in 0..=next(3) {
+                    let file = if next(3) == 0 { 1 } else { reviewer };
+                    let p = next(6);
+                    put(
+                        d,
+                        &format!("annotations/p{p}/reviewer-{file}.json"),
+                        &json!({ "round": round, "v": next(1000) }).to_string(),
+                    );
+                }
+                if next(4) == 0 {
+                    let mut raw: Value =
+                        serde_json::from_str(&fs::read_to_string(d.join("p.json")).unwrap())
+                            .unwrap();
+                    let id = format!("n{round}r{reviewer}");
+                    raw["papers"]
+                        .as_array_mut()
+                        .unwrap()
+                        .push(json!({ "id": id }));
+                    put(d, "p.json", &raw.to_string());
+                    put(
+                        d,
+                        &format!("annotations/{id}/reviewer-{reviewer}.json"),
+                        "{}",
+                    );
+                }
+                if !sh(d, &["status", "--porcelain"]).is_empty() {
+                    commit_all(d, &format!("round {round}"));
+                }
+            }
+            kinds.insert(sync(&s, &b));
+            assert!(push(&s, &root(&b)).unwrap().ok);
+            let preview = merge_preview(&s, &root(&a), "p.json", None).unwrap();
+            saw_conflict |= preview["conflicts"]
+                .as_array()
+                .is_some_and(|c| !c.is_empty());
+            kinds.insert(sync(&s, &a));
+            assert!(push(&s, &root(&a)).unwrap().ok);
+            kinds.insert(sync(&s, &b));
+            assert_eq!(
+                sh(&a, &["rev-parse", "HEAD"]),
+                sh(&b, &["rev-parse", "HEAD"])
+            );
+        }
+        assert!(
+            kinds.contains("merge") && kinds.contains("fast-forwarded"),
+            "{kinds:?}"
+        );
+        assert!(saw_conflict);
+    }
+
+    #[test]
+    fn preview_lists_incoming_papers_and_expected_conflicts() {
+        let (a, b, s) = bare_pair("git-preview", 3);
+        put(&b, "annotations/p1/reviewer-1.json", r#"{"b":1}"#);
+        put(&b, "annotations/p2/reviewer-2.json", r#"{"b":2}"#);
+        put(&b, "notes.md", "b");
+        commit_all(&b, "b reads");
+        assert!(push(&s, &root(&b)).unwrap().ok);
+        let before = sh(&a, &["rev-parse", "HEAD"]);
+        let p = merge_preview(&s, &root(&a), "p.json", None).unwrap();
+        assert_eq!(p["kind"], "preview", "{p}");
+        assert_eq!(p["ref"], "origin/main");
+        assert_eq!(p["fastForward"], true);
+        assert_eq!(
+            p["files"],
+            json!([
+                "annotations/p1/reviewer-1.json",
+                "annotations/p2/reviewer-2.json"
+            ])
+        );
+        assert_eq!(p["papers"], json!(["p1", "p2"]));
+        assert_eq!(sh(&a, &["rev-parse", "HEAD"]), before);
+
+        put(&a, "annotations/p1/reviewer-1.json", r#"{"a":1}"#);
+        put(&a, "notes.md", "a");
+        commit_all(&a, "a reads");
+        let p = merge_preview(&s, &root(&a), "p.json", Some("origin/main")).unwrap();
+        assert_eq!(p["fastForward"], false, "{p}");
+        assert_eq!(p["conflicts"], json!(["annotations/p1/reviewer-1.json"]));
+        assert_eq!(p["conflictsElsewhere"], json!(["notes.md"]));
+        assert!(!a.join(".git/MERGE_HEAD").exists());
+        assert!(sh(&a, &["status", "--porcelain"]).is_empty());
+        assert!(merge_preview(&s, &root(&a), "p.json", Some("--x")).is_err());
+    }
+
+    #[test]
+    fn preflight_refuses_locks_operations_in_progress_and_detached_head() {
+        let (a, _b, s) = bare_pair("git-preflight", 1);
+        let refusal = |v: Value| v["message"].as_str().unwrap_or_default().to_string();
+        fs::write(a.join(".git/index.lock"), "").unwrap();
+        assert!(
+            refusal(pull_begin(&s, &root(&a), "p.json").unwrap()).contains("Another git program")
+        );
+        assert!(
+            refusal(merge_preview(&s, &root(&a), "p.json", None).unwrap()).contains("index.lock")
+        );
+        fs::remove_file(a.join(".git/index.lock")).unwrap();
+        for (marker, what) in [
+            ("rebase-merge", "A rebase"),
+            ("rebase-apply", "A rebase"),
+            ("MERGE_HEAD", "A merge"),
+            ("CHERRY_PICK_HEAD", "A cherry-pick"),
+            ("REVERT_HEAD", "A revert"),
+        ] {
+            let p = a.join(".git").join(marker);
+            if marker.starts_with("rebase") {
+                fs::create_dir(&p).unwrap();
+            } else {
+                fs::write(&p, sh(&a, &["rev-parse", "HEAD"])).unwrap();
+            }
+            let m = refusal(merge_begin(&s, &root(&a), "p.json", "origin/main").unwrap());
+            assert!(m.starts_with(what), "{m}");
+            assert!(!undo_merge(&s, &root(&a), "p.json").unwrap().ok);
+            if p.is_dir() {
+                fs::remove_dir(&p).unwrap();
+            } else {
+                fs::remove_file(&p).unwrap();
+            }
+        }
+        sh(&a, &["checkout", "-q", "--detach"]);
+        assert!(refusal(pull_begin(&s, &root(&a), "p.json").unwrap()).contains("detached HEAD"));
+        sh(&a, &["checkout", "-q", "main"]);
+        put(&a, "annotations/p0/reviewer-1.json", "{}");
+        assert_eq!(
+            pull_begin(&s, &root(&a), "p.json").unwrap()["kind"],
+            "dirty"
+        );
+        assert_eq!(
+            merge_preview(&s, &root(&a), "p.json", None).unwrap()["kind"],
+            "dirty"
+        );
+    }
+
+    #[test]
+    fn undo_restores_the_backup_only_while_head_is_the_merge_result() {
+        let (a, b, s) = bare_pair("git-undo", 2);
+        let head = |d: &Path| sh(d, &["rev-parse", "HEAD"]).trim().to_string();
+        let backups = |d: &Path| sh(d, &["for-each-ref", "--format=%(refname)", "refs/sailor/"]);
+        let undo = |d: &Path| undo_merge(&s, &root(d), "p.json").unwrap();
+        assert!(undo(&a).stderr.contains("no merge or pull to undo"));
+
+        put(&b, "annotations/p0/reviewer-2.json", r#"{"b":1}"#);
+        commit_all(&b, "b reads");
+        assert!(push(&s, &root(&b)).unwrap().ok);
+        let before = head(&a);
+        assert_eq!(sync(&s, &a), "fast-forwarded");
+        assert!(backups(&a).contains("refs/sailor/backup/"));
+        let r = undo(&a);
+        assert!(r.ok, "{}", r.stderr);
+        assert_eq!(head(&a), before);
+        assert_openable(&a);
+        assert!(!undo(&a).ok);
+
+        put(&a, "annotations/p1/reviewer-1.json", r#"{"a":1}"#);
+        commit_all(&a, "a reads");
+        assert_eq!(sync(&s, &a), "merge");
+        let merged = head(&a);
+        put(&a, "annotations/p1/reviewer-1.json", r#"{"a":2}"#);
+        assert!(undo(&a).stderr.contains("clean working tree"));
+        commit_all(&a, "after merge");
+        assert!(undo(&a).stderr.contains("branch changed"));
+        sh(&a, &["reset", "-q", "--hard", &merged]);
+        let r = undo(&a);
+        assert!(r.ok, "{}", r.stderr);
+        assert_eq!(
+            sh(&a, &["rev-list", "--count", "HEAD..origin/main"]).trim(),
+            "1"
+        );
+        assert_openable(&a);
+
+        let none = backups(&a);
+        put(&a, "notes.md", "a");
+        commit_all(&a, "a notes");
+        put(&b, "notes.md", "b");
+        commit_all(&b, "b notes");
+        assert!(push(&s, &root(&b)).unwrap().ok);
+        assert_eq!(
+            pull_begin(&s, &root(&a), "p.json").unwrap()["kind"],
+            "conflict-elsewhere"
+        );
+        assert_eq!(backups(&a), none);
+    }
+
+    #[test]
+    fn finish_refuses_a_merge_that_is_not_valid_json() {
+        let (a, b, s) = bare_pair("git-badjson", 1);
+        put(&a, "annotations/p0/reviewer-1.json", r#"{"a":1}"#);
+        commit_all(&a, "a");
+        put(&b, "annotations/p0/reviewer-1.json", r#"{"b":1}"#);
+        commit_all(&b, "b");
+        assert!(push(&s, &root(&b)).unwrap().ok);
+        let m = pull_begin(&s, &root(&a), "p.json").unwrap();
+        assert_eq!(m["kind"], "merge", "{m}");
+        let meta = m["ours"]["text"].as_str().unwrap().to_string();
+        let r = pull_finish(
+            &s,
+            &root(&a),
+            "p.json",
+            &contents(&meta, &[("p0/reviewer-1.json", "{oops")]),
+        )
+        .unwrap();
+        assert!(r.stderr.contains("not valid JSON"), "{}", r.stderr);
+        assert!(pull_abort(&s, &root(&a)).unwrap().ok);
+        assert_openable(&a);
     }
 
     #[test]
