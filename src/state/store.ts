@@ -64,6 +64,7 @@ import {
   type Resolutions,
 } from '../git/merge'
 import type { RecentEntry } from '../platform/recents'
+import { assignedSeat, missingFinishers, personPapers, strictActive, type Person } from '../model/strict'
 import {
   type Theme,
   loadTheme,
@@ -370,6 +371,44 @@ function seatOnArrival(handle: SaveHandle | null, project: Project | null, paper
   if (!project || project.reviewers <= 1) return null
   const seat = loadRememberedSeats(handle, project).perPaper[paperId]
   return seatFits(seat, project) && seat !== current ? seat : null
+}
+
+const STRICT_PERSON_KEY_PREFIX = 'slr.strictPerson.'
+
+function strictPersonKey(handle: SaveHandle | null): string | null {
+  return handle?.path ? `${STRICT_PERSON_KEY_PREFIX}${handle.path}` : null
+}
+
+function loadStrictPerson(handle: SaveHandle | null, project: Project): string | null {
+  const key = strictPersonKey(handle)
+  if (!key || !strictActive(project)) return null
+  const raw = safeGet(key)
+  return raw === STRICT_MANAGER || project.strict.persons.some((p) => p.id === raw) ? raw : null
+}
+
+function saveStrictPerson(handle: SaveHandle | null, person: string | null): void {
+  const key = strictPersonKey(handle)
+  if (!key) return
+  if (person) safeSet(key, person)
+  else safeRemove(key)
+}
+
+export const STRICT_MANAGER = 'manager'
+
+/** The person id who works in strict mode, or null for the Manager, no choice, or no strict mode. */
+export function activePerson(s: Pick<AppState, 'project' | 'strictPerson'>): string | null {
+  return strictActive(s.project) && s.strictPerson !== null && s.strictPerson !== STRICT_MANAGER ? s.strictPerson : null
+}
+
+/** The persons who block consolidation of the current paper; empty when nothing blocks it. */
+export function consolidationGateMissing(
+  s: Pick<AppState, 'project' | 'currentPaperId' | 'currentReviewer' | 'consolidationOverrides'>,
+): Person[] {
+  const { project, currentPaperId } = s
+  if (!strictActive(project) || s.currentReviewer !== 'consolidation' || !currentPaperId) return []
+  if (s.consolidationOverrides[currentPaperId]) return []
+  const paper = project.papers.find((p) => p.id === currentPaperId)
+  return paper ? missingFinishers(project, paper) : []
 }
 
 const READING_POSITION_KEY_PREFIX = 'slr.readingPosition.'
@@ -700,6 +739,10 @@ interface AppState {
    * project (see `saveCurrentReviewer`).
    */
   currentReviewer: string | null
+  /** Strict mode: who works, as a person id or `STRICT_MANAGER`; null until chosen. Per machine, like the seat. */
+  strictPerson: string | null
+  /** Strict mode: papers the Manager opened for consolidation before every person finished. Session only. */
+  consolidationOverrides: Record<string, true>
   /** The field a Consolidation-mode "compare" click is showing, or null when
    *  the compare popup is closed. Session-only, like `validationOpen`. */
   consolidationTarget: { path: PathSeg[]; name: string; index: number } | null
@@ -952,6 +995,14 @@ interface AppState {
   /** Switch which reviewer's tree is shown/edited. This is a local view
    * switch, not an edit: no undo step, no `dirty`, and never any JSON write. */
   selectReviewer: (reviewer: string | null) => void
+  /** Strict mode: work as a person or as `STRICT_MANAGER`. Refused with unsaved changes. */
+  choosePerson: (id: string) => void
+  /** Strict mode: forget who works, so the person dialog asks again. Refused with unsaved changes. */
+  switchPerson: () => void
+  /** Strict mode: set the finished flag of the person's seat on every assigned paper, then save. */
+  finishPersonWork: () => Promise<boolean>
+  /** Strict mode: the Manager opens a paper for consolidation before every person finished. */
+  overrideConsolidationGate: (paperId: string) => void
   /** Consolidation clicked "compare" on one field — open the popup for it. */
   openConsolidation: (path: PathSeg[], name: string, index: number, returnToDisagreements?: boolean) => void
   closeConsolidation: () => void
@@ -1265,6 +1316,8 @@ export const useStore = create<AppState>()(
     aiMarks: {},
     deferredConsolidations: {},
     currentReviewer: null,
+    strictPerson: null,
+    consolidationOverrides: {},
     consolidationTarget: null,
     consolidationUpdatePrompt: null,
     consolidationUpdateApproved: null,
@@ -1450,6 +1503,8 @@ export const useStore = create<AppState>()(
         s.closePromptOpen = false
         s.pendingAfterPrompt = null
         s.currentReviewer = null
+        s.strictPerson = null
+        s.consolidationOverrides = {}
         s.consolidationTarget = null
         s.consolidationUpdatePrompt = null
         s.consolidationUpdateApproved = null
@@ -1530,11 +1585,21 @@ export const useStore = create<AppState>()(
         const savedPosition = loadReadingPosition(handle)
         const savedPaperStillExists =
           !!savedPosition && project.papers.some((p) => p.id === savedPosition.paperId)
-        const landingPaperId = savedPaperStillExists
-          ? savedPosition!.paperId
-          : firstUnfinishedPaperId(project, seats.last)
-        const reviewer =
-          project.reviewers > 1 ? ((landingPaperId && seats.perPaper[landingPaperId]) || seats.last) : null
+        const strictPerson = loadStrictPerson(handle, project)
+        const person = strictPerson !== STRICT_MANAGER ? strictPerson : null
+        const ownPapers = person ? personPapers(project, person) : null
+        const landingPaperId = ownPapers
+          ? savedPaperStillExists && ownPapers.includes(savedPosition!.paperId)
+            ? savedPosition!.paperId
+            : (ownPapers[0] ?? null)
+          : savedPaperStillExists
+            ? savedPosition!.paperId
+            : firstUnfinishedPaperId(project, seats.last)
+        const reviewer = person
+          ? landingPaperId && assignedSeat(project, landingPaperId, person)
+          : project.reviewers > 1
+            ? (landingPaperId && seats.perPaper[landingPaperId]) || seats.last
+            : null
         // The title only becomes known once the JSON is parsed, so the recents
         // entry is enriched here rather than in the adapter's open path.
         if (handle) getPlatform().rememberProject(handle, name, project.title)
@@ -1549,7 +1614,7 @@ export const useStore = create<AppState>()(
           s.recents = getPlatform().getRecents()
           s.currentPaperId = landingPaperId
           s.initialPdfPosition =
-            savedPaperStillExists && landingPaperId
+            savedPaperStillExists && landingPaperId === savedPosition!.paperId
               ? { paperId: landingPaperId, page: savedPosition!.page, offsetFraction: savedPosition!.offsetFraction }
               : null
           s.dirty = false
@@ -1592,6 +1657,8 @@ export const useStore = create<AppState>()(
           // none, so the reviewer picks explicitly rather than inheriting
           // whoever the previously open project happened to be showing).
           s.currentReviewer = reviewer
+          s.strictPerson = strictPerson
+          s.consolidationOverrides = {}
           s.screeningAbstractReads = {}
         })
         lastFieldKey = null
@@ -2049,9 +2116,16 @@ export const useStore = create<AppState>()(
     selectPaper: (id) => {
       lastFieldKey = null
       const { saveHandle, project, currentReviewer } = get()
+      const person = activePerson(get())
+      const personSeat = person ? assignedSeat(project!, id, person) : null
+      if (person && !personSeat) return
       // The seat this paper was last read in — see `RememberedSeats`. A
       // paper never read here keeps the current seat.
-      const seat = seatOnArrival(saveHandle, project, id, currentReviewer)
+      const seat = person
+        ? personSeat !== currentReviewer
+          ? personSeat
+          : null
+        : seatOnArrival(saveHandle, project, id, currentReviewer)
       if (seat) rememberSeat(saveHandle, project, id, seat)
       set((s) => {
         s.currentPaperId = id
@@ -2560,6 +2634,10 @@ export const useStore = create<AppState>()(
       // Multi-reviewer, nobody picked yet: nothing to attribute the
       // declaration to — the same guard every editing action uses.
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
+      if (!finished && activePerson(prev)) {
+        const onDisk = diskProject?.papers.find((p) => p.id === prev.currentPaperId)
+        if (onDisk?.reviewsFinished[prev.currentReviewer!] === true) return
+      }
       set((s) => {
         const paper = currentPaper(s)
         if (!paper) return
@@ -3014,6 +3092,7 @@ export const useStore = create<AppState>()(
       }),
 
     selectReviewer: (reviewer) => {
+      if (activePerson(get())) return
       // A view switch, not an edit: no undo step, no dirty flag.
       //
       // Breaks undo-coalescing across the seat change, like `selectPaper` does:
@@ -3028,6 +3107,67 @@ export const useStore = create<AppState>()(
         // reviewer, so nothing for a later popover to auto-link.
         s.lastCreatedMarkId = null
         s.lastCreatedMarkAllowedField = null
+      })
+    },
+
+    choosePerson: (id) => {
+      const { project, dirty, saveHandle, currentPaperId } = get()
+      if (dirty || !strictActive(project)) return
+      if (id !== STRICT_MANAGER && !project.strict.persons.some((p) => p.id === id)) return
+      saveStrictPerson(saveHandle, id)
+      if (id === STRICT_MANAGER) {
+        set((s) => {
+          s.strictPerson = id
+          s.past = []
+          s.future = []
+        })
+        return
+      }
+      const own = personPapers(project, id)
+      const paperId = currentPaperId && own.includes(currentPaperId) ? currentPaperId : (own[0] ?? null)
+      lastFieldKey = null
+      set((s) => {
+        s.strictPerson = id
+        s.past = []
+        s.future = []
+        s.currentPaperId = paperId
+        s.currentReviewer = paperId ? assignedSeat(project, paperId, id) : null
+        s.pdfSelection = ''
+        s.lastCreatedMarkId = null
+        s.lastCreatedMarkAllowedField = null
+      })
+    },
+
+    switchPerson: () => {
+      if (get().dirty) return
+      saveStrictPerson(get().saveHandle, null)
+      set((s) => {
+        s.strictPerson = null
+      })
+    },
+
+    finishPersonWork: async () => {
+      const prev = get()
+      const person = activePerson(prev)
+      if (!person || prev.readOnly) return false
+      const project = prev.project!
+      set((s) => {
+        for (const paper of s.project!.papers) {
+          const seat = assignedSeat(project, paper.id, person)
+          if (seat && paper.reviewsFinished[seat] !== true) {
+            paper.reviewsFinished[seat] = true
+            s.dirty = true
+          }
+        }
+      })
+      return get().save()
+    },
+
+    overrideConsolidationGate: (paperId) => {
+      const { project, strictPerson } = get()
+      if (!strictActive(project) || strictPerson !== STRICT_MANAGER) return
+      set((s) => {
+        s.consolidationOverrides[paperId] = true
       })
     },
 
