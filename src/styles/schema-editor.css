@@ -429,6 +429,27 @@
   font-size: 0.85em;
   color: var(--muted);
 }
+.schema-unique-by {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 2px 0 6px 28px;
+  padding: 0;
+  border: none;
+  font-size: 0.85em;
+  color: var(--muted);
+}
+.schema-unique-by legend {
+  float: left;
+  padding: 0;
+  margin-right: 8px;
+}
+.schema-unique-by label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  cursor: pointer;
+}
 .schema-move-toggle {
   padding: 0;
   border: none;
