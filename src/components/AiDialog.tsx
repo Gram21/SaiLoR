@@ -205,6 +205,7 @@ function trimHint(selected: LlmConfig, mode: AiMode, pages: number | undefined, 
   return t('ai.trim.hint', { pages, model: selected.model, fit })
 }
 
+// [impl->req~llm-300~1]
 const PHASE_LINE: Record<string, MessageKey> = {
   starting: 'ai.phase.starting',
   reading: 'ai.phase.reading',
@@ -243,6 +244,18 @@ function allPapersWarning(mode: AiMode, count: number, recheck: boolean, local: 
   })
 }
 
+// [impl->req~llm-390~1]
+// [impl->req~llm-420~1]
+// [impl->req~llm-440~1]
+// [impl->req~llm-450~1]
+// [impl->req~llm-480~1]
+// [impl->req~llm-490~1]
+// [impl->req~llm-500~1]
+// [impl->req~llm-510~1]
+// [impl->req~llm-540~1]
+// [impl->req~llm-550~1]
+// [impl->req~llm-560~1]
+// [impl->req~llm-743~1]
 export function AiDialog() {
   const t = useT()
   const open = useAiStore((s) => s.open)
@@ -1239,6 +1252,7 @@ function isPaperEvidence(row: ReviewRow): boolean {
 }
 
 // [impl->req~llm-210~1]
+// [impl->req~llm-560~1]
 // [impl->req~llm-580~1]
 function ReviewTable({
   rows,

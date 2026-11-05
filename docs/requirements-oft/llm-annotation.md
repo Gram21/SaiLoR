@@ -113,7 +113,7 @@ The system shall offer the AI feature only for a project whose configuration set
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/project.ts:683`, `src/components/Toolbar.tsx:96-112,188`, `src/state/aiStore.ts:139`
-- **Tests:** `src/components/Toolbar.test.tsx` (`is not rendered when the project does not set config.ai`, `is not rendered when the project turns AI off`)
+- **Tests:** `src/components/Toolbar.test.tsx` (`is not rendered when the project does not set config.ai`, the turns-AI-off case in `the AI button in the toolbar`)
 - **Status:** Implemented
 
 Needs: impl, utest
@@ -337,7 +337,7 @@ When an apply changes at least one field, the system shall append a record of pr
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.ts:2419-2427`, `src/model/project.ts:37-59,420-452` (`AiUsageRecord.edited`, `parseAiUsage`), `src/state/aiStore.ts` (`apply`, `editRow`, `runJudge`, `roundsByPaper`), `src/state/store.ai.test.ts:364-429`, `src/state/aiStore.judge.test.ts` (disclosure-fields tests), `src/state/aiStore.edit.test.ts`, `src/model/model.test.ts` (edited round-trip), `src/components/AiUsageDisclosure.tsx`
+- **Evidence:** `src/state/store.ts:2419-2427`, `src/model/project.ts:37-59,420-452` (`AiUsageRecord.edited`, `parseAiUsage`), `src/state/aiStore.ts` (`apply`, `editRow`, `runJudge`, `roundsByPaper`), `src/state/store.ai.test.ts:364-429`, `src/state/aiStore.judge.test.ts` (`apply: usage disclosure fields`), `src/state/aiStore.edit.test.ts`, `src/model/model.test.ts` (`loads and round-trips the optional disclosure fields`), `src/components/AiUsageDisclosure.tsx`
 - **Status:** Implemented
 
 Needs: impl, utest
@@ -421,7 +421,7 @@ During an AI run, the system shall display the current phase (setup, reading, st
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/aiStore.ts` (`AiPhase`, `run`), `src/components/AiDialog.tsx` (running-phase block)
+- **Evidence:** `src/state/aiStore.ts` (`AiPhase`, `run`), `src/components/AiDialog.tsx` (`PHASE_LINE` in the running-phase block)
 - **Status:** Implemented
 
 Needs: impl
@@ -561,7 +561,7 @@ The setup screen shall state that only the current paper is annotated by default
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/aiStore.ts` (`batchCandidates`, `setAllPapers`, `concurrency`, `setConcurrency`), `src/components/AiDialog.tsx` (`allPapersWarning`, "Papers at once" select)
+- **Evidence:** `src/state/aiStore.ts` (`batchCandidates`, `setAllPapers`, `concurrency`, `setConcurrency`), `src/components/AiDialog.tsx` (`allPapersWarning`, `AiDialog`'s 'Papers at once' select)
 - **Status:** Implemented
 
 Needs: impl
@@ -575,7 +575,7 @@ In agent-mode review, the system shall show each row's judge verdict (accepted, 
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/aiStore.ts` (`run`, row `checked`/`flagged` initialization), `src/components/AiDialog.tsx` (`JudgeCell`)
+- **Evidence:** `src/state/aiStore.ts` (`run`, `rowChecked`, row checked/flagged initialization), `src/components/AiDialog.tsx` (`JudgeCell`)
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.edit.test.ts`
 
@@ -590,7 +590,7 @@ After a run finishes, the system shall report the total number of model requests
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/aiStore.ts` (`usage`, `runOnePaperPrompt`, `runOnePaperAgent`), `src/components/AiDialog.tsx` (`ai-usage`)
+- **Evidence:** `src/state/aiStore.ts` (`AiState.usage`, `runOnePaperPrompt`, `runOnePaperAgent`), `src/components/AiDialog.tsx` (`AiDialog`'s ai-usage line)
 - **Status:** Implemented
 
 Needs: impl
@@ -604,7 +604,7 @@ The system shall let the reviewer enter an input and output price (USD per 1M to
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/llm/cost.ts` (`costOf`, `estimateRun`, `estimateCost`, `estimateCostSplit`), `src/llm/types.ts` (`LlmConfig.inputPrice`/`outputPrice`, `ModelInfo.pricing`), `src/llm/models.ts` (`parseOpenRouterModels`), `src/model/pdfText.ts` (`countPdfPages`), `src/state/aiStore.ts` (`ensurePageCounts`, `pageCounts`), `src/components/AiDialog.tsx` (`estimateLine`), `src/components/LlmSettingsDialog.tsx` (price fields, pricing prefill), `src-tauri/src/llm.rs` (`valid_price`, `save_config`)
+- **Evidence:** `src/llm/cost.ts` (`costOf`, `estimateRun`, `estimateCost`, `estimateCostSplit`), `src/llm/types.ts` (`LlmConfig.inputPrice`/`LlmConfig.outputPrice`, `ModelInfo.pricing`), `src/llm/models.ts` (`parseOpenRouterModels`), `src/model/pdfText.ts` (`countPdfPages`), `src/state/aiStore.ts` (`ensurePageCounts`, `pageCounts`), `src/components/AiDialog.tsx` (`estimateLine`), `src/components/LlmSettingsDialog.tsx` (`LlmSettingsDialog`'s price fields and pricing prefill), `src-tauri/src/llm.rs` (`valid_price`, `save_config`)
 - **Status:** Implemented
 - **Tests:** `src/llm/cost.test.ts`, `src/components/LlmSettingsDialog.test.tsx`, `src/components/AiDialog.test.tsx`, `src-tauri/src/llm.rs` (`save_sanitizes_and_keeps_keys_out_of_the_file`)
 
@@ -619,7 +619,7 @@ When a model call fails with HTTP 429, 408, 500, 502, 503, 504, or 529, the syst
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `src/llm/retry.ts` (`withRetry`, `parseRetryAfter`, `runPool`, `RetryOptions.onRetry`), `src-tauri/src/llm.rs` (`call`, `parse_retry_after`), `src/state/aiStore.ts` (`run` wrapping `getPlatform().callLlm` with `withRetry`, `retryNotice`), `src/components/AiDialog.tsx` (`ai-retry` notice)
+- **Evidence:** `src/llm/retry.ts` (`withRetry`, `parseRetryAfter`, `runPool`, `RetryOptions.onRetry`), `src-tauri/src/llm.rs` (`call`, `parse_retry_after`), `src/state/aiStore.ts` (`run`, which wraps the platform's callLlm in withRetry, `retryNotice`), `src/components/AiDialog.tsx` (`AiDialog`'s ai-retry notice)
 - **Status:** Implemented
 - **Tests:** `src/llm/retry.test.ts` (including `onRetry`), `src/state/aiStore.batch.test.ts`
 
@@ -634,7 +634,7 @@ The system shall let the reviewer's already-finished papers be shown to the mode
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/llm/fewshot.ts` (`buildFewShotBlock`, `pickFewShotExamples`, `countAnsweredFields`), `src/llm/prompt.ts` (`buildSystemPrompt`, `buildAgentSystemPrompt`), `src/llm/agent.ts` (`AgentInput.examples`), `src/state/aiStore.ts` (`fewShot`, `fewShotCount`, `fewShotCandidates`, `buildFewShotForPaper`, `fewShotByPaper`), `src/components/AiDialog.tsx` (few-shot toggle and count select, consent line)
+- **Evidence:** `src/llm/fewshot.ts` (`buildFewShotBlock`, `pickFewShotExamples`, `countAnsweredFields`), `src/llm/prompt.ts` (`buildSystemPrompt`, `buildAgentSystemPrompt`), `src/llm/agent.ts` (`AgentInput.examples`), `src/state/aiStore.ts` (`fewShot`, `AiState.fewShotCount`, `fewShotCandidates`, `buildFewShotForPaper`, `fewShotByPaper`), `src/components/AiDialog.tsx` (`AiDialog`'s few-shot toggle, count select and consent line)
 - **Status:** Implemented
 - **Tests:** `src/llm/fewshot.test.ts`, `src/state/aiStore.fewshot.test.ts`, `src/components/AiDialog.test.tsx`
 
@@ -664,7 +664,7 @@ When the project has an AI seat, every AI run: unanswered-field computation, "an
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/project.ts:265-289` (`aiSeatId`, `seatLabel`), `src/state/editorStore.ts`, `src/components/ProjectEditor.tsx`, `src/components/AnnotationPanel.tsx`, `src/components/Toolbar.tsx` (`aiButtonState`'s `hasAiSeat` parameter), `src/state/aiStore.ts` (`targetSeat`, `openDialog`, `batchCandidates`), `src/state/store.ts` (`applyAiSuggestionsBatch`'s AI-seat-only relaxation), `src/git/changes.ts`, `src/git/merge.ts`
+- **Evidence:** `src/model/project.ts:265-289` (`aiSeatId`, `seatLabel`), `src/state/editorStore.ts`, `src/components/ProjectEditor.tsx`, `src/components/AnnotationPanel.tsx`, `src/components/Toolbar.tsx` (`aiButtonState`'s `hasAiSeat` parameter), `src/state/aiStore.ts` (`AiState.targetSeat`, `openDialog`, `batchCandidates`), `src/state/store.ts` (`applyAiSuggestionsBatch`'s AI-seat-only relaxation), `src/git/changes.ts`, `src/git/merge.ts`
 - **Status:** Implemented
 - **Tests:** `src/components/Toolbar.test.ts`, `src/state/aiStore.batch.test.ts`, `src/state/store.ai.test.ts`, `src/components/AiDialog.test.tsx`
 
@@ -679,7 +679,7 @@ In agent mode's Models section, the system shall let the reviewer pick a judge m
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/aiStore.ts:950-954` (`selectJudge`), `src/state/aiStore.ts` (`judgeSelectedId`, `run`'s judge hasKey check, `runJudge`), `src/components/AiDialog.tsx:549-570` (judge `ComboBox` and price hint), `src/components/AiDialog.tsx:610-614` (consent line naming the judge), `src/llm/agent.ts` (`AgentInput.judgeConfig`)
+- **Evidence:** `src/state/aiStore.ts:950-954` (`selectJudge`), `src/state/aiStore.ts` (`judgeSelectedId`, `run`'s judge hasKey check, `runJudge`), `src/components/AiDialog.tsx` (`AiDialog`'s judge ComboBox, price hint and consent line naming the judge), `src/llm/agent.ts` (`AgentInput.judgeConfig`)
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.judge.test.ts`, `src/components/AiDialog.test.tsx`
 
@@ -694,7 +694,7 @@ In all-papers mode, when both the agent target and the judge target (or the agen
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/aiStore.ts` (`spendCap`, `setSpendCap`, `spentSoFar`, `spendCapHit`, `executeBatch`'s cap check), `src/components/AiDialog.tsx` (spend-cap input, `ai-cap-hit`, `ai-usage` cost line), `src/llm/cost.ts` (`costOf`)
+- **Evidence:** `src/state/aiStore.ts` (`spendCap`, `setSpendCap`, `spentSoFar`, `spendCapHit`, `executeBatch`'s cap check), `src/components/AiDialog.tsx` (`AiDialog`'s spend-cap input, ai-cap-hit notice and ai-usage cost line), `src/llm/cost.ts` (`costOf`)
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.judge.test.ts`
 
@@ -709,7 +709,7 @@ In all-papers mode, the system shall run up to a reviewer-chosen number of paper
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Performance Efficiency)
-- **Evidence:** `src/llm/retry.ts` (`runPool`), `src/state/aiStore.ts` (`concurrency`, `setConcurrency`, `executeBatch`, `inFlightTitles`, `batchDone`), `src/components/AiDialog.tsx` ("Papers at once" select, in-flight progress line)
+- **Evidence:** `src/llm/retry.ts` (`runPool`), `src/state/aiStore.ts` (`concurrency`, `setConcurrency`, `executeBatch`, `AiState.inFlightPapers`, `batchDone`), `src/components/AiDialog.tsx` (`AiDialog`'s 'Papers at once' select and in-flight progress line)
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.resume.test.ts`, `src/state/aiStore.batch.test.ts`, `src/llm/retry.test.ts`
 
@@ -724,7 +724,7 @@ After every paper an all-papers batch finishes (successfully or with an error), 
 
 Comment:
 - **Type:** Functional (ISO 25010: Reliability)
-- **Evidence:** `src/state/aiStore.ts` (`PersistedBatch`, `persistBatch`, `readPersistedBatch`, `clearPersistedBatch`, `resumeBatch`, `resumeAvailable`, `discardBatch`, `dismissResume`), `src/components/AiDialog.tsx` (resume banner, "Continue with the remaining N papers")
+- **Evidence:** `src/state/aiStore.ts` (`PersistedBatch`, `persistBatch`, `readPersistedBatch`, `clearPersistedBatch`, `resumeBatch`, `resumeAvailable`, `discardBatch`, `dismissResume`), `src/components/AiDialog.tsx` (`AiDialog`'s resume banner and 'Continue with the remaining N papers' action)
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.resume.test.ts`, `src/components/AiDialog.test.tsx`
 
@@ -739,7 +739,7 @@ For a boolean field or a single-valued enum field (2-255 options), the system sh
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/llm/systemone.ts:20-27` (`systemOneEligible`), `src/llm/systemone.ts:85-145` (`buildSystemOneRequest`), `src/llm/systemone.ts:146-241` (`parseSystemOneResponse`), `src/llm/systemone.ts:249-268` (`SYSTEMONE_VERIFY_ASKED`, `buildSystemOneVerifyRequest`), `src/llm/systemone.ts:270-301` (`compareWithSystemOne`), `src/llm/providers.ts:132-146` (`PROVIDERS.systemone`), `src/components/LlmSettingsDialog.tsx:574-595` (Max input tokens field), `src/state/aiStore.ts:1585-1637` (`runOnePaperClassify`), `src/state/aiStore.ts:1644-1671` (`runCrossCheck`)
+- **Evidence:** `src/llm/systemone.ts:20-27` (`systemOneEligible`), `src/llm/systemone.ts:85-145` (`buildSystemOneRequest`), `src/llm/systemone.ts:146-241` (`parseSystemOneResponse`), `src/llm/systemone.ts:249-268` (`SYSTEMONE_VERIFY_ASKED`, `buildSystemOneVerifyRequest`), `src/llm/systemone.ts:270-301` (`compareWithSystemOne`), `src/llm/providers.ts:132-146` (`PROVIDERS.systemone`), `src/components/LlmSettingsDialog.tsx` (`LlmSettingsDialog`'s Max input tokens field), `src/state/aiStore.ts:1585-1637` (`runOnePaperClassify`), `src/state/aiStore.ts:1644-1671` (`runCrossCheck`)
 - **Status:** Implemented
 - **Tests:** `src/llm/systemone.test.ts`, `src/state/aiStore.classify.test.ts`, `src/components/LlmSettingsDialog.test.tsx`
 
@@ -754,7 +754,7 @@ For an OpenAI-compatible target (or any future custom-base-URL provider), the sy
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/llm/types.ts` (`LlmConfig.noKey`, `isUsable`), `src/components/LlmSettingsDialog.tsx` (no-key checkbox), `src-tauri/src/llm.rs` (`llm_call`, `save_config`, `build_call_headers`)
+- **Evidence:** `src/llm/types.ts` (`LlmConfig.noKey`, `isUsable`), `src/components/LlmSettingsDialog.tsx` (`LlmSettingsDialog`'s no-key checkbox), `src-tauri/src/llm.rs` (`llm_call`, `save_config`, `build_call_headers`)
 - **Status:** Implemented
 - **Tests:** `src-tauri/src/llm.rs` (`call_headers`), `src/components/LlmSettingsDialog.test.tsx`
 
@@ -769,7 +769,7 @@ The setup screen shall assign library models (REQ-LLM-30) to three roles: Annota
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/aiStore.ts:463-487` (`StoredRoles`, `rolesStorageKey`, `readProjectRoles`, `writeProjectRole`), `src/state/aiStore.ts:889-906` (`openDialog` applying remembered roles), `src/state/aiStore.ts:921-926,950-961` (`selectConfig`, `selectJudge`, `selectCrossCheck` writing both keys), `src/state/aiStore.ts:927-939` (`setMode` clearing a wrong-family annotator), `src/components/AiDialog.tsx:526-591` (Models section: Annotator/Judge/Cross-check pickers)
+- **Evidence:** `src/state/aiStore.ts:463-487` (`StoredRoles`, `rolesStorageKey`, `readProjectRoles`, `writeProjectRole`), `src/state/aiStore.ts:889-906` (`openDialog` applying remembered roles), `src/state/aiStore.ts:921-926,950-961` (`selectConfig`, `selectJudge`, `selectCrossCheck` writing both keys), `src/state/aiStore.ts:927-939` (`setMode` clearing a wrong-family annotator), `src/components/AiDialog.tsx` (`AiDialog`'s Models section: Annotator/Judge/Cross-check pickers)
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.roles.test.ts`, `src/components/AiDialog.test.tsx`
 
@@ -784,7 +784,7 @@ The setup screen shall offer a third mode, "Classify" (alongside Prompt and Agen
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/aiStore.ts:78` (`AiMode` including `'classify'`), `src/state/aiStore.ts:1585-1637` (`runOnePaperClassify`), `src/state/aiStore.ts:644-651` (dispatch to `runOnePaperClassify` and confidence-threshold row-checking), `src/components/AiDialog.tsx:484-520` (How section's Classify radio, disabled without a System One model), `src/model/project.ts:47` (`AiUsageRecord.mode` extended to include `'classify'`)
+- **Evidence:** `src/state/aiStore.ts` (`AiMode` including 'classify'), `src/state/aiStore.ts:1585-1637` (`runOnePaperClassify`), `src/state/aiStore.ts:644-651` (dispatch to `runOnePaperClassify` and confidence-threshold row-checking), `src/components/AiDialog.tsx` (`AiDialog`'s Classify radio in the How section, disabled without a System One model), `src/model/project.ts` (`AiUsageRecord.mode` extended to include 'classify')
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.classify.test.ts`, `src/components/AiDialog.test.tsx`
 
@@ -799,7 +799,7 @@ After a prompt- or agent-mode paper's suggestions are in hand, the setup screen 
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/aiStore.ts:1644-1671` (`runCrossCheck`), `src/state/aiStore.ts:668-694` (dispatch, agreement/disagreement row-checking), `src/components/AiDialog.tsx:571-591` (Cross-check role picker), `src/components/AiDialog.tsx:1008,1078-1090` (review table's "Cross-check" column), `src/llm/systemone.ts:270-301` (`compareWithSystemOne`)
+- **Evidence:** `src/state/aiStore.ts:1644-1671` (`runCrossCheck`), `src/state/aiStore.ts` (`executeBatch`'s cross-check dispatch and agreement/disagreement row-checking), `src/components/AiDialog.tsx` (`AiDialog`'s Cross-check role picker), `src/components/AiDialog.tsx` (`ReviewTable`'s 'Cross-check' column), `src/llm/systemone.ts:270-301` (`compareWithSystemOne`)
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.classify.test.ts`, `src/llm/systemone.test.ts`
 
@@ -830,7 +830,7 @@ A row whose confidence is below the existing confidence threshold (Options; prev
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability: Operability)
-- **Evidence:** `src/llm/parse.ts` (`coerce`, exported), `src/state/aiStore.ts` (`ReviewRow.edited`/`editedValue`/`flagged`, `editRow`, `apply`, prompt-mode `rowChecked`), `src/components/AiDialog.tsx` (`EditControl`, `ReviewTable`'s edit UI, attention-only filter and header note), `src/model/project.ts` (`AiUsageRecord.edited`), `src/components/AiUsageDisclosure.tsx`
+- **Evidence:** `src/llm/parse.ts` (`coerce`, exported), `src/state/aiStore.ts` (`ReviewRow.edited`/`ReviewRow.editedValue`/`flagged`, `editRow`, `apply`, prompt-mode `rowChecked`), `src/components/AiDialog.tsx` (`EditControl`, `ReviewTable`'s edit UI, attention-only filter and header note), `src/model/project.ts` (`AiUsageRecord.edited`), `src/components/AiUsageDisclosure.tsx`
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.edit.test.ts`, `src/components/AiDialog.test.tsx`, `src/components/AiUsageDisclosure.test.tsx`, `src/model/model.test.ts`
 
@@ -860,7 +860,7 @@ In the same run (no extra LLM call), the model may optionally report up to 5 `sc
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Maintainability)
-- **Evidence:** `src/llm/types.ts` (`SchemaRemark`), `src/llm/parse.ts` (`parseSchemaRemarks`), `src/llm/prompt.ts` (`SCHEMA_REMARKS_RULE`), `src/llm/tools.ts` (`submit_annotations`, `parseSubmitArgs`), `src/llm/agent.ts`, `src/llm/feedback.ts`, `src/state/aiStore.ts` (`remarks`, `writeFeedback`)
+- **Evidence:** `src/llm/types.ts` (`SchemaRemark`), `src/llm/parse.ts` (`parseSchemaRemarks`), `src/llm/prompt.ts` (`SCHEMA_REMARKS_RULE`), `src/llm/tools.ts` (`AGENT_TOOLS`' submit_annotations entry, `parseSubmitArgs`), `src/llm/agent.ts`, `src/llm/feedback.ts`, `src/state/aiStore.ts` (`AiState.remarks`, `writeFeedback`)
 - **Status:** Implemented
 - **Tests:** `src/llm/feedback.test.ts`, `src/llm/parse.test.ts`, `src/llm/tools.test.ts`, `src/llm/agent.test.ts`, `src/llm/prompt.remarks.test.ts`
 
@@ -890,7 +890,7 @@ Tags: Functional, Functional_Suitability, Reliability
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/llm/chat.ts` (`buildChatRequest` `webSearch`, `parseChatResponse`), `src/llm/providers.ts` (`supportsWebSearch`), `src/llm/agent.ts` (`AgentInput.webSearch`, pause handling, `searchResultUrls`), `src/llm/verify.ts` (`normalizeUrl`, `checkSubmission`), `src/llm/judge.ts` (`JudgeProposal.webUnverified`), `src/llm/prompt.ts` (`buildAgentSystemPrompt`), `src/llm/cost.ts` (`WEB_SEARCH_NOTE`), `src/state/aiStore.ts` (`runOnePaperAgent`)
+- **Evidence:** `src/llm/chat.ts` (`buildChatRequest` `webSearch`, `parseChatResponse`), `src/llm/providers.ts` (`ProviderInfo.supportsWebSearch`), `src/llm/agent.ts` (`AgentInput.webSearch`, pause handling, `searchResultUrls`), `src/llm/verify.ts` (`normalizeUrl`, `checkSubmission`), `src/llm/judge.ts` (`JudgeProposal.webUnverified`), `src/llm/prompt.ts` (`buildAgentSystemPrompt`), `src/llm/cost.ts` (`WEB_SEARCH_NOTE`), `src/state/aiStore.ts` (`runOnePaperAgent`)
 - **Status:** Implemented
 - **Tests:** `src/llm/websearch.test.ts`
 
@@ -950,7 +950,7 @@ The AI dialog's Options shall offer "Also re-check fields I've already filled" (
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Safety)
-- **Evidence:** `src/state/aiStore.ts` (`recheck`, `RecheckRow`, `batchCandidates`, `runOnePaperPrompt`, `toggleRecheckRow`, `apply`), `src/state/store.ts` (`applyAiSuggestionsBatch` `replacements`), `src/components/AiDialog.tsx` (`RecheckSection`, options), `src/model/project.ts` (`AiUsageRecord.rechecked`), `src/components/AiUsageDisclosure.tsx`
+- **Evidence:** `src/state/aiStore.ts` (`AiState.recheck`, `RecheckRow`, `batchCandidates`, `runOnePaperPrompt`, `toggleRecheckRow`, `apply`), `src/state/store.ts` (`applyAiSuggestionsBatch` with its per-item replacements), `src/components/AiDialog.tsx` (`RecheckSection`, options), `src/model/project.ts` (`AiUsageRecord.rechecked`), `src/components/AiUsageDisclosure.tsx`
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.recheck.test.ts`, `src/components/AiDialog.test.tsx`, `src/components/AiUsageDisclosure.test.tsx`, `src/model/model.test.ts`
 
@@ -965,7 +965,7 @@ In Agent mode the Options shall offer "Let the model search the web" (default of
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Safety)
-- **Evidence:** `src/state/aiStore.ts` (`webSearch`, `executeBatch` agent branch), `src/components/AiDialog.tsx`, `src/model/project.ts` (`AiUsageRecord.webSearches`), `src/components/AiUsageDisclosure.tsx`
+- **Evidence:** `src/state/aiStore.ts` (`AiState.webSearch`, `executeBatch` agent branch), `src/components/AiDialog.tsx`, `src/model/project.ts` (`AiUsageRecord.webSearches`), `src/components/AiUsageDisclosure.tsx`
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.recheck.test.ts`, `src/components/AiDialog.test.tsx`, `src/components/AiUsageDisclosure.test.tsx`, `src/model/model.test.ts`
 
@@ -980,7 +980,7 @@ The Options shall offer "Save feedback about the annotation schema" (default on,
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
-- **Evidence:** `src/state/aiStore.ts` (`saveFeedback`, `writeFeedback`, `feedbackHandled`), `src/llm/feedback.ts`, `src/platform/adapter.ts` (`writeFeedback`), `src/components/AiDialog.tsx`
+- **Evidence:** `src/state/aiStore.ts` (`saveFeedback`, `writeFeedback`, `feedbackHandled`), `src/llm/feedback.ts`, `src/platform/adapter.ts` (`PlatformAdapter.writeFeedback`), `src/components/AiDialog.tsx`
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.recheck.test.ts`, `src/llm/feedback.test.ts`, `src-tauri/src/feedback.rs` (`name_and_content_rules`, `write_never_overwrites_and_lists_sorted`)
 
@@ -1085,7 +1085,7 @@ The desktop app shall expose Ollama control (`version`, `list`, `show`, `ps`, `p
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Security)
-- **Evidence:** `src-tauri/src/ollama.rs` (`check_base_url`, `is_valid_model_tag`, `discover`, `localserver_discover`), `src/llm/ollama.ts` (parsers), `src/platform/ollamaApi.ts`, `src/platform/tauri.ts` (`tauriBridge`), `src/platform/unsupported.ts`
+- **Evidence:** `src-tauri/src/ollama.rs` (`check_base_url`, `is_valid_model_tag`, `discover`, `localserver_discover`), `src/llm/ollama.ts` (`isValidModelTag`, `parseTags`, `capabilitiesOf`, `contextOf`, `parsePs`, `parsePullLine`, `parseLmStudioModels`, `parseLlamaCppProps`, `parseOpenAiModelsMeta`), `src/platform/ollamaApi.ts`, `src/platform/tauri.ts` (`tauriBridge`), `src/platform/unsupported.ts`
 - **Status:** Implemented
 - **Tests:** `src-tauri/src/ollama.rs` (`base_urls`, `model_tags`, `handlers`, `pulls`, `discovers`), `src/llm/ollama.test.ts`
 
@@ -1220,7 +1220,7 @@ When a chat target's `contextTokens` is known, text delivery shall cut the paper
 
 Comment:
 - **Type:** Functional (ISO 25010: Reliability, Functional Suitability)
-- **Evidence:** `src/state/aiStore.ts` (`fitForChat`, `describeFit`, `fitByPaper`, `runOnePaperPrompt`, `runOnePaperAgent`), `src/state/aiScreeningStore.ts` (`promptOne`), `src/components/AiDialog.tsx` (`trimHint`, `ReviewNotes`)
+- **Evidence:** `src/state/aiStore.ts` (`fitForChat`, `describeFit`, `AiState.fitByPaper`, `runOnePaperPrompt`, `runOnePaperAgent`), `src/state/aiScreeningStore.ts` (`promptOne`), `src/components/AiDialog.tsx` (`trimHint`, `ReviewNotes`)
 - **Status:** Implemented; the tokens-per-character heuristic is conservative, not measured per model
 - **Tests:** `src/state/aiStore.budget.test.ts`, `src/state/aiScreeningStore.test.ts`
 
@@ -1235,7 +1235,7 @@ When a local server reports that it cut the front off the prompt (`inputTruncate
 
 Comment:
 - **Type:** Functional (ISO 25010: Reliability, Safety)
-- **Evidence:** `src/state/aiStore.ts` (`startBlocker`, `LOCAL_TRUNCATED_MESSAGE`, `destinationNote`, `runOnePaperPrompt`), `src/state/aiScreeningStore.ts` (`promptOne`), `src/components/AiDialog.tsx`, `src/components/AiScreeningDialog.tsx`
+- **Evidence:** `src/state/aiStore.ts` (`startBlocker`, `localTruncatedMessage`, `destinationNote`, `runOnePaperPrompt`), `src/state/aiScreeningStore.ts` (`promptOne`), `src/components/AiDialog.tsx`, `src/components/AiScreeningDialog.tsx`
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.budget.test.ts`, `src/state/aiScreeningStore.test.ts`, `src/components/AiDialog.test.tsx`
 
@@ -1265,7 +1265,7 @@ Agent mode accumulates tool results in the conversation, so when an annotator's 
 
 Comment:
 - **Type:** Functional (ISO 25010: Reliability)
-- **Evidence:** `src/state/aiStore.ts` (`agentContextReason`, `startBlocker`), `src/components/AiDialog.tsx` (Agent radio)
+- **Evidence:** `src/state/aiStore.ts` (`agentContextReason`, `startBlocker`), `src/components/AiDialog.tsx` (`AiDialog`'s Agent radio)
 - **Status:** Implemented
 - **Tests:** `src/state/aiStore.budget.test.ts`, `src/components/AiDialog.test.tsx`
 

@@ -24,6 +24,7 @@ const SNIPPET_RADIUS = 150 // ~300 chars total around a match
 // Tool definitions (schemas shown to the model)
 // ---------------------------------------------------------------------------
 
+// [impl->req~llm-600~1]
 export const AGENT_TOOLS: ToolDef[] = [
   {
     name: 'search_paper',

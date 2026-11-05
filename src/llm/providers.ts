@@ -27,6 +27,7 @@ export interface ProviderInfo {
    * the reviewer types the model name and it's never validated for this provider.
    */
   supportsModelListing: boolean
+  // [impl->req~llm-620~1]
   /**
    * Whether agent mode can enable this provider's built-in web search
    * alongside our function tools (chat.ts `webSearch`). Decisions, checked

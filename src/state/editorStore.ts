@@ -818,6 +818,7 @@ export function editorSeatFinished(paper: EditorPaper | undefined, seat: number)
 }
 
 // [impl->req~edt-120~1]
+// [impl->req~edt-320~1]
 /**
  * Validate a draft the same way loading does (structure + schema resolution),
  * plus editor-specific checks. Returns [] when the draft is valid.

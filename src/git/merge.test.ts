@@ -801,6 +801,7 @@ describe('mergeProjects — protocol', () => {
     expect(outcome.merged.protocol).toEqual(PROTO_A)
   })
 
+  // [utest->req~git-250~1]
   it('asks per protocol entry when both sides edited it differently — never half-drops an authored one', () => {
     const base = project({ protocol: PROTO_A, papers: [] })
     const ours = project({ protocol: PROTO_B, papers: [] })
@@ -1380,6 +1381,7 @@ describe('mergeProjects — answers under a field the schema no longer has', () 
   })
 })
 
+// [utest->req~git-255~1]
 describe('mergeProjects — schema, node by node', () => {
   const merged = (base: AnnotationDef[], ours: AnnotationDef[], theirs: AnnotationDef[], papers = [paper('a')]) => {
     const outcome = mergeProjects(project({ schema: base, papers }), project({ schema: ours, papers }), project({ schema: theirs, papers }))

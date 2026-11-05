@@ -1354,7 +1354,7 @@ If the draft schema is not valid, the Preview tab shall list the problems and sh
 
 Comment:
 - **Type:** Functional (ISO 25010: Reliability, Usability)
-- **Evidence:** `src/components/SchemaPreview.tsx` (`SchemaPreview`, `validateDraft`)
+- **Evidence:** `src/components/SchemaPreview.tsx` (`SchemaPreview`), `src/state/editorStore.ts` (`validateDraft`)
 - **Verified by:** `src/components/SchemaPreview.test.tsx` (`lists the problems instead of the form when the draft schema is invalid`)
 - **Status:** Implemented
 

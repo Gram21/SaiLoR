@@ -260,6 +260,7 @@ describe('run: spending cap stops an all-papers batch', () => {
   })
 })
 
+// [utest->req~llm-240~1]
 describe('apply: usage disclosure fields', () => {
   it('passes mode/judge/rounds and verdict counts of only the applied rows to applyAiSuggestionsBatch', () => {
     const agentCfg = cfg()

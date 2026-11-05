@@ -59,6 +59,7 @@ export interface LlmConfig {
    * "unknown" — cost estimates degrade to null rather than guessing.
    */
   inputPrice?: number
+  // [impl->req~llm-430~1]
   outputPrice?: number
   /**
    * System One targets only: the context budget (tokens) `systemone.ts`

@@ -121,6 +121,7 @@ export function numCtxOfBody(body: string | undefined): number | undefined {
 
 const TAG_RE = /^[a-z0-9._/-]+(:[a-z0-9._-]+)?$/
 
+// [impl->req~llm-722~1]
 /** A model tag safe to put in a request body and a registry URL (never take one from model output). */
 export function isValidModelTag(tag: unknown): tag is string {
   return (
@@ -144,6 +145,7 @@ export interface OllamaModel {
   family?: string
 }
 
+// [impl->req~llm-722~1]
 /** `GET /api/tags`. */
 export function parseTags(json: unknown): OllamaModel[] {
   if (!isRecord(json) || !Array.isArray(json.models)) return []
@@ -165,12 +167,14 @@ export function parseTags(json: unknown): OllamaModel[] {
   })
 }
 
+// [impl->req~llm-722~1]
 /** `POST /api/show`: the `capabilities` list (e.g. "completion", "tools", "thinking", "vision"). */
 export function capabilitiesOf(show: unknown): string[] {
   if (!isRecord(show) || !Array.isArray(show.capabilities)) return []
   return show.capabilities.filter((c): c is string => typeof c === 'string')
 }
 
+// [impl->req~llm-722~1]
 /** The model's own (training) context length from `model_info["<arch>.context_length"]`. */
 export function contextOf(show: unknown): number | null {
   if (!isRecord(show) || !isRecord(show.model_info)) return null
@@ -221,6 +225,7 @@ export interface OllamaRunning {
   expiresAt?: string
 }
 
+// [impl->req~llm-722~1]
 /** `GET /api/ps`: models currently loaded in memory. */
 export function parsePs(json: unknown): OllamaRunning[] {
   if (!isRecord(json) || !Array.isArray(json.models)) return []
@@ -256,6 +261,7 @@ export interface PullProgress {
   error?: string
 }
 
+// [impl->req~llm-722~1]
 /** One NDJSON line of `POST /api/pull`; null when it is not a status/error object. */
 export function parsePullLine(line: string): PullProgress | null {
   let json: unknown
@@ -321,6 +327,7 @@ export interface LocalServerInfo {
   models: LocalServerModel[]
 }
 
+// [impl->req~llm-722~1]
 /** LM Studio `GET /api/v1/models`; embedding models are dropped. */
 export function parseLmStudioModels(json: unknown): LocalServerModel[] {
   if (!isRecord(json) || !Array.isArray(json.models)) return []
@@ -340,12 +347,14 @@ export function parseLmStudioModels(json: unknown): LocalServerModel[] {
   })
 }
 
+// [impl->req~llm-722~1]
 /** llama.cpp `GET /props`: the server's actual window, or null. */
 export function parseLlamaCppProps(json: unknown): number | null {
   if (!isRecord(json) || !isRecord(json.default_generation_settings)) return null
   return num(json.default_generation_settings.n_ctx) ?? null
 }
 
+// [impl->req~llm-722~1]
 /**
  * `GET /v1/models` of llama.cpp (`meta.n_ctx_train`) or vLLM (`max_model_len`).
  * `vllm` is true when any entry states `max_model_len`.

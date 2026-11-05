@@ -371,7 +371,7 @@ When the two sides of a merge both changed a project-level setting differently, 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/git/merge.ts:423-448,1183-1352,1409-1516`, commit `543cb13`
-- **Verified by:** `src/git/merge.test.ts` (`asks for the reviewer count when both sides changed it, differently`, `asks per protocol entry when both sides edited it differently: never half-drops an authored one`)
+- **Verified by:** `src/git/merge.test.ts` (`asks for the reviewer count when both sides changed it, differently`, `asks per protocol entry when both sides edited it differently — never half-drops an authored one`)
 - **Status:** Implemented
 
 Needs: impl, utest
@@ -386,7 +386,7 @@ When merging, the system shall combine the annotation schemas node by node, iden
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/git/merge.ts:878-896,905-1005,1009-1014,1027-1061,1370-1377`, `src/state/gitStore.ts:408`, `src/state/store.ts:1654`, commit `543cb13`
-- **Verified by:** `src/git/merge.test.ts` (`mergeProjects: schema, node by node`, `mergeResultProblem`, `combines a schema both sides extended, node by node`), `src/state/gitStore.test.ts` (`a schema both sides extended merges node by node instead of aborting`)
+- **Verified by:** `src/git/merge.test.ts` (`mergeProjects — schema, node by node`, `mergeResultProblem`, `combines a schema both sides extended, node by node`), `src/state/gitStore.test.ts` (`a schema both sides extended merges node by node instead of aborting`)
 - **Status:** Implemented
 
 Needs: impl, utest

@@ -157,6 +157,7 @@ export interface PlatformAdapter {
    *  when it is still next to it; `null` otherwise. */
   screeningSource(projectPath: string): Promise<{ name: string; text: string } | null>
 
+  // [impl->req~llm-680~1]
   /**
    * Write one AI schema-feedback JSON file to `<annotationsDir>/feedback/<fileName>`
    * (never overwrites; `fileName` must be unique per call). Returns the
@@ -312,6 +313,7 @@ export interface PlatformAdapter {
   //
   // Download and install are explicit, user-triggered calls only.
 
+  // [impl->req~plt-270~1]
   /** Ask whether a newer version can be downloaded. `supported: false` on the
    *  browser build and for bundles that cannot self-update (deb, rpm). */
   checkForNativeUpdate(): Promise<{ supported: boolean }>

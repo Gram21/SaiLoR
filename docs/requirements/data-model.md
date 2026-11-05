@@ -622,6 +622,6 @@ the project editor. See the [index](index.md) for the glossary.
 ### REQ-EDT-320: Show the schema problems instead of the preview
 - **Description:** If the draft schema is not valid, the Preview tab shall list the problems and shall not show the form.
 - **Type:** Functional (ISO 25010: Reliability, Usability)
-- **Evidence:** `src/components/SchemaPreview.tsx` (`SchemaPreview`, `validateDraft`)
+- **Evidence:** `src/components/SchemaPreview.tsx` (`SchemaPreview`), `src/state/editorStore.ts` (`validateDraft`)
 - **Verified by:** `src/components/SchemaPreview.test.tsx` (`lists the problems instead of the form when the draft schema is invalid`)
 - **Status:** Implemented

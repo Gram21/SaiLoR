@@ -27,7 +27,7 @@ When the application is launched while another instance is running, the system s
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `src-tauri/src/main.rs` (`tauri_plugin_single_instance`), `src-tauri/src/shell.rs` (`focus_main`), commit `6ce60d5` (removed Electron main process), commit `0bc6c9c`
+- **Evidence:** `src-tauri/src/main.rs` (`main`, which registers tauri_plugin_single_instance), `src-tauri/src/shell.rs` (`focus_main`), commit `6ce60d5` (removed Electron main process), commit `0bc6c9c`
 - **Status:** Implemented
 
 Needs: impl
@@ -291,7 +291,7 @@ When the user reloads the page with unsaved changes, by the View menu, Ctrl/Cmd+
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/close.rs` (`request_reload`, `app_reload`, `on_reload`, `saved`), `src-tauri/src/shell.rs` (`action`, `run`, `macos_menu`, `menu`), `src/hooks/useKeybindings.ts` (`useKeybindings`), `src/platform/tauri.ts` (`requestReload`), `src/hooks/useDirtyGuard.ts` (`useDirtyGuard`, `beforeunload`), commit `6ce60d5` (removed Electron main process)
+- **Evidence:** `src-tauri/src/close.rs` (`request_reload`, `app_reload`, `on_reload`, `saved`), `src-tauri/src/shell.rs` (`action`, `run`, `macos_menu`, `menu`), `src/hooks/useKeybindings.ts` (`useKeybindings`), `src/platform/tauri.ts` (`requestReload`), `src/hooks/useDirtyGuard.ts` (`useDirtyGuard` and its beforeunload listener), commit `6ce60d5` (removed Electron main process)
 - **Verified by:** `src-tauri/src/close.rs` (`clean_project_reloads_at_once`, `dirty_reload_asks_once_and_cancel_keeps_the_page`, `discard_reloads_without_allowing_a_later_close`, `reload_waits_for_a_requested_save_to_succeed`, `open_close_dialog_blocks_reload`), `src/hooks/useKeybindings.test.tsx` (`reload shortcuts`), `src-tauri/src/shell.rs` (`menu_ids_map_to_actions`)
 - **Status:** Implemented. Windows and Linux were not run by hand. See `docs/tauri-migration.md` §22.3.
 
@@ -481,7 +481,7 @@ The system shall give the user-interface webview no Node.js runtime. The webview
 
 Comment:
 - **Type:** Non-functional, design constraint (ISO 25010: Security)
-- **Evidence:** `src-tauri/src/main.rs` (`generate_handler!`), `src-tauri/capabilities/default.json`, `src/platform/tauri.ts` (`command`, `tauriBridge`)
+- **Evidence:** `src-tauri/src/main.rs` (`main`'s generate_handler! command list), `src-tauri/capabilities/default.json`, `src/platform/tauri.ts` (`command`, `tauriBridge`)
 - **Status:** Implemented
 
 Needs: impl
@@ -539,7 +539,7 @@ The system shall offer in-app update download and install for the AppImage, the 
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/update.rs` (`self_update_supported`, `update_check`), `src/platform/adapter.ts` (`checkForNativeUpdate`), commit `9b8eb12`
+- **Evidence:** `src-tauri/src/update.rs` (`self_update_supported`, `update_check`), `src/platform/adapter.ts` (`PlatformAdapter.checkForNativeUpdate`), commit `9b8eb12`
 - **Verified by:** `src-tauri/src/update.rs` (`only_appimage_windows_and_macos_self_update`), `src/state/store.update.test.ts`
 - **Status:** Implemented
 
@@ -704,7 +704,7 @@ The system shall store AI provider settings, the local runtime and local models 
 
 Comment:
 - **Type:** Functional (ISO 25010: Portability: Adaptability)
-- **Evidence:** `src-tauri/src/localruntime.rs` (`data_dir`, `DATA_DIR_NAME`), `src-tauri/src/llm.rs` (`config_file`), `src-tauri/src/shell.rs` (`migrate_data_dir`, `hide`, `setup`), `README.md` (Upgrading from 1.x)
+- **Evidence:** `src-tauri/src/localruntime.rs` (`data_dir`, `DATA_DIR_NAME`), `src-tauri/src/llm.rs` (`config_file`), `src-tauri/src/shell.rs` (`migrate_data_dir` and the Windows-only hide step it calls, `setup`), `README.md` (Upgrading from 1.x)
 - **Verified by:** `src-tauri/src/shell.rs` (`data_dir_moves_once_and_never_overwrites`)
 - **Status:** Implemented. The Windows hidden attribute was not run by hand.
 
