@@ -492,6 +492,12 @@ inspection only.
 | REQ-LLM-760 | Respect field conditions in AI prompts | Functional · Functional Suitability | `src/llm/fields.ts`<br>`src/llm/prompt.ts`<br>`src/state/aiStore.ts`<br>`src/state/store.ts` | `src/llm/fields.test.ts`<br>`src/llm/prompt.test.ts` | — | — |
 | REQ-LLM-770 | Check AI evidence quotes against the paper text | Functional · Functional Suitability | `src/llm/verify.ts`<br>`src/llm/parse.ts`<br>`src/llm/tools.ts`<br>`src/llm/prompt.ts`<br>`src/state/aiStore.ts`<br>`src/model/project.ts`<br>`src/components/AiDialog.tsx`<br>`src/components/AiUsageDisclosure.tsx` | `src/llm/verify.test.ts`<br>`src/llm/parse.test.ts`<br>`src/llm/tools.test.ts`<br>`src/state/aiStore.recheck.test.ts`<br>`src/model/model.test.ts`<br>`src/components/AiUsageDisclosure.test.tsx` | — | — |
 | REQ-LLM-780 | Record the prompt version on each AI usage record | Functional · Functional Suitability | `src/llm/prompt.ts`<br>`src/llm/recheck.ts`<br>`src/llm/judge.ts`<br>`src/llm/screeningAi.ts`<br>`src/llm/systemone.ts`<br>`src/state/aiStore.ts`<br>`src/state/aiScreeningStore.ts`<br>`src/model/project.ts` | `src/model/model.test.ts`<br>`src/model/split.test.ts`<br>`src/state/aiStore.recheck.test.ts`<br>`src/state/aiStore.classify.test.ts`<br>`src/state/aiScreeningStore.test.ts` | — | — |
+| REQ-LLM-820 | Compare the AI seat with the consolidated answers per field | Functional · Functional Suitability | `src/llm/evaluation.ts` (`evaluateAi`)<br>`src/consolidate/disagreements.ts` (`paperVerdicts`)<br>`src/consolidate/unanimous.ts` (`comparable`) | `src/llm/evaluation.test.ts` | — | `user-guide/multi-reviewer.md` §AI evaluation |
+| REQ-LLM-821 | Match repeated entries through the recorded alignment | Functional · Functional Suitability | `src/llm/evaluation.ts` (`evaluateAi`)<br>`src/model/alignment.ts` (`alignedReviews`) | `src/llm/evaluation.test.ts` | — | `user-guide/multi-reviewer.md` §AI evaluation |
+| REQ-LLM-822 | Report the AI evaluation per field, without model breakdown | Functional · Functional Suitability | `src/llm/evaluation.ts` (`evaluateAi`)<br>`src/model/project.ts` (`aiSeatId`) | `src/llm/evaluation.test.ts` | — | `user-guide/multi-reviewer.md` §AI evaluation |
+| REQ-LLM-830 | Show the AI evaluation in a read-only dialog | Functional · Functional Suitability, Usability: Operability, Security: Confidentiality | `src/components/AiEvaluationDialog.tsx`<br>`src/components/Toolbar.tsx` | `src/components/AiEvaluationDialog.test.tsx`<br>`src/components/Toolbar.test.tsx` | — | `user-guide/multi-reviewer.md` §AI evaluation |
+| REQ-LLM-831 | Export the AI evaluation as CSV | Functional · Functional Suitability, Security: Integrity | `src/llm/evaluation.ts` (`evaluationCsv`)<br>`src/components/AiEvaluationDialog.tsx`<br>`src/model/graph.ts` (`csvCell`) | `src/llm/evaluation.test.ts`<br>`src/components/AiEvaluationDialog.test.tsx` | — | `user-guide/multi-reviewer.md` §AI evaluation |
+| REQ-LLM-832 | Show an empty state for the AI evaluation | Functional · Usability: Operability | `src/components/AiEvaluationDialog.tsx` | `src/components/AiEvaluationDialog.test.tsx` | — | `user-guide/multi-reviewer.md` §AI evaluation |
 
 ## Platform & desktop shell ([platform.md](platform.md))
 
@@ -551,17 +557,17 @@ inspection only.
 
 ## Coverage statistics
 
-Counts come from `python3 technical-report/trace_stats.py` at the revision that adds metadata correction.
+Counts come from `python3 technical-report/trace_stats.py` at the revision that adds the AI evaluation.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 466 | 100% |
-| With an implementing source link | 440 | 94% |
-| With at least one verifying test | 436 | 94% |
+| Requirements traced | 472 | 100% |
+| With an implementing source link | 446 | 94% |
+| With at least one verifying test | 442 | 94% |
 | Without an automated check (source inspection only) | 30 | 6% |
 | With an introducing/pinning commit | 122 | 26% |
-| With a documentation link | 394 | 85% |
-| Security-related (ISO 25010 Security) | 37 | 8% |
-| Distinct test files linked | 211 | — |
-| Distinct source files linked | 198 | — |
+| With a documentation link | 400 | 85% |
+| Security-related (ISO 25010 Security) | 39 | 8% |
+| Distinct test files linked | 213 | — |
+| Distinct source files linked | 201 | — |
 | Linked files missing at this revision | 0 | — |

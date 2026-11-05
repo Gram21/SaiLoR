@@ -59,9 +59,9 @@ per category so requirements can be inserted without renumbering.
 | Screening (SCR) | 39 |
 | Consolidation (CON) | 61 |
 | Git integration (GIT) | 66 |
-| LLM annotation (LLM) | 91 |
+| LLM annotation (LLM) | 97 |
 | Platform & shell (PLT) | 51 |
-| **Total** | **466** |
+| **Total** | **472** |
 
 ## Method & evidence notes
 
@@ -147,3 +147,5 @@ per category so requirements can be inserted without renumbering.
   the "Open settings" button in the Help dialog. The coverage counts above were not recounted.
 - **Editor tabs and preview (2026-11-05).** REQ-EDT-300 to REQ-EDT-320 added for the project editor tabs,
   the preview of the draft schema and the list of schema problems. The coverage counts above were not recounted.
+- **AI evaluation (2026-11-05).** REQ-LLM-820 to REQ-LLM-832 added for the per-field comparison of the
+  AI seat with the consolidated answers, the AI evaluation dialog, its CSV export and its empty state. The coverage counts above include them.
