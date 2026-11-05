@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { resolveSchema } from './schema'
-import { loadProject, serializeProject, ProjectLoadError } from './project'
+import { loadProject, serializeProject, splitProjectFiles, ProjectLoadError } from './project'
 import {
   applyFieldHelp,
   cleanPromptOverrides,
@@ -67,6 +67,8 @@ describe('project file', () => {
     const loaded = loadProject(project({ role: 'Role.', examples: 'Ex.', fieldHelp: { Year: 'Help.' } }))
     expect(loaded.promptOverrides).toEqual({ role: 'Role.', examples: 'Ex.', fieldHelp: { Year: 'Help.' } })
     expect(loadProject(serializeProject(loaded)).promptOverrides).toEqual(loaded.promptOverrides)
+    const { meta } = splitProjectFiles(loaded)
+    expect((meta as { config: Record<string, unknown> }).config.promptOverrides).toEqual(loaded.promptOverrides)
     const empty = loadProject(project({ role: '' }))
     expect(empty.promptOverrides).toBeUndefined()
     expect(JSON.parse(serializeProject(empty)).config).not.toHaveProperty('promptOverrides')
