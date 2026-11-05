@@ -2,8 +2,10 @@
 // [impl->req~llm-470~1]
 // [impl->req~llm-650~1]
 // [impl->req~edt-180~1]
+// [impl->req~edt-200~1]
 import { useEditorStore } from '../state/editorStore'
 import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
+import { pdfFolderProblem } from '../model/pdfFolder'
 import { getPlatform } from '../platform'
 import { getLanguage, rich, tp, useT } from '../i18n'
 import { SchemaTreeEditor } from './SchemaTreeEditor'
@@ -55,6 +57,11 @@ export function ProjectEditor() {
   const setAiSeat = useEditorStore((s) => s.setAiSeat)
   const metadataEdit = useEditorStore((s) => s.metadataEdit)
   const setMetadataEdit = useEditorStore((s) => s.setMetadataEdit)
+  const pdfFolder = useEditorStore((s) => s.pdfFolder)
+  const setPdfFolder = useEditorStore((s) => s.setPdfFolder)
+  const pdfFolderIssue = pdfFolder.trim() ? pdfFolderProblem(pdfFolder.trim()) : null
+  const crossrefLookup = useEditorStore((s) => s.crossrefLookup)
+  const setCrossrefLookup = useEditorStore((s) => s.setCrossrefLookup)
   const screening = useEditorStore((s) => s.screening)
   const setScreening = useEditorStore((s) => s.setScreening)
   const provenance = useEditorStore((s) => s.provenance)
@@ -304,6 +311,33 @@ export function ProjectEditor() {
           <option value="annotation">{t('editor.project.metadataEditAnnotation')}</option>
         </select>
       </div>
+
+      <div className="editor-location">
+        <label className="editor-location-label" htmlFor="editor-pdf-folder">
+          {t('editor.project.pdfFolder')}
+        </label>
+        <input
+          id="editor-pdf-folder"
+          className="editor-title-input"
+          type="text"
+          value={pdfFolder}
+          onChange={(e) => setPdfFolder(e.target.value)}
+          placeholder={t('editor.project.pdfFolderPlaceholder')}
+          title={t('editor.project.pdfFolderTitle')}
+          disabled={busy}
+          aria-invalid={pdfFolderIssue !== null}
+        />
+        <label className="editor-ai-toggle" title={t('editor.project.crossrefLookupTitle')}>
+          <input
+            type="checkbox"
+            checked={crossrefLookup}
+            onChange={(e) => setCrossrefLookup(e.target.checked)}
+            disabled={busy}
+          />
+          <span>{t('editor.project.crossrefLookup')}</span>
+        </label>
+      </div>
+      {pdfFolderIssue && <p className="editor-field-problem">{pdfFolderIssue}</p>}
 
       {error && (
         <div className="editor-error" role="alert">

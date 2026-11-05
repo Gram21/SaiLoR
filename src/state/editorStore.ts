@@ -33,6 +33,7 @@ import { classifyImport, type DupRecord, type DupVerdict } from '../model/duplic
 import { paperIdProblem, paperIdsCollide } from '../model/paperId'
 import { parseYear } from '../model/year'
 import { parseMetadataEditMode, type MetadataEditMode } from '../model/metadata'
+import { paperIdFromName, parsePdfFolder, pdfFolderProblem, titleFromName } from '../model/pdfFolder'
 import { getPlatform, type OpenedProject, type PickedPdf, type ProjectLocation, type SaveHandle } from '../platform'
 import { DEFAULT_SCREENING_REASONS, screeningSchemaDefs } from '../screening/schema'
 import { screeningReason, screeningStatus } from '../screening/status'
@@ -139,6 +140,8 @@ interface EditorSnapshot {
   reviewers: number
   aiSeat: boolean
   metadataEdit: MetadataEditMode
+  pdfFolder: string
+  crossrefLookup: boolean
   screening: ScreeningConfig | null
   extra: Record<string, unknown>
   provenance: ProjectProvenance | null
@@ -435,21 +438,7 @@ export function pendingSchemaMoves(
 // Building + validating the project JSON
 // ---------------------------------------------------------------------------
 
-/** Slugify a file name into a stable paper id. */
-function paperIdFromName(name: string): string {
-  return (
-    name
-      .replace(/\.pdf$/i, '')
-      .toLowerCase()
-      .replace(/[^a-z0-9]+/g, '-')
-      .replace(/^-+|-+$/g, '') || 'paper'
-  )
-}
-
-/** A human title guessed from a PDF file name (a placeholder until the PDF is read). */
-export function titleFromName(name: string): string {
-  return name.replace(/\.pdf$/i, '').replace(/[_-]+/g, ' ').trim()
-}
+export { titleFromName }
 
 /** Identity of a referenced PDF, for duplicate detection: the absolute path
  *  when we have one (desktop), else the stored relative path (browser has none). */
@@ -733,6 +722,8 @@ export function buildProjectJson(state: {
   aiSeat?: boolean
   /** Optional for the same reason; absent means `off`. */
   metadataEdit?: MetadataEditMode
+  pdfFolder?: string
+  crossrefLookup?: boolean
   /** Optional so existing test fixtures (and any other caller predating this
    *  feature) keep compiling unchanged — absent means "not a screening draft". */
   screening?: ScreeningConfig | null
@@ -780,6 +771,8 @@ export function buildProjectJson(state: {
       ...(screening ? { screening: { reasons: screening.reasons } } : {}),
       ...strictConfigJson(strictForFile(state.strict ?? null, state.papers)),
       ...(state.metadataEdit && state.metadataEdit !== 'off' ? { metadataEdit: state.metadataEdit } : {}),
+      ...(state.pdfFolder?.trim() ? { pdfFolder: state.pdfFolder.trim() } : {}),
+      ...(state.crossrefLookup ? { crossrefLookup: true } : {}),
     },
     papers: state.papers.map((p) => {
       const out: Record<string, unknown> = { ...(p.extra ?? {}) }
@@ -1063,6 +1056,8 @@ interface EditorState {
   aiSeat: boolean
   /** Who may correct paper metadata — see `Project.metadataEdit`. */
   metadataEdit: MetadataEditMode
+  pdfFolder: string
+  crossrefLookup: boolean
   /** Set when this draft is a screening project: its schema is derived from
    *  these reasons (`src/screening/schema.ts`) and `nodes` is unused —
    *  `ProjectEditor` renders `ScreeningReasonsEditor` instead of
@@ -1139,6 +1134,8 @@ interface EditorState {
   setAiSeat: (on: boolean) => void
   /** Its own undo step, same shape as `setFinishCheckbox`. */
   setMetadataEdit: (mode: MetadataEditMode) => void
+  setPdfFolder: (folder: string) => void
+  setCrossrefLookup: (on: boolean) => void
   /** Strict mode settings — see `model/strict.ts`. Assignments keyed by paper `uid`. */
   strict: StrictConfig | null
   setStrictEnabled: (on: boolean) => void
@@ -1230,6 +1227,8 @@ function snapshotOf(s: EditorState): EditorSnapshot {
     reviewers: s.reviewers,
     aiSeat: s.aiSeat,
     metadataEdit: s.metadataEdit,
+    pdfFolder: s.pdfFolder,
+    crossrefLookup: s.crossrefLookup,
     screening: s.screening,
     extra: s.extra,
     provenance: s.provenance,
@@ -1250,6 +1249,8 @@ function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
   s.reviewers = snap.reviewers
   s.aiSeat = snap.aiSeat
   s.metadataEdit = snap.metadataEdit
+  s.pdfFolder = snap.pdfFolder
+  s.crossrefLookup = snap.crossrefLookup
   s.screening = snap.screening
   s.extra = snap.extra
   s.provenance = snap.provenance
@@ -1275,6 +1276,8 @@ interface OpenedEditorState {
   reviewers: number
   aiSeat: boolean
   metadataEdit: MetadataEditMode
+  pdfFolder: string
+  crossrefLookup: boolean
   screening: ScreeningConfig | null
   extra: Record<string, unknown>
   provenance: ProjectProvenance | null
@@ -1370,6 +1373,8 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     // Absent means no AI seat, same rule as `aiEnabled` above.
     aiSeat: (parsed.config as { aiSeat?: unknown }).aiSeat === true,
     metadataEdit: parseMetadataEditMode((data.config as { metadataEdit?: unknown } | undefined)?.metadataEdit),
+    pdfFolder: parsePdfFolder((data.config as { pdfFolder?: unknown } | undefined)?.pdfFolder) ?? '',
+    crossrefLookup: (data.config as { crossrefLookup?: unknown } | undefined)?.crossrefLookup === true,
     screening,
     extra: rootExtra,
     provenance: parseProvenance(data.provenance),
@@ -1412,6 +1417,8 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.reviewers = st.reviewers
   s.aiSeat = st.aiSeat
   s.metadataEdit = st.metadataEdit
+  s.pdfFolder = st.pdfFolder
+  s.crossrefLookup = st.crossrefLookup
   s.screening = st.screening
   s.extra = st.extra
   s.provenance = st.provenance
@@ -1554,6 +1561,8 @@ export const useEditorStore = create<EditorState>()(
     reviewers: 1,
     aiSeat: false,
     metadataEdit: 'off',
+    pdfFolder: '',
+    crossrefLookup: false,
     screening: null,
     extra: {},
     provenance: null,
@@ -1598,6 +1607,8 @@ export const useEditorStore = create<EditorState>()(
         s.reviewers = 1
         s.aiSeat = false
         s.metadataEdit = 'off'
+        s.pdfFolder = ''
+        s.crossrefLookup = false
         s.screening = null
         s.extra = {}
         s.provenance = null
@@ -1855,6 +1866,30 @@ export const useEditorStore = create<EditorState>()(
       set((s) => {
         pushPast(s, snap)
         s.metadataEdit = mode
+        s.dirty = true
+      })
+    },
+
+    // [impl->req~edt-200~1]
+    setPdfFolder: (folder) => {
+      const key = 'project:pdfFolder'
+      const coalesce = key === lastEditKey
+      lastEditKey = key
+      const snap = snapshotOf(get())
+      set((s) => {
+        if (!coalesce) pushPast(s, snap)
+        s.pdfFolder = folder
+        s.dirty = true
+      })
+    },
+
+    // [impl->req~edt-200~1]
+    setCrossrefLookup: (on) => {
+      lastEditKey = null
+      const snap = snapshotOf(get())
+      set((s) => {
+        pushPast(s, snap)
+        s.crossrefLookup = on
         s.dirty = true
       })
     },
@@ -2399,6 +2434,8 @@ export const useEditorStore = create<EditorState>()(
           // Same reasoning as `aiEnabled` just above.
           s.aiSeat = false
           s.metadataEdit = 'off'
+          s.pdfFolder = ''
+          s.crossrefLookup = false
           // Seeded from the source's own reasons, not DEFAULT_SCREENING_REASONS:
           // they're the pre-registered protocol's vocabulary, and PRISMA
           // reports exclusions per reason across both passes — a disjoint
@@ -2585,6 +2622,8 @@ export const useEditorStore = create<EditorState>()(
         return false
       }
       const issues = validateDraft(st)
+      const pdfIssue = st.pdfFolder.trim() ? pdfFolderProblem(st.pdfFolder.trim()) : null
+      if (pdfIssue) issues.push(t('editor.store.pdfFolderProblem', { folder: st.pdfFolder.trim(), problem: pdfIssue }))
       const folder = st.annotationsDir.trim() || DEFAULT_ANNOTATIONS_DIR
       const folderProblem = st.annotationsDir.trim() ? annotationsDirProblem(folder) : null
       if (folderProblem) issues.push(t('editor.store.folderProblem', { folder, problem: folderProblem }))

@@ -849,7 +849,7 @@ Tags: Functional, Functional_Suitability, Reliability
 ### REQ-DAT-520: Propose metadata for a new PDF file
 `req~dat-520~1`
 
-For each new PDF file, the system shall propose a title, authors, a year and a DOI in this order: first the embedded PDF information and the first page (source `pdfinfo`), then Crossref for a found DOI if the Crossref lookup is on (source `crossref`, REQ-DAT-530), then the file name for the title (source `filename`). A title from the file name shall flag the entry as "metadata missing". A value that the user changes shall get the source `manual`. The system shall not use an AI model. For an added paper, the system shall write the hash into the paper key `pdfSha256` and the source of each value into the paper key `metadataSource`.
+For each new PDF file, the system shall propose a title, authors, a year and a DOI. The system shall first read the embedded PDF information and the first page (source `pdfinfo`). If the Crossref lookup is on (REQ-DAT-530) and the system found a DOI, a value from Crossref (source `crossref`) shall replace the value from the PDF file. If no source gives a title, the title shall come from the file name (source `filename`). A title from the file name shall flag the entry as "metadata missing". A value that the user changes shall get the source `manual`. The system shall not use an AI model. For an added paper, the system shall write the hash into the paper key `pdfSha256` and the source of each value into the paper key `metadataSource`.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
