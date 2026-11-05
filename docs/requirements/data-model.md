@@ -374,6 +374,43 @@ the project editor. See the [index](index.md) for the glossary.
 - **Verified by:** `src/model/metadata.test.ts` (`proposeFromPdf`), `src/model/pdfMeta.test.ts` (`findDoi`)
 - **Status:** Implemented
 
+## Knowledge graph export
+
+### REQ-DAT-480: Build the knowledge graph
+- **Description:** The system shall build one graph from the papers and one annotation value tree per paper. The graph shall contain one node for each paper, author, venue and keyword, and one node for each value of a choice field. A choice field is a string field with options or a boolean field. The system shall make one node for each filled entry of a schema node with children. The system shall connect the nodes with the edges `authoredBy`, `publishedIn`, `hasKeyword`, `cites` and `hasAnswer`. Each `hasAnswer` edge shall name the field path. The system shall store other answers as values of the paper node or of the entry node. The system shall merge authors, venues and keywords that differ only in letter case or spaces. The system shall ignore a boolean `false`, an empty answer, a field that `visibleIf` hides, and data that is not in the schema. The system shall read keywords from the paper key `keywords`. The system shall make a `cites` edge only from the paper key `references` or `cites` to a paper of the project, by identifier or by DOI. For the same input, the system shall make the same nodes and edges in the same order.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/graph.ts` (`buildGraph`)
+- **Verified by:** `src/model/graph.test.ts` (`buildGraph`)
+- **Status:** Implemented
+
+### REQ-DAT-490: Source of the graph data
+- **Description:** With one reviewer, the system shall use the annotations of that reviewer. With more reviewers, the system shall use the consolidated annotations if one paper or more has a consolidated answer. Otherwise, the system shall use the annotations of the seat that the user selects. The system shall use the title, the authors, the year, the DOI, the venue and the abstract from the project file only. The system shall not apply the metadata overrides of a seat (REQ-DAT-460).
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/graph.ts` (`graphSource`, `graphTrees`)
+- **Verified by:** `src/model/graph.test.ts` (`graphSource`)
+- **Status:** Implemented
+
+### REQ-DAT-500: Graph export formats
+- **Description:** The system shall write the graph as JSON-LD, as RDF Turtle, as GraphML, and as two CSV files: one node list and one edge list. In JSON-LD and Turtle, the system shall describe papers with schema.org and Dublin Core terms. The system shall use the `sailor:` namespace `https://github.com/Gram21/SaiLoR/ns#` for the other node types and for the answer properties. Each field path shall have one property that is a sub-property of `sailor:hasAnswer`. The system shall write the same text for the same graph.
+- **Type:** Functional (ISO 25010: Functional Suitability, Compatibility)
+- **Evidence:** `src/model/graph.ts` (`toJsonLd`, `toTurtle`, `toGraphMl`, `toCsvNodes`, `toCsvEdges`)
+- **Verified by:** `src/model/graph.test.ts` (`graph formats`)
+- **Status:** Implemented
+
+### REQ-DAT-510: Escape values in the graph export
+- **Description:** The system shall escape each value for its format. In Turtle, the system shall escape backslashes, quotation marks, line breaks and control characters, and shall percent-encode identifiers in IRIs. In GraphML, the system shall escape the XML special characters and remove characters that XML does not allow. In CSV, the system shall put each cell in quotation marks and double each quotation mark. The system shall add an apostrophe before a CSV cell that starts with `=`, `+`, `-`, `@`, a tab or a carriage return, so that a spreadsheet does not run the cell as a formula.
+- **Type:** Functional (ISO 25010: Security, Functional Suitability)
+- **Evidence:** `src/model/graph.ts` (`turtleString`, `xmlText`, `csvCell`)
+- **Verified by:** `src/model/graph.test.ts` (`graph escaping`)
+- **Status:** Implemented
+
+### REQ-DAT-520: Graph export dialog
+- **Description:** The toolbar shall have a "Knowledge graph" button that opens the export dialog. In the dialog, the user shall select the format. If no consolidated data exists and the project has more than one reviewer, the user shall select the seat. The system shall save each file through the save dialog of the system, with the file extension of the format. For CSV, the system shall ask for the node file first and then for the edge file. The system shall show the path of each saved file or the error.
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/components/ExportGraphDialog.tsx` (`ExportGraphDialog`), `src/components/Toolbar.tsx` (`Toolbar`), `src-tauri/src/pdf.rs` (`text_pick_export_path`, `text_export_extension`)
+- **Verified by:** `src/components/ExportGraphDialog.test.tsx` (`ExportGraphDialog`), `src-tauri/src/pdf.rs` (`text_export_extension_allows_known_extensions`)
+- **Status:** Implemented
+
 ## Project editor
 
 ### REQ-EDT-10: Validate drafts before save
