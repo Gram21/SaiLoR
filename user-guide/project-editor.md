@@ -11,6 +11,31 @@ Reach it from the start screen (**New annotation JSON…** / **Edit annotation J
   <img src="screenshots/project-editor-schema.png" alt="The project editor: location, title, screening toggle, reviewer count, the review protocol section, and the schema tree with a visibility button on every row" width="900">
 </p>
 
+## Tabs and preview
+
+The editor shows its sections in four tabs below the JSON file location:
+
+| Tab | Content |
+| --- | --- |
+| **Schema** | The schema info and the schema tree, or the exclusion reasons for a screening project. |
+| **Papers** | The paper list. |
+| **Settings** | The annotations folder, title, reviewers, AI options, PDF folder, protocol and strict mode. |
+| **Preview** | The annotation form for the current draft schema. |
+
+Click a tab to open it. You can also use the arrow keys, **Home** and **End** in the tab row.
+A change of tab keeps your draft as it is. It does not save the draft.
+If an issue names a paper, click the issue to open the **Papers** tab at that paper.
+
+Use the **Preview** tab to try the schema before you save it:
+
+1. Select a sample paper in **Sample paper**. The preview starts with the first paper.
+2. Fill in the form. Conditions, added entries and validation hints work as in the annotation panel.
+3. Leave the tab to discard your answers.
+
+The preview does not save your answers. It does not change the project, the undo history or Git.
+If the draft schema has a problem, the tab lists the problems instead of the form.
+A screening project has no **Preview** tab.
+
 ## Where the JSON lives
 
 The location is chosen up front and shown at the top; use **Change…** to move it later — this

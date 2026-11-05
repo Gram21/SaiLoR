@@ -141,6 +141,9 @@ inspection only.
 | REQ-EDT-170 | Reopen finished work | Functional · Functional Suitability | `src/components/StrictModeEditor.tsx` (`StrictModeEditor`)<br>`src/state/editorStore.ts` (`reopenWork`) | `src/components/StrictModeEditor.test.tsx` | — | `docs/annotation-schema.md` §9 Strict mode |
 | REQ-EDT-180 | Select the metadata correction mode | Functional · Functional Suitability | `src/state/editorStore.ts` (`setMetadataEdit`, `buildProjectJson`)<br>`src/components/ProjectEditor.tsx` | `src/state/editorStore.metadata.test.ts` | — | `docs/annotation-schema.md` §4 Correcting paper metadata |
 | REQ-EDT-200 | Set the PDF folder and the Crossref lookup | Functional · Functional Suitability, Usability | `src/state/editorStore.ts` (`setPdfFolder`, `setCrossrefLookup`, `buildProjectJson`)<br>`src/components/ProjectEditor.tsx` | `src/state/editorStore.pdfFolder.test.ts` | — | `docs/annotation-schema.md` §4 Watching a PDF folder |
+| REQ-EDT-300 | Organize the project editor in tabs | Functional · Usability | `src/components/ProjectEditor.tsx` (`onTabKey`, `tabPanel`, `jumpToPaper`)<br>`src/styles/editor.css` | `src/components/ProjectEditor.test.tsx` | — | `user-guide/project-editor.md` Tabs and preview |
+| REQ-EDT-310 | Preview the draft schema as an annotation form | Functional · Functional Suitability, Usability | `src/components/SchemaPreview.tsx` (`SchemaPreview`, `PreviewForm`)<br>`src/components/AnnotationFormContext.ts`<br>`src/components/AnnotationNode.tsx`<br>`src/components/Field.tsx` | `src/components/SchemaPreview.test.tsx` | — | `user-guide/project-editor.md` Tabs and preview |
+| REQ-EDT-320 | Show the schema problems instead of the preview | Functional · Reliability, Usability | `src/components/SchemaPreview.tsx` (`SchemaPreview`) | `src/components/SchemaPreview.test.tsx` | — | `user-guide/project-editor.md` Tabs and preview |
 
 ## Annotation form, paper list & PDF ([annotation-ui.md](annotation-ui.md))
 

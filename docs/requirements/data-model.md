@@ -604,3 +604,24 @@ the project editor. See the [index](index.md) for the glossary.
 - **Evidence:** `src/state/editorStore.ts` (`setPdfFolder`, `setCrossrefLookup`, `buildProjectJson`), `src/components/ProjectEditor.tsx`
 - **Verified by:** `src/state/editorStore.pdfFolder.test.ts` (`pdf folder settings`)
 - **Status:** Implemented
+
+### REQ-EDT-300: Organize the project editor in tabs
+- **Description:** The project editor shall show its sections in the tabs Schema, Papers, Settings and Preview. The tabs shall use the ARIA roles `tablist`, `tab` and `tabpanel`. The arrow keys, Home and End shall move between the tabs. In a right-to-left locale, the arrow keys shall be swapped. The selected tab shall be UI state only. A change of tab shall not change, discard or save the draft. A "Paper N" issue shall open the Papers tab and go to that paper. A screening draft shall not show the Preview tab.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/ProjectEditor.tsx` (`onTabKey`, `tabPanel`, `jumpToPaper`), `src/styles/editor.css`
+- **Verified by:** `src/components/ProjectEditor.test.tsx` (`ProjectEditor: tabs`)
+- **Status:** Implemented
+
+### REQ-EDT-310: Preview the draft schema as an annotation form
+- **Description:** The Preview tab shall show the annotation form for the draft schema. It shall use the same annotation components as the annotation panel. The form shall show the first paper of the draft, and the user shall be able to select a different paper. `visibleIf` conditions, adding and removing instances and validation hints shall work as in the annotation panel. The tab shall show a banner that says nothing is saved. The answers shall be kept in local state only. They shall be discarded when the user leaves the tab or closes the editor. The preview shall not change the project store, the undo history, the annotation files, the dirty flag, the autosave or Git.
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/components/SchemaPreview.tsx` (`SchemaPreview`, `PreviewForm`), `src/components/AnnotationFormContext.ts`, `src/components/AnnotationNode.tsx`, `src/components/Field.tsx`
+- **Verified by:** `src/components/SchemaPreview.test.tsx` (`SchemaPreview: the draft schema as a throwaway annotation form`)
+- **Status:** Implemented
+
+### REQ-EDT-320: Show the schema problems instead of the preview
+- **Description:** If the draft schema is not valid, the Preview tab shall list the problems and shall not show the form.
+- **Type:** Functional (ISO 25010: Reliability, Usability)
+- **Evidence:** `src/components/SchemaPreview.tsx` (`SchemaPreview`, `validateDraft`)
+- **Verified by:** `src/components/SchemaPreview.test.tsx` (`lists the problems instead of the form when the draft schema is invalid`)
+- **Status:** Implemented

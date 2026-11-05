@@ -143,3 +143,5 @@ per category so requirements can be inserted without renumbering.
   REQ-ANN-200, REQ-ANN-210 and REQ-LST-90 added for the confirmation dialog, the scan triggers and the
   "missing" badge. REQ-GIT-600 added for the merge by PDF hash. REQ-PLT-420 added for the desktop scan.
   The coverage counts above were not recounted.
+- **Editor tabs and preview (2026-11-05).** REQ-EDT-300 to REQ-EDT-320 added for the project editor tabs,
+  the preview of the draft schema and the list of schema problems. The coverage counts above were not recounted.
