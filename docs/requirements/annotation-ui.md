@@ -192,7 +192,7 @@ export. See the [index](index.md) for the glossary.
 - **Description:** After a scan, the paper list shall show the badge "missing" on each paper whose PDF file the system cannot find. The system shall keep the paper and its annotations.
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability)
 - **Evidence:** `src/model/pdfFolder.ts` (`missingPaperIds`), `src/state/store.ts` (`scanPdfFolder`), `src/components/PaperList.tsx`
-- **Verified by:** `src/model/pdfFolder.test.ts` (`missingPaperIds`), `src/state/store.pdfFolder.test.ts` (`scanPdfFolder`)
+- **Verified by:** `src/model/pdfFolder.test.ts` (`missingPaperIds`), `src/state/store.pdfFolder.test.ts` (`scanPdfFolder`), `src/components/PdfFolderDialog.test.tsx` (`PaperList missing PDF badge`)
 - **Status:** Implemented
 
 ## PDF viewer
