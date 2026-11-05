@@ -591,6 +591,40 @@ button.paper-search-clear:hover {
   font-weight: 500;
   line-height: 1.25;
 }
+.paper-metadata-badge {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 0.857rem;
+}
+.metadata-dialog {
+  max-height: 85vh;
+  overflow-y: auto;
+}
+.metadata-entry {
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+  margin-top: 12px;
+}
+.metadata-field label {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  margin-top: 4px;
+}
+.metadata-field label span {
+  min-width: 5em;
+}
+.metadata-field input {
+  flex: 1;
+}
+.metadata-field small {
+  display: block;
+  color: var(--muted);
+  margin-left: calc(5em + 8px);
+}
+.metadata-field small.metadata-disagreement {
+  color: var(--danger);
+}
 .paper-authors {
   color: var(--muted);
   font-size: 0.857rem;
