@@ -195,6 +195,7 @@ function validateField(def: ResolvedDef, value: unknown, loc: PathAcc, emit: Emi
     return
   }
 
+  // [impl->req~dat-200~1]
   const empty = isEmptyValue(type, value)
 
   if (def.required && empty) {
@@ -288,6 +289,7 @@ function validateTree(
       // simple non-repeating fields read as "Relevant", not "Relevant #1" —
       // the canonical segment always carries the real index regardless.
       const segment = instances.length > 1 ? `${def.name} #${index + 1}` : def.name
+      // [impl->req~dat-210~1]
       const loc: PathAcc = {
         segs: [...ancestors.segs, { name: def.name, index }],
         displayParts: [...ancestors.displayParts, segment],
@@ -381,6 +383,7 @@ export function validateProject(project: Project): ProjectValidation {
   const unannotated: UnannotatedPaper[] = []
   for (const paper of papers) {
     try {
+      // [impl->req~dat-168~1]
       const tree = isPlainObject(paper?.annotations) ? (paper.annotations as AnnotationValueTree) : {}
       // Checked before the skip below, and for every tree: a paper whose only
       // answers sit under a removed field has none the current schema can see,

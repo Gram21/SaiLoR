@@ -47,6 +47,7 @@ export interface StashEntry {
   origin: StashOrigin
 }
 
+// [impl->req~git-430~1]
 /** `git stash list --format=...` in the shape `parseStashList` reads: ref,
  *  sha, committer date, reflog subject, NUL-terminated. */
 export const STASH_LIST_FORMAT = '%gd%x09%H%x09%cI%x09%gs%x00'

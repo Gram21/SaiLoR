@@ -136,6 +136,7 @@ export interface RecheckRow {
   checked: boolean
 }
 
+// [impl->req~llm-80~1]
 /** A paper a batch run failed on, kept so the run can continue past it. */
 export interface PaperRunError {
   paperId: string
@@ -392,6 +393,7 @@ interface AiState {
 // Not in the store: it is not serializable and nothing renders from it.
 let controller: AbortController | null = null
 let ticker: ReturnType<typeof setInterval> | null = null
+// [impl->req~llm-120~1]
 // [impl->req~llm-590~1]
 /** One AbortController per paper currently in flight, keyed by paper id —
  *  lets `skipPaper` abort a single paper's calls without touching the rest of

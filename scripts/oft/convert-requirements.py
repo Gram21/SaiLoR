@@ -11,8 +11,10 @@ from pathlib import Path
 import oftlib
 
 
-def needs_utest(root, item):
-    return any(kind == "utest" for ref in oftlib.refs(item) for kind, *_ in oftlib.resolve(root, *ref))
+def needs(root, item):
+    kinds = {kind for ref in oftlib.refs(item) for kind, _, _, reason in oftlib.resolve(root, *ref)
+             if not (reason or "").startswith("unsupported file type")}
+    return ", ".join(k for k in ("impl", "utest") if k in kinds)
 
 
 def tags(item):
@@ -28,8 +30,8 @@ def render(root, item):
     f = item["fields"]
     lines = [item["heading"], f"`{item['id']}`", "", f.get("Description", "").strip(), "", "Comment:"]
     lines += [f"- **{k}:** {f[k]}".replace("\n", "\n  ") for k in item["order"] if k != "Description"]
-    needs = "impl, utest" if needs_utest(root, item) else "impl"
-    lines += ["", f"Needs: {needs}", "", f"Tags: {', '.join(tags(item))}", ""]
+    n = needs(root, item)
+    lines += [""] + ([f"Needs: {n}", ""] if n else []) + [f"Tags: {', '.join(tags(item))}", ""]
     return lines
 
 

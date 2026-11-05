@@ -347,6 +347,7 @@ const KNOWN_PAPER_KEYS = new Set([
   'reviewsFinished',
   'schemaVersions',
 ])
+// [impl->req~dat-270~1]
 // [impl->req~dat-80~1]
 // [impl->req~dat-260~1]
 /** Exported so `editorStore.ts`'s root-extra split reuses this exact list
@@ -705,6 +706,7 @@ export function loadProject(input: string | unknown): Project {
   // disagree with the dropdown shown. `raw.config.schema!` is safe: zod's
   // `superRefine` guarantees it's present whenever `screening` is null.
   const screening = parseScreening((raw.config as { screening?: unknown }).screening)
+  // [impl->req~llm-80~1]
   // [impl->req~dat-30~1]
   let schema: ResolvedDef[]
   try {
@@ -737,6 +739,7 @@ export function loadProject(input: string | unknown): Project {
   const annotationsDir =
     typeof rawAnnotationsDir === 'string' && annotationsDirProblem(rawAnnotationsDir) === null ? rawAnnotationsDir : null
 
+  // [impl->req~dat-165~1]
   const papers: Paper[] = raw.papers.map((p) => {
     // Carry each file's answers across the renames and moves made since it
     // was written — see `model/schemaVersion.ts`. A file with no version
@@ -754,6 +757,7 @@ export function loadProject(input: string | unknown): Project {
     }
     const tree = (key: string, v: unknown) =>
       migrate(key, v as AnnotationValueTree | undefined, moveInTree)
+    // [impl->req~dat-50~1]
     const rawReviews = (p as { reviews?: unknown }).reviews
     const reviews =
       typeof rawReviews === 'object' && rawReviews !== null && !Array.isArray(rawReviews)

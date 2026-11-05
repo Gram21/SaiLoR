@@ -421,6 +421,7 @@ export const useGitStore = create<GitState>()(
         })
         return
       }
+      // [impl->req~git-210~1]
       const r =
         source.kind === 'branch-switch'
           ? await git.finishBranchSwitch(repo.root, repo.relPath, toSplitProject(resolved))
@@ -781,6 +782,7 @@ export const useGitStore = create<GitState>()(
       probeGit: async () => {
         const git = getPlatform().getGit()
         if (!git) return
+        // [impl->req~git-411~1]
         const probe = await git.probe()
         set((s) => {
           s.probe = probe
@@ -842,9 +844,11 @@ export const useGitStore = create<GitState>()(
         })
         if (!accept) return
         const git = getPlatform().getGit()
+        // [impl->req~git-440~1]
         // [impl->req~git-450~1]
         const repo = get().repo
         if (!git || !repo) return
+        // [impl->req~git-450~1]
         const r = await git.applyRepoSetup(repo.root, repo.relPath)
         set((s) => {
           s.repoSetupNotice = r.ok
@@ -892,6 +896,7 @@ export const useGitStore = create<GitState>()(
 
       runStashRestore: async (sha) => {
         const git = getPlatform().getGit()
+        // [impl->req~git-460~1]
         const repo = get().repo
         if (!git || !repo || !get().panel) return
         if (!guardDirtyForMerge(t('git.verb.restoringStash'))) return
@@ -1296,6 +1301,7 @@ export const useGitStore = create<GitState>()(
         // Exactly the `workingOut` a commit-with-these-decisions would have
         // left behind — the same compose path, so the two can never drift.
         const { workingOut } = composeContents(review.head, review.working, review.changes, review.decisions)
+        // [impl->req~git-300~1]
         const r = await git.writeWorking(repo.root, repo.relPath, toSplitProject(workingOut))
         if (!r.ok) {
           set((s) => {
@@ -1769,6 +1775,7 @@ export const useGitStore = create<GitState>()(
         }
       })
 
+      // [impl->req~git-350~1]
       const start = await git.beginBranchSwitch(repo.root, repo.relPath, branch)
 
       if (start.kind === 'no-changes') {

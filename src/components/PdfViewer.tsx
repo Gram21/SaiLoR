@@ -101,6 +101,7 @@ function findMatches(root: HTMLElement, query: string, caseSensitive: boolean): 
   const layers = root.querySelectorAll<HTMLElement>('.react-pdf__Page__textContent')
   layers.forEach((layer) => {
     // Concatenate the layer's text nodes so matches can span multiple spans.
+    // [impl->req~pdf-55~1]
     const walker = document.createTreeWalker(layer, NodeFilter.SHOW_TEXT)
     // [impl->req~pdf-55~1]
     const nodes: Text[] = []
@@ -565,6 +566,7 @@ export function PdfViewer() {
     const el = containerRef.current
     if (!el) return
     const ro = new ResizeObserver((entries) => {
+      // [impl->req~pdf-30~1]
       const w = entries[0]?.contentRect.width ?? 600
       setWidth(Math.max(240, Math.floor(w - 24)))
     })
@@ -701,6 +703,7 @@ export function PdfViewer() {
     updateSelectionToolbar(sel, text)
   }
 
+  // [impl->req~pdf-140~1]
   /**
    * A mark's overlay div sits on top of pdf.js's text layer so it can be
    * clicked/hovered, but that means a mousedown starting on a mark could

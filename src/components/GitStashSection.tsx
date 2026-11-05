@@ -33,6 +33,7 @@ export function GitStashSection({ disabled }: { disabled: boolean }) {
   const runStashDrop = useGitStore((s) => s.runStashDrop)
   const [note, setNote] = useState('')
 
+  // [impl->req~git-470~1]
   const push = async () => {
     await runStashPush(note)
     setNote('')

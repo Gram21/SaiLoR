@@ -280,7 +280,7 @@ Comment:
 - **Evidence:** `src/state/store.close.test.ts:59-252`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -309,7 +309,7 @@ Comment:
 - **Evidence:** `src/state/store.save.test.ts:52-86`, commit `7f96e40`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -379,7 +379,7 @@ The system shall persist window size, position, and maximized state across runs,
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/main.rs` (`tauri_plugin_window_state`, `StateFlags::SIZE | POSITION | MAXIMIZED`), `src-tauri/tauri.conf.json` (`app.windows`), commit `6ce60d5` (removed Electron main process)
+- **Evidence:** `src-tauri/src/main.rs`, using `tauri_plugin_window_state` with `StateFlags::SIZE | POSITION | MAXIMIZED`, `src-tauri/tauri.conf.json` (`app.windows`), commit `6ce60d5` (removed Electron main process)
 - **Status:** Implemented
 
 Needs: impl
@@ -495,7 +495,7 @@ The system shall deny every permission request of the WebView (camera, microphon
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src-tauri/src/main.rs` (`on_permission_request`), commit `6ce60d5` (removed Electron main process)
+- **Evidence:** `src-tauri/src/main.rs`, using `on_permission_request`, commit `6ce60d5` (removed Electron main process)
 - **Status:** Implemented. Platform limit: on macOS, WKWebView reports only camera and microphone requests to the app. macOS itself blocks geolocation and notifications, because the app has no entitlement or usage description for them.
 
 Needs: impl
@@ -616,8 +616,6 @@ Comment:
 - **Evidence:** `.github/workflows/release.yml` (jobs `release`, `build`, `check-updater-json`), `src-tauri/tauri.release.conf.json` (`bundle.targets`, `createUpdaterArtifacts`), `src-tauri/tauri.conf.json` (`bundle.macOS.minimumSystemVersion`), `README.md` (release table)
 - **Status:** Implemented
 
-Needs: impl
-
 Tags: NonFunctional, Portability_Adaptability
 
 ### REQ-PLT-330: Ad-hoc sign unsigned macOS builds
@@ -630,8 +628,6 @@ Comment:
 - **Evidence:** `.github/workflows/release.yml` (job `build`, step "macOS signing and notarization (optional)")
 - **Status:** Implemented
 
-Needs: impl
-
 Tags: NonFunctional, Usability_Operability
 
 ### REQ-PLT-340: Optional autosave
@@ -641,7 +637,7 @@ When autosave is enabled, the system shall save the open project automatically e
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/Toolbar.tsx` (Save menu), `src/state/settings.ts` (`slr.autosave`)
+- **Evidence:** `src/components/Toolbar.tsx`, Save menu, `src/state/settings.ts`, key `slr.autosave`
 - **Status:** Implemented
 
 Needs: impl
@@ -657,8 +653,6 @@ Comment:
 - **Type:** Non-functional, design constraint (ISO 25010: Portability: Adaptability)
 - **Evidence:** `.github/workflows/release.yml` (job `zenodo`), `README.md` (Zenodo badge)
 - **Status:** Implemented
-
-Needs: impl
 
 Tags: NonFunctional, Portability_Adaptability
 
@@ -700,8 +694,6 @@ Comment:
 - **Type:** Non-functional, design constraint (ISO 25010: Security: Confidentiality)
 - **Evidence:** `Dockerfile.tauri-linux-gui` (stages `build`, `runtime`), `docker/gui-entrypoint.sh` (checks for `VNC_LISTEN_ALL` and `VNC_PASSWORD`, `-localhost`), `docker-compose.dev.yml` (service `tauri-linux-gui`), `docs/building.md` (section "Run the app in a container (Linux only)")
 - **Status:** Implemented. No automated check: verified by a manual container run only.
-
-Needs: impl
 
 Tags: NonFunctional, Security_Confidentiality
 

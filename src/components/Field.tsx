@@ -118,6 +118,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   )
 
   const grabFromPdf = () => {
+    // [impl->req~ann-50~1]
     const sel = useStore.getState().pdfSelection.trim()
     if (!sel) return
     if (def.type === 'number') {

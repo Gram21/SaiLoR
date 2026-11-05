@@ -26,6 +26,7 @@ type Fields = {
   notes: string
 }
 
+// [impl->req~edt-70~1]
 function fieldsFrom(protocol: ProjectProtocol | null): Fields {
   return {
     researchQuestions: (protocol?.researchQuestions ?? []).join('\n'),

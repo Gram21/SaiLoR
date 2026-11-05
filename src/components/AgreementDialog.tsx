@@ -24,6 +24,7 @@ export interface MetricSpec {
   compute: (input: MetricInput) => MetricResult
 }
 
+// [impl->req~con-310~1]
 /** Order matches the tolerance-for-missing-ratings ladder `metrics.ts` describes:
  *  strictest (exactly two, fully paired) first, most forgiving of gaps last. */
 export const METRICS: MetricSpec[] = [

@@ -30,6 +30,7 @@ export function DisagreementOverview() {
 
   useEffect(() => {
     if (!open) return
+    // [impl->req~con-230~1]
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') closeDisagreements()
     }

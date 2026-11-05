@@ -1,3 +1,4 @@
+// [utest->req~scr-310~1]
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import type { RecentEntry, SaveHandle } from '../platform/adapter'
 

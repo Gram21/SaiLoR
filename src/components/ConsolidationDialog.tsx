@@ -134,6 +134,7 @@ export function ConsolidationDialog() {
     paper.alignment,
     Object.fromEntries(reviewerIds.map((r) => [r, paper.reviews[r]])),
   )
+  // [impl->req~con-360~1]
   const rows = reviewerIds.map((reviewer) => ({
     reviewer,
     value: peekValue(lined[reviewer] ?? {}, target.path, target.name, target.index),

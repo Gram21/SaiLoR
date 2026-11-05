@@ -343,7 +343,7 @@ the project editor. See the [index](index.md) for the glossary.
 - **Description:** When saving a project draft, the system shall require at least one named schema node (non-screening) or at least one non-blank exclusion reason (screening), a trimmed identifier and title per paper, a PDF path per paper except in screening drafts, every identifier safe as a folder name (REQ-EDT-21), and no two identifiers equal after trimming, case folding, or Unicode normalization, reporting each violation as a clickable issue capped at 12 displayed lines.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/editorStore.ts:625-636`, `src/model/paperId.ts:43-70,81-83,95-97`, `src/components/ProjectEditor.tsx`, commit `fe92a6e`
-- **Verified by:** `src/state/editorStore.test.ts` (duplicate and unsafe identifier cases)
+- **Verified by:** `src/state/editorStore.test.ts`, duplicate and unsafe identifier cases
 - **Status:** Implemented
 
 ### REQ-EDT-20: Flag duplicate and unsafe identifiers while typing
@@ -391,7 +391,7 @@ the project editor. See the [index](index.md) for the glossary.
 - **Description:** When the identifier of a paper with recorded annotations is changed and the edit is committed, the system shall request confirmation stating that the paper's annotation folder is named after the identifier and that other reviewers' unpulled work under the old identifier will not follow, and shall restore the previous identifier when declined.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/PapersEditor.tsx:149`, commit `fa30150`
-- **Verified by:** `src/components/PapersEditor.test.tsx` (`confirm renaming the id of an annotated paper`)
+- **Verified by:** `src/components/PapersEditor.test.tsx`, test `confirm renaming the id of an annotated paper`
 - **Status:** Implemented
 
 ### REQ-EDT-46: Own annotations folder for a project started from screening

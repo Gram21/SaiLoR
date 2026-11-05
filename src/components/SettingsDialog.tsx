@@ -95,6 +95,7 @@ function GitSection() {
   )
 }
 
+// [impl->req~ui-110~1]
 // [impl->req~ui-90~1]
 export const SETTINGS_SECTIONS: Array<{ id: string; title: MessageKey; Body: ComponentType }> = [
   { id: 'general', title: 'settings.section.general', Body: GeneralSection },

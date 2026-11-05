@@ -130,6 +130,8 @@ function SchemaNodeRow({
   const behind = useGitStore((s) => s.behind)
   const savedNodes = useEditorStore((s) => s.savedNodes)
   const liveNodes = useEditorStore((s) => s.nodes)
+  // [impl->req~edt-40~1]
+  // [impl->req~edt-41~1]
   const keepHidden = useEditorStore((s) => s.keepHidden)
   const setKeepHidden = useEditorStore((s) => s.setKeepHidden)
 

@@ -26,6 +26,7 @@ export function ScreeningReasonsEditor() {
   const reasons = screening.reasons
 
   const patch = (i: number, value: string) => {
+    // [impl->req~scr-260~1]
     const next = [...reasons]
     next[i] = value
     setScreeningReasons(next)
@@ -66,6 +67,7 @@ export function ScreeningReasonsEditor() {
     const label = reasons[i]
     const count = label.trim() === '' ? 0 : countPapersUsingReason(papers, label)
     if (count > 0) {
+      // [impl->req~scr-270~1]
       const ok = window.confirm(tp('editor.screeningReasons.removeConfirm', count, { label }))
       if (!ok) return
     }

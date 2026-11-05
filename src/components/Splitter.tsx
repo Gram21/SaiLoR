@@ -7,6 +7,7 @@ interface SplitterProps {
   onResizeEnd?: () => void
 }
 
+// [impl->req~ui-40~1]
 // [impl->req~ui-140~1]
 export function offsetFromStart(clientX: number, rect: DOMRect): number {
   return document.documentElement.dir === 'rtl' ? rect.right - clientX : clientX - rect.left

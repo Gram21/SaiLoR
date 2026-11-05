@@ -248,6 +248,7 @@ function reviewerStorageKey(handle: SaveHandle | null): string | null {
   return handle?.path ? `${REVIEWER_KEY_PREFIX}${handle.path}` : null
 }
 
+// [impl->req~con-40~1]
 // [impl->req~lst-70~1]
 /** How many paper ids a remembered seat carries to recognise its project by. */
 const REVIEWER_FINGERPRINT_SAMPLE = 8
@@ -1571,6 +1572,7 @@ export const useStore = create<AppState>()(
         s.busy = true
       })
       try {
+        // [impl->req~plt-135~1]
         const opened = await platform.openRecent(id)
         if (!opened) {
           // The file is gone. Keep the entry — the drive may come back — but
@@ -2498,6 +2500,7 @@ export const useStore = create<AppState>()(
       const coalesce = key === lastFieldKey
       lastFieldKey = key
       const canonical = fieldPath(path, name, index)
+      // [impl->req~con-255~1]
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
       set((s) => {
         const paper = currentPaper(s)
@@ -2521,6 +2524,7 @@ export const useStore = create<AppState>()(
             // `closingWouldStrand` only guards the compare popup's own close
             // path; this covers every other way a consolidation write can
             // empty a field afterward (an ordinary in-panel edit, say).
+            // [impl->req~con-257~1]
             const i = paper.equal.indexOf(canonical)
             if (i >= 0) paper.equal.splice(i, 1)
           } else {

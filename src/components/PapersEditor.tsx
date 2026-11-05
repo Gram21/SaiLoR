@@ -5,6 +5,7 @@ import { paperIdProblem, paperIdKey, type PaperIdIssue } from '../model/paperId'
 import { t, useT } from '../i18n'
 import '../styles/papers-editor.css'
 
+// [impl->req~edt-20~1]
 /** A short label for `idProblem.reason`, for the same spot the duplicate flag
  *  uses — `idProblem.detail` (the full explanation) goes in the `title` instead. */
 function idProblemLabel(reason: PaperIdIssue['reason']): string {
@@ -150,6 +151,7 @@ export function PapersEditor() {
   // lands nothing points at it. The old folder is also left on disk.
   // [impl->req~edt-45~1]
   const confirmIdChange = (paper: EditorPaper, from: string): boolean => {
+    // [impl->req~edt-45~1]
     const a = paper.annotations
     const hasAnswers = !!a && typeof a === 'object' && Object.keys(a).length > 0
     if (!hasAnswers) return true

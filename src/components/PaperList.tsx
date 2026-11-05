@@ -184,6 +184,8 @@ function paperMetadataRaw(paper: Paper): string {
   return `${paper.title} ${paper.authors.join(' ')} ${paper.doi ?? ''} ${paper.abstract ?? ''} ${paper.pdf} ${paper.id}`
 }
 
+// [impl->req~lst-20~1]
+// [impl->req~lst-25~1]
 export function paperMetadataHaystack(paper: Paper): string {
   return paperMetadataRaw(paper).toLowerCase()
 }
@@ -334,6 +336,7 @@ export function PaperList() {
     if (!isConsolidationSeat) return { total, text }
     // Consolidation also gets a readiness count (`paperIsMarkedDone`) — the
     // project-wide answer to "how much can I even start on".
+    // [impl->req~lst-40~1]
     const ready = project.papers.filter((p) => paperIsMarkedDone(project, p, currentReviewer)).length
     return { total, text: t('paperList.progress.ready', { text, ready, total }) }
   }, [project, isScreening, isConsolidationSeat, currentReviewer, index, annotationFilter, language])
@@ -397,9 +400,11 @@ export function PaperList() {
       // Deliberately also covers Alt+Arrow (the global next/previous-paper
       // shortcut): useKeybindings.ts defers to us via e.defaultPrevented.
       e.preventDefault()
+      // [impl->req~lst-10~1]
       const sib = (e.key === 'ArrowDown' ? row.nextElementSibling : row.previousElementSibling) as
         | HTMLElement
         | null
+      // [impl->req~lst-50~1]
       const id = sib?.dataset.paperId
       if (id) {
         selectPaper(id)

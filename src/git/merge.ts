@@ -425,6 +425,7 @@ function mergeEqual(base: string[] | undefined, ours: string[], theirs: string[]
   const tSet = new Set(theirs)
   // [impl->req~git-250~1]
   const all = new Set([...(base ?? []), ...ours, ...theirs])
+  // [impl->req~git-250~1]
   const out: string[] = []
   for (const p of all) {
     const m = merge3<boolean>(bSet.has(p), oSet.has(p), tSet.has(p), (a, b) => a === b)
@@ -1292,6 +1293,7 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
   const aiM = merge3<boolean | undefined>(base?.aiEnabled, ours.aiEnabled, theirs.aiEnabled, eqBool)
   if (!aiM) projectRow('aiEnabled', t('git.merge.row.aiEnabled'), { type: 'boolean', base: base?.aiEnabled ?? null, ours: ours.aiEnabled, theirs: theirs.aiEnabled })
 
+  // [impl->req~dat-285~1]
   const aiSeatM = merge3<boolean | undefined>(base?.aiSeat, ours.aiSeat, theirs.aiSeat, eqBool)
   if (!aiSeatM) {
     projectRow('aiSeat', t('git.merge.row.aiSeat'), {
@@ -1387,6 +1389,7 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
     // [impl->req~git-256~1]
     const m = merge3<unknown>(base?.extra[k], ours.extra[k], theirs.extra[k], deepEqualJson)
     if (!m) conflicts.push(extraChoice('', '', { kind: 'project' }, k, ours.extra[k], theirs.extra[k]))
+    // [impl->req~git-256~1]
     const value = m ? m.value : ours.extra[k]
     if (value !== undefined) mergedRootExtra[k] = value
   }
@@ -1485,6 +1488,7 @@ interface RenameClash {
   theirs: string[]
 }
 
+// [impl->req~git-257~1]
 const samePath = (a: string[], b: string[]) => a.length === b.length && a.every((n, i) => n === b[i])
 const underPath = (path: string[], prefix: string[]) =>
   prefix.length <= path.length && prefix.every((n, i) => path[i] === n)

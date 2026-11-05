@@ -158,7 +158,7 @@ Comment:
 - **Evidence:** `src/state/store.marks.test.ts:325-457`, commits `861470c`, `e170faa`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -172,7 +172,7 @@ Comment:
 - **Evidence:** `src/state/store.reindex.test.ts:58-170`, commit `b9afb02`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -342,7 +342,7 @@ Comment:
 - **Evidence:** `src/components/PaperList.perf.test.ts:26,70-115`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: NonFunctional, Performance_Efficiency
 
@@ -540,7 +540,7 @@ Comment:
 - **Evidence:** `src/state/store.marks.test.ts:52-323`, commit `316b304`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 

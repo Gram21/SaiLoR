@@ -1,3 +1,4 @@
+// [impl->req~git-120~1]
 import { t } from '../i18n'
 import type { GitFileChange, GitRun, MergePreview } from './types'
 
@@ -127,6 +128,7 @@ export function parseGitLog(raw: string): CommitRecord[] {
 
     const hash = record.slice(0, firstTab)
     const date = record.slice(firstTab + 1, secondTab)
+    // [impl->req~git-390~1]
     const subject = record.slice(secondTab + 1)
     if (!hash) continue
 

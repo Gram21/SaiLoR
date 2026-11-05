@@ -25,6 +25,7 @@ import { getLanguage, t, tp } from '../i18n'
 /** Reasons a paper id is refused as a directory name, for the caller's error message. */
 export type PaperIdProblem = 'empty' | 'control-char' | 'dot' | 'illegal-char' | 'trailing-dot-or-space' | 'reserved-name'
 
+// [impl->req~edt-21~1]
 export interface PaperIdIssue {
   reason: PaperIdProblem
   /** Plain-language specifics for `reason`, e.g. which characters or which

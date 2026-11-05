@@ -17,6 +17,7 @@ import { t, type MessageKey } from '../i18n'
  * `merge3` rule.
  */
 
+// [impl->req~git-130~1]
 export type Disposition = 'use' | 'ignore' | 'discard'
 
 // [impl->req~git-130~1]
@@ -54,6 +55,7 @@ export interface PaperChange {
   kind: PaperChangeKind
 }
 
+// [impl->req~git-490~1]
 export interface DetectedChanges {
   fields: FieldChange[]
   papers: PaperChange[]

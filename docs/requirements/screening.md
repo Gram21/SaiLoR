@@ -80,7 +80,7 @@ Requirements for the title/abstract and full-text screening workflow. See the
 ### REQ-SCR-130: Restrict reason entry to excluded papers
 - **Description:** The system shall accept an exclusion reason only for a paper whose current decision is `Exclude`, and shall present the reason input as disabled otherwise.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.screening.test.ts` (`setScreeningReason` describe block), `src/components/ScreeningPanel.tsx` (`disabled={status !== 'excluded'}`)
+- **Evidence:** `src/state/store.screening.test.ts` (`setScreeningReason` describe block), `src/components/ScreeningPanel.tsx`, attribute `disabled={status !== 'excluded'}`
 - **Status:** Implemented
 
 ### REQ-SCR-140: Screening keyboard shortcuts
@@ -188,7 +188,7 @@ Requirements for the title/abstract and full-text screening workflow. See the
 ### REQ-SCR-310: Never overwrite manual abstracts
 - **Description:** When an abstract extraction completes after the reviewer has entered an abstract manually for the same paper, the system shall discard the extraction result.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.screeningAbstract.test.ts` (race-safety tests)
+- **Evidence:** `src/state/store.screeningAbstract.test.ts`, race-safety tests
 - **Status:** Implemented
 
 ### REQ-SCR-320: Import screening results into a new project

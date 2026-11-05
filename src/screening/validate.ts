@@ -5,6 +5,8 @@ import { SCREENING_REASON } from './schema'
 import { screeningReason, screeningStatus } from './status'
 import { t } from '../i18n'
 
+// [impl->req~scr-230~1]
+// [impl->req~scr-240~1]
 /** Mirrors `currentTree`'s seat routing — see `screening/counts.ts`'s `seatTree`
  *  for why this is reimplemented rather than imported. */
 function seatTree(

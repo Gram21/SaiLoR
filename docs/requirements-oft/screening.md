@@ -99,7 +99,7 @@ Comment:
 - **Evidence:** `src/state/store.screening.test.ts` (`setScreeningDecision` describe block)
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -127,7 +127,7 @@ Comment:
 - **Evidence:** `src/state/store.screening.test.ts` ("clears the reason in the same undo step")
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -141,7 +141,7 @@ Comment:
 - **Evidence:** `src/state/store.screening.test.ts` ("writes decision and reason together in one undo step")
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -155,7 +155,7 @@ Comment:
 - **Evidence:** `src/state/store.screening.test.ts` ("advances to the next undecided paper", "stops at the last paper rather than wrapping")
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -180,7 +180,7 @@ The system shall accept an exclusion reason only for a paper whose current decis
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.screening.test.ts` (`setScreeningReason` describe block), `src/components/ScreeningPanel.tsx` (`disabled={status !== 'excluded'}`)
+- **Evidence:** `src/state/store.screening.test.ts` (`setScreeningReason` describe block), `src/components/ScreeningPanel.tsx`, attribute `disabled={status !== 'excluded'}`
 - **Status:** Implemented
 
 Needs: impl, utest
@@ -211,7 +211,7 @@ Comment:
 - **Evidence:** `src/state/store.screening.test.ts` ("refuses and fills nothing")
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -225,7 +225,7 @@ Comment:
 - **Evidence:** `src/state/store.screening.test.ts` (`adoptAllUnanimousScreening` describe block)
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -407,7 +407,7 @@ Comment:
 - **Evidence:** `src/state/store.screeningAbstract.test.ts` ("extraction fires on selection, not on opening the PDF")
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -432,10 +432,10 @@ When an abstract extraction completes after the reviewer has entered an abstract
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/state/store.screeningAbstract.test.ts` (race-safety tests)
+- **Evidence:** `src/state/store.screeningAbstract.test.ts`, race-safety tests
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -463,7 +463,7 @@ Comment:
 - **Evidence:** `src/state/editorStore.screening.test.ts:233`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -477,7 +477,7 @@ Comment:
 - **Evidence:** `src/state/editorStore.screening.test.ts:196,328,382`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -491,7 +491,7 @@ Comment:
 - **Evidence:** `src/state/editorStore.screening.test.ts:244-264`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -505,7 +505,7 @@ Comment:
 - **Evidence:** `src/state/editorStore.screening.test.ts:336-423`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -519,7 +519,7 @@ Comment:
 - **Evidence:** `src/state/editorStore.screening.test.ts:525`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 

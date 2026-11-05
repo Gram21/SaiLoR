@@ -340,6 +340,7 @@ function resolveSpec(
   const conditions: VisibleIfEntry[] = []
   for (const entry of spec.conditions) {
     if (isConditionGroup(entry)) {
+      // [impl->req~dat-130~1]
       const nested = resolveSpec(entry, def, siblings, ancestorFields, root, selfId)
       if (nested) conditions.push(nested)
       continue
@@ -347,6 +348,7 @@ function resolveSpec(
     if (entry.field === def.name) continue
     // Sibling, then ancestor chain, then absolute path (see `AnnotationDef.visibleIf`).
     // Only the path route needs a subtree check — a sibling/ancestor can't be in it.
+    // [impl->req~dat-140~1]
     // [impl->req~dat-130~1]
     const target =
       siblings.find((sib) => sib.name === entry.field && sib.type !== undefined) ??
@@ -374,6 +376,7 @@ function resolveFieldPath(
 ): AnnotationDef | undefined {
   if (path === selfId || path.startsWith(`${selfId}/`)) return undefined
   let level = root
+  // [impl->req~dat-150~1]
   let found: AnnotationDef | undefined
   for (const seg of path.split('/')) {
     found = level.find((d) => d.name === seg)

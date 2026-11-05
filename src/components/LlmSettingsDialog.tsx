@@ -99,6 +99,7 @@ export function LlmSettingsDialog() {
   const modelsLoadingById = useAiStore((s) => s.modelsLoading)
   // [impl->req~llm-30~1]
   const modelsErrorById = useAiStore((s) => s.modelsError)
+  // [impl->req~llm-30~1]
   const t = useT()
 
   /** The target being edited/added; null means we are showing the list. */

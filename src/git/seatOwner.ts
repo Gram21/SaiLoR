@@ -51,6 +51,7 @@ export const CONSOLIDATION_SEAT = 'consolidation'
 /** The file a seat writes for one paper — the same naming `splitProjectFiles`
  *  uses, and the key into {@link AnnotationAuthors.files}. */
 export function seatFileFor(paperId: string, seat: string, screening: boolean): string {
+  // [impl->req~git-510~1]
   const name =
     seat === CONSOLIDATION_SEAT
       ? screening

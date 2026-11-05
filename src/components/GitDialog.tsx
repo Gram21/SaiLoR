@@ -409,6 +409,7 @@ export function GitDialog() {
                 const discardable = !isOwn && !c.from && !c.unmerged
                 const untracked = c.code.startsWith('?')
                 const discard = () => {
+                  // [impl->req~git-190~1]
                   const ok = window.confirm(
                     untracked
                       ? isDir

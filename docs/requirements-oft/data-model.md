@@ -130,7 +130,7 @@ Comment:
 - **Evidence:** `src/model/jsonvalues.test.ts:44-83`, commit `6933376`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: NonFunctional, Reliability, Security
 
@@ -747,7 +747,7 @@ When saving a project draft, the system shall require at least one named schema 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/editorStore.ts:625-636`, `src/model/paperId.ts:43-70,81-83,95-97`, `src/components/ProjectEditor.tsx`, commit `fe92a6e`
-- **Verified by:** `src/state/editorStore.test.ts` (duplicate and unsafe identifier cases)
+- **Verified by:** `src/state/editorStore.test.ts`, duplicate and unsafe identifier cases
 - **Status:** Implemented
 
 Needs: impl, utest
@@ -851,7 +851,7 @@ When the identifier of a paper with recorded annotations is changed and the edit
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/PapersEditor.tsx:149`, commit `fa30150`
-- **Verified by:** `src/components/PapersEditor.test.tsx` (`confirm renaming the id of an annotated paper`)
+- **Verified by:** `src/components/PapersEditor.test.tsx`, test `confirm renaming the id of an annotated paper`
 - **Status:** Implemented
 
 Needs: impl, utest

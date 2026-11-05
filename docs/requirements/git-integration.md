@@ -188,7 +188,7 @@ See the [index](index.md) for the glossary.
 - **Description:** When both sides of a merge renamed or moved the same schema node to different places since the merge base, the system shall present one conflict row offering either side's name, merge both sides' answers under the chosen name, and record the chosen move in the merged schema version so that files later arriving from either branch are read under that name.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/git/merge.ts:1476-1501,1045`, commit `c9c982f`
-- **Verified by:** `src/git/merge.test.ts` (`mergeProjects: a field renamed differently on each side`)
+- **Verified by:** `src/git/merge.test.ts`, test `mergeProjects: a field renamed differently on each side`
 - **Status:** Implemented
 
 ### REQ-GIT-260: Keep answers under removed schema fields
@@ -366,7 +366,7 @@ See the [index](index.md) for the glossary.
 - **Description:** When merging, the system shall carry answers held under nodes the schema no longer describes (REQ-DAT-165) through to the result, keep the local side where both sides hold different ones under the same node, and add a merge note naming the node and paper in that case.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/git/merge.ts:179-186,340`, commits `0e185f2`, `264d6b0`
-- **Verified by:** `src/git/merge.test.ts` (`mergeProjects: answers under a field the schema no longer has`)
+- **Verified by:** `src/git/merge.test.ts`, test `mergeProjects: answers under a field the schema no longer has`
 - **Status:** Implemented
 
 ### REQ-GIT-510: Warn about a paper already read in the same seat

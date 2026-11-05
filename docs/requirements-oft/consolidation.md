@@ -89,7 +89,7 @@ Comment:
 - **Evidence:** `src/state/store.reviewers.test.ts:387-398,544-566`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -103,7 +103,7 @@ Comment:
 - **Evidence:** `src/state/store.reviewers.test.ts:328`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -229,7 +229,7 @@ Comment:
 - **Evidence:** `src/state/store.align.test.ts:144-219`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -621,7 +621,7 @@ Comment:
 - **Evidence:** `src/state/store.align.test.ts:442-464`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 

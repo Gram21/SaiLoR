@@ -175,7 +175,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-160: Persist window state
 - **Description:** The system shall persist window size, position, and maximized state across runs, defaulting to 1400×900, and shall reuse a saved position only when it still overlaps a connected display.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src-tauri/src/main.rs` (`tauri_plugin_window_state`, `StateFlags::SIZE | POSITION | MAXIMIZED`), `src-tauri/tauri.conf.json` (`app.windows`), commit `6ce60d5` (removed Electron main process)
+- **Evidence:** `src-tauri/src/main.rs`, using `tauri_plugin_window_state` with `StateFlags::SIZE | POSITION | MAXIMIZED`, `src-tauri/tauri.conf.json` (`app.windows`), commit `6ce60d5` (removed Electron main process)
 - **Status:** Implemented
 
 ### REQ-PLT-170: Persist appearance settings
@@ -227,7 +227,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-240: Deny device permissions
 - **Description:** The system shall deny every permission request of the WebView (camera, microphone, geolocation, notifications, and the other kinds the platform reports).
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src-tauri/src/main.rs` (`on_permission_request`), commit `6ce60d5` (removed Electron main process)
+- **Evidence:** `src-tauri/src/main.rs`, using `on_permission_request`, commit `6ce60d5` (removed Electron main process)
 - **Status:** Implemented. Platform limit: on macOS, WKWebView reports only camera and microphone requests to the app. macOS itself blocks geolocation and notifications, because the app has no entitlement or usage description for them.
 
 ### REQ-PLT-250: Route external links to the system browser
@@ -293,7 +293,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-340: Optional autosave
 - **Description:** When autosave is enabled, the system shall save the open project automatically every 5 minutes.
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/components/Toolbar.tsx` (Save menu), `src/state/settings.ts` (`slr.autosave`)
+- **Evidence:** `src/components/Toolbar.tsx`, Save menu, `src/state/settings.ts`, key `slr.autosave`
 - **Status:** Implemented
 
 ### REQ-PLT-350: Archive releases on Zenodo

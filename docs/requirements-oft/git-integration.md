@@ -230,7 +230,7 @@ Comment:
 - **Evidence:** `src/components/GitDialog.test.ts:4-55`, commit `6285ce4`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -416,7 +416,7 @@ When both sides of a merge renamed or moved the same schema node to different pl
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/git/merge.ts:1476-1501,1045`, commit `c9c982f`
-- **Verified by:** `src/git/merge.test.ts` (`mergeProjects: a field renamed differently on each side`)
+- **Verified by:** `src/git/merge.test.ts`, test `mergeProjects: a field renamed differently on each side`
 - **Status:** Implemented
 
 Needs: impl, utest
@@ -504,7 +504,7 @@ Comment:
 - **Evidence:** `src/components/GitMergeDialog.test.ts:5-15`, `src/state/gitStore.test.ts:730-792`
 - **Status:** Implemented
 
-Needs: impl, utest
+Needs: utest
 
 Tags: Functional, Functional_Suitability
 
@@ -810,7 +810,7 @@ When merging, the system shall carry answers held under nodes the schema no long
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/git/merge.ts:179-186,340`, commits `0e185f2`, `264d6b0`
-- **Verified by:** `src/git/merge.test.ts` (`mergeProjects: answers under a field the schema no longer has`)
+- **Verified by:** `src/git/merge.test.ts`, test `mergeProjects: answers under a field the schema no longer has`
 - **Status:** Implemented
 
 Needs: impl, utest
