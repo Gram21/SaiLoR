@@ -560,6 +560,7 @@ inspection only.
 | REQ-PLT-390 | Hidden data folder in the home directory | Functional · Portability: Adaptability | `src-tauri/src/localruntime.rs` (`data_dir`)<br>`src-tauri/src/llm.rs` (`config_file`)<br>`src-tauri/src/shell.rs` (`migrate_data_dir`, `hide`) | `src-tauri/src/shell.rs` (`data_dir_moves_once_and_never_overwrites`) | — | `README.md` (Upgrading from 1.x) |
 | REQ-PLT-400 | Translated native menus | Functional · Usability | `src-tauri/src/shell.rs` (`app_set_language`, `tr`, `TABLES`, `menu`, `macos_menu`)<br>`src/App.tsx`<br>`src/platform/tauri.ts` (`setLanguage`) | `src-tauri/src/shell.rs` (`every_menu_label_has_an_entry_in_every_language`)<br>`src/platform/tauri.test.ts` (`invokes exactly the commands main.rs registers`) | — | `docs/translations.md` |
 | REQ-PLT-420 | Scan the PDF folder in the desktop shell | Functional · Functional Suitability, Security, Performance Efficiency | `src-tauri/src/pdf.rs` (`pdf_scan_folder`, `scan_folder`, `sha256_file`)<br>`src/platform/tauri.ts`<br>`src/platform/desktop.ts` (`scanPdfFolder`) | `src-tauri/src/pdf.rs` (`scan_folder_hashes_and_reports_missing`)<br>`src/platform/tauri.test.ts` | — | `docs/annotation-schema.md` §4 Watching a PDF folder |
+| REQ-PLT-430 | Run every CI job from a script | Non-functional · Maintainability, Portability | `scripts/ci.sh`<br>`scripts/ci/rust.sh`<br>`scripts/ci/trace.sh`<br>`scripts/ci/bundle.sh`<br>`scripts/ci/e2e.sh`<br>`Makefile` (`ci`, `ci-all`)<br>`.github/workflows/ci.yml` | `src/ci/ciScripts.test.ts` | — | `README.md` CI jobs |
 
 ## Coverage statistics
 
@@ -567,13 +568,13 @@ Counts come from `python3 technical-report/trace_stats.py` at the revision that 
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 478 | 100% |
-| With an implementing source link | 452 | 95% |
-| With at least one verifying test | 448 | 94% |
+| Requirements traced | 479 | 100% |
+| With an implementing source link | 453 | 95% |
+| With at least one verifying test | 449 | 94% |
 | Without an automated check (source inspection only) | 30 | 6% |
-| With an introducing/pinning commit | 122 | 26% |
-| With a documentation link | 405 | 85% |
+| With an introducing/pinning commit | 122 | 25% |
+| With a documentation link | 406 | 85% |
 | Security-related (ISO 25010 Security) | 40 | 8% |
-| Distinct test files linked | 215 | — |
-| Distinct source files linked | 203 | — |
+| Distinct test files linked | 216 | — |
+| Distinct source files linked | 209 | — |
 | Linked files missing at this revision | 0 | — |

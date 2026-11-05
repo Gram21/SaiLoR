@@ -741,3 +741,18 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Functional_Suitability, Security, Performance_Efficiency
+
+### REQ-PLT-430: Run every CI job from a script
+`req~plt-430~1`
+
+The repository shall hold one script for each CI job. The CI workflow shall only install toolchains and call these scripts. Each script shall stop on the first error and shall work from the repository root. Each script shall have a Makefile target, so a developer can run the job on a local machine.
+
+Comment:
+- **Type:** Non-functional (ISO 25010: Maintainability, Portability)
+- **Evidence:** `scripts/ci.sh`, `scripts/ci/rust.sh`, `scripts/ci/trace.sh`, `scripts/ci/bundle.sh`, `scripts/ci/e2e.sh`, `Makefile` (`ci`, `ci-all`), `.github/workflows/ci.yml`
+- **Verified by:** `src/ci/ciScripts.test.ts` (`every workflow job step that builds or tests calls a script that exists`)
+- **Status:** Implemented
+
+Needs: utest
+
+Tags: NonFunctional, Maintainability, Portability

@@ -60,8 +60,8 @@ per category so requirements can be inserted without renumbering.
 | Consolidation (CON) | 61 |
 | Git integration (GIT) | 66 |
 | LLM annotation (LLM) | 103 |
-| Platform & shell (PLT) | 51 |
-| **Total** | **478** |
+| Platform & shell (PLT) | 52 |
+| **Total** | **479** |
 
 ## Method & evidence notes
 
@@ -150,3 +150,4 @@ per category so requirements can be inserted without renumbering.
 - **AI evaluation (2026-11-05).** REQ-LLM-820 to REQ-LLM-832 added for the per-field comparison of the
   AI seat with the consolidated answers, the AI evaluation dialog, its CSV export and its empty state. The coverage counts above include them.
 - **AI prompt overrides (2026-11-05).** REQ-LLM-790 to REQ-LLM-795 added for the project-level role, field help and examples of the AI prompt. The coverage counts above include them.
+- **CI scripts (2026-11-05).** REQ-PLT-430 added: every CI job runs from a script. The coverage counts above include it.

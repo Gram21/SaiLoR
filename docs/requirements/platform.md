@@ -341,3 +341,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `src-tauri/src/pdf.rs` (`pdf_scan_folder`, `scan_folder`, `sha256_file`), `src/platform/tauri.ts`, `src/platform/desktop.ts` (`scanPdfFolder`)
 - **Verified by:** `src-tauri/src/pdf.rs` (`scan_folder_hashes_and_reports_missing`), `src/platform/tauri.test.ts` (`invokes exactly the commands main.rs registers`)
 - **Status:** Implemented
+
+### REQ-PLT-430: Run every CI job from a script
+- **Description:** The repository shall hold one script for each CI job. The CI workflow shall only install toolchains and call these scripts. Each script shall stop on the first error and shall work from the repository root. Each script shall have a Makefile target, so a developer can run the job on a local machine.
+- **Type:** Non-functional (ISO 25010: Maintainability, Portability)
+- **Evidence:** `scripts/ci.sh`, `scripts/ci/rust.sh`, `scripts/ci/trace.sh`, `scripts/ci/bundle.sh`, `scripts/ci/e2e.sh`, `Makefile` (`ci`, `ci-all`), `.github/workflows/ci.yml`
+- **Verified by:** `src/ci/ciScripts.test.ts` (`every workflow job step that builds or tests calls a script that exists`)
+- **Status:** Implemented
