@@ -240,6 +240,7 @@
   "help.mode.start": "Premiers pas",
   "help.reportBug": "Signaler un bogue",
   "help.reportBugTitle": "Signaler un bogue sur GitHub — ouvre un nouveau ticket dans votre navigateur",
+  "help.openSettingsTitle": "Fermer l'aide et ouvrir la fenêtre des paramètres",
   "help.closeTitle": "Fermer l’aide",
   "help.tocLabel": "Sommaire de l’aide",
   "help.tocTitle": "Sur cette page",

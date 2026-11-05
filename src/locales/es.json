@@ -240,6 +240,7 @@
   "help.mode.start": "Primeros pasos",
   "help.reportBug": "Informar de un error",
   "help.reportBugTitle": "Informar de un error en GitHub: abre una incidencia nueva en tu navegador",
+  "help.openSettingsTitle": "Cerrar la ayuda y abrir el cuadro de configuración",
   "help.closeTitle": "Cerrar la ayuda",
   "help.tocLabel": "Contenido de la ayuda",
   "help.tocTitle": "En esta página",
