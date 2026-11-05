@@ -719,6 +719,42 @@ into `project.json`. **Accept all** skips entries with a disagreement.
 
 The paper `id` never changes. A badge in the paper list marks each paper with a corrected field.
 
+### Watching a PDF folder
+
+Set `config.pdfFolder` to a folder inside the project folder, for example `"pdfs"` or `"pdfs/new"`.
+The key is optional. Without it, the app does not scan.
+
+The app scans the folder and its subfolders when the project opens and when the window gets the focus.
+Click **Rescan** in the toolbar to scan at any time.
+The app compares files by their SHA-256 hash, not by their names.
+A renamed or moved file is not new.
+
+The app never adds a paper without your confirmation.
+The **New PDF files** dialog shows one entry per new file.
+Each entry shows the proposed title, authors, year and DOI, and the source of each value.
+
+| Source | Meaning |
+| --- | --- |
+| `pdfinfo` | The embedded PDF information or the first page. |
+| `crossref` | The Crossref record of the found DOI. |
+| `filename` | The file name. The metadata is missing. |
+| `manual` | You changed the value. |
+
+For each entry, you can edit the values, add the entry, skip it or ignore it.
+**Add** writes the paper at the end of the paper list in `project.json`.
+**Skip** keeps the entry as "Not added". The next scan offers the file again.
+**Ignore** writes the file hash into the root key `ignoredPdfs`. Later scans do not offer the file.
+**Add all** adds each entry at once.
+
+An added paper keeps the file hash in `pdfSha256` and the source of each value in `metadataSource`.
+The app never deletes or reorders papers. If the PDF file of a paper is not found, the paper list shows "missing".
+
+Set `config.crossrefLookup` to `true` to look up a found DOI at `api.crossref.org`.
+The lookup is off by default. When it is on, the app sends only the DOI.
+
+If two reviewers add the same file at the same time, a Git merge makes one paper from the two.
+The merged paper keeps the identifier of the remote side.
+
 ---
 
 ## 5. What the file looks like after annotating

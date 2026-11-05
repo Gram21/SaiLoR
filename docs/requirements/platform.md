@@ -334,3 +334,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `src-tauri/src/shell.rs` (`app_set_language`, `tr`, `TABLES`, `menu`, `macos_menu`), `src/App.tsx`, `src/platform/tauri.ts` (`setLanguage`)
 - **Verified by:** `src-tauri/src/shell.rs` (`every_menu_label_has_an_entry_in_every_language`), `src/platform/tauri.test.ts` (`invokes exactly the commands main.rs registers`)
 - **Status:** Implemented. The translated menus were not run by hand on Windows and Linux.
+
+### REQ-PLT-420: Scan the PDF folder in the desktop shell
+- **Description:** The desktop shell shall list the PDF files of the PDF folder and its subfolders, and shall return the SHA-256 hash of each file with its path relative to the project folder. The shell shall refuse a folder outside the project folder and shall not follow links. For each given paper path, the shell shall return the hash, "missing" when the file does not exist, or nothing when the path is outside the project folder. The shell shall keep the hash of a file until its size or its modification time changes.
+- **Type:** Functional (ISO 25010: Functional Suitability, Security, Performance Efficiency)
+- **Evidence:** `src-tauri/src/pdf.rs` (`pdf_scan_folder`, `scan_folder`, `sha256_file`), `src/platform/tauri.ts`, `src/platform/desktop.ts` (`scanPdfFolder`)
+- **Verified by:** `src-tauri/src/pdf.rs` (`scan_folder_hashes_and_reports_missing`), `src/platform/tauri.test.ts` (`invokes exactly the commands main.rs registers`)
+- **Status:** Implemented

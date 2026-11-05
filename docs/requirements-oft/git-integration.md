@@ -936,3 +936,18 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Functional_Suitability, Reliability
+
+### REQ-GIT-600: Merge papers by PDF hash
+`req~git-600~1`
+
+A merge shall treat a paper that the local side added and a paper that the remote side added as one paper when both have the same `pdfSha256`. The merged paper shall keep the identifier of the remote side, because the remote side published it first. The merge shall combine the values of both papers by the normal paper merge, and shall show a note. A merge shall combine the root key `ignoredPdfs` as a set, so that two users who ignore files at the same time get no conflict.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `src/git/merge.ts` (`mergePapers`, `mergeProjects`)
+- **Verified by:** `src/git/merge.test.ts` (`merge papers by PDF hash`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Reliability

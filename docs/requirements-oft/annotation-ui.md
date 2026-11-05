@@ -261,6 +261,36 @@ Needs: impl, utest
 
 Tags: Functional, Functional_Suitability, Usability
 
+### REQ-ANN-200: Confirm each new PDF file
+`req~ann-200~1`
+
+When a scan finds new PDF files (REQ-DAT-510), the system shall show a dialog with one entry per file. Each entry shall show the proposed title, authors, year and DOI, and the source of each value (REQ-DAT-520). The user shall be able to edit each value. The user shall be able to add the entry, skip the entry or ignore the file. "Add all" shall add each entry at once. A skipped file shall stay in the dialog as "Not added", and the next scan shall offer the file again. An ignored file shall go into the root key `ignoredPdfs`, and later scans shall not offer it. The system shall write only confirmed papers. Each confirmation shall be one undo step. A read-only project shall not change.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/components/PdfFolderDialog.tsx` (`PdfFolderDialog`), `src/state/store.ts` (`addPdfPapers`, `ignorePdfs`)
+- **Verified by:** `src/components/PdfFolderDialog.test.tsx` (`PdfFolderDialog`), `src/state/store.pdfFolder.test.ts` (`addPdfPapers`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Usability
+
+### REQ-ANN-210: Scan the PDF folder on open, on focus and on request
+`req~ann-210~1`
+
+When the project sets a PDF folder, the system shall scan it when the project opens and when the window gets the focus. The toolbar shall show a "Rescan" button that starts a scan and opens the dialog. An automatic scan shall open the dialog only when it finds a new file that the dialog did not show before in this session. The system shall not use a file watcher.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/App.tsx`, `src/components/Toolbar.tsx`, `src/state/store.ts` (`scanPdfFolder`)
+- **Verified by:** `src/state/store.pdfFolder.test.ts` (`scanPdfFolder`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Usability
+
 ## Paper list
 
 ### REQ-LST-10: List papers with status
@@ -384,6 +414,21 @@ Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability)
 - **Evidence:** `src/model/metadata.ts` (`effectiveMetadata`, `editedFields`, `metadataSeatKey`), `src/components/PaperList.tsx`, `src/components/AnnotationPanel.tsx`
 - **Verified by:** `src/model/metadata.test.ts` (`editedFields`), `src/components/MetadataDialog.test.tsx` (`paper list badge`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Usability
+
+### REQ-LST-90: Mark a missing PDF file in the paper list
+`req~lst-90~1`
+
+After a scan, the paper list shall show the badge "missing" on each paper whose PDF file the system cannot find. The system shall keep the paper and its annotations.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/model/pdfFolder.ts` (`missingPaperIds`), `src/state/store.ts` (`scanPdfFolder`), `src/components/PaperList.tsx`
+- **Verified by:** `src/model/pdfFolder.test.ts` (`missingPaperIds`), `src/state/store.pdfFolder.test.ts` (`scanPdfFolder`)
 - **Status:** Implemented
 
 Needs: impl, utest
