@@ -251,6 +251,10 @@ export function planSystemOneRequests(
   return planSystemOne(cfg, items, { head, hasAbstract: !!paper.abstract, body: paperText })
 }
 
+// [impl->req~llm-780~1]
+/** Version of the System One annotation questions. Change it whenever they change. */
+export const SYSTEMONE_PROMPT_VERSION = 'systemone-1'
+
 // [impl->req~llm-520~1]
 /** Backward-compatible: the first planned request, or null when nothing is eligible/handled. */
 export function buildSystemOneRequest(

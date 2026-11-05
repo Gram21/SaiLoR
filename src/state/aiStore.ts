@@ -10,7 +10,15 @@ import {
   visibleSchema,
   type FieldTarget,
 } from '../llm/fields'
-import { buildSystemPrompt, buildAgentSystemPrompt, buildUserText, buildUserPdfCaption, type Delivery } from '../llm/prompt'
+import {
+  buildSystemPrompt,
+  buildAgentSystemPrompt,
+  buildUserText,
+  buildUserPdfCaption,
+  AGENT_PROMPT_VERSION,
+  EXTRACT_PROMPT_VERSION,
+  type Delivery,
+} from '../llm/prompt'
 import { buildRequest, extractText, extractError, wasTruncated, baseOf, PROVIDERS } from '../llm/providers'
 import { buildModelsRequest, parseModelsResponse } from '../llm/models'
 import { parseAnswer, coerce } from '../llm/parse'
@@ -26,12 +34,14 @@ import { buildFewShotBlock, countAnsweredFields, pickFewShotExamples, type FewSh
 import {
   answeredFields,
   buildRecheckSystemPrompt,
+  RECHECK_PROMPT_VERSION,
   parseRecheckReply,
   type RecheckOutcome,
   // [impl->req~llm-250~1]
   // [impl->req~llm-290~1]
   type RecheckTarget,
 } from '../llm/recheck'
+import { JUDGE_PROMPT_VERSION } from '../llm/judge'
 import { buildRunFeedback, feedbackFileName, hasFeedbackWorthSaving, type FeedbackRow } from '../llm/feedback'
 import type { LlmAnswer, LlmConfig, ModelInfo, RejectedSuggestion, SchemaRemark, Suggestion } from '../llm/types'
 import { isUsable } from '../llm/types'
@@ -41,6 +51,7 @@ import {
   parseSystemOneResponse,
   planSystemOneRequests,
   compareWithSystemOne,
+  SYSTEMONE_PROMPT_VERSION,
   systemOneEligible,
   SYSTEMONE_VERIFY_ASKED,
   type SystemOneComparison,
@@ -2028,6 +2039,16 @@ export const useAiStore = create<AiState>()(
         const verdict = row.suggestion.judge?.verdict
         if (verdict) entry.verdicts[verdict]++
       }
+      // [impl->req~llm-780~1]
+      const modeVersions: Record<AiMode, string[]> = {
+        prompt: [EXTRACT_PROMPT_VERSION],
+        agent: runJudge ? [AGENT_PROMPT_VERSION, JUDGE_PROMPT_VERSION] : [AGENT_PROMPT_VERSION],
+        classify: [SYSTEMONE_PROMPT_VERSION],
+      }
+      const versionsOf = (entry: Entry): string[] => [
+        ...(entry.suggestions.length > 0 ? modeVersions[mode] : []),
+        ...(entry.replacements.length > 0 ? [RECHECK_PROMPT_VERSION] : []),
+      ]
       const items = [...byPaper.values()].map((entry) => ({
         paperId: entry.paperId,
         reviewer: entry.reviewer,
@@ -2045,6 +2066,7 @@ export const useAiStore = create<AiState>()(
           ...(webSearchesByPaper[entry.paperId] ? { webSearches: webSearchesByPaper[entry.paperId] } : {}),
           ...(entry.edited > 0 ? { edited: entry.edited } : {}),
           ...(entry.unverifiedQuotes > 0 ? { unverifiedQuotes: entry.unverifiedQuotes } : {}),
+          promptVersion: versionsOf(entry).join('+'),
         },
       }))
       const result = useStore.getState().applyAiSuggestionsBatch(items)

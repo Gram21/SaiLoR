@@ -597,3 +597,10 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/llm/verify.ts`, `src/llm/parse.ts`, `src/llm/tools.ts`, `src/llm/prompt.ts`, `src/state/aiStore.ts`, `src/model/project.ts`, `src/components/AiDialog.tsx`, `src/components/AiUsageDisclosure.tsx`
 - **Status:** Implemented
 - **Tests:** `src/llm/verify.test.ts`, `src/llm/parse.test.ts`, `src/llm/tools.test.ts`, `src/state/aiStore.recheck.test.ts`, `src/model/model.test.ts`, `src/components/AiUsageDisclosure.test.tsx`
+
+### REQ-LLM-780: Record the prompt version on each AI usage record
+- **Description:** Each AI prompt template shall have a constant version string. The system shall store the versions of the templates that produced the applied values in the AI usage record. The system shall join more than one version with a plus sign, for example "agent-1+judge-1". The version shall survive a save and a load of the project file and of the split annotation files. A record without a version shall load and save without a version.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/prompt.ts`, `src/llm/recheck.ts`, `src/llm/judge.ts`, `src/llm/screeningAi.ts`, `src/llm/systemone.ts`, `src/state/aiStore.ts`, `src/state/aiScreeningStore.ts`, `src/model/project.ts`
+- **Status:** Implemented
+- **Tests:** `src/model/model.test.ts`, `src/model/split.test.ts`, `src/state/aiStore.recheck.test.ts`, `src/state/aiStore.classify.test.ts`, `src/state/aiScreeningStore.test.ts`

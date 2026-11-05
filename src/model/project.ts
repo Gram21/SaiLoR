@@ -78,6 +78,10 @@ export interface AiUsageRecord {
   /** How many applied values carried a quote the offline check could not
    *  confirm: not found in the paper text, or not on the page named. */
   unverifiedQuotes?: number
+  // [impl->req~llm-780~1]
+  /** The versions of the prompt templates that produced the values, joined
+   *  by "+", e.g. "agent-1+judge-1". Absent for a record predating versions. */
+  promptVersion?: string
   /** The seat the values were written into ("1".."N" or "consolidation"). */
   reviewer?: string
 }
@@ -528,6 +532,7 @@ function parseAiUsage(raw: unknown): AiUsageRecord[] {
       if (typeof e.unverifiedQuotes === 'number' && Number.isFinite(e.unverifiedQuotes)) {
         record.unverifiedQuotes = e.unverifiedQuotes
       }
+      if (typeof e.promptVersion === 'string' && e.promptVersion) record.promptVersion = e.promptVersion
       if (typeof e.reviewer === 'string') record.reviewer = e.reviewer
       out.push(record)
     }

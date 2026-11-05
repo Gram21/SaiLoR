@@ -194,6 +194,8 @@ describe('re-check run and apply', () => {
     expect(ai().applied).toMatchObject({ filled: 2, replaced: 1 })
     expect(paper().aiUsage).toHaveLength(1)
     expect(paper().aiUsage[0].rechecked).toBe(1)
+    // [utest->req~llm-780~1]
+    expect(paper().aiUsage[0].promptVersion).toBe('extract-1+recheck-1')
     st().undo()
     expect(paper().annotations.Summary[0].value).toBe('old')
     expect(paper().annotations.Year?.[0]?.value ?? null).toBeNull()
@@ -228,6 +230,7 @@ describe('re-check run and apply', () => {
     expect(ai().rows[0].suggestion.evidenceCheck).toBe('verified')
     ai().apply()
     expect(st().project!.papers[0].aiUsage[0]).not.toHaveProperty('unverifiedQuotes')
+    expect(st().project!.papers[0].aiUsage[0].promptVersion).toBe('extract-1')
   })
 
   it('agree and unsure outcomes are not actionable', async () => {
@@ -276,6 +279,7 @@ describe('web search option (agent mode)', () => {
     ai().setAllRows(true)
     ai().apply()
     expect(st().project!.papers[0].aiUsage[0].webSearches).toBe(2)
+    expect(st().project!.papers[0].aiUsage[0].promptVersion).toBe('agent-1+judge-1')
   })
 })
 

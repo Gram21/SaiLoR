@@ -123,6 +123,10 @@ export function fieldLines(targets: FieldTarget[]): string {
     .join('\n')
 }
 
+// [impl->req~llm-780~1]
+/** Version of the prompt-mode template. Change it whenever `buildSystemPrompt` changes. */
+export const EXTRACT_PROMPT_VERSION = 'extract-1'
+
 // [impl->req~llm-450~1]
 // [impl->req~llm-760~1]
 /**
@@ -207,6 +211,10 @@ export function buildUserPdfCaption(paper: Paper): string {
 
 The paper is attached. Extract the annotations for the fields listed in the schema.`
 }
+
+// [impl->req~llm-780~1]
+/** Version of the agent-mode template. Change it whenever `buildAgentSystemPrompt` changes. */
+export const AGENT_PROMPT_VERSION = 'agent-1'
 
 // [impl->req~llm-360~1]
 // [impl->req~llm-450~1]

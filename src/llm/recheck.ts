@@ -38,6 +38,10 @@ export function answeredFields(schema: ResolvedDef[], tree: AnnotationValueTree 
   }))
 }
 
+// [impl->req~llm-780~1]
+/** Version of the re-check template. Change it whenever `buildRecheckSystemPrompt` changes. */
+export const RECHECK_PROMPT_VERSION = 'recheck-1'
+
 export function buildRecheckSystemPrompt(
   schema: ResolvedDef[],
   targets: RecheckTarget[],

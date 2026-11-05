@@ -21,6 +21,8 @@ import {
   MAX_SCREENING_TEXT_CHARS,
   buildScreeningSystemOneRequest,
   buildScreeningSystemPrompt,
+  SCREENING_PROMPT_VERSION,
+  SCREENING_SYSTEMONE_PROMPT_VERSION,
   buildScreeningUserText,
   parseScreeningAnswer,
   parseScreeningSystemOne,
@@ -376,7 +378,14 @@ export const useAiScreeningStore = create<ScreeningAiState>()(
             reviewer: r.reviewer,
             decision: r.proposal.decision,
             reason: r.proposal.reason,
-            usage: { provider: runModel.provider, model: runModel.model, mode: 'screening' as const },
+            usage: {
+              provider: runModel.provider,
+              model: runModel.model,
+              mode: 'screening' as const,
+              // [impl->req~llm-780~1]
+              promptVersion:
+                runModel.provider === 'systemone' ? SCREENING_SYSTEMONE_PROMPT_VERSION : SCREENING_PROMPT_VERSION,
+            },
           })),
       )
       set((s) => {
