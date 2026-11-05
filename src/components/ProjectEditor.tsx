@@ -1,6 +1,7 @@
 // [impl->req~edt-10~1]
 // [impl->req~llm-470~1]
 // [impl->req~llm-650~1]
+// [impl->req~edt-180~1]
 import { useEditorStore } from '../state/editorStore'
 import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
 import { getPlatform } from '../platform'
@@ -11,6 +12,7 @@ import { ProtocolEditor } from './ProtocolEditor'
 import { PapersEditor } from './PapersEditor'
 import { StrictModeEditor } from './StrictModeEditor'
 import type { ProjectProvenance } from '../model/project'
+import type { MetadataEditMode } from '../model/metadata'
 import '../styles/editor.css'
 
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
@@ -51,6 +53,8 @@ export function ProjectEditor() {
   const setAiEnabled = useEditorStore((s) => s.setAiEnabled)
   const aiSeat = useEditorStore((s) => s.aiSeat)
   const setAiSeat = useEditorStore((s) => s.setAiSeat)
+  const metadataEdit = useEditorStore((s) => s.metadataEdit)
+  const setMetadataEdit = useEditorStore((s) => s.setMetadataEdit)
   const screening = useEditorStore((s) => s.screening)
   const setScreening = useEditorStore((s) => s.setScreening)
   const provenance = useEditorStore((s) => s.provenance)
@@ -284,6 +288,23 @@ export function ProjectEditor() {
           </p>
         </>
       )}
+
+      <div className="editor-location">
+        <label className="editor-location-label" htmlFor="editor-metadata-edit">
+          {t('editor.project.metadataEdit')}
+        </label>
+        <select
+          id="editor-metadata-edit"
+          value={metadataEdit}
+          title={t('editor.project.metadataEditTitle')}
+          onChange={(e) => setMetadataEdit(e.target.value as MetadataEditMode)}
+          disabled={busy}
+        >
+          <option value="off">{t('editor.project.metadataEditOff')}</option>
+          <option value="project">{t('editor.project.metadataEditProject')}</option>
+          <option value="annotation">{t('editor.project.metadataEditAnnotation')}</option>
+        </select>
+      </div>
 
       {error && (
         <div className="editor-error" role="alert">

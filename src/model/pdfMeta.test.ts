@@ -10,9 +10,23 @@ import {
   titleAndAuthorsFromLines,
   abstractFromLines,
   extractPdfMeta,
+  findDoi,
   toLines,
 } from './pdfMeta'
 import { pdfjs } from '../platform/pdfjs'
+
+// [utest->req~dat-470~1]
+describe('findDoi', () => {
+  it('finds a bare or linked DOI and trims trailing punctuation', () => {
+    expect(findDoi('DOI: 10.18420/se2026-21.')).toBe('10.18420/se2026-21')
+    expect(findDoi('see https://doi.org/10.1145/3593434.3593468), p. 3')).toBe('10.1145/3593434.3593468')
+  })
+
+  it('ignores text without a DOI, including a template placeholder', () => {
+    expect(findDoi('https://doi.org/XXXXXXX.XXXXXXX')).toBeUndefined()
+    expect(findDoi('Version 10.2 of the tool')).toBeUndefined()
+  })
+})
 
 describe('parseAuthorList', () => {
   it('splits the usual separators', () => {
@@ -559,6 +573,11 @@ describe('extractPdfMeta against real PDFs', () => {
       'Tobias Thirolf', // the name the line break ran through
       'Anne Koziolek',
     ])
+  })
+
+  it('reads the DOI printed on page 1', async () => {
+    const meta = await extractPdfMeta(loadPdf('samples/pdfs/A1-37.pdf'))
+    expect(meta.doi).toBe('10.18420/se2026-21')
   })
 
   it('returns no abstract for a PDF that has none, rather than guessing', async () => {

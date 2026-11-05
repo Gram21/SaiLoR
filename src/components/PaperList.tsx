@@ -1,7 +1,9 @@
 // [impl->req~con-460~1]
+// [impl->req~lst-80~1]
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useStore, currentTree, currentFinished, activePerson } from '../state/store'
-import { personPapers } from '../model/strict'
+import { assignedSeat, personPapers } from '../model/strict'
+import { editedFields, effectiveMetadata } from '../model/metadata'
 import { hasAnnotations, annotationText } from '../model/annotations'
 import { completeness, completenessPercent, hasRequiredFields, type Completeness } from '../model/completeness'
 import {
@@ -205,8 +207,10 @@ const PaperRow = memo(function PaperRow({
   dotClassName,
   dotLabel,
   dotFill,
+  seat,
 }: {
   paper: Paper
+  seat: string | null
   active: boolean
   /** Whether this row is the list's one roving tab stop right now — see the
    *  `rovingId` comment in `PaperList` below. */
@@ -219,6 +223,9 @@ const PaperRow = memo(function PaperRow({
   // [impl->req~lst-20~1]
   // [impl->req~lst-25~1]
   const dotStyle = dotFill === null ? undefined : ({ '--fill': `${dotFill}%` } as CSSProperties)
+  const meta = effectiveMetadata(paper, seat)
+  const edited = editedFields(paper, seat)
+  const badge = edited.length > 0 ? t('paperList.metadataBadge', { fields: edited.map((f) => t(`metadata.field.${f}`)).join(', ') }) : ''
   return (
     <li
       className={active ? 'paper active' : 'paper'}
@@ -233,8 +240,20 @@ const PaperRow = memo(function PaperRow({
           fill, so the meaning is not only in a hover-only tooltip. */}
       <span className={dotClassName} style={dotStyle} role="img" aria-label={dotLabel} title={dotLabel} />
       <span className="paper-info">
-        <span className="paper-title">{paper.title}</span>
-        <span className="paper-authors">{paper.authors.join(', ')}</span>
+        <span className="paper-title">
+          {meta.title}
+          {edited.length > 0 && (
+            <span
+              className="paper-metadata-badge"
+              role="img"
+              aria-label={badge}
+              title={badge}
+            >
+              ✎
+            </span>
+          )}
+        </span>
+        <span className="paper-authors">{meta.authors.join(', ')}</span>
       </span>
     </li>
   )
@@ -558,6 +577,7 @@ export function PaperList() {
                   active={active}
                   roving={p.id === rovingId}
                   onSelect={selectPaper}
+                  seat={person ? assignedSeat(project, p.id, person) : currentReviewer}
                   dotClassName={`status-dot screening-${status}`}
                   dotLabel={title}
                   dotFill={null}
@@ -605,6 +625,7 @@ export function PaperList() {
                 active={active}
                 roving={p.id === rovingId}
                 onSelect={selectPaper}
+                seat={person ? assignedSeat(project, p.id, person) : currentReviewer}
                 dotClassName={`status-dot ${state}`}
                 dotLabel={dotLabel}
                 // Only the genuinely partial fills carry a percentage; the

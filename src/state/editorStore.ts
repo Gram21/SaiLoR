@@ -32,6 +32,7 @@ import {
 import { classifyImport, type DupRecord, type DupVerdict } from '../model/duplicates'
 import { paperIdProblem, paperIdsCollide } from '../model/paperId'
 import { parseYear } from '../model/year'
+import { parseMetadataEditMode, type MetadataEditMode } from '../model/metadata'
 import { getPlatform, type OpenedProject, type PickedPdf, type ProjectLocation, type SaveHandle } from '../platform'
 import { DEFAULT_SCREENING_REASONS, screeningSchemaDefs } from '../screening/schema'
 import { screeningReason, screeningStatus } from '../screening/status'
@@ -137,6 +138,7 @@ interface EditorSnapshot {
   finishCheckbox: boolean
   reviewers: number
   aiSeat: boolean
+  metadataEdit: MetadataEditMode
   screening: ScreeningConfig | null
   extra: Record<string, unknown>
   provenance: ProjectProvenance | null
@@ -729,6 +731,8 @@ export function buildProjectJson(state: {
   /** Optional so callers predating this option keep compiling; absent means
    *  no AI seat, matching `Project.aiSeat`'s default. */
   aiSeat?: boolean
+  /** Optional for the same reason; absent means `off`. */
+  metadataEdit?: MetadataEditMode
   /** Optional so existing test fixtures (and any other caller predating this
    *  feature) keep compiling unchanged — absent means "not a screening draft". */
   screening?: ScreeningConfig | null
@@ -775,6 +779,7 @@ export function buildProjectJson(state: {
       ...(state.aiSeat ? { aiSeat: true } : {}),
       ...(screening ? { screening: { reasons: screening.reasons } } : {}),
       ...strictConfigJson(strictForFile(state.strict ?? null, state.papers)),
+      ...(state.metadataEdit && state.metadataEdit !== 'off' ? { metadataEdit: state.metadataEdit } : {}),
     },
     papers: state.papers.map((p) => {
       const out: Record<string, unknown> = { ...(p.extra ?? {}) }
@@ -1056,6 +1061,8 @@ interface EditorState {
    *  ineffective (AI off, or fewer than 2 reviewers); only `aiSeatId` decides
    *  whether it actually applies. */
   aiSeat: boolean
+  /** Who may correct paper metadata — see `Project.metadataEdit`. */
+  metadataEdit: MetadataEditMode
   /** Set when this draft is a screening project: its schema is derived from
    *  these reasons (`src/screening/schema.ts`) and `nodes` is unused —
    *  `ProjectEditor` renders `ScreeningReasonsEditor` instead of
@@ -1130,6 +1137,8 @@ interface EditorState {
   /** Toggle whether the AI takes one reviewer seat — see `Project.aiSeat`.
    *  Its own undo step, same shape as `setFinishCheckbox`. */
   setAiSeat: (on: boolean) => void
+  /** Its own undo step, same shape as `setFinishCheckbox`. */
+  setMetadataEdit: (mode: MetadataEditMode) => void
   /** Strict mode settings — see `model/strict.ts`. Assignments keyed by paper `uid`. */
   strict: StrictConfig | null
   setStrictEnabled: (on: boolean) => void
@@ -1220,6 +1229,7 @@ function snapshotOf(s: EditorState): EditorSnapshot {
     finishCheckbox: s.finishCheckbox,
     reviewers: s.reviewers,
     aiSeat: s.aiSeat,
+    metadataEdit: s.metadataEdit,
     screening: s.screening,
     extra: s.extra,
     provenance: s.provenance,
@@ -1239,6 +1249,7 @@ function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
   s.finishCheckbox = snap.finishCheckbox
   s.reviewers = snap.reviewers
   s.aiSeat = snap.aiSeat
+  s.metadataEdit = snap.metadataEdit
   s.screening = snap.screening
   s.extra = snap.extra
   s.provenance = snap.provenance
@@ -1263,6 +1274,7 @@ interface OpenedEditorState {
   finishCheckbox: boolean
   reviewers: number
   aiSeat: boolean
+  metadataEdit: MetadataEditMode
   screening: ScreeningConfig | null
   extra: Record<string, unknown>
   provenance: ProjectProvenance | null
@@ -1357,6 +1369,7 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     reviewers: parsed.config.reviewers ?? 1,
     // Absent means no AI seat, same rule as `aiEnabled` above.
     aiSeat: (parsed.config as { aiSeat?: unknown }).aiSeat === true,
+    metadataEdit: parseMetadataEditMode((data.config as { metadataEdit?: unknown } | undefined)?.metadataEdit),
     screening,
     extra: rootExtra,
     provenance: parseProvenance(data.provenance),
@@ -1398,6 +1411,7 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.finishCheckbox = st.finishCheckbox
   s.reviewers = st.reviewers
   s.aiSeat = st.aiSeat
+  s.metadataEdit = st.metadataEdit
   s.screening = st.screening
   s.extra = st.extra
   s.provenance = st.provenance
@@ -1539,6 +1553,7 @@ export const useEditorStore = create<EditorState>()(
     finishCheckbox: true,
     reviewers: 1,
     aiSeat: false,
+    metadataEdit: 'off',
     screening: null,
     extra: {},
     provenance: null,
@@ -1582,6 +1597,7 @@ export const useEditorStore = create<EditorState>()(
         s.finishCheckbox = true
         s.reviewers = 1
         s.aiSeat = false
+        s.metadataEdit = 'off'
         s.screening = null
         s.extra = {}
         s.provenance = null
@@ -1828,6 +1844,17 @@ export const useEditorStore = create<EditorState>()(
       set((s) => {
         pushPast(s, snap)
         s.aiSeat = on
+        s.dirty = true
+      })
+    },
+
+    // [impl->req~edt-180~1]
+    setMetadataEdit: (mode) => {
+      lastEditKey = null
+      const snap = snapshotOf(get())
+      set((s) => {
+        pushPast(s, snap)
+        s.metadataEdit = mode
         s.dirty = true
       })
     },
@@ -2371,6 +2398,7 @@ export const useEditorStore = create<EditorState>()(
           s.reviewers = screeningTarget ? draft.reviewers : 1
           // Same reasoning as `aiEnabled` just above.
           s.aiSeat = false
+          s.metadataEdit = 'off'
           // Seeded from the source's own reasons, not DEFAULT_SCREENING_REASONS:
           // they're the pre-registered protocol's vocabulary, and PRISMA
           // reports exclusions per reason across both passes — a disjoint

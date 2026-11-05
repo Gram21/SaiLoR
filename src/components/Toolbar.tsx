@@ -3,6 +3,7 @@
 // [impl->req~ui-80~1]
 // [impl->req~ui-100~1]
 // [impl->req~con-470~1]
+// [impl->req~ann-180~1]
 import { useEffect, useState } from 'react'
 import { activePerson, useStore } from '../state/store'
 import { useAiStore } from '../state/aiStore'
@@ -16,6 +17,8 @@ import { SidebarToggle } from './SidebarToggle'
 import { StrictPersonBar } from './StrictPersonBar'
 import type { GitProbe, GitRepoInfo } from '../git/types'
 import { aiSeatId, seatLabel } from '../model/project'
+import { metadataTarget } from '../model/metadata'
+import { MetadataDialog } from './MetadataDialog'
 import { t, tp, useT, type MessageKey } from '../i18n'
 
 /** Shown on every git entry point in the browser build, where `getGit()` is
@@ -191,6 +194,7 @@ export function Toolbar() {
   // going false is silent otherwise, and an autosave in particular has no
   // other feedback at all.
   const [showSaved, setShowSaved] = useState(false)
+  const [metadataOpen, setMetadataOpen] = useState(false)
   useEffect(() => {
     if (lastSavedAt === null) return
     setShowSaved(true)
@@ -538,7 +542,23 @@ export function Toolbar() {
               {t('toolbar.ai.label')}
             </button>
           )}
+          {project && (project.metadataEdit ?? 'off') !== 'off' && (
+            <button
+              type="button"
+              className="tb-btn"
+              title={
+                metadataTarget(project, currentReviewer) === null
+                  ? t('toolbar.metadata.unavailable')
+                  : t('toolbar.metadata.title')
+              }
+              onClick={() => setMetadataOpen(true)}
+              disabled={readOnly || busy || editorOpen || metadataTarget(project, currentReviewer) === null}
+            >
+              {t('toolbar.metadata.label')}
+            </button>
+          )}
         </div>
+        {metadataOpen && <MetadataDialog onClose={() => setMetadataOpen(false)} />}
 
         <div className="toolbar-view">
           <div className="font-controls" role="group" aria-label={t('toolbar.font.group')}>

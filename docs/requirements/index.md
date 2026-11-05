@@ -54,14 +54,14 @@ per category so requirements can be inserted without renumbering.
 
 | Category | Requirements |
 |---|---|
-| Data model & editor (DAT/EDT) | 72 |
-| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 60 |
+| Data model & editor (DAT/EDT) | 78 |
+| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 62 |
 | Screening (SCR) | 39 |
-| Consolidation (CON) | 56 |
-| Git integration (GIT) | 63 |
+| Consolidation (CON) | 57 |
+| Git integration (GIT) | 64 |
 | LLM annotation (LLM) | 88 |
 | Platform & shell (PLT) | 50 |
-| **Total** | **428** |
+| **Total** | **438** |
 
 ## Method & evidence notes
 
@@ -129,3 +129,8 @@ per category so requirements can be inserted without renumbering.
   Italian, Portuguese and Japanese. REQ-UI-120 revised for plural forms. REQ-UI-130 and REQ-PLT-400 revised
   for all language files and menu tables. REQ-UI-140 added for the right-to-left layout of Persian. The
   coverage counts above were not recounted.
+- **Metadata correction (2026-11-05).** REQ-DAT-430 to REQ-DAT-470 and REQ-EDT-180 added for the
+  `config.metadataEdit` mode, the stable paper identifier, the two storage targets and the PDF proposals.
+  REQ-ANN-180 and REQ-LST-80 added for the Metadata dialog and the paper list badge. REQ-CON-530 added for
+  the consolidation of metadata overrides. REQ-GIT-580 added for the merge and commit of the overrides.
+  The coverage counts above were recounted with `trace_stats.py`.

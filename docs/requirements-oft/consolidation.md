@@ -792,3 +792,18 @@ Comment:
 Needs: impl
 
 Tags: Functional, Usability
+
+### REQ-CON-530: Consolidate metadata corrections
+`req~con-530~1`
+
+With `config.metadataEdit: annotation`, the Metadata dialog in the Consolidation seat shall show one entry per paper with metadata overrides of the human seats, as a group of the fields title, authors, year and DOI. A field that no seat changed shall keep the value of the project file. A field shall be agreed only when every human seat changed it to the same value. Any other changed field shall be a disagreement. The dialog shall show the value of each seat, with the project value for a seat that did not change the field. Accept shall write the values into the project file. Ignore shall keep the project file. After Accept or Ignore, the entry shall stay hidden until a seat changes its overrides again. "Accept all" shall skip entries with a disagreement.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/metadata.ts` (`mergeSeatMetadata`, `metadataFingerprint`), `src/components/MetadataDialog.tsx` (`MetadataDialog`), `src/state/store.ts` (`applyMetadataEdits`)
+- **Verified by:** `src/model/metadata.test.ts` (`mergeSeatMetadata`), `src/state/store.metadata.test.ts` (`metadata consolidation`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability

@@ -246,6 +246,21 @@ Needs: impl
 
 Tags: Functional, Functional_Suitability
 
+### REQ-ANN-180: Confirm each metadata correction
+`req~ann-180~1`
+
+When the metadata correction mode is not `off`, the toolbar shall open a Metadata dialog. The dialog shall show the current paper as an entry with editable title, authors, year and DOI. After "Check PDFs", the dialog shall add one entry per proposal (REQ-DAT-470). For each entry, the reviewer shall be able to edit the values, accept the entry, skip the entry for this session or ignore the entry permanently. "Accept all" shall accept every proposal and every agreed consolidation entry at once, and shall be one undo step. The system shall change no paper without one of these confirmations.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/components/MetadataDialog.tsx` (`MetadataDialog`), `src/components/Toolbar.tsx`, `src/state/store.ts` (`applyMetadataEdits`)
+- **Verified by:** `src/components/MetadataDialog.test.tsx` (`MetadataDialog`), `src/state/store.metadata.test.ts` (`applyMetadataEdits`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Usability
+
 ## Paper list
 
 ### REQ-LST-10: List papers with status
@@ -359,6 +374,21 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Functional_Suitability
+
+### REQ-LST-80: Mark corrected metadata in the paper list
+`req~lst-80~1`
+
+The paper list and the annotation panel header shall show the corrected title and authors of the active seat. The paper list shall show a badge on each paper with a corrected field. The badge tooltip shall name the corrected fields.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/model/metadata.ts` (`effectiveMetadata`, `editedFields`), `src/components/PaperList.tsx`, `src/components/AnnotationPanel.tsx`
+- **Verified by:** `src/model/metadata.test.ts` (`editedFields`), `src/components/MetadataDialog.test.tsx` (`paper list badge`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Usability
 
 ## PDF viewer
 

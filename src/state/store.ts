@@ -46,6 +46,18 @@ import {
 import { screeningIssues } from '../screening/validate'
 import { extractPdfMeta } from '../model/pdfMeta'
 import {
+  applyProjectEdit,
+  applySeatEdit,
+  effectiveMetadata,
+  humanSeats,
+  ignoredFor,
+  metadataFingerprint,
+  metadataTarget,
+  proposeFromPdf,
+  recordIgnored,
+  type MetadataValues,
+} from '../model/metadata'
+import {
   fetchLatestRelease,
   updateFrom,
   CHECK_INTERVAL_MS,
@@ -595,6 +607,21 @@ let diskProject: Project | null = null
  */
 let projectGeneration = 0
 
+/** One confirmed metadata change: corrected values, ignored proposal values, or a settled consolidation. */
+export interface MetadataEdit {
+  paperId: string
+  values?: MetadataValues
+  ignore?: MetadataValues
+  settle?: boolean
+}
+
+/** The seat a metadata edit of `paperId` belongs to: the person's assigned seat in strict mode. */
+export function metadataSeat(s: Pick<AppState, 'project' | 'strictPerson' | 'currentReviewer'>, paperId: string): string | null {
+  const person = activePerson(s)
+  if (person && s.project) return assignedSeat(s.project, paperId, person)
+  return s.currentReviewer
+}
+
 // [impl->req~pdf-110~1]
 // [impl->req~plt-136~1]
 interface AppState {
@@ -1108,6 +1135,10 @@ interface AppState {
    * Marks what it writes `abstractFromPdf`, so it's shown as the guess it is.
    */
   extractScreeningAbstract: (paperId: string) => Promise<void>
+  /** Applies confirmed metadata edits in one undo step. Returns false when nothing changed. */
+  applyMetadataEdits: (edits: MetadataEdit[]) => boolean
+  /** Reads every PDF and returns the values that differ from the paper; changes nothing. */
+  scanPdfMetadata: () => Promise<{ paperId: string; values: MetadataValues }[]>
   /**
    * Adopt every paper's unanimous screening decision into the consolidated
    * tree, in one undo step. Returns how many papers were filled.
@@ -3687,6 +3718,77 @@ export const useStore = create<AppState>()(
           }
         })
       }
+    },
+
+    // [impl->req~dat-440~1]
+    // [impl->req~dat-450~1]
+    // [impl->req~ann-180~1]
+    // [impl->req~con-530~1]
+    applyMetadataEdits: (edits) => {
+      const prev = get()
+      if (prev.readOnly || !prev.project) return false
+      const project = prev.project
+      const changed = new Map<string, Paper>()
+      for (const edit of edits) {
+        const original = project.papers.find((p) => p.id === edit.paperId)
+        if (!original) continue
+        const seat = metadataSeat(prev, edit.paperId)
+        const target = metadataTarget(project, seat)
+        if (!target) continue
+        const seatKey = target === 'seat' ? seat : null
+        const paper = changed.get(edit.paperId) ?? structuredClone(original)
+        if (edit.values) {
+          if (seatKey) applySeatEdit(paper, seatKey, edit.values)
+          else applyProjectEdit(paper, edit.values)
+        }
+        if (edit.ignore && Object.keys(edit.ignore).length > 0) recordIgnored(paper, seatKey, edit.ignore)
+        if (edit.settle) paper.extra.metadataSync = metadataFingerprint(paper, humanSeats(project))
+        changed.set(edit.paperId, paper)
+      }
+      for (const [id, paper] of changed) {
+        if (deepEqualJson(paper, project.papers.find((p) => p.id === id))) changed.delete(id)
+      }
+      if (changed.size === 0) return false
+      lastFieldKey = null
+      const snap: HistoryEntry = { project, paperId: prev.currentPaperId }
+      set((s) => {
+        pushPast(s, snap)
+        s.project!.papers = s.project!.papers.map((p) => changed.get(p.id) ?? p)
+        s.dirty = true
+      })
+      return true
+    },
+
+    // [impl->req~dat-470~1]
+    scanPdfMetadata: async () => {
+      const project = get().project
+      if (!project) return []
+      const generation = projectGeneration
+      const out: { paperId: string; values: MetadataValues }[] = []
+      for (const paper of project.papers) {
+        if (!paper.pdf) continue
+        const seat = metadataSeat(get(), paper.id)
+        const target = metadataTarget(project, seat)
+        if (!target) continue
+        try {
+          const src = await getPlatform().getPdfSource(paper.pdf, get().saveHandle ?? { kind: 'download' })
+          let bytes: ArrayBuffer
+          try {
+            bytes = await (await fetch(src.url)).arrayBuffer()
+          } finally {
+            src.revoke?.()
+          }
+          const meta = await extractPdfMeta(bytes)
+          if (projectGeneration !== generation) return []
+          const current = get().project?.papers.find((p) => p.id === paper.id) ?? paper
+          const seatKey = target === 'seat' ? seat : null
+          const values = proposeFromPdf(effectiveMetadata(current, seatKey), meta, ignoredFor(current, seatKey))
+          if (Object.keys(values).length > 0) out.push({ paperId: paper.id, values })
+        } catch {
+          continue
+        }
+      }
+      return projectGeneration === generation ? out : []
     },
 
     adoptAllUnanimousScreening: () => {

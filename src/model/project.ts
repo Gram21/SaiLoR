@@ -21,6 +21,7 @@ import { parseMarks, parseReviewMarks, type PdfMark } from './pdfMarks'
 import { parseAlignment, type StoredAlignment } from './alignment'
 import { annotationsDirProblem } from './annotationsDir'
 import { parseStrictConfig, strictConfigJson, type StrictConfig } from './strict'
+import { parseMetadataEditMode, parseReviewMetadata, type MetadataEditMode, type SeatMetadata } from './metadata'
 import {
   moveInMarks,
   moveInTree,
@@ -156,6 +157,9 @@ export interface Paper {
   /** Each numbered reviewer's own finished flag, keyed "1".."N" like `reviews`.
    *  Absent/empty in a single-reviewer project. */
   reviewsFinished: Record<string, boolean>
+  /** Each numbered seat's metadata overrides and ignored proposals, keyed
+   *  "1".."N". Absent when no seat has any. See `model/metadata.ts`. */
+  reviewMetadata?: Record<string, SeatMetadata>
   /** Any additional fields present in the source file are preserved on save. */
   extra: Record<string, unknown>
   /** Files of this paper written under a schema version the project's
@@ -286,6 +290,8 @@ export interface Project {
   extra: Record<string, unknown>
   /** Strict mode settings; absent when the file has none. See `model/strict.ts`. */
   strict?: StrictConfig
+  /** Who may correct paper metadata, and where it is stored. Absent means `off`. */
+  metadataEdit?: MetadataEditMode
 }
 
 // [impl->req~llm-470~1]
@@ -345,6 +351,7 @@ const KNOWN_PAPER_KEYS = new Set([
   'reviewMarks',
   'finished',
   'reviewsFinished',
+  'reviewMetadata',
   'schemaVersions',
 ])
 // [impl->req~dat-270~1]
@@ -798,6 +805,7 @@ export function loadProject(input: string | unknown): Project {
     // Only a literal `true` declares anything — see `parseReviewsFinished`.
     finished: (p as { finished?: unknown }).finished === true,
     reviewsFinished: parseReviewsFinished((p as { reviewsFinished?: unknown }).reviewsFinished),
+    ...reviewMetadataField(parseReviewMetadata((p as { reviewMetadata?: unknown }).reviewMetadata)),
     extra: extractExtra(p, KNOWN_PAPER_KEYS),
     ...(unknownSchemaFiles.length > 0 ? { unknownSchemaFiles } : {}),
     }
@@ -829,7 +837,16 @@ export function loadProject(input: string | unknown): Project {
     screening,
     extra: extractExtra(raw, KNOWN_ROOT_KEYS),
     ...(strict.strict ? { strict: strict.strict } : {}),
+    ...metadataEditField(parseMetadataEditMode(((data as { config?: { metadataEdit?: unknown } }).config ?? {}).metadataEdit)),
   }
+}
+
+function reviewMetadataField(m: Record<string, SeatMetadata> | undefined): { reviewMetadata?: Record<string, SeatMetadata> } {
+  return m && Object.keys(m).length > 0 ? { reviewMetadata: m } : {}
+}
+
+function metadataEditField(mode: MetadataEditMode | undefined): { metadataEdit?: MetadataEditMode } {
+  return mode && mode !== 'off' ? { metadataEdit: mode } : {}
 }
 
 /** The root keys naming the schema version, written once there is one. */
@@ -881,6 +898,7 @@ export function serializeProject(project: Project): string {
       ...(project.aiSeat ? { aiSeat: true } : {}),
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
       ...strictConfigJson(project.strict),
+      ...metadataEditField(project.metadataEdit),
     },
     papers: [...project.papers].sort(comparePapers).map((p) => {
       const paper: Record<string, unknown> = {
@@ -936,6 +954,7 @@ export function serializeProject(project: Project): string {
           finishedKeys.sort((a, b) => Number(a) - Number(b)).map((k) => [k, true]),
         )
       }
+      Object.assign(paper, reviewMetadataField(p.reviewMetadata))
       // Every tree held here is at the project's version — it was carried
       // there on load — so reading this text back must not move it again.
       if (project.schemaVersion) {
@@ -1030,6 +1049,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     for (const key of Object.keys(p.reviews)) reviewerSlots.add(Number(key))
     for (const key of Object.keys(p.reviewMarks)) reviewerSlots.add(Number(key))
     for (const key of Object.keys(p.reviewsFinished)) reviewerSlots.add(Number(key))
+    for (const key of Object.keys(p.reviewMetadata ?? {})) reviewerSlots.add(Number(key))
     if (reviewerSlots.size > 0) {
       for (const k of [...reviewerSlots].sort((a, b) => a - b)) {
         const tree = p.reviews[String(k)]
@@ -1039,15 +1059,18 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
         // file alive alone — ticking the box then clearing a field still said
         // something, and dropping the file would un-say it.
         const finished = p.reviewsFinished[String(k)] === true
+        const metadata = p.reviewMetadata?.[String(k)]
         files.push({
           relPath: `${p.id}/${reviewerName}-${k}.json`,
           text:
-            has || finished
+            has || finished || metadata
               ? JSON.stringify(
                   {
                     ...stamp,
                     ...(has ? { annotations: serializedTree(project.schema, tree!) } : {}),
                     ...(finished ? { finished: true } : {}),
+                    ...(metadata?.overrides ? { metadataOverrides: metadata.overrides } : {}),
+                    ...(metadata?.ignored ? { metadataIgnored: metadata.ignored } : {}),
                   },
                   null,
                   2,
@@ -1103,6 +1126,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
       ...(project.aiSeat ? { aiSeat: true } : {}),
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
       ...strictConfigJson(project.strict),
+      ...metadataEditField(project.metadataEdit),
     },
     papers: metaPapers,
     ...project.extra,
@@ -1249,11 +1273,16 @@ export function assembleLegacyProjectJson(
       for (const [k, v] of entry?.reviewMarks ?? []) schemaVersions[`marks-${k}`] = versionOf(v)
       const reviews: Record<string, unknown> = {}
       const reviewsFinished: Record<string, unknown> = {}
+      const reviewMetadata: Record<string, unknown> = {}
       for (const [k, v] of entry?.reviewers ?? []) {
         reviews[k] = (v as { annotations?: unknown })?.annotations ?? {}
         // Only lifted when actually declared — `loadProject` rejects anything
         // but literal `true` anyway.
         if ((v as { finished?: unknown })?.finished === true) reviewsFinished[k] = true
+        const { metadataOverrides, metadataIgnored } = (v ?? {}) as { metadataOverrides?: unknown; metadataIgnored?: unknown }
+        if (metadataOverrides !== undefined || metadataIgnored !== undefined) {
+          reviewMetadata[k] = { overrides: metadataOverrides, ignored: metadataIgnored }
+        }
       }
       const marksConsolidated = (entry?.marksConsolidated ?? {}) as { marks?: unknown }
       const reviewMarks: Record<string, unknown> = {}
@@ -1274,6 +1303,7 @@ export function assembleLegacyProjectJson(
         ...(Object.keys(reviewMarks).length > 0 ? { reviewMarks } : {}),
         ...(consolidated.finished !== undefined ? { finished: consolidated.finished } : {}),
         ...(Object.keys(reviewsFinished).length > 0 ? { reviewsFinished } : {}),
+        ...(Object.keys(reviewMetadata).length > 0 ? { reviewMetadata } : {}),
         ...(Object.keys(schemaVersions).length > 0 ? { schemaVersions } : {}),
       }
     }),

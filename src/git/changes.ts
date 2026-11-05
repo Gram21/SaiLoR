@@ -84,6 +84,7 @@ const BOOKKEEPING_FIELDS = [
   'equal',
   'alignment',
   'aiUsage',
+  'reviewMetadata',
   'extra',
 ] as const satisfies readonly (keyof Paper)[]
 
@@ -267,6 +268,7 @@ export function detectFieldChanges(head: Project, working: Project): DetectedCha
     head.aiEnabled !== working.aiEnabled ||
     head.aiSeat !== working.aiSeat ||
     head.finishCheckbox !== working.finishCheckbox ||
+    (head.metadataEdit ?? 'off') !== (working.metadataEdit ?? 'off') ||
     !deepEqualJson(head.screening, working.screening) ||
     head.version !== working.version ||
     !deepEqualJson(head.extra, working.extra) ||
