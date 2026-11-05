@@ -13,6 +13,8 @@ if [ "$MODE" != "test" ]; then
   npx tauri build --no-bundle --features probe --config src-tauri/tauri.probe.conf.json
 fi
 [ "$MODE" = "build" ] && exit 0
+[ "$(uname -s)" = "Darwin" ] && { echo "tauri-driver has no macOS support. Run the test step on Linux or Windows." >&2; exit 1; }
+command -v tauri-driver > /dev/null || { echo "tauri-driver not found. Run: cargo install tauri-driver --locked" >&2; exit 1; }
 if [ "$(uname -s)" = "Linux" ] && [ -z "${DISPLAY:-}" ]; then
   xvfb-run -a node --test e2e/probe.test.mjs
 else
