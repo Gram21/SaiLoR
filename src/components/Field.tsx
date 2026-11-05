@@ -1,5 +1,6 @@
 // [impl->req~dat-410~1]
-import { useEffect, useRef, useState } from 'react'
+// [impl->req~edt-310~1]
+import { useContext, useEffect, useRef, useState } from 'react'
 import {
   deferredConsolidationKey,
   fieldPath,
@@ -16,6 +17,7 @@ import { parseYear, YEAR_MIN, YEAR_MAX } from '../model/year'
 import { useT, tp } from '../i18n'
 import { ComboBox } from './ComboBox'
 import { useConsolidationFieldStatus } from './ConsolidationVerdicts'
+import { AnnotationFormContext } from './AnnotationFormContext'
 
 const MAX_TEXTAREA_HEIGHT = 240
 
@@ -33,7 +35,9 @@ interface FieldProps {
 /** Renders the editable control for a single field instance, plus a "grab from PDF" button. */
 export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   const t = useT()
-  const setFieldValue = useStore((s) => s.setFieldValue)
+  const form = useContext(AnnotationFormContext)
+  const storeSetFieldValue = useStore((s) => s.setFieldValue)
+  const setFieldValue = form?.setFieldValue ?? storeSetFieldValue
   const [hint, setHint] = useState<string | null>(null)
   const [draft, setDraft] = useState<string | null>(null)
   const set = (v: FieldValue, typed?: string) => {
@@ -49,7 +53,9 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
 
   // Reaching the control at all — clicking it, or tabbing into it — is the
   // reviewer confirming they have seen what the AI put there, so the mark goes.
-  const [marked, confirm] = useAiMark(path, def.name, index)
+  const [aiMarked, confirmAiMark] = useAiMark(path, def.name, index)
+  const marked = aiMarked && !form
+  const confirm = form ? () => {} : confirmAiMark
   const markClass = marked ? ' ai-marked' : ''
   const canonical = fieldPath(path, def.name, index)
   const linkPopoverOpen = useStore((s) => s.openLinkPopoverField === canonical)
@@ -58,9 +64,9 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
     if (s.currentReviewer !== 'consolidation' || !s.currentPaperId) return false
     return !!s.deferredConsolidations[deferredConsolidationKey(s.currentPaperId, canonical)]
   })
-  const deferredClass = deferred ? ' consolidation-pending' : ''
+  const deferredClass = deferred && !form ? ' consolidation-pending' : ''
   const verdict = useConsolidationFieldStatus(canonical)
-  const verdictClass = verdict ? ` consolidation-${verdict}` : ''
+  const verdictClass = verdict && !form ? ` consolidation-${verdict}` : ''
 
   // Only Consolidation gets the compare popup — everyone else has one tree to reconcile.
   const isConsolidation = useStore((s) => s.currentReviewer === 'consolidation')
@@ -76,7 +82,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
       : false,
   )
   // [impl->req~ann-100~1]
-  const compareBtn = isConsolidation && (
+  const compareBtn = isConsolidation && !form && (
     <button
       type="button"
       className="compare-btn"
@@ -93,7 +99,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
   const linkCount = useLinkedMarkCount(path, def.name, index)
   const linkBtnRef = useRef<HTMLButtonElement>(null)
   // [impl->req~ann-50~1]
-  const linkBtn = (
+  const linkBtn = !form && (
     <div className="field-link-wrap">
       <button
         ref={linkBtnRef}
@@ -157,7 +163,7 @@ export function Field({ def, path, index, value, ariaLabel }: FieldProps) {
 
   // A string field with `options` is an enum → dropdown (no free-text grab).
   const isEnum = def.type === 'string' && !!def.options && def.options.length > 0
-  const canGrab = def.type === 'number' || def.type === 'year' || (def.type === 'string' && !isEnum)
+  const canGrab = !form && (def.type === 'number' || def.type === 'year' || (def.type === 'string' && !isEnum))
 
   return (
     <>
