@@ -516,8 +516,8 @@ export class DesktopAdapter implements PlatformAdapter {
 
   // ---- Plain-text export ----
 
-  pickTextExportPath(suggestedName: string): Promise<string | null> {
-    return bridge().pickTextExportPath(suggestedName)
+  pickTextExportPath(suggestedName: string, extension?: string): Promise<string | null> {
+    return bridge().pickTextExportPath(suggestedName, extension)
   }
 
   writeTextFile(absPath: string, text: string): Promise<{ ok: true; path: string } | { ok: false; error: string }> {

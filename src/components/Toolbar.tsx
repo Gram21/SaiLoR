@@ -19,6 +19,7 @@ import type { GitProbe, GitRepoInfo } from '../git/types'
 import { aiSeatId, seatLabel } from '../model/project'
 import { canUpdateProject, metadataSeatKey } from '../model/metadata'
 import { MetadataDialog } from './MetadataDialog'
+import { ExportGraphDialog } from './ExportGraphDialog'
 import { t, tp, useT, type MessageKey } from '../i18n'
 
 /** Shown on every git entry point in the browser build, where `getGit()` is
@@ -197,6 +198,7 @@ export function Toolbar() {
   // other feedback at all.
   const [showSaved, setShowSaved] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
+  const [graphOpen, setGraphOpen] = useState(false)
   useEffect(() => {
     if (lastSavedAt === null) return
     setShowSaved(true)
@@ -555,8 +557,18 @@ export function Toolbar() {
               {t('toolbar.metadata.label')}
             </button>
           )}
+          <button
+            type="button"
+            className="tb-btn"
+            title={t('toolbar.graph.title')}
+            onClick={() => setGraphOpen(true)}
+            disabled={!project || busy || editorOpen}
+          >
+            {t('toolbar.graph.label')}
+          </button>
         </div>
         {metadataOpen && <MetadataDialog onClose={() => setMetadataOpen(false)} />}
+        {graphOpen && <ExportGraphDialog onClose={() => setGraphOpen(false)} />}
 
         <div className="toolbar-view">
           <div className="font-controls" role="group" aria-label={t('toolbar.font.group')}>
