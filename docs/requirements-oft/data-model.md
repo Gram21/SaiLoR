@@ -816,8 +816,8 @@ Tags: Functional, Functional_Suitability
 
 ## PDF folder watch
 
-### REQ-DAT-500: PDF folder setting
-`req~dat-500~1`
+### REQ-DAT-530: PDF folder setting
+`req~dat-530~1`
 
 The system shall read the optional project key `config.pdfFolder`. The value shall be a relative path inside the folder of the project file, with `/` between the folder names. Each folder name shall obey the rules of an annotations folder name (REQ-DAT-165). If the key is absent or not allowed, the system shall not scan a folder. The system shall write the key only when it has a value, so that a project without the key opens and saves unchanged.
 
@@ -831,8 +831,8 @@ Needs: impl, utest
 
 Tags: Functional, Functional_Suitability, Security, Compatibility
 
-### REQ-DAT-510: Find new PDF files by file hash
-`req~dat-510~1`
+### REQ-DAT-540: Find new PDF files by file hash
+`req~dat-540~1`
 
 A scan shall list each PDF file in the PDF folder and its subfolders. The system shall compare files by their SHA-256 hash, not by their names. A file shall be new when its hash differs from the hash of the PDF file of each paper, from each paper key `pdfSha256` and from each hash in the root key `ignoredPdfs`. Two files with the same hash shall give one new entry. A second scan after the user added a file shall not offer the file again.
 
@@ -846,10 +846,10 @@ Needs: impl, utest
 
 Tags: Functional, Functional_Suitability, Reliability
 
-### REQ-DAT-520: Propose metadata for a new PDF file
-`req~dat-520~1`
+### REQ-DAT-550: Propose metadata for a new PDF file
+`req~dat-550~1`
 
-For each new PDF file, the system shall propose a title, authors, a year and a DOI. The system shall first read the embedded PDF information and the first page (source `pdfinfo`). If the Crossref lookup is on (REQ-DAT-530) and the system found a DOI, a value from Crossref (source `crossref`) shall replace the value from the PDF file. If no source gives a title, the title shall come from the file name (source `filename`). A title from the file name shall flag the entry as "metadata missing". A value that the user changes shall get the source `manual`. The system shall not use an AI model. For an added paper, the system shall write the hash into the paper key `pdfSha256` and the source of each value into the paper key `metadataSource`.
+For each new PDF file, the system shall propose a title, authors, a year and a DOI. The system shall first read the embedded PDF information and the first page (source `pdfinfo`). If the Crossref lookup is on (REQ-DAT-560) and the system found a DOI, a value from Crossref (source `crossref`) shall replace the value from the PDF file. If no source gives a title, the title shall come from the file name (source `filename`). A title from the file name shall flag the entry as "metadata missing". A value that the user changes shall get the source `manual`. The system shall not use an AI model. For an added paper, the system shall write the hash into the paper key `pdfSha256` and the source of each value into the paper key `metadataSource`.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
@@ -861,8 +861,8 @@ Needs: impl, utest
 
 Tags: Functional, Functional_Suitability
 
-### REQ-DAT-530: Crossref lookup setting
-`req~dat-530~1`
+### REQ-DAT-560: Crossref lookup setting
+`req~dat-560~1`
 
 The system shall read the optional project key `config.crossrefLookup`. Only the value `true` shall turn the lookup on. The default shall be off. When the lookup is off, a scan shall not send data to a network service. When the lookup is on, the system shall send only the found DOI to `api.crossref.org`. The system shall write the key only when the lookup is on.
 
@@ -876,8 +876,8 @@ Needs: impl, utest
 
 Tags: Functional, Functional_Suitability, Security
 
-### REQ-DAT-540: Keep papers and identifiers on a scan
-`req~dat-540~1`
+### REQ-DAT-570: Keep papers and identifiers on a scan
+`req~dat-570~1`
 
 A scan shall never delete or reorder papers. The system shall add each confirmed paper at the end of the paper list. The identifier of an added paper shall come from its file name, as in the project editor, with a number suffix when the identifier is already in use. The system shall not change the identifier later, except in a merge by hash (REQ-GIT-600).
 
@@ -1228,7 +1228,7 @@ Tags: Functional, Functional_Suitability
 ### REQ-EDT-200: Set the PDF folder and the Crossref lookup
 `req~edt-200~1`
 
-The project editor shall let the user set the PDF folder (REQ-DAT-500) and turn the Crossref lookup on or off (REQ-DAT-530). The Crossref lookup shall be off by default. The editor shall show why a PDF folder is not allowed. Each change shall be part of the editor undo history.
+The project editor shall let the user set the PDF folder (REQ-DAT-530) and turn the Crossref lookup on or off (REQ-DAT-560). The Crossref lookup shall be off by default. The editor shall show why a PDF folder is not allowed. Each change shall be part of the editor undo history.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability)

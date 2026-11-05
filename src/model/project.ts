@@ -848,8 +848,8 @@ export function loadProject(input: string | unknown): Project {
   }
 }
 
-// [impl->req~dat-500~1]
 // [impl->req~dat-530~1]
+// [impl->req~dat-560~1]
 function pdfFolderFields(pdfFolder: string | undefined, crossrefLookup: boolean | undefined): { pdfFolder?: string; crossrefLookup?: boolean } {
   return { ...(pdfFolder ? { pdfFolder } : {}), ...(crossrefLookup ? { crossrefLookup: true } : {}) }
 }

@@ -3831,9 +3831,9 @@ export const useStore = create<AppState>()(
       return projectGeneration === generation ? out : []
     },
 
-    // [impl->req~dat-510~1]
-    // [impl->req~dat-520~1]
-    // [impl->req~dat-530~1]
+    // [impl->req~dat-540~1]
+    // [impl->req~dat-550~1]
+    // [impl->req~dat-560~1]
     // [impl->req~ann-210~1]
     // [impl->req~lst-90~1]
     scanPdfFolder: async (manual = false) => {
@@ -3919,8 +3919,8 @@ export const useStore = create<AppState>()(
     },
 
     // [impl->req~ann-200~1]
-    // [impl->req~dat-520~1]
-    // [impl->req~dat-540~1]
+    // [impl->req~dat-550~1]
+    // [impl->req~dat-570~1]
     addPdfPapers: (proposals) => {
       const prev = get()
       if (prev.readOnly || !prev.project) return 0

@@ -20,12 +20,12 @@ export interface PdfProposal {
   sources: MetadataSources
 }
 
-// [impl->req~dat-500~1]
+// [impl->req~dat-530~1]
 export function parsePdfFolder(raw: unknown): string | undefined {
   return typeof raw === 'string' && raw !== '' ? raw : undefined
 }
 
-// [impl->req~dat-500~1]
+// [impl->req~dat-530~1]
 export function pdfFolderProblem(folder: string): string | null {
   for (const segment of folder.split('/')) {
     const problem = annotationsDirProblem(segment)
@@ -60,7 +60,7 @@ export function pdfHashOf(paper: Pick<Paper, 'extra'>): string | undefined {
   return typeof h === 'string' ? h : undefined
 }
 
-// [impl->req~dat-510~1]
+// [impl->req~dat-540~1]
 export function newPdfFiles(papers: Pick<Paper, 'extra'>[], scan: PdfFolderScan, ignored: string[]): PdfFile[] {
   const seen = new Set<string>(ignored)
   for (const h of scan.known) if (h && h !== 'missing') seen.add(h)
@@ -82,12 +82,12 @@ export function missingPaperIds(papers: Pick<Paper, 'id'>[], known: PdfFolderSca
   return papers.filter((_, i) => known[i] === 'missing').map((p) => p.id)
 }
 
-// [impl->req~dat-530~1]
+// [impl->req~dat-560~1]
 export function crossrefUrl(doi: string): string {
   return `https://api.crossref.org/works/${encodeURIComponent(doi)}`
 }
 
-// [impl->req~dat-520~1]
+// [impl->req~dat-550~1]
 export function parseCrossrefWork(body: string): MetadataValues {
   let m: Record<string, unknown>
   try {
@@ -115,7 +115,7 @@ export function parseCrossrefWork(body: string): MetadataValues {
   return out
 }
 
-// [impl->req~dat-520~1]
+// [impl->req~dat-550~1]
 export function proposeNewPaper(file: PdfFile, meta: PdfMeta, crossref?: MetadataValues): PdfProposal {
   const values: MetadataValues = {}
   const sources: MetadataSources = {}
@@ -132,8 +132,8 @@ export function proposeNewPaper(file: PdfFile, meta: PdfMeta, crossref?: Metadat
   return { file, values, sources }
 }
 
-// [impl->req~dat-520~1]
-// [impl->req~dat-540~1]
+// [impl->req~dat-550~1]
+// [impl->req~dat-570~1]
 export function newPaper(
   project: Pick<Project, 'schema' | 'reviewers'>,
   proposal: PdfProposal,
