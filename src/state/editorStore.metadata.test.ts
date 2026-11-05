@@ -30,15 +30,15 @@ describe('metadata edit setting', () => {
   })
 
   it('reads the mode of an opened project and defaults to off', () => {
-    expect(editorStateFromOpened(opened({ metadataEdit: 'project' })).metadataEdit).toBe('project')
+    expect(editorStateFromOpened(opened({ metadataEdit: 'project' })).metadataEdit).toBe('annotation')
     expect(editorStateFromOpened(opened({})).metadataEdit).toBe('off')
   })
 
   it('is its own undo step', () => {
     useEditorStore.setState({ metadataEdit: 'off', dirty: false, past: [], future: [] })
     const s = () => useEditorStore.getState()
-    s().setMetadataEdit('project')
-    expect(s().metadataEdit).toBe('project')
+    s().setMetadataEdit('annotation')
+    expect(s().metadataEdit).toBe('annotation')
     expect(s().dirty).toBe(true)
     s().undo()
     expect(s().metadataEdit).toBe('off')

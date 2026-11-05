@@ -134,3 +134,7 @@ per category so requirements can be inserted without renumbering.
   REQ-ANN-180 and REQ-LST-80 added for the Metadata dialog and the paper list badge. REQ-CON-530 added for
   the consolidation of metadata overrides. REQ-GIT-580 added for the merge and commit of the overrides.
   The coverage counts above were recounted with `trace_stats.py`.
+- **Metadata as annotation (2026-11-05).** REQ-DAT-430, REQ-DAT-440, REQ-DAT-450, REQ-DAT-460, REQ-DAT-470,
+  REQ-EDT-180, REQ-ANN-180, REQ-LST-80 and REQ-CON-530 revised. A correction is now an annotation in the seat file.
+  Only the confirmed update after consolidation writes into `project.json`. The mode `project` reads as `annotation`.
+  REQ-GIT-580 revised for the conflict row of `config.metadataEdit`. The requirement count did not change.

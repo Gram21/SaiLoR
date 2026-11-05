@@ -9,11 +9,12 @@ import { loadProject, projectFromFiles, serializeProject, splitProjectFiles, typ
 import {
   applyProjectEdit,
   applySeatEdit,
+  canUpdateProject,
   editedFields,
   effectiveMetadata,
   mergeSeatMetadata,
   metadataFingerprint,
-  metadataTarget,
+  metadataSeatKey,
   parseMetadataEditMode,
   proposeFromPdf,
   recordIgnored,
@@ -46,31 +47,34 @@ describe('metadata edit mode', () => {
     expect(JSON.parse(serializeProject(project({ metadataEdit: 'off' }))).config).not.toHaveProperty('metadataEdit')
   })
 
-  it('reads and writes project and annotation', () => {
-    for (const mode of ['project', 'annotation'] as const) {
+  it('reads and writes annotation, and reads the old project mode as annotation', () => {
+    for (const mode of ['project', 'annotation']) {
       const p = project({ metadataEdit: mode })
-      expect(p.metadataEdit).toBe(mode)
-      expect(JSON.parse(serializeProject(p)).config.metadataEdit).toBe(mode)
-      expect(reopen(p).metadataEdit).toBe(mode)
+      expect(p.metadataEdit).toBe('annotation')
+      expect(JSON.parse(serializeProject(p)).config.metadataEdit).toBe('annotation')
+      expect(reopen(p).metadataEdit).toBe('annotation')
     }
   })
 
-  it('routes each seat to its target', () => {
-    expect(metadataTarget(project(), null)).toBeNull()
-    expect(metadataTarget(project({ metadataEdit: 'project' }), null)).toBe('project')
-    expect(metadataTarget(project({ metadataEdit: 'annotation' }), null)).toBe('project')
+  it('routes each seat to its annotation file and only Consolidation or the only reviewer to the project', () => {
+    expect(metadataSeatKey(project(), null)).toBeNull()
+    expect(canUpdateProject(project(), null)).toBe(false)
+    const single = project({ metadataEdit: 'annotation' })
+    expect(metadataSeatKey(single, null)).toBe('1')
+    expect(canUpdateProject(single, null)).toBe(true)
     const multi = project({ metadataEdit: 'annotation', reviewers: 3, ai: true, aiSeat: true })
-    expect(metadataTarget(multi, null)).toBeNull()
-    expect(metadataTarget(multi, '1')).toBe('seat')
-    expect(metadataTarget(multi, '3')).toBeNull()
-    expect(metadataTarget(multi, 'consolidation')).toBe('project')
-    expect(metadataTarget({ ...multi, metadataEdit: 'project' }, '1')).toBe('project')
+    expect(metadataSeatKey(multi, null)).toBeNull()
+    expect(metadataSeatKey(multi, '1')).toBe('1')
+    expect(metadataSeatKey(multi, '3')).toBeNull()
+    expect(metadataSeatKey(multi, 'consolidation')).toBeNull()
+    expect(canUpdateProject(multi, '1')).toBe(false)
+    expect(canUpdateProject(multi, 'consolidation')).toBe(true)
   })
 })
 
 describe('applyProjectEdit', () => {
   it('records the first value and drops it when the value returns', () => {
-    const p = project({ metadataEdit: 'project' })
+    const p = project({ metadataEdit: 'annotation' })
     const paper = p.papers[0]
     applyProjectEdit(paper, { title: 'Original Title', doi: '10.1/x' })
     applyProjectEdit(paper, { title: 'Original Title 2' })
@@ -119,8 +123,22 @@ describe('metadata storage round trip', () => {
     expect(loadProject(serializeProject(p)).papers[0].reviewMetadata).toEqual(p.papers[0].reviewMetadata)
   })
 
-  it('keeps project corrections and their original values', () => {
-    const p = project({ metadataEdit: 'project' })
+  it('keeps single-reviewer corrections in the seat 1 file', () => {
+    const p = project({ metadataEdit: 'annotation' })
+    applySeatEdit(p.papers[0], '1', { title: 'Original Title' })
+    const { meta, files } = splitProjectFiles(p)
+    expect((meta as { papers: Record<string, unknown>[] }).papers[0].title).toBe('Orignal Title')
+    expect(JSON.parse(files.find((f) => f.relPath === 'p1/reviewer-1.json')!.text!)).toEqual({
+      metadataOverrides: { title: 'Original Title' },
+    })
+    const back = reopen(p).papers[0]
+    expect(back.title).toBe('Orignal Title')
+    expect(back.reviewMetadata).toEqual({ '1': { overrides: { title: 'Original Title' } } })
+    expect(loadProject(serializeProject(p)).papers[0].reviewMetadata).toEqual(back.reviewMetadata)
+  })
+
+  it('keeps updated project values and their original values', () => {
+    const p = project({ metadataEdit: 'annotation' })
     applyProjectEdit(p.papers[0], { title: 'Original Title' })
     const back = reopen(p).papers[0]
     expect(back.title).toBe('Original Title')

@@ -17,7 +17,7 @@ import { SidebarToggle } from './SidebarToggle'
 import { StrictPersonBar } from './StrictPersonBar'
 import type { GitProbe, GitRepoInfo } from '../git/types'
 import { aiSeatId, seatLabel } from '../model/project'
-import { metadataTarget } from '../model/metadata'
+import { canUpdateProject, metadataSeatKey } from '../model/metadata'
 import { MetadataDialog } from './MetadataDialog'
 import { t, tp, useT, type MessageKey } from '../i18n'
 
@@ -165,6 +165,8 @@ export function Toolbar() {
   const setHelpOpen = useStore((s) => s.setHelpOpen)
   const setUserSettingsOpen = useStore((s) => s.setUserSettingsOpen)
   const currentReviewer = useStore((s) => s.currentReviewer)
+  const metadataUnavailable =
+    !!project && metadataSeatKey(project, currentReviewer) === null && !canUpdateProject(project, currentReviewer)
   const selectReviewer = useStore((s) => s.selectReviewer)
   const readOnly = useStore((s) => s.readOnly)
   const setReadOnly = useStore((s) => s.setReadOnly)
@@ -546,13 +548,9 @@ export function Toolbar() {
             <button
               type="button"
               className="tb-btn"
-              title={
-                metadataTarget(project, currentReviewer) === null
-                  ? t('toolbar.metadata.unavailable')
-                  : t('toolbar.metadata.title')
-              }
+              title={metadataUnavailable ? t('toolbar.metadata.unavailable') : t('toolbar.metadata.title')}
               onClick={() => setMetadataOpen(true)}
-              disabled={readOnly || busy || editorOpen || metadataTarget(project, currentReviewer) === null}
+              disabled={readOnly || busy || editorOpen || metadataUnavailable}
             >
               {t('toolbar.metadata.label')}
             </button>

@@ -664,6 +664,37 @@ The key is optional. The app writes it only when the value is not `off`.
 | Value | Effect |
 | --- | --- |
 | `off` | The default. The metadata is read-only. |
+| `annotation` | A correction is an annotation. It goes into the annotation file of the seat. |
+
+The app reads the old value `project` as `annotation`.
+
+A correction has two steps. First, a reviewer saves the correction as an annotation.
+Then a confirmed update writes the agreed values into `project.json`.
+
+Open the **Metadata** dialog from the toolbar. The dialog shows the current paper.
+Click **Check PDFs** to read the title, the authors and the DOI from each PDF file.
+The app reads the PDF files on your computer. It uses no network service and no AI model.
+The app proposes a value only when it differs from the current value.
+For each entry, you can edit the values, save the entry, skip it or ignore it.
+**Save** writes the changed fields into `metadataOverrides` of the seat file `reviewer-N.json`.
+**Skip** hides the entry until you open the dialog again.
+**Ignore** stores the proposed values, so that the app does not propose them again.
+**Save all** saves each proposal at once. You can undo it in one step.
+
+The Consolidation seat shows one entry per paper with overrides.
+With one reviewer, seat 1 shows these entries for its own overrides.
+A field that no seat changed keeps its value. A field is agreed only when every
+human seat changed it to the same value. Any other changed field is a disagreement, and the
+dialog shows the value of each seat. **Update project metadata** writes the values
+into `project.json`. **Accept all** skips entries with a disagreement.
+**Ignore** keeps the values in `project.json`.
+The app keeps the first value of each changed field in the paper key `metadataOriginal`.
+
+The paper `id` never changes. No dialog lets you edit it.
+A badge in the paper list marks each paper with a corrected field.
+
+--- | --- |
+| `off` | The default. The metadata is read-only. |
 | `project` | A confirmed correction goes into the paper in `project.json`. |
 | `annotation` | A confirmed correction of a numbered seat goes into the annotation file of that seat. |
 

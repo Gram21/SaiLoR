@@ -8,7 +8,7 @@ import { useStore, selectCurrentPaper, currentTree, currentFinished, consolidati
 import { normalizeTree, isFieldVisible } from '../model/annotations'
 import { useT } from '../i18n'
 import { aiSeatId, seatLabel } from '../model/project'
-import { effectiveMetadata } from '../model/metadata'
+import { effectiveMetadata, metadataSeatKey } from '../model/metadata'
 import { paperCompleteness, paperAnnotationState } from './PaperList'
 import { paperVerdicts } from '../consolidate/disagreements'
 import { AnnotationNode } from './AnnotationNode'
@@ -210,7 +210,7 @@ export function AnnotationPanel() {
           )}
         </div>
         <div className="annotations-paper-title">
-          {effectiveMetadata(paper, currentReviewer).title}
+          {effectiveMetadata(paper, project ? metadataSeatKey(project, currentReviewer) : null).title}
           {/* A second, redundant cue (besides the toolbar switch) right where the
               data is being edited — worth the repetition, since this is exactly
               what makes a multi-reviewer file trustworthy. */}

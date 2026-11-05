@@ -1489,4 +1489,17 @@ describe('merge of metadata overrides', () => {
     expectMerged(outcome)
     expect(outcome.merged.metadataEdit).toBe('annotation')
   })
+
+  it('asks which mode to keep when both sides set different modes', () => {
+    const base: Project = { ...withMeta(), metadataEdit: 'later' as Project['metadataEdit'] }
+    const theirs: Project = { ...withMeta(), metadataEdit: 'annotation' }
+    const outcome = mergeProjects(base, withMeta(), theirs)
+    expectMerged(outcome)
+    const row = outcome.conflicts.find((c) => c.canonical === 'metadataEdit')!
+    expect(row.type).toBe('choice')
+    expect(row.tree).toEqual({ kind: 'project' })
+    expect(outcome.merged.metadataEdit).toBeUndefined()
+    expect(applyResolutions(outcome.merged, outcome.conflicts, { [row.id]: 'theirs' }).metadataEdit).toBe('annotation')
+    expect(applyResolutions(outcome.merged, outcome.conflicts, { [row.id]: 'ours' }).metadataEdit).toBeUndefined()
+  })
 })

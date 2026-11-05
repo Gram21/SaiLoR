@@ -34,22 +34,28 @@ beforeEach(() => {
 })
 
 describe('MetadataDialog', () => {
-  it('writes a manual correction only after Accept', async () => {
-    open({ metadataEdit: 'project' })
+  it('saves a manual correction as an annotation and writes the project only on update', async () => {
+    open({ metadataEdit: 'annotation' })
     st().selectPaper('p1')
     render(<MetadataDialog onClose={() => {}} />)
     const title = within(entry('p1')).getByRole('textbox', { name: 'Title' })
     await userEvent.clear(title)
     await userEvent.type(title, 'Original Title')
+    expect(st().project!.papers[0].reviewMetadata).toBeUndefined()
+    await userEvent.click(within(entry('p1')).getByRole('button', { name: 'Save' }))
     expect(st().project!.papers[0].title).toBe('Orignal Title')
-    await userEvent.click(within(entry('p1')).getByRole('button', { name: 'Accept' }))
+    expect(st().project!.papers[0].reviewMetadata).toEqual({ '1': { overrides: { title: 'Original Title' } } })
+    expect(screen.queryByRole('heading', { name: 'Current paper: p1' })).toBeNull()
+    const section = screen.getByRole('heading', { name: 'Reviewer corrections: p1' }).closest('section')!
+    expect(within(section).queryByRole('textbox', { name: /id/i })).toBeNull()
+    await userEvent.click(within(section).getByRole('button', { name: 'Update project metadata' }))
     expect(st().project!.papers[0].title).toBe('Original Title')
     expect(st().project!.papers[0].id).toBe('p1')
     expect(screen.queryByRole('region', { name: 'p1' })).toBeNull()
   })
 
   it('changes nothing on Skip', async () => {
-    open({ metadataEdit: 'project' })
+    open({ metadataEdit: 'annotation' })
     st().selectPaper('p1')
     render(<MetadataDialog onClose={() => {}} />)
     await userEvent.click(within(entry('p1')).getByRole('button', { name: 'Skip' }))
@@ -57,8 +63,8 @@ describe('MetadataDialog', () => {
     expect(st().dirty).toBe(false)
   })
 
-  it('accepts all proposals at once and remembers an ignored one', async () => {
-    open({ metadataEdit: 'project' })
+  it('saves all proposals at once and remembers an ignored one', async () => {
+    open({ metadataEdit: 'annotation' })
     useStore.setState({
       scanPdfMetadata: vi.fn(async () => [
         { paperId: 'p1', values: { doi: '10.1/a' } },
@@ -69,10 +75,14 @@ describe('MetadataDialog', () => {
     await userEvent.click(screen.getByRole('button', { name: 'Check PDFs' }))
     await userEvent.click(within(entry('p2')).getByRole('button', { name: 'Ignore' }))
     expect(st().project!.papers[1].title).toBe('Second')
-    expect(st().project!.papers[1].extra.metadataIgnored).toEqual({ title: 'Junk' })
+    expect(st().project!.papers[1].reviewMetadata).toEqual({ '1': { ignored: { title: 'Junk' } } })
+    await userEvent.click(screen.getByRole('button', { name: 'Save all (1)' }))
+    expect(st().project!.papers[0].doi).toBeUndefined()
+    expect(st().project!.papers[0].reviewMetadata?.['1']?.overrides).toEqual({ doi: '10.1/a' })
+    expect(st().past.length).toBe(2)
     await userEvent.click(screen.getByRole('button', { name: 'Accept all (1)' }))
     expect(st().project!.papers[0].doi).toBe('10.1/a')
-    expect(st().past.length).toBe(2)
+    expect(st().past.length).toBe(3)
   })
 
   it('shows a disagreement between reviewers in Consolidation', () => {
@@ -91,7 +101,7 @@ describe('MetadataDialog', () => {
 
 describe('paper list badge', () => {
   it('marks a corrected paper and shows the corrected title', () => {
-    open({ metadataEdit: 'project' })
+    open({ metadataEdit: 'annotation' })
     st().applyMetadataEdits([{ paperId: 'p1', values: { title: 'Original Title' } }])
     render(<PaperList />)
     expect(screen.getByText('Original Title')).toBeInTheDocument()

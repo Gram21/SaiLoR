@@ -5,16 +5,17 @@ import { useEffect, useMemo, useState } from 'react'
 import { metadataSeat, useStore, type MetadataEdit } from '../state/store'
 import {
   METADATA_FIELDS,
+  canUpdateProject,
   consolidationPending,
   effectiveMetadata,
   humanSeats,
   mergeSeatMetadata,
-  metadataTarget,
+  metadataSeatKey,
   type FieldMerge,
   type MetadataField,
   type MetadataValues,
 } from '../model/metadata'
-import { seatLabel, type Paper, type Project } from '../model/project'
+import { seatLabel, type Paper } from '../model/project'
 import { parseYear } from '../model/year'
 import { useT } from '../i18n'
 
@@ -61,10 +62,6 @@ function shown(v: unknown, none: string): string {
   return Array.isArray(v) ? v.join(', ') : String(v)
 }
 
-function seatKeyFor(project: Project, seat: string | null): string | null {
-  return metadataTarget(project, seat) === 'seat' ? seat : null
-}
-
 /** Lists the current paper, the PDF proposals and, in Consolidation, the reviewer corrections. */
 export function MetadataDialog({ onClose }: { onClose: () => void }) {
   const t = useT()
@@ -92,12 +89,12 @@ export function MetadataDialog({ onClose }: { onClose: () => void }) {
     const seatState = { project, strictPerson, currentReviewer }
     const out: Entry[] = []
     const current = project.papers.find((p) => p.id === currentPaperId)
-    const currentSeat = current ? metadataSeat(seatState, current.id) : null
-    if (current && metadataTarget(project, currentSeat)) {
-      const base = toDraft(effectiveMetadata(current, seatKeyFor(project, currentSeat)))
+    const currentKey = current ? metadataSeatKey(project, metadataSeat(seatState, current.id)) : null
+    if (current && currentKey) {
+      const base = toDraft(effectiveMetadata(current, currentKey))
       out.push({ key: `current:${current.id}`, kind: 'current', paper: current, base, start: base })
     }
-    if (currentReviewer === 'consolidation' && project.metadataEdit === 'annotation' && project.reviewers > 1) {
+    if (canUpdateProject(project, currentReviewer)) {
       const seats = humanSeats(project)
       for (const paper of project.papers) {
         if (!consolidationPending(paper, seats)) continue
@@ -117,7 +114,9 @@ export function MetadataDialog({ onClose }: { onClose: () => void }) {
     for (const prop of proposals ?? []) {
       const paper = project.papers.find((p) => p.id === prop.paperId)
       if (!paper) continue
-      const current = effectiveMetadata(paper, seatKeyFor(project, metadataSeat(seatState, paper.id)))
+      const seatKey = metadataSeatKey(project, metadataSeat(seatState, paper.id))
+      if (!seatKey) continue
+      const current = effectiveMetadata(paper, seatKey)
       out.push({
         key: `proposal:${paper.id}`,
         kind: 'proposal',
@@ -134,28 +133,28 @@ export function MetadataDialog({ onClose }: { onClose: () => void }) {
 
   const draftOf = (e: Entry) => drafts[e.key] ?? e.start
   const hide = (keys: string[]) => setHidden((prev) => new Set([...prev, ...keys]))
-  const editOf = (e: Entry): MetadataEdit => ({
-    paperId: e.paper.id,
-    values: fromDraft(draftOf(e), e.base),
-    ...(e.kind === 'consolidation' ? { settle: true } : {}),
-  })
-  const accept = (e: Entry) => {
+  const editOf = (e: Entry): MetadataEdit => {
+    const values = fromDraft(draftOf(e), e.base)
+    return e.kind === 'consolidation' ? { paperId: e.paper.id, update: values } : { paperId: e.paper.id, values }
+  }
+  const submit = (e: Entry) => {
     applyMetadataEdits([editOf(e)])
     hide([e.key])
   }
   const ignore = (e: Entry) => {
     if (e.kind === 'proposal') applyMetadataEdits([{ paperId: e.paper.id, ignore: e.proposal }])
-    else applyMetadataEdits([{ paperId: e.paper.id, settle: true }])
+    else applyMetadataEdits([{ paperId: e.paper.id, update: {} }])
     hide([e.key])
   }
-  const bulk = entries.filter(
-    (e) => e.kind === 'proposal' || (e.kind === 'consolidation' && e.merge!.every((m) => m.agreed)),
-  )
-  const acceptAll = () => {
-    const ok = bulk.filter((e) => !badYear(draftOf(e)))
+  const confirmAll = (list: Entry[]) => {
+    const ok = list.filter((e) => !badYear(draftOf(e)))
     applyMetadataEdits(ok.map(editOf))
     hide(ok.map((e) => e.key))
   }
+  const saveable = entries.filter((e) => e.kind === 'proposal')
+  const acceptable = entries.filter((e) => e.kind === 'consolidation' && e.merge!.every((m) => m.agreed))
+  const annotator = currentPaperId !== null && metadataSeatKey(project, metadataSeat({ project, strictPerson, currentReviewer }, currentPaperId)) !== null
+  const updater = canUpdateProject(project, currentReviewer)
   const check = async () => {
     setScanning(true)
     try {
@@ -184,18 +183,32 @@ export function MetadataDialog({ onClose }: { onClose: () => void }) {
         </div>
         <div className="modal-body">
           <div className="screening-import-actions">
-            <button type="button" title={t('metadata.checkTitle')} disabled={scanning} onClick={() => void check()}>
-              {scanning ? t('metadata.checking') : t('metadata.check')}
-            </button>
-            <button
-              type="button"
-              className="primary"
-              title={t('metadata.acceptAllTitle')}
-              disabled={scanning || bulk.length === 0}
-              onClick={acceptAll}
-            >
-              {t('metadata.acceptAll', { count: bulk.length })}
-            </button>
+            {annotator && (
+              <>
+                <button type="button" title={t('metadata.checkTitle')} disabled={scanning} onClick={() => void check()}>
+                  {scanning ? t('metadata.checking') : t('metadata.check')}
+                </button>
+                <button
+                  type="button"
+                  title={t('metadata.saveAllTitle')}
+                  disabled={scanning || saveable.length === 0}
+                  onClick={() => confirmAll(saveable)}
+                >
+                  {t('metadata.saveAll', { count: saveable.length })}
+                </button>
+              </>
+            )}
+            {updater && (
+              <button
+                type="button"
+                className="primary"
+                title={t('metadata.acceptAllTitle')}
+                disabled={acceptable.length === 0}
+                onClick={() => confirmAll(acceptable)}
+              >
+                {t('metadata.acceptAll', { count: acceptable.length })}
+              </button>
+            )}
           </div>
           {proposals !== null && proposals.length === 0 && <p>{t('metadata.noProposals')}</p>}
           {entries.length === 0 && <p>{t('metadata.empty')}</p>}
@@ -249,11 +262,11 @@ export function MetadataDialog({ onClose }: { onClose: () => void }) {
                   <button
                     type="button"
                     className="primary"
-                    title={t('metadata.acceptTitle')}
+                    title={e.kind === 'consolidation' ? t('metadata.acceptTitle') : t('metadata.saveTitle')}
                     disabled={badYear(draft)}
-                    onClick={() => accept(e)}
+                    onClick={() => submit(e)}
                   >
-                    {t('metadata.accept')}
+                    {e.kind === 'consolidation' ? t('metadata.accept') : t('metadata.save')}
                   </button>
                 </div>
               </section>

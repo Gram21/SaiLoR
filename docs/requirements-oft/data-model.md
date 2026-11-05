@@ -742,11 +742,11 @@ Tags: Functional, Functional_Suitability
 ### REQ-DAT-430: Metadata correction mode
 `req~dat-430~1`
 
-The system shall read the optional project key `config.metadataEdit` with the values `off`, `project` and `annotation`. An absent or unknown value shall mean `off`. The system shall write the key only when the value is not `off`, so that a project without the key opens and saves unchanged. With `off`, the title, authors, year and DOI of a paper shall stay read-only in the annotation view.
+The system shall read the optional project key `config.metadataEdit` with the values `off` and `annotation`. The system shall read the old value `project` as `annotation`. An absent or unknown value shall mean `off`. The system shall write the key only when the value is not `off`, so that a project without the key opens and saves unchanged. With `off`, the title, authors, year and DOI of a paper shall stay read-only in the annotation view.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Compatibility)
-- **Evidence:** `src/model/metadata.ts` (`parseMetadataEditMode`, `metadataTarget`), `src/model/project.ts` (`loadProject`, `serializeProject`, `splitProjectFiles`)
+- **Evidence:** `src/model/metadata.ts` (`parseMetadataEditMode`, `metadataSeatKey`), `src/model/project.ts` (`loadProject`, `serializeProject`, `splitProjectFiles`)
 - **Verified by:** `src/model/metadata.test.ts` (`metadata edit mode`, `metadata storage round trip`)
 - **Status:** Implemented
 
@@ -757,11 +757,11 @@ Tags: Functional, Functional_Suitability, Compatibility
 ### REQ-DAT-440: Stable paper identifier on metadata correction
 `req~dat-440~1`
 
-A metadata correction shall change only the title, the authors, the year and the DOI. The system shall never change the paper identifier, the PDF path or the annotations folder of the paper.
+A metadata correction shall change only the title, the authors, the year and the DOI. The system shall never change the paper identifier, the PDF path or the annotations folder of the paper. No dialog shall offer the paper identifier for editing.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
-- **Evidence:** `src/model/metadata.ts` (`applyProjectEdit`, `applySeatEdit`), `src/state/store.ts` (`applyMetadataEdits`)
+- **Evidence:** `src/model/metadata.ts` (`applyProjectEdit`, `applySeatEdit`), `src/state/store.ts` (`applyMetadataEdits`), `src/components/MetadataDialog.tsx` (`MetadataDialog`)
 - **Verified by:** `src/state/store.metadata.test.ts` (`applyMetadataEdits`)
 - **Status:** Implemented
 
@@ -769,10 +769,10 @@ Needs: impl, utest
 
 Tags: Functional, Functional_Suitability, Reliability
 
-### REQ-DAT-450: Write corrections into the project file
+### REQ-DAT-450: Write agreed corrections into the project file
 `req~dat-450~1`
 
-With `config.metadataEdit: project`, the system shall write a confirmed correction into the paper in the project file. The system shall record the value before the first change of each field in the paper key `metadataOriginal`. When a field returns to its first value, the system shall remove the field from `metadataOriginal`.
+The system shall write a correction into the paper in the project file only through the confirmed action "Update project metadata" after consolidation (REQ-CON-530). The system shall record the value before the first change of each field in the paper key `metadataOriginal`. When a field returns to its first value, the system shall remove the field from `metadataOriginal`.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
@@ -787,11 +787,11 @@ Tags: Functional, Functional_Suitability
 ### REQ-DAT-460: Write corrections into the annotation file
 `req~dat-460~1`
 
-With `config.metadataEdit: annotation` and more than one reviewer, the system shall write a confirmed correction of a numbered human seat as `metadataOverrides` into the annotation file of that seat, and shall not change the project file. The system shall store only the fields that differ from the project file. An empty input shall mean no override. With one reviewer, or in the Consolidation seat, the system shall write as in REQ-DAT-450. The system shall not accept a correction in the AI seat.
+With `config.metadataEdit: annotation`, the system shall treat a metadata correction as an annotation. The system shall write a saved correction of a numbered human seat as `metadataOverrides` into the annotation file of that seat, and shall not change the project file. With one reviewer, the system shall write into the annotation file of seat 1. The system shall store only the fields that differ from the project file. An empty input shall mean no override. The system shall not accept a correction in the AI seat or in the Consolidation seat.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/metadata.ts` (`applySeatEdit`, `metadataTarget`), `src/model/project.ts` (`splitProjectFiles`, `assembleLegacyProjectJson`, `loadProject`)
+- **Evidence:** `src/model/metadata.ts` (`applySeatEdit`, `metadataSeatKey`), `src/model/project.ts` (`splitProjectFiles`, `assembleLegacyProjectJson`, `loadProject`)
 - **Verified by:** `src/model/metadata.test.ts` (`applySeatEdit`, `metadata storage round trip`)
 - **Status:** Implemented
 
@@ -802,7 +802,7 @@ Tags: Functional, Functional_Suitability
 ### REQ-DAT-470: Propose corrections from the PDF files
 `req~dat-470~1`
 
-On request, the system shall read the title, the authors and the DOI of each paper from its PDF file on the local computer. The system shall propose a correction only for a field that differs from the current value. The system shall not propose a value that the reviewer ignored before for that field. The system shall not propose a year, and shall not use a network service or an AI model. The system shall not change a paper until the reviewer confirms the correction.
+On request, the system shall read the title, the authors and the DOI of each paper from its PDF file on the local computer. The system shall propose a correction only for a field that differs from the current value of the seat. The system shall not propose a value that the reviewer ignored before for that field. The system shall not propose a year, and shall not use a network service or an AI model. The system shall not store a proposal until the reviewer saves it into the annotation file (REQ-DAT-460).
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
@@ -1136,7 +1136,7 @@ Tags: Functional, Functional_Suitability
 ### REQ-EDT-180: Select the metadata correction mode
 `req~edt-180~1`
 
-The project editor shall let the user select the metadata correction mode `off`, `project` or `annotation` (REQ-DAT-430). The default shall be `off`. The change shall be part of the editor undo history.
+The project editor shall let the user select the metadata correction mode `off` or `annotation` (REQ-DAT-430). The default shall be `off`. The change shall be part of the editor undo history.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)

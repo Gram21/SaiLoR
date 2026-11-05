@@ -925,11 +925,11 @@ Tags: NonFunctional, Reliability
 ### REQ-GIT-580: Merge and commit metadata corrections
 `req~git-580~1`
 
-A merge shall keep the metadata overrides of each seat. When both sides changed the overrides of the same seat differently, the merge shall keep the local overrides. A commit shall carry the metadata overrides and the metadata records of the project file with the paper.
+A merge shall keep the metadata overrides of each seat. When both sides changed the overrides of the same seat differently, the merge shall keep the local overrides. When both sides changed `config.metadataEdit` to different values, the merge shall show a conflict row in the project settings, and the user shall choose one value. A commit shall carry the metadata overrides and the metadata records of the project file with the paper.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
-- **Evidence:** `src/git/merge.ts` (`mergePaper`, `canonicalPaper`), `src/git/changes.ts` (`BOOKKEEPING_FIELDS`)
+- **Evidence:** `src/git/merge.ts` (`mergePaper`, `canonicalPaper`, `mergeProjects`, `applyResolutions`), `src/git/changes.ts` (`BOOKKEEPING_FIELDS`)
 - **Verified by:** `src/git/merge.test.ts` (`merge of metadata overrides`)
 - **Status:** Implemented
 

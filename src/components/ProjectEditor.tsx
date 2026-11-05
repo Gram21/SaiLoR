@@ -301,7 +301,6 @@ export function ProjectEditor() {
           disabled={busy}
         >
           <option value="off">{t('editor.project.metadataEditOff')}</option>
-          <option value="project">{t('editor.project.metadataEditProject')}</option>
           <option value="annotation">{t('editor.project.metadataEditAnnotation')}</option>
         </select>
       </div>

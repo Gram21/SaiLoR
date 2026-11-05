@@ -1408,6 +1408,19 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
   const strictM = merge3(base?.strict, ours.strict, theirs.strict, deepEqualJson)
   const strict = strictM ? strictM.value : ours.strict
 
+  // [impl->req~git-580~1]
+  const metadataEditM = merge3<MetadataEditMode>(
+    base?.metadataEdit ?? 'off',
+    ours.metadataEdit ?? 'off',
+    theirs.metadataEdit ?? 'off',
+    (a, b) => a === b,
+  )
+  if (!metadataEditM) {
+    projectChoice('metadataEdit', t('editor.project.metadataEdit'), ours.metadataEdit ?? 'off', theirs.metadataEdit ?? 'off', (v) =>
+      v === 'annotation' ? t('editor.project.metadataEditAnnotation') : t('editor.project.metadataEditOff'),
+    )
+  }
+
   const removalNote = schemaRemovalNote(base, schema, ours, theirs)
   if (removalNote) notes.push(removalNote)
   if (!changedFromBase(base?.schema, ours.schema) && changedFromBase(base?.schema, theirs.schema)) {
@@ -1454,10 +1467,7 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
       aiEnabled: aiM ? aiM.value! : ours.aiEnabled,
       aiSeat: aiSeatM ? aiSeatM.value! : ours.aiSeat,
       finishCheckbox: finishM ? finishM.value! : ours.finishCheckbox,
-      ...metadataEditField(
-        merge3(base?.metadataEdit ?? 'off', ours.metadataEdit ?? 'off', theirs.metadataEdit ?? 'off', (a, b) => a === b)
-          ?.value ?? ours.metadataEdit,
-      ),
+      ...metadataEditField(metadataEditM ? metadataEditM.value : ours.metadataEdit),
       reviewers: reviewersM ? reviewersM.value! : ours.reviewers,
       screening: screeningValue,
       ...(strict ? { strict } : {}),
@@ -1655,6 +1665,9 @@ function applyOne(draft: Project, conflict: FieldConflict, value: FieldValue): v
       draft.annotationsDir = (chosen as string | null) ?? null
     } else if (c === 'provenance') {
       draft.provenance = (chosen as ProjectProvenance | null) ?? null
+    } else if (c === 'metadataEdit') {
+      if (chosen === 'off') delete draft.metadataEdit
+      else draft.metadataEdit = chosen as MetadataEditMode
     } else if (c.startsWith('protocol.')) {
       const key = c.slice('protocol.'.length) as (typeof PROTOCOL_KEYS)[number]
       const text = valueToString(value)

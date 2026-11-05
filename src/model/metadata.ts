@@ -2,7 +2,7 @@ import type { PdfMeta } from './pdfMeta'
 import { aiSeatId, deepEqualJson, type Paper, type Project } from './project'
 import { parseYear } from './year'
 
-export type MetadataEditMode = 'off' | 'project' | 'annotation'
+export type MetadataEditMode = 'off' | 'annotation'
 
 export const METADATA_FIELDS = ['title', 'authors', 'year', 'doi'] as const
 export type MetadataField = (typeof METADATA_FIELDS)[number]
@@ -24,7 +24,7 @@ type MetadataProject = Pick<Project, 'metadataEdit' | 'reviewers' | 'aiSeat' | '
 
 // [impl->req~dat-430~1]
 export function parseMetadataEditMode(raw: unknown): MetadataEditMode {
-  return raw === 'project' || raw === 'annotation' ? raw : 'off'
+  return raw === 'project' || raw === 'annotation' ? 'annotation' : 'off'
 }
 
 export function parseMetadataValues(raw: unknown): MetadataValues | undefined {
@@ -168,30 +168,28 @@ export function applySeatEdit(paper: Paper, seat: string, values: MetadataValues
   setSeat(paper, seat, 'overrides', overrides)
 }
 
-/** Remembers ignored proposal values in the seat file or the project file. */
-export function recordIgnored(paper: Paper, seat: string | null, values: MetadataValues): void {
-  if (seat === null) {
-    const prev = paper.extra.metadataIgnored
-    paper.extra.metadataIgnored = { ...(typeof prev === 'object' && prev !== null ? prev : {}), ...values }
-  } else {
-    setSeat(paper, seat, 'ignored', { ...paper.reviewMetadata?.[seat]?.ignored, ...values })
-  }
-}
-
-export function ignoredFor(paper: Paper, seat: string | null): MetadataValues | undefined {
-  return seat === null ? parseMetadataValues(paper.extra.metadataIgnored) : paper.reviewMetadata?.[seat]?.ignored
+/** Remembers ignored proposal values in the seat file. */
+export function recordIgnored(paper: Paper, seat: string, values: MetadataValues): void {
+  setSeat(paper, seat, 'ignored', { ...paper.reviewMetadata?.[seat]?.ignored, ...values })
 }
 
 // [impl->req~dat-430~1]
 // [impl->req~dat-460~1]
-/** Where a confirmed correction goes for this seat, or null when the seat may not correct. */
-export function metadataTarget(project: MetadataProject, seat: string | null): 'project' | 'seat' | null {
-  const mode = project.metadataEdit ?? 'off'
-  if (mode === 'off') return null
-  if (project.reviewers > 1 && seat === null) return null
-  if (seat !== null && seat === aiSeatId(project)) return null
-  if (mode === 'annotation' && project.reviewers > 1 && seat !== 'consolidation') return 'seat'
-  return 'project'
+// [impl->req~lst-80~1]
+/** The seat file that holds this seat's corrections: seat 1 with one reviewer, null when the seat may not correct. */
+export function metadataSeatKey(project: MetadataProject, seat: string | null): string | null {
+  if ((project.metadataEdit ?? 'off') === 'off') return null
+  if (project.reviewers <= 1) return '1'
+  if (seat === null || seat === 'consolidation' || seat === aiSeatId(project)) return null
+  return seat
+}
+
+// [impl->req~dat-450~1]
+// [impl->req~con-530~1]
+/** True when this seat may write agreed corrections into the project file: Consolidation, or the only reviewer. */
+export function canUpdateProject(project: MetadataProject, seat: string | null): boolean {
+  if ((project.metadataEdit ?? 'off') === 'off') return false
+  return project.reviewers <= 1 || seat === 'consolidation'
 }
 
 /** The human seats whose overrides Consolidation reconciles. */
