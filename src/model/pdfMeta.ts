@@ -19,6 +19,14 @@ export interface PdfMeta {
   title?: string
   authors?: string[]
   abstract?: string
+  doi?: string
+}
+
+// [impl->req~dat-470~1]
+/** The first DOI in `text`, without trailing punctuation, or undefined. */
+export function findDoi(text: string): string | undefined {
+  const m = /\b10\.\d{4,9}\/[^\s"<>]+/.exec(text)
+  return m ? m[0].replace(/[.,;)\]]+$/, '') : undefined
 }
 
 /** Metadata titles that are really tool artefacts, not paper titles. */
@@ -399,6 +407,8 @@ export async function extractPdfMeta(data: ArrayBuffer): Promise<PdfMeta> {
     try {
       const meta = await doc.getMetadata()
       const info = meta.info as { Title?: string; Author?: string } | undefined
+      const doi = findDoi(Object.values(info ?? {}).filter((v) => typeof v === 'string').join(' '))
+      if (doi) result.doi = doi
       const rawTitle = info?.Title ? cleanTitle(info.Title) : ''
       if (rawTitle && isPlausibleTitle(rawTitle)) result.title = rawTitle
       const rawAuthor = info?.Author?.trim()
@@ -425,6 +435,10 @@ export async function extractPdfMeta(data: ArrayBuffer): Promise<PdfMeta> {
 
     const abstract = abstractFromLines(lines)
     if (abstract) result.abstract = abstract
+    if (!result.doi) {
+      const doi = findDoi(lines.map((l) => l.text).join('\n'))
+      if (doi) result.doi = doi
+    }
 
     await doc.destroy()
     return result
