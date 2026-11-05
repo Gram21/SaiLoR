@@ -144,6 +144,7 @@ export const tauriBridge: SlrBridge = {
   // Rust returns bytes as ArrayBuffer (ipc::Response) or number[] (Vec<u8>); callers expect a Uint8Array.
   readPdf: async (filePath: string) => new Uint8Array(await invoke<ArrayBuffer | number[]>('pdf_read', { filePath })),
   checkPdfPath: call('pdf:checkPath', 'rel'),
+  scanPdfFolder: call('pdf:scanFolder', 'folder', 'known'),
   allowPdfPath: call('pdf:allowPath', 'rel'),
   embedPdfMarks: call('pdf:embedMarks', 'pdfAbsPath', 'marks', 'target'),
   pickPdfExportPath: call('pdf:pickExportPath', 'suggestedName'),

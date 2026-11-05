@@ -1,6 +1,7 @@
 import type {
   OpenedProject,
   OsInfo,
+  PdfFolderScan,
   PdfSource,
   PickedPdf,
   PlatformAdapter,
@@ -250,6 +251,14 @@ export class DesktopAdapter implements PlatformAdapter {
     // path segments per spec before the request is even made, so a path-based value would
     // silently climb to the wrong file. Query values aren't subject to that normalization.
     return { url: `slr-file://project/pdf?path=${encodeURIComponent(pdfPath)}` }
+  }
+
+  // [impl->req~plt-420~1]
+  async scanPdfFolder(folder: string, known: string[], projectHandle: SaveHandle): Promise<PdfFolderScan> {
+    if (projectHandle?.path) await bridge().setProjectDir(projectHandle.path)
+    const r = await bridge().scanPdfFolder(folder, known)
+    if ('error' in r) throw new Error(r.error)
+    return r
   }
 
   // The desktop app reads PDFs straight off disk via slr-file:// — there is no

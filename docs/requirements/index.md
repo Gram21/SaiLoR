@@ -138,3 +138,8 @@ per category so requirements can be inserted without renumbering.
   REQ-EDT-180, REQ-ANN-180, REQ-LST-80 and REQ-CON-530 revised. A correction is now an annotation in the seat file.
   Only the confirmed update after consolidation writes into `project.json`. The mode `project` reads as `annotation`.
   REQ-GIT-580 revised for the conflict row of `config.metadataEdit`. The requirement count did not change.
+- **PDF folder watch (2026-11-05).** REQ-DAT-530 to REQ-DAT-570 and REQ-EDT-200 added for the
+  `config.pdfFolder` and `config.crossrefLookup` settings, the scan by file hash and the proposals.
+  REQ-ANN-200, REQ-ANN-210 and REQ-LST-90 added for the confirmation dialog, the scan triggers and the
+  "missing" badge. REQ-GIT-600 added for the merge by PDF hash. REQ-PLT-420 added for the desktop scan.
+  The coverage counts above were not recounted.

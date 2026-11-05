@@ -22,6 +22,7 @@ import { parseAlignment, type StoredAlignment } from './alignment'
 import { annotationsDirProblem } from './annotationsDir'
 import { parseStrictConfig, strictConfigJson, type StrictConfig } from './strict'
 import { parseMetadataEditMode, parseReviewMetadata, type MetadataEditMode, type SeatMetadata } from './metadata'
+import { parsePdfFolder } from './pdfFolder'
 import {
   moveInMarks,
   moveInTree,
@@ -300,6 +301,8 @@ export interface Project {
   strict?: StrictConfig
   /** Who may correct paper metadata, and where it is stored. Absent means `off`. */
   metadataEdit?: MetadataEditMode
+  pdfFolder?: string
+  crossrefLookup?: boolean
 }
 
 // [impl->req~llm-470~1]
@@ -869,7 +872,17 @@ export function loadProject(input: string | unknown): Project {
     extra: extractExtra(raw, KNOWN_ROOT_KEYS),
     ...(strict.strict ? { strict: strict.strict } : {}),
     ...metadataEditField(parseMetadataEditMode(((data as { config?: { metadataEdit?: unknown } }).config ?? {}).metadataEdit)),
+    ...pdfFolderFields(
+      parsePdfFolder((data as { config?: { pdfFolder?: unknown } }).config?.pdfFolder),
+      (data as { config?: { crossrefLookup?: unknown } }).config?.crossrefLookup === true,
+    ),
   }
+}
+
+// [impl->req~dat-530~1]
+// [impl->req~dat-560~1]
+function pdfFolderFields(pdfFolder: string | undefined, crossrefLookup: boolean | undefined): { pdfFolder?: string; crossrefLookup?: boolean } {
+  return { ...(pdfFolder ? { pdfFolder } : {}), ...(crossrefLookup ? { crossrefLookup: true } : {}) }
 }
 
 function reviewMetadataField(m: Record<string, SeatMetadata> | undefined): { reviewMetadata?: Record<string, SeatMetadata> } {
@@ -930,6 +943,7 @@ export function serializeProject(project: Project): string {
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
       ...strictConfigJson(project.strict),
       ...metadataEditField(project.metadataEdit),
+      ...pdfFolderFields(project.pdfFolder, project.crossrefLookup),
     },
     papers: [...project.papers].sort(comparePapers).map((p) => {
       const paper: Record<string, unknown> = {
@@ -1163,6 +1177,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
       ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
       ...strictConfigJson(project.strict),
       ...metadataEditField(project.metadataEdit),
+      ...pdfFolderFields(project.pdfFolder, project.crossrefLookup),
     },
     papers: metaPapers,
     ...project.extra,

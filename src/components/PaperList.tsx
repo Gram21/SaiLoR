@@ -208,9 +208,11 @@ const PaperRow = memo(function PaperRow({
   dotLabel,
   dotFill,
   seat,
+  missing,
 }: {
   paper: Paper
   seat: string | null
+  missing: boolean
   active: boolean
   /** Whether this row is the list's one roving tab stop right now — see the
    *  `rovingId` comment in `PaperList` below. */
@@ -222,6 +224,7 @@ const PaperRow = memo(function PaperRow({
 }) {
   // [impl->req~lst-20~1]
   // [impl->req~lst-25~1]
+  // [impl->req~lst-90~1]
   const dotStyle = dotFill === null ? undefined : ({ '--fill': `${dotFill}%` } as CSSProperties)
   const meta = effectiveMetadata(paper, seat)
   const edited = editedFields(paper, seat)
@@ -252,6 +255,11 @@ const PaperRow = memo(function PaperRow({
               ✎
             </span>
           )}
+          {missing && (
+            <span className="paper-metadata-badge" title={t('paperList.missingBadgeTitle')}>
+              {t('paperList.missingBadge')}
+            </span>
+          )}
         </span>
         <span className="paper-authors">{meta.authors.join(', ')}</span>
       </span>
@@ -266,6 +274,7 @@ export function PaperList() {
   const project = useStore((s) => s.project)
   const currentPaperId = useStore((s) => s.currentPaperId)
   const currentReviewer = useStore((s) => s.currentReviewer)
+  const missingPdfs = useStore((s) => s.missingPdfs)
   const selectPaper = useStore((s) => s.selectPaper)
   const screeningFilter = useStore((s) => s.screeningFilter)
   const setScreeningFilter = useStore((s) => s.setScreeningFilter)
@@ -578,6 +587,7 @@ export function PaperList() {
                   roving={p.id === rovingId}
                   onSelect={selectPaper}
                   seat={metadataSeatKey(project, person ? assignedSeat(project, p.id, person) : currentReviewer)}
+                  missing={missingPdfs.includes(p.id)}
                   dotClassName={`status-dot screening-${status}`}
                   dotLabel={title}
                   dotFill={null}
@@ -626,6 +636,7 @@ export function PaperList() {
                 roving={p.id === rovingId}
                 onSelect={selectPaper}
                 seat={metadataSeatKey(project, person ? assignedSeat(project, p.id, person) : currentReviewer)}
+                missing={missingPdfs.includes(p.id)}
                 dotClassName={`status-dot ${state}`}
                 dotLabel={dotLabel}
                 // Only the genuinely partial fills carry a percentage; the

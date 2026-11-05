@@ -5,10 +5,14 @@ use crate::authz::{assert_not_symlink, err, lock, within, Session};
 use crate::paths::{normalize, resolve};
 use crate::project::save_dialog;
 use lopdf::{dictionary, Dictionary, Document, Object, ObjectId, StringFormat};
+use ring::digest::{Context, SHA256};
 use serde_json::{json, Value};
+use std::collections::HashMap;
 use std::fs;
+use std::io::Read;
 use std::path::{Path, PathBuf};
-use std::sync::Mutex;
+use std::sync::{LazyLock, Mutex};
+use std::time::SystemTime;
 use tauri::{ipc::Response, AppHandle, Manager, State};
 use tauri_plugin_dialog::{DialogExt, MessageDialogButtons, MessageDialogKind};
 
@@ -119,6 +123,83 @@ pub async fn pdf_pick_folder(
     let mut paths = vec![];
     collect_pdfs(&dir.into_path().map_err(err)?, &mut paths);
     Ok(readable(&session, paths))
+}
+
+type HashCache = HashMap<PathBuf, (u64, SystemTime, String)>;
+static HASHES: LazyLock<Mutex<HashCache>> = LazyLock::new(Default::default);
+
+// [impl->req~plt-420~1]
+fn sha256_file(path: &Path) -> std::io::Result<String> {
+    let meta = fs::metadata(path)?;
+    let (len, mtime) = (meta.len(), meta.modified()?);
+    if let Some((l, m, h)) = HASHES.lock().unwrap_or_else(|e| e.into_inner()).get(path) {
+        if *l == len && *m == mtime {
+            return Ok(h.clone());
+        }
+    }
+    let mut file = fs::File::open(path)?;
+    let mut ctx = Context::new(&SHA256);
+    let mut buf = vec![0u8; 1 << 16];
+    loop {
+        let n = file.read(&mut buf)?;
+        if n == 0 {
+            break;
+        }
+        ctx.update(&buf[..n]);
+    }
+    let hex: String = ctx.finish().as_ref().iter().map(|b| format!("{b:02x}")).collect();
+    HASHES
+        .lock()
+        .unwrap_or_else(|e| e.into_inner())
+        .insert(path.to_path_buf(), (len, mtime, hex.clone()));
+    Ok(hex)
+}
+
+// [impl->req~plt-420~1]
+pub fn scan_folder(session: &Mutex<Session>, folder: &str, known: &[String]) -> Value {
+    let Some(base) = lock(session).project_dir.clone().and_then(|d| d.canonicalize().ok()) else {
+        return json!({ "error": "no-project" });
+    };
+    let dir = match resolve_project_path(session, folder) {
+        Ok(d) if !d.starts_with(&base) => return json!({ "error": "escapes" }),
+        Ok(d) if d.is_dir() => d,
+        Ok(_) => return json!({ "error": "not-found" }),
+        Err(reason) => return json!({ "error": reason }),
+    };
+    let mut paths = vec![];
+    collect_pdfs(&dir, &mut paths);
+    paths.sort();
+    let files: Vec<Value> = paths
+        .iter()
+        .filter_map(|p| {
+            let rel: Vec<String> = p
+                .strip_prefix(&base)
+                .ok()?
+                .components()
+                .map(|c| c.as_os_str().to_string_lossy().into_owned())
+                .collect();
+            Some(json!({ "path": rel.join("/"), "sha256": sha256_file(p).ok()? }))
+        })
+        .collect();
+    let known: Vec<Value> = known
+        .iter()
+        .map(|rel| match resolve_project_path(session, rel) {
+            Ok(p) => sha256_file(&p).map_or(Value::Null, Value::from),
+            Err("not-found") => json!("missing"),
+            Err(_) => Value::Null,
+        })
+        .collect();
+    json!({ "files": files, "known": known })
+}
+
+// [impl->req~plt-420~1]
+#[tauri::command]
+pub async fn pdf_scan_folder(
+    session: State<'_, Mutex<Session>>,
+    folder: String,
+    known: Vec<String>,
+) -> Result<Value, String> {
+    Ok(scan_folder(&session, &folder, &known))
 }
 
 #[tauri::command]
@@ -834,5 +915,36 @@ mod tests {
             out,
             [d.join("a/Y.PDF"), d.join("a/b/z.pdf"), d.join("x.pdf")]
         );
+    }
+
+    // [utest->req~plt-420~1]
+    #[test]
+    fn scan_folder_hashes_and_reports_missing() {
+        let d = tmp("scan");
+        let proj = d.join("proj");
+        fs::create_dir_all(proj.join("pdfs/sub")).unwrap();
+        fs::write(proj.join("pdfs/a.pdf"), "abc").unwrap();
+        fs::write(proj.join("pdfs/sub/b.PDF"), "abc").unwrap();
+        fs::write(d.join("out.pdf"), "x").unwrap();
+        let s = Mutex::new(Session::default());
+        assert_eq!(scan_folder(&s, "pdfs", &[]), json!({ "error": "no-project" }));
+        lock(&s).project_dir = Some(proj.clone());
+        let abc = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
+        let known = ["pdfs/a.pdf".into(), "gone.pdf".into(), "../out.pdf".into()];
+        assert_eq!(
+            scan_folder(&s, "pdfs", &known),
+            json!({
+                "files": [
+                    { "path": "pdfs/a.pdf", "sha256": abc },
+                    { "path": "pdfs/sub/b.PDF", "sha256": abc }
+                ],
+                "known": [abc, "missing", null]
+            })
+        );
+        assert_eq!(scan_folder(&s, "..", &[]), json!({ "error": "escapes" }));
+        assert_eq!(scan_folder(&s, "nope", &[]), json!({ "error": "not-found" }));
+        fs::write(proj.join("pdfs/a.pdf"), "abcd").unwrap();
+        let changed = scan_folder(&s, "pdfs", &["pdfs/a.pdf".into()]);
+        assert_ne!(changed["known"][0], json!(abc));
     }
 }

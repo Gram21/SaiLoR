@@ -102,6 +102,9 @@ export function App() {
   const installUpdate = useStore((s) => s.installUpdate)
 
   const saveHandle = useStore((s) => s.saveHandle)
+  const projectGeneration = useStore((s) => s.projectGeneration)
+  const pdfFolder = useStore((s) => s.project?.pdfFolder)
+  const scanPdfFolder = useStore((s) => s.scanPdfFolder)
   const gitProbe = useGitStore((s) => s.probe)
   const probeGit = useGitStore((s) => s.probeGit)
   const refreshRepo = useGitStore((s) => s.refreshRepo)
@@ -153,6 +156,15 @@ export function App() {
     void refreshRepo(saveHandle)
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [saveHandle?.path, refreshRepo])
+
+  // [impl->req~ann-210~1]
+  useEffect(() => {
+    if (!pdfFolder) return
+    void scanPdfFolder()
+    const onFocus = () => void scanPdfFolder()
+    window.addEventListener('focus', onFocus)
+    return () => window.removeEventListener('focus', onFocus)
+  }, [projectGeneration, pdfFolder, scanPdfFolder])
 
   // Persist pane widths whenever they change (avoids stale-closure saves).
   useEffect(() => {

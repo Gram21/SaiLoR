@@ -1,4 +1,4 @@
-import type { SharedAnnotations } from './adapter'
+import type { PdfFolderScan, SharedAnnotations } from './adapter'
 import type { LlmConfig, LlmHttpRequest, LlmHttpResponse, WebFetchResult } from '../llm/types'
 import type { PullProgress } from '../llm/ollama'
 import type { LocalServerResult, OllamaApi } from './ollamaApi'
@@ -61,6 +61,7 @@ export interface SlrBridge {
   /** Same traversal/symlink guard `registerPdfProtocol` enforces when serving the file,
    *  checked first so a blocked/missing PDF gets an honest reason instead of pdf.js's opaque failure. */
   checkPdfPath(rel: string): Promise<{ ok: true } | { ok: false; reason: 'no-project' | 'escapes' | 'not-found' }>
+  scanPdfFolder(folder: string, known: string[]): Promise<PdfFolderScan | { error: string }>
   /** Asks the reviewer (native dialog in the Rust shell) whether to open `rel` despite it
    *  pointing outside the project folder; approval is remembered for the session — see src-tauri/src/authz.rs. */
   allowPdfPath(rel: string): Promise<boolean>
