@@ -2,7 +2,7 @@
 CARGO := cargo
 
 .PHONY: help setup install dev web build build-debug probe test test-js test-rust test-integration \
-        lint fmt typecheck check clean trace report docker-linux docker-gui-build docker-gui
+        lint fmt typecheck check clean trace report ci ci-rust ci-trace ci-bundle ci-e2e ci-all docker-linux docker-gui-build docker-gui
 
 help: ## Show this help
 	@awk 'BEGIN{FS=":.*## "} /^[a-zA-Z_-]+:.*## /{printf "  %-18s %s\n",$$1,$$2}' $(MAKEFILE_LIST)
@@ -35,6 +35,23 @@ test-js: ## Run renderer unit tests
 
 test-rust: ## Run Rust unit tests
 	$(CARGO) test --manifest-path src-tauri/Cargo.toml
+
+ci: ## Run the renderer CI checks (typecheck, wiki links, tests, build)
+	scripts/ci.sh
+
+ci-rust: ## Run the Rust lint CI job (fmt, clippy)
+	scripts/ci/rust.sh
+
+ci-trace: ## Run the OFT trace CI job (self-test, convert, trace)
+	scripts/ci/trace.sh
+
+ci-bundle: ## Run the Rust tests, installer bundle and probe CI job
+	scripts/ci/bundle.sh
+
+ci-e2e: ## Run the Tauri e2e CI job (needs tauri-driver)
+	scripts/ci/e2e.sh
+
+ci-all: ci ci-rust ci-trace ci-bundle ## Run every CI job that works on this OS
 
 test-integration: ## Run integration tests
 	npm run test:integration

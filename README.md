@@ -567,6 +567,19 @@ make probe             # CI probe app (e2e/ page, probe commands)
 `npm run build` writes the renderer into `dist/`. The Tauri build embeds it. Opening `dist/` in a
 browser shows the "use the desktop app" notice.
 
+Every CI job is a script, so you can run it locally or port it to another CI provider. The workflow
+`.github/workflows/ci.yml` only installs toolchains and calls these scripts:
+
+| Job | Script | Make target |
+|---|---|---|
+| Renderer: typecheck, wiki links, tests, build | `scripts/ci.sh` | `make ci` |
+| Rust lint: fmt, clippy | `scripts/ci/rust.sh` | `make ci-rust` |
+| Requirement trace (needs Java 17+) | `scripts/ci/trace.sh` | `make ci-trace` |
+| Rust tests, installer bundle, probe run | `scripts/ci/bundle.sh` | `make ci-bundle` |
+| Tauri e2e (needs `tauri-driver`) | `scripts/ci/e2e.sh` | `make ci-e2e` |
+
+`scripts/ci/linux-deps.sh` installs the Linux system libraries. `make ci-all` runs every job except e2e.
+
 Three layers of tests, by what each one can actually catch:
 
 - **`npm test`** — plain vitest, no rendering. ~2800 tests of pure logic: schema resolution, project

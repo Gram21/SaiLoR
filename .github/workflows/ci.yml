@@ -1,9 +1,14 @@
 name: CI
 
-# One workflow for everything that checks code: the renderer (scripts/ci.sh),
-# the Rust shell (fmt, clippy), the Tauri build matrix on every OS, and the
-# Tauri e2e test. Release and report workflows stay separate.
-# The renderer work lives in scripts/ci.sh so it can run locally or on another CI provider.
+# One workflow for everything that checks code. This file only provisions
+# toolchains and calls scripts, so every job also runs on a developer machine
+# or another CI provider:
+#   build       scripts/ci.sh              (also: make ci)
+#   rust        scripts/ci/rust.sh         (make ci-rust)
+#   trace       scripts/ci/trace.sh        (make ci-trace)
+#   tauri-build scripts/ci/bundle.sh       (make ci-bundle)
+#   tauri-e2e   scripts/ci/e2e.sh          (make ci-e2e)
+# Release and report workflows stay separate.
 
 on:
   push:
@@ -39,17 +44,11 @@ jobs:
   # Lint the Tauri shell (src-tauri/). Tests run per OS in tauri-build.
   rust:
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: src-tauri
     steps:
-      - name: Checkout
-        uses: actions/checkout@v7
+      - uses: actions/checkout@v7
 
       - name: Install Linux dependencies
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev
+        run: scripts/ci/linux-deps.sh
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -59,8 +58,7 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - run: cargo fmt --check
-      - run: cargo clippy --all-targets --all-features -- -D warnings
+      - run: scripts/ci/rust.sh
 
   # Requirement trace links (OpenFastTrace). Allowed to fail until the trace tags are in the sources.
   trace:
@@ -69,14 +67,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Self-check the OFT scripts
-        run: python3 -B scripts/oft/selftest.py
-
-      - name: Convert requirements
-        run: python3 -B scripts/oft/convert-requirements.py
-
-      - name: Trace
-        run: make trace
+      - run: scripts/ci/trace.sh
 
       - name: Upload trace report
         if: always()
@@ -97,6 +88,8 @@ jobs:
     defaults:
       run:
         shell: bash
+    env:
+      REPORT: ${{ runner.temp }}/probe-report.txt
     steps:
       - uses: actions/checkout@v7
 
@@ -107,9 +100,7 @@ jobs:
 
       - name: Install Linux dependencies
         if: startsWith(matrix.os, 'ubuntu')
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev xvfb
+        run: scripts/ci/linux-deps.sh xvfb
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -117,44 +108,7 @@ jobs:
         with:
           workspaces: src-tauri
 
-      - run: npm ci
-
-      - name: Rust tests
-        run: cargo test --manifest-path src-tauri/Cargo.toml
-
-      - name: Build (installer bundle)
-        run: npx tauri build
-
-      - name: Report installer sizes
-        run: |
-          find src-tauri/target/release/bundle -type f \( -name '*.dmg' -o -name '*.msi' -o -name '*.exe' -o -name '*.deb' -o -name '*.AppImage' -o -name '*.rpm' \) -exec ls -l {} \;
-
-      - name: Build probe
-        run: npx tauri build --no-bundle --features probe --config src-tauri/tauri.probe.conf.json
-
-      - name: Run probe (open project, traversal check, render PDF)
-        env:
-          SAILOR_PROBE_PROJECT: ${{ github.workspace }}/samples/project.example.json
-          SAILOR_PROBE_REPORT: ${{ runner.temp }}/probe-report.txt
-        run: |
-          rm -f "$SAILOR_PROBE_REPORT"
-          BIN=src-tauri/target/release/sailor
-          [ -f "$BIN.exe" ] && BIN="$BIN.exe"
-          if [[ "${{ matrix.os }}" == ubuntu* ]]; then
-            xvfb-run -a "$BIN" > /dev/null 2>&1 &
-          else
-            "$BIN" > /dev/null 2>&1 &
-          fi
-          PID=$!
-          for i in $(seq 1 60); do
-            grep -qE "RENDER OK|PDF ERROR|RENDER ERROR" "$SAILOR_PROBE_REPORT" 2>/dev/null && break
-            sleep 1
-          done
-          kill $PID 2>/dev/null || true
-          echo "---- report ----"
-          cat "$SAILOR_PROBE_REPORT" || true
-          grep -q "RENDER OK" "$SAILOR_PROBE_REPORT"
-          grep -q -- "-> 403" "$SAILOR_PROBE_REPORT"
+      - run: scripts/ci/bundle.sh
 
       - name: Upload report
         if: always()
@@ -184,9 +138,7 @@ jobs:
 
       - name: Install Linux dependencies
         if: runner.os == 'Linux'
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y libwebkit2gtk-4.1-dev libayatana-appindicator3-dev librsvg2-dev libxdo-dev libssl-dev webkit2gtk-driver xvfb
+        run: scripts/ci/linux-deps.sh webkit2gtk-driver xvfb
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -208,13 +160,11 @@ jobs:
           Write-Host "WebView2 $version; $(& "$dir\msedgedriver.exe" --version)"
           $dir >> $env:GITHUB_PATH
 
-      - run: npm ci
-
-      - run: npx tauri build --no-bundle --features probe --config src-tauri/tauri.probe.conf.json
+      - run: scripts/ci/e2e.sh build
 
       - name: Run e2e test (Linux)
         if: runner.os == 'Linux'
-        run: xvfb-run -a node --test e2e/probe.test.mjs
+        run: scripts/ci/e2e.sh test
 
       # WebView2 ignores the driver's WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS in an elevated
       # process, and the runner is elevated. Run at medium integrity, as Tauri's own e2e CI does.
