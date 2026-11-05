@@ -16,6 +16,11 @@ import type { PdfMark } from '../model/pdfMarks'
 export type { RecentEntry }
 export type { OsInfo }
 
+export interface PdfFolderScan {
+  files: { path: string; sha256: string }[]
+  known: (string | null)[]
+}
+
 export interface OpenedProject {
   /** Raw JSON text of the project file. */
   text: string
@@ -118,6 +123,8 @@ export interface PlatformAdapter {
 
   /** Resolve a paper's `pdf` path (relative to the project file) into a URL react-pdf can load. */
   getPdfSource(pdfPath: string, projectHandle: SaveHandle): Promise<PdfSource>
+
+  scanPdfFolder(folder: string, known: string[], projectHandle: SaveHandle): Promise<PdfFolderScan>
 
   /**
    * True when `getPdfSource` would need to prompt for a local folder first and
