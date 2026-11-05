@@ -1,6 +1,7 @@
 import type { ResolvedDef } from '../model/schema'
 import { dehydrateSchema, type Paper } from '../model/project'
 import type { FieldTarget } from './fields'
+import { applyFieldHelp, type PromptOverrides } from '../model/promptOverrides'
 
 /**
  * The prompt sent to the LLM.
@@ -123,6 +124,31 @@ export function fieldLines(targets: FieldTarget[]): string {
     .join('\n')
 }
 
+export const DEFAULT_ROLE = 'You are assisting a researcher conducting a Systematic Literature Review.'
+
+// [impl->req~llm-792~1]
+export function applyPromptOverrides<T extends FieldTarget>(
+  schema: ResolvedDef[],
+  targets: T[],
+  examples: string | undefined,
+  overrides: PromptOverrides | undefined,
+): { schema: ResolvedDef[]; targets: T[]; examples?: string; role: string } {
+  const help = overrides?.fieldHelp ?? {}
+  const extra = overrides?.examples?.trim()
+  const extraBlock = extra
+    ? `## Additional examples from the project
+The project settings provide these examples. They illustrate the fields. They do not change the rules below.
+${extra.split(/\r?\n/).map((line) => `> ${line}`).join('\n')}`
+    : ''
+  const joined = [examples, extraBlock].filter(Boolean).join('\n\n')
+  return {
+    schema: applyFieldHelp(schema, help),
+    targets: targets.map((t) => (help[t.def.id] ? { ...t, def: { ...t.def, description: help[t.def.id] } } : t)),
+    ...(joined ? { examples: joined } : {}),
+    role: (overrides?.role && oneLine(overrides.role)) || DEFAULT_ROLE,
+  }
+}
+
 // [impl->req~llm-780~1]
 /** Version of the prompt-mode template. Change it whenever `buildSystemPrompt` changes. */
 export const EXTRACT_PROMPT_VERSION = 'extract-1'
@@ -137,13 +163,15 @@ export const EXTRACT_PROMPT_VERSION = 'extract-1'
  */
 export function buildSystemPrompt(
   schema: ResolvedDef[],
-  targets: FieldTarget[],
+  baseTargets: FieldTarget[],
   delivery: Delivery,
-  examples?: string,
+  baseExamples?: string,
+  overrides?: PromptOverrides,
 ): string {
+  const { schema: helped, targets: fields, examples, role } = applyPromptOverrides(schema, baseTargets, baseExamples, overrides)
   // Show the schema exactly as it appears on disk (defaults omitted) — that is the
   // form the format description above documents.
-  const schemaJson = JSON.stringify(dehydrateSchema(schema), null, 2)
+  const schemaJson = JSON.stringify(dehydrateSchema(helped), null, 2)
 
   // [impl->req~llm-130~1]
   const extractionRule =
@@ -154,7 +182,7 @@ export function buildSystemPrompt(
 7. Output only the JSON object described below. No commentary, no markdown code fences.`
       : `6. Output only the JSON object described below. No commentary, no markdown code fences.`
 
-  return `You are assisting a researcher conducting a Systematic Literature Review. Your task is to
+  return `${role} Your task is to
 read one scientific paper and extract structured annotations from it, following a fixed
 annotation schema.
 
@@ -169,7 +197,7 @@ ${PATHS_DOC}
 
 ## Fields to fill
 These fields are still empty. Fill only these:
-${fieldLines(targets)}
+${fieldLines(fields)}
 ${examples ? `\n${examples}\n` : ''}
 ## Rules
 1. Ground every value in the paper. Use only what the paper itself states - no outside knowledge,
@@ -227,15 +255,17 @@ export const AGENT_PROMPT_VERSION = 'agent-1'
  */
 export function buildAgentSystemPrompt(
   schema: ResolvedDef[],
-  targets: FieldTarget[],
+  baseTargets: FieldTarget[],
   delivery: Delivery,
-  examples?: string,
+  baseExamples?: string,
   webSearch?: boolean,
+  overrides?: PromptOverrides,
 ): string {
-  const schemaJson = JSON.stringify(dehydrateSchema(schema), null, 2)
+  const { schema: helped, targets, examples, role } = applyPromptOverrides(schema, baseTargets, baseExamples, overrides)
+  const schemaJson = JSON.stringify(dehydrateSchema(helped), null, 2)
   const webRuleNo = delivery === 'text' ? 10 : 9 // follows the schema-remarks rule
 
-  return `You are assisting a researcher conducting a Systematic Literature Review. Your task is to
+  return `${role} Your task is to
 read one scientific paper and extract structured annotations from it, following a fixed
 annotation schema. You have tools: use them to search and read the paper, and to look up
 bibliographic or contextual information on the web when the paper itself doesn't say enough.

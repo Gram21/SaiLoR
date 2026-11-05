@@ -276,7 +276,8 @@ export function detectFieldChanges(head: Project, working: Project): DetectedCha
     !deepEqualJson(head.provenance, working.provenance) ||
     !deepEqualJson(head.protocol, working.protocol) ||
     (head.title ?? '') !== (working.title ?? '') ||
-    head.schemaInfo !== working.schemaInfo
+    head.schemaInfo !== working.schemaInfo ||
+    !deepEqualJson(head.promptOverrides, working.promptOverrides)
   if (structural) return null
 
   const fields: FieldChange[] = []

@@ -16,6 +16,7 @@ import { ScreeningReasonsEditor } from './ScreeningReasonsEditor'
 import { ProtocolEditor } from './ProtocolEditor'
 import { PapersEditor } from './PapersEditor'
 import { StrictModeEditor } from './StrictModeEditor'
+import { PromptOverridesEditor } from './PromptOverridesEditor'
 import { SchemaPreview } from './SchemaPreview'
 import type { ProjectProvenance } from '../model/project'
 import type { MetadataEditMode } from '../model/metadata'
@@ -539,6 +540,8 @@ export function ProjectEditor() {
               <ProtocolEditor />
             </details>
           </section>
+
+          <PromptOverridesEditor />
 
           {multiReviewer && !screening && <StrictModeEditor />}
         </div>
