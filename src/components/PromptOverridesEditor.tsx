@@ -16,11 +16,10 @@ export function PromptOverridesEditor() {
   const overrides = useEditorStore((s) => s.promptOverrides)
   const setPromptOverrides = useEditorStore((s) => s.setPromptOverrides)
   const nodes = useEditorStore((s) => s.nodes)
-  const screening = useEditorStore((s) => s.screening)
   const busy = useEditorStore((s) => s.busy)
 
   const help = overrides.fieldHelp ?? {}
-  const fields = screening ? [] : fieldPaths(nodes)
+  const fields = fieldPaths(nodes)
   const known = new Set(fields.map((f) => f.path))
   const orphans = Object.keys(help).filter((p) => !known.has(p))
   const setHelp = (path: string, value: string | null, coalesce = true) => {

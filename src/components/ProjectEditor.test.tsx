@@ -193,6 +193,19 @@ describe('ProjectEditor: AI seat toggle enabling rules', () => {
   })
 })
 
+// [utest->req~llm-794~1]
+describe('ProjectEditor: AI prompt section', () => {
+  it('is in the Settings tab of an annotation draft and absent in a screening draft', () => {
+    const { unmount } = render(<ProjectEditor />)
+    fireEvent.click(screen.getByRole('tab', { name: 'Settings' }))
+    expect(screen.getByRole('heading', { name: 'AI prompt' })).toBeInTheDocument()
+    unmount()
+    useEditorStore.setState({ screening: { reasons: ['Wrong topic'] } })
+    renderSettings()
+    expect(screen.queryByRole('heading', { name: 'AI prompt' })).toBeNull()
+  })
+})
+
 // [utest->req~edt-300~1]
 describe('ProjectEditor: tabs', () => {
   const tab = (name: string) => screen.getByRole('tab', { name })
