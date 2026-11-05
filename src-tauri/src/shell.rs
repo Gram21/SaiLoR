@@ -362,6 +362,7 @@ enum Action {
 }
 
 // [impl->req~ui-100~1]
+// [impl->req~ui-150~1]
 // [impl->req~plt-120~1]
 // [impl->req~plt-310~1]
 fn action(id: &str) -> Option<Action> {
@@ -377,7 +378,7 @@ fn action(id: &str) -> Option<Action> {
         "app:undo" => Action::Emit("app:undo"),
         "app:redo" => Action::Emit("app:redo"),
         "app:closeProject" => Action::Emit("app:closeProject"),
-        "app:settings" => Action::Emit("app:settings"),
+        "app:settings" | "app:helpSettings" => Action::Emit("app:settings"),
         _ => return None,
     })
 }
@@ -574,6 +575,7 @@ fn copy_new(from: &Path, to: &Path) -> std::io::Result<()> {
 }
 
 // [impl->req~ui-100~1]
+// [impl->req~ui-150~1]
 // [impl->req~plt-120~1]
 // [impl->req~plt-310~1]
 // [impl->req~plt-370~1]
@@ -659,11 +661,24 @@ fn macos_menu<M: Manager<Wry>>(app: &M) -> tauri::Result<Menu<Wry>> {
             &PredefinedMenuItem::close_window(app, Some(tr("Close Window")))?,
         ],
     )?;
-    let help = Submenu::with_id_and_items(app, HELP_SUBMENU_ID, tr("Help"), true, &[])?;
+    let help = Submenu::with_id_and_items(
+        app,
+        HELP_SUBMENU_ID,
+        tr("Help"),
+        true,
+        &[&MenuItem::with_id(
+            app,
+            "app:helpSettings",
+            tr("Settings…"),
+            true,
+            None::<&str>,
+        )?],
+    )?;
     Menu::with_items(app, &[&app_menu, &file, &edit, &view, &window, &help])
 }
 
 // [impl->req~ui-100~1]
+// [impl->req~ui-150~1]
 // [impl->req~plt-120~1]
 // [impl->req~plt-310~1]
 // [impl->req~plt-370~1]
@@ -740,6 +755,8 @@ fn menu<M: Manager<Wry>>(app: &M) -> tauri::Result<Menu<Wry>> {
         tr("Help"),
         true,
         &[
+            &MenuItem::with_id(app, "app:helpSettings", tr("Settings…"), true, None::<&str>)?,
+            &PredefinedMenuItem::separator(app)?,
             &MenuItem::with_id(
                 app,
                 "app:github",
@@ -848,6 +865,26 @@ mod tests {
             assert_eq!(action(event), Some(Action::Emit(event)));
         }
         assert_eq!(action("tauri:quit"), None);
+    }
+
+    // [utest->req~ui-150~1]
+    #[test]
+    fn help_menus_open_settings_without_a_shortcut() {
+        let id = format!("\"{}\",", "app:helpSettings");
+        let items: Vec<&str> = include_str!("shell.rs")
+            .split(id.as_str())
+            .skip(1)
+            .collect();
+        assert_eq!(items.len(), 2);
+        for item in items {
+            let args = item.split(")?").next().unwrap_or_default();
+            assert!(args.contains("tr(\"Settings…\")"), "{args}");
+            assert!(args.contains("None::<&str>"), "{args}");
+        }
+        assert_eq!(
+            action("app:helpSettings"),
+            Some(Action::Emit("app:settings"))
+        );
     }
 
     // [utest->req~plt-400~1]
