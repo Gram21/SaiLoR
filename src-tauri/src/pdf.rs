@@ -147,7 +147,12 @@ fn sha256_file(path: &Path) -> std::io::Result<String> {
         }
         ctx.update(&buf[..n]);
     }
-    let hex: String = ctx.finish().as_ref().iter().map(|b| format!("{b:02x}")).collect();
+    let hex: String = ctx
+        .finish()
+        .as_ref()
+        .iter()
+        .map(|b| format!("{b:02x}"))
+        .collect();
     HASHES
         .lock()
         .unwrap_or_else(|e| e.into_inner())
@@ -157,7 +162,11 @@ fn sha256_file(path: &Path) -> std::io::Result<String> {
 
 // [impl->req~plt-420~1]
 pub fn scan_folder(session: &Mutex<Session>, folder: &str, known: &[String]) -> Value {
-    let Some(base) = lock(session).project_dir.clone().and_then(|d| d.canonicalize().ok()) else {
+    let Some(base) = lock(session)
+        .project_dir
+        .clone()
+        .and_then(|d| d.canonicalize().ok())
+    else {
         return json!({ "error": "no-project" });
     };
     let dir = match resolve_project_path(session, folder) {
@@ -927,7 +936,10 @@ mod tests {
         fs::write(proj.join("pdfs/sub/b.PDF"), "abc").unwrap();
         fs::write(d.join("out.pdf"), "x").unwrap();
         let s = Mutex::new(Session::default());
-        assert_eq!(scan_folder(&s, "pdfs", &[]), json!({ "error": "no-project" }));
+        assert_eq!(
+            scan_folder(&s, "pdfs", &[]),
+            json!({ "error": "no-project" })
+        );
         lock(&s).project_dir = Some(proj.clone());
         let abc = "ba7816bf8f01cfea414140de5dae2223b00361a396177a9cb410ff61f20015ad";
         let known = ["pdfs/a.pdf".into(), "gone.pdf".into(), "../out.pdf".into()];
@@ -942,7 +954,10 @@ mod tests {
             })
         );
         assert_eq!(scan_folder(&s, "..", &[]), json!({ "error": "escapes" }));
-        assert_eq!(scan_folder(&s, "nope", &[]), json!({ "error": "not-found" }));
+        assert_eq!(
+            scan_folder(&s, "nope", &[]),
+            json!({ "error": "not-found" })
+        );
         fs::write(proj.join("pdfs/a.pdf"), "abcd").unwrap();
         let changed = scan_folder(&s, "pdfs", &["pdfs/a.pdf".into()]);
         assert_ne!(changed["known"][0], json!(abc));
