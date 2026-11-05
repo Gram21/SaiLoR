@@ -1332,3 +1332,93 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Functional_Suitability
+
+### REQ-LLM-790: Store prompt overrides in the project file
+`req~llm-790~1`
+
+A project shall be able to store prompt overrides in `config.promptOverrides`. The overrides shall hold an optional role text, an optional help text per field path, and optional extra examples. The system shall trim each text. The system shall drop an empty text, so an empty or absent entry means the built-in text. The overrides shall survive a save and a load of the project file and of the split project file.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/promptOverrides.ts`, `src/model/project.ts`, `src/state/editorStore.ts`
+- **Status:** Implemented
+- **Tests:** `src/model/promptOverrides.test.ts`, `src/components/PromptOverridesEditor.test.tsx`
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability
+
+### REQ-LLM-791: Validate prompt overrides at load
+`req~llm-791~1`
+
+The system shall validate `config.promptOverrides` when it loads a project file and when the project editor opens one. The system shall refuse an unknown key, a value that is not text, an empty or too long field path, and a text over its limit. The limits are 1000 characters for the role, 2000 characters per field help, and 8000 characters for the examples. The system shall list each problem in the load error. The editor shall report the same problems before it saves a draft.
+
+Comment:
+- **Type:** Non-functional (ISO 25010: Security, Integrity)
+- **Evidence:** `src/model/promptOverrides.ts`, `src/model/project.ts`, `src/state/editorStore.ts`
+- **Status:** Implemented
+- **Tests:** `src/model/promptOverrides.test.ts`, `src/components/PromptOverridesEditor.test.tsx`
+
+Needs: impl, utest
+
+Tags: NonFunctional, Security, Integrity
+
+### REQ-LLM-792: Apply prompt overrides and keep the fixed rules
+`req~llm-792~1`
+
+The extraction, agent and re-check prompts shall use the role override as their opening sentence. These prompts shall use a field help override in place of the field description, in the schema block and in the field list. These prompts shall add the extra examples as a quoted block before the rules. The judge prompt shall use the field help only. An override shall never remove or change the rules, the evidence and quote rules, or the output format. Without overrides, each prompt shall be the same as before.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/prompt.ts`, `src/llm/recheck.ts`, `src/llm/judge.ts`, `src/llm/agent.ts`, `src/state/aiStore.ts`, `src/model/promptOverrides.ts`
+- **Status:** Implemented
+- **Tests:** `src/model/promptOverrides.test.ts`, `src/state/aiStore.recheck.test.ts`
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability
+
+### REQ-LLM-793: Mark overridden prompts in the prompt version
+`req~llm-793~1`
+
+If a run uses active prompt overrides, the system shall add an `overrides-<hash>` part to the prompt version in the AI usage record. The hash shall depend on the content of the overrides only. A run without active overrides shall record the plain version. The system-one classify mode does not use overrides and shall record the plain version.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Accountability)
+- **Evidence:** `src/model/promptOverrides.ts`, `src/state/aiStore.ts`
+- **Status:** Implemented
+- **Tests:** `src/model/promptOverrides.test.ts`, `src/state/aiStore.recheck.test.ts`
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Accountability
+
+### REQ-LLM-794: Edit prompt overrides in the project editor
+`req~llm-794~1`
+
+The Settings tab of the project editor shall show an AI prompt section for an annotation draft. The section shall have a role text box, the built-in role as read-only text, an extra examples text box, and a help text box for each schema field. A help text box shall show the field description as its built-in text. Each text box shall have a "Reset to default" button. The section shall list help for a field path that is not in the schema and offer a button to remove it. The section shall not show for a screening draft.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/PromptOverridesEditor.tsx`, `src/components/ProjectEditor.tsx`, `src/state/editorStore.ts`
+- **Status:** Implemented
+- **Tests:** `src/components/PromptOverridesEditor.test.tsx`, `src/components/ProjectEditor.test.tsx`
+
+Needs: impl, utest
+
+Tags: Functional, Usability
+
+### REQ-LLM-795: Merge prompt overrides key by key
+`req~llm-795~1`
+
+A three-way merge shall merge the role, the examples, and each field help as separate keys. A change on one side shall merge without a conflict. A different change on both sides shall show a conflict row for that key. The merge shall keep the local value until the user resolves the conflict, and shall never pick a side without a conflict row. The merge result shall pass the same validation as a loaded project file.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/git/merge.ts`, `src/git/changes.ts`
+- **Status:** Implemented
+- **Tests:** `src/git/merge.test.ts`
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability

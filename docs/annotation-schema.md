@@ -152,6 +152,25 @@ annotation project with `config.reviewers` of at least `2`. See
 - If a key is not valid, the project does not open, and the error names the problem.
 - An assignment to a seat above `config.reviewers` stays in the file, but the app ignores it.
 
+**`config.promptOverrides`: changes to the AI prompt.** Optional. Use this key to change parts of
+the prompt that the AI receives. Screening projects do not use it.
+
+```jsonc
+"promptOverrides": {
+  "role": "You are a careful reviewer of software engineering studies.",
+  "fieldHelp": { "Findings/Claim": "The main claim in one sentence." },
+  "examples": "Paper X reports a user study, so Method is \"Experiment\"."
+}
+```
+
+- `role` replaces the opening sentence of the prompt. The limit is 1000 characters.
+- `fieldHelp` maps a field path to a help text. The path joins the field names with `/`. The help
+  text replaces the field description in the prompt only. The limit is 2000 characters per text.
+- `examples` adds a quoted block before the rules. The limit is 8000 characters.
+- An empty or absent text means the built-in text. The app writes the key only when it has a text.
+- If a key is unknown or a text is over its limit, the project does not open.
+- Overrides never change the rules, the quote rules, or the output format.
+
 **`protocol` — the review's own protocol.** Optional. A record of the research questions, the
 search that ran, and the criteria behind the review — kept *inside* the project file so a
 pre-registered protocol travels with the data it produced. Every part is optional:
