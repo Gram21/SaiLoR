@@ -5,6 +5,7 @@
 // [impl->req~ui-100~1]
 // [impl->req~con-470~1]
 // [impl->req~ann-180~1]
+// [impl->req~llm-830~1]
 import { useEffect, useState } from 'react'
 import { activePerson, useStore } from '../state/store'
 import { useAiStore } from '../state/aiStore'
@@ -21,6 +22,7 @@ import { aiSeatId, seatLabel } from '../model/project'
 import { canUpdateProject, metadataSeatKey } from '../model/metadata'
 import { MetadataDialog } from './MetadataDialog'
 import { ExportGraphDialog } from './ExportGraphDialog'
+import { AiEvaluationDialog } from './AiEvaluationDialog'
 import { PdfFolderDialog } from './PdfFolderDialog'
 import { t, tp, useT, type MessageKey } from '../i18n'
 
@@ -204,6 +206,7 @@ export function Toolbar() {
   const [showSaved, setShowSaved] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
   const [graphOpen, setGraphOpen] = useState(false)
+  const [aiEvalOpen, setAiEvalOpen] = useState(false)
   useEffect(() => {
     if (lastSavedAt === null) return
     setShowSaved(true)
@@ -551,6 +554,17 @@ export function Toolbar() {
               {t('toolbar.ai.label')}
             </button>
           )}
+          {project?.aiEnabled && (
+            <button
+              type="button"
+              className="tb-btn"
+              title={t('toolbar.aiEval.title')}
+              onClick={() => setAiEvalOpen(true)}
+              disabled={busy || editorOpen}
+            >
+              {t('toolbar.aiEval.label')}
+            </button>
+          )}
           {project && (project.metadataEdit ?? 'off') !== 'off' && (
             <button
               type="button"
@@ -585,6 +599,7 @@ export function Toolbar() {
         </div>
         {metadataOpen && <MetadataDialog onClose={() => setMetadataOpen(false)} />}
         {graphOpen && <ExportGraphDialog onClose={() => setGraphOpen(false)} />}
+        {aiEvalOpen && <AiEvaluationDialog onClose={() => setAiEvalOpen(false)} />}
         {pdfDialogOpen && !editorOpen && <PdfFolderDialog />}
 
         <div className="toolbar-view">
