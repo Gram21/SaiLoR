@@ -79,6 +79,7 @@ export interface DetectedChanges {
 const BOOKKEEPING_FIELDS = [
   'finished',
   'reviewsFinished',
+  'reviewsLock',
   'marks',
   'reviewMarks',
   'equal',

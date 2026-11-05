@@ -18,6 +18,7 @@ import {
   type Project,
   type ProjectProvenance,
   type ProjectProtocol,
+  type SeatLock,
 } from '../model/project'
 import type { ScreeningConfig } from '../model/schema'
 import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
@@ -663,7 +664,10 @@ function mergePaper(
     finished:
       merge3<boolean>(base?.finished ?? false, ours.finished, theirs.finished, (a, b) => a === b)
         ?.value ?? true,
-    reviewsFinished: mergeReviewsFinished(base?.reviewsFinished, ours.reviewsFinished, theirs.reviewsFinished),
+    ...lockedSeatsFinished(
+      mergeReviewsFinished(base?.reviewsFinished, ours.reviewsFinished, theirs.reviewsFinished),
+      mergeReviewsLock(base?.reviewsLock, ours.reviewsLock ?? {}, theirs.reviewsLock ?? {}),
+    ),
     ...reviewMetadataField(mergePerKey(base?.reviewMetadata, ours.reviewMetadata ?? {}, theirs.reviewMetadata ?? {})),
     extra,
   }
@@ -722,6 +726,34 @@ function mergeReviewsFinished(
   return out
 }
 
+// [impl->req~git-590~1]
+function mergeReviewsLock(
+  base: Record<string, SeatLock> | undefined,
+  ours: Record<string, SeatLock>,
+  theirs: Record<string, SeatLock>,
+): Record<string, SeatLock> {
+  const out: Record<string, SeatLock> = {}
+  for (const k of new Set([...Object.keys(ours), ...Object.keys(theirs)])) {
+    const m = merge3(base?.[k], ours[k], theirs[k], deepEqualJson)
+    const value = m ? m.value : !ours[k]?.finishedAt && theirs[k]?.finishedAt ? theirs[k] : ours[k]
+    if (value) out[k] = value
+  }
+  return out
+}
+
+// [impl->req~git-590~1]
+function lockedSeatsFinished(
+  reviewsFinished: Record<string, boolean>,
+  reviewsLock: Record<string, SeatLock>,
+): { reviewsFinished: Record<string, boolean>; reviewsLock?: Record<string, SeatLock> } {
+  const locked = Object.keys(reviewsLock).filter((k) => reviewsLock[k].finishedAt)
+  if (Object.keys(reviewsLock).length === 0) return { reviewsFinished }
+  return {
+    reviewsFinished: { ...reviewsFinished, ...Object.fromEntries(locked.map((k) => [k, true])) },
+    reviewsLock,
+  }
+}
+
 /** Same union-by-reviewer-key shape as the `reviews` loop above, then a
  *  per-reviewer `mergeMarksList`. */
 function mergeReviewMarks(
@@ -774,6 +806,7 @@ function canonicalPaper(schema: ResolvedDef[], p: Paper) {
         .sort()
         .map((k) => [k, true]),
     ),
+    reviewsLock: p.reviewsLock ?? {},
     reviewMetadata: p.reviewMetadata ?? {},
     extra: p.extra,
   }

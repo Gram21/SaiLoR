@@ -859,6 +859,51 @@ describe('mergeProjects — the finished declaration', () => {
   })
 })
 
+// [utest->req~git-590~1]
+describe('merge of the edit lock', () => {
+  const finished = (at: string) => ({ reviewsFinished: { '1': true }, reviewsLock: { '1': { finishedAt: at } } })
+  const reopened = { reviewsLock: { '1': { reopenedAt: '2026-11-05T11:00:00Z' } } }
+  const opts = { reviewers: 2 }
+
+  it('keeps a lock that only one side wrote', () => {
+    const base = project({ ...opts, papers: [paper('a')] })
+    const ours = project({ ...opts, papers: [paper('a', { extra: finished('2026-11-05T10:00:00Z') })] })
+    const theirs = project({ ...opts, papers: [paper('a', { title: 'New' })] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.papers[0].reviewsLock).toEqual({ '1': { finishedAt: '2026-11-05T10:00:00Z' } })
+    expect(outcome.merged.papers[0].reviewsFinished).toEqual({ '1': true })
+  })
+
+  it('takes a reopen when the other side did not touch the lock', () => {
+    const base = project({ ...opts, papers: [paper('a', { extra: finished('2026-11-05T10:00:00Z') })] })
+    const ours = project({ ...opts, papers: [paper('a', { extra: reopened })] })
+    const theirs = project({ ...opts, papers: [paper('a', { extra: finished('2026-11-05T10:00:00Z') })] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.papers[0].reviewsLock).toEqual(reopened.reviewsLock)
+    expect(outcome.merged.papers[0].reviewsFinished).toEqual({})
+  })
+
+  it('lets finished win over unfinished for the same seat', () => {
+    const base = project({ ...opts, papers: [paper('a', { extra: finished('2026-11-05T10:00:00Z') })] })
+    const ours = project({ ...opts, papers: [paper('a', { extra: reopened })] })
+    const theirs = project({ ...opts, papers: [paper('a', { extra: finished('2026-11-05T12:00:00Z') })] })
+    for (const outcome of [mergeProjects(base, ours, theirs), mergeProjects(base, theirs, ours)]) {
+      expectMerged(outcome)
+      expect(outcome.merged.papers[0].reviewsLock).toEqual({ '1': { finishedAt: '2026-11-05T12:00:00Z' } })
+      expect(outcome.merged.papers[0].reviewsFinished).toEqual({ '1': true })
+    }
+  })
+
+  it('writes no lock for a project without one', () => {
+    const base = project({ ...opts, papers: [paper('a')] })
+    const outcome = mergeProjects(base, project({ ...opts, papers: [paper('a', { title: 'New' })] }), base)
+    expectMerged(outcome)
+    expect(outcome.merged.papers[0]).not.toHaveProperty('reviewsLock')
+  })
+})
+
 describe('mergeProjects — paper metadata conflicts', () => {
   it('conflicts on title, with canonical "title" under the paper tree', () => {
     const base = project({ papers: [paper('a', { title: 'T0' })] })
