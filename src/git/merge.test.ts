@@ -486,6 +486,59 @@ describe('mergeProjects — papers added and removed', () => {
   })
 })
 
+// [utest->req~git-600~1]
+describe('mergeProjects — papers that share a PDF hash', () => {
+  const added = (id: string, hash: string) => paper(id, { pdf: `pdfs/${id}.pdf`, extra: { pdfSha256: hash } })
+
+  it('keeps one paper with the remote id when both sides added the same file', () => {
+    const base = project({ papers: [paper('a')] })
+    const ours = project({
+      papers: [paper('a'), added('mine', 'h1'), { ...added('x', 'h2'), annotations: { 'Study Type': [{ value: 'RCT' }] } }],
+    })
+    const theirs = project({ papers: [paper('a'), added('theirs', 'h1'), added('remote-x', 'h2')] })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.papers.map((p) => p.id)).toEqual(['a', 'theirs', 'remote-x'])
+    expect(outcome.merged.papers[2].annotations['Study Type'][0].value).toBe('RCT')
+    expect(outcome.notes.filter((n) => n.kind === 'paper-same-pdf')).toHaveLength(2)
+  })
+
+  it('keeps both papers for different files', () => {
+    const base = project({ papers: [] })
+    const outcome = mergeProjects(base, project({ papers: [added('x', 'h1')] }), project({ papers: [added('y', 'h2')] }))
+    expectMerged(outcome)
+    expect(outcome.merged.papers.map((p) => p.id)).toEqual(['x', 'y'])
+  })
+
+  it('joins the ignored files of both sides', () => {
+    const base = project({ extra: { ignoredPdfs: ['h0'] } })
+    const ours = project({ extra: { ignoredPdfs: ['h0', 'h1'] } })
+    const theirs = project({ extra: { ignoredPdfs: ['h0', 'h2'] } })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect([...(outcome.merged.extra.ignoredPdfs as string[])].sort()).toEqual(['h0', 'h1', 'h2'])
+    expect(outcome.conflicts).toEqual([])
+  })
+
+  it('merges the PDF folder and the Crossref setting', () => {
+    const base = project()
+    const ours = project()
+    const theirs = project()
+    theirs.pdfFolder = 'pdfs'
+    theirs.crossrefLookup = true
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.pdfFolder).toBe('pdfs')
+    expect(outcome.merged.crossrefLookup).toBe(true)
+    ours.pdfFolder = 'local'
+    const clash = mergeProjects(base, ours, theirs)
+    expectMerged(clash)
+    const c = conflictAt(clash.conflicts, 'pdfFolder')!
+    expect(clash.merged.pdfFolder).toBe('local')
+    expect(applyResolutions(clash.merged, clash.conflicts, { [c.id]: 'theirs' }).pdfFolder).toBe('pdfs')
+  })
+})
+
 describe('mergeProjects — schema changes', () => {
   const MINUS_RELEVANT: AnnotationDef[] = [
     { name: 'Study Type', type: 'string' },

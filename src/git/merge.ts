@@ -25,6 +25,7 @@ import { parseYear } from '../model/year'
 import { t, tp, type MessageKey } from '../i18n'
 import { mergeMarksList, type PdfMark } from '../model/pdfMarks'
 import type { MetadataEditMode, SeatMetadata } from '../model/metadata'
+import { ignoredPdfsOf, pdfHashOf } from '../model/pdfFolder'
 import {
   ancestorsOf,
   mergeHistories,
@@ -92,6 +93,7 @@ export interface FieldConflict {
 export type MergeNoteKind =
   | 'paper-added-local'
   | 'paper-added-remote'
+  | 'paper-same-pdf'
   | 'paper-removed-local'
   | 'paper-removed-remote'
   | 'paper-kept'
@@ -804,9 +806,26 @@ function mergePapers(
   const oursById = new Map(ours.papers.map((p) => [p.id, p]))
   const theirsById = new Map(theirs.papers.map((p) => [p.id, p]))
 
+  // [impl->req~git-600~1]
+  const theirsAddedByHash = new Map<string, Paper>()
+  for (const p of theirs.papers) {
+    const h = pdfHashOf(p)
+    if (h && !baseById.has(p.id) && !oursById.has(p.id) && !theirsAddedByHash.has(h)) theirsAddedByHash.set(h, p)
+  }
+  const samePdf = new Map<string, Paper>()
+  for (const p of ours.papers) {
+    const h = pdfHashOf(p)
+    const th = h ? theirsAddedByHash.get(h) : undefined
+    if (th && !baseById.has(p.id) && !theirsById.has(p.id)) {
+      samePdf.set(p.id, th)
+      theirsAddedByHash.delete(h!)
+    }
+  }
+  const matchedTheirs = new Set([...samePdf.values()].map((p) => p.id))
+
   const order = [
     ...ours.papers.map((p) => p.id),
-    ...theirs.papers.filter((p) => !oursById.has(p.id)).map((p) => p.id),
+    ...theirs.papers.filter((p) => !oursById.has(p.id) && !matchedTheirs.has(p.id)).map((p) => p.id),
   ]
 
   const out: Paper[] = []
@@ -814,6 +833,13 @@ function mergePapers(
     const b = baseById.get(id)
     const o = oursById.get(id)
     const th = theirsById.get(id)
+
+    const twin = samePdf.get(id)
+    if (o && twin) {
+      out.push(mergePaper(schema, undefined, { ...o, id: twin.id }, twin, conflicts, notes, refusals))
+      notes.push({ kind: 'paper-same-pdf', message: t('git.merge.paperSamePdf', { title: twin.title, id: twin.id }) })
+      continue
+    }
 
     if (o && !th) {
       if (!b) {
@@ -1397,6 +1423,12 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
   const rootExtraKeys = new Set([...Object.keys(base?.extra ?? {}), ...Object.keys(ours.extra), ...Object.keys(theirs.extra)])
   const mergedRootExtra: Record<string, unknown> = {}
   for (const k of rootExtraKeys) {
+    // [impl->req~git-600~1]
+    if (k === 'ignoredPdfs') {
+      const ignored = mergeEqual(base ? ignoredPdfsOf(base) : undefined, ignoredPdfsOf(ours), ignoredPdfsOf(theirs))
+      if (ignored.length > 0) mergedRootExtra[k] = ignored
+      continue
+    }
     // [impl->req~git-256~1]
     const m = merge3<unknown>(base?.extra[k], ours.extra[k], theirs.extra[k], deepEqualJson)
     if (!m) conflicts.push(extraChoice('', '', { kind: 'project' }, k, ours.extra[k], theirs.extra[k]))
@@ -1420,6 +1452,15 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
       v === 'annotation' ? t('editor.project.metadataEditAnnotation') : t('editor.project.metadataEditOff'),
     )
   }
+
+  const pdfFolderM = merge3<string | undefined>(base?.pdfFolder, ours.pdfFolder, theirs.pdfFolder, (a, b) => a === b)
+  if (!pdfFolderM) {
+    projectChoice('pdfFolder', t('editor.project.pdfFolder'), ours.pdfFolder, theirs.pdfFolder, (v) =>
+      v ? `${v}/` : t('editor.project.notSet'),
+    )
+  }
+  const pdfFolder = pdfFolderM ? pdfFolderM.value : ours.pdfFolder
+  const crossrefM = merge3<boolean>(base?.crossrefLookup === true, ours.crossrefLookup === true, theirs.crossrefLookup === true, eqBool)
 
   const removalNote = schemaRemovalNote(base, schema, ours, theirs)
   if (removalNote) notes.push(removalNote)
@@ -1468,6 +1509,8 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
       aiSeat: aiSeatM ? aiSeatM.value! : ours.aiSeat,
       finishCheckbox: finishM ? finishM.value! : ours.finishCheckbox,
       ...metadataEditField(metadataEditM ? metadataEditM.value : ours.metadataEdit),
+      ...(pdfFolder ? { pdfFolder } : {}),
+      ...(crossrefM?.value ? { crossrefLookup: true } : {}),
       reviewers: reviewersM ? reviewersM.value! : ours.reviewers,
       screening: screeningValue,
       ...(strict ? { strict } : {}),
@@ -1668,6 +1711,9 @@ function applyOne(draft: Project, conflict: FieldConflict, value: FieldValue): v
     } else if (c === 'metadataEdit') {
       if (chosen === 'off') delete draft.metadataEdit
       else draft.metadataEdit = chosen as MetadataEditMode
+    } else if (c === 'pdfFolder') {
+      if (chosen) draft.pdfFolder = chosen as string
+      else delete draft.pdfFolder
     } else if (c.startsWith('protocol.')) {
       const key = c.slice('protocol.'.length) as (typeof PROTOCOL_KEYS)[number]
       const text = valueToString(value)
