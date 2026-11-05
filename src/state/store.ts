@@ -1364,7 +1364,7 @@ function firstUnfinishedPaperId(project: Project, currentReviewer: string | null
 }
 
 /** Walk from a paper's annotation root to the container tree addressed by `path`. */
-function containerAt(root: AnnotationValueTree, path: PathSeg[]): AnnotationValueTree {
+export function containerAt(root: AnnotationValueTree, path: PathSeg[]): AnnotationValueTree {
   let tree = root
   for (const seg of path) {
     const inst = tree[seg.name]?.[seg.index]

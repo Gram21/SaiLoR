@@ -145,3 +145,5 @@ per category so requirements can be inserted without renumbering.
   The coverage counts above were not recounted.
 - **Settings in the help (2026-11-05).** REQ-UI-150 added for the "Settings…" item in the Help menus and
   the "Open settings" button in the Help dialog. The coverage counts above were not recounted.
+- **Editor tabs and preview (2026-11-05).** REQ-EDT-300 to REQ-EDT-320 added for the project editor tabs,
+  the preview of the draft schema and the list of schema problems. The coverage counts above were not recounted.

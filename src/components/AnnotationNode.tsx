@@ -1,4 +1,6 @@
 // [impl->req~ann-10~1]
+// [impl->req~edt-310~1]
+import { useContext } from 'react'
 import { fieldPath, useAiMark, useStore, type PathSeg } from '../state/store'
 import { isField, isRepeatable, type ResolvedDef } from '../model/schema'
 import {
@@ -11,6 +13,7 @@ import {
 import { useT } from '../i18n'
 import { Field } from './Field'
 import { NodeName } from './NodeName'
+import { AnnotationFormContext } from './AnnotationFormContext'
 
 interface AnnotationNodeProps {
   def: ResolvedDef
@@ -37,8 +40,11 @@ export function AnnotationNode({
   root,
 }: AnnotationNodeProps) {
   const t = useT()
-  const addInstance = useStore((s) => s.addInstance)
-  const removeInstance = useStore((s) => s.removeInstance)
+  const form = useContext(AnnotationFormContext)
+  const storeAddInstance = useStore((s) => s.addInstance)
+  const storeRemoveInstance = useStore((s) => s.removeInstance)
+  const addInstance = form?.addInstance ?? storeAddInstance
+  const removeInstance = form?.removeInstance ?? storeRemoveInstance
   // The field currently pulsing after a "jump to this field" request (from
   // Validation) — a plain string, so every node just compares its own
   // canonical path against it rather than each subscribing separately.
@@ -60,7 +66,7 @@ export function AnnotationNode({
         className={`anno-leaf${canonical === flashFieldPath ? ' field-flash' : ''}`}
         data-canonical={canonical}
       >
-        <NodeName def={def} onClick={confirmFirst} />
+        <NodeName def={def} onClick={form ? undefined : confirmFirst} />
         <Field def={def} path={path} index={0} value={inst?.value ?? null} ariaLabel={def.name} />
       </div>
     )
@@ -78,7 +84,7 @@ export function AnnotationNode({
   return (
     <div className="anno-node">
       <div className="anno-node-header">
-        <NodeName def={def} onClick={isField(def) ? confirmAll : undefined} />
+        <NodeName def={def} onClick={isField(def) && !form ? confirmAll : undefined} />
         {repeatable && (
           <button
             type="button"

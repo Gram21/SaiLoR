@@ -3,16 +3,20 @@
 // [impl->req~llm-650~1]
 // [impl->req~edt-180~1]
 // [impl->req~edt-200~1]
+// [impl->req~edt-300~1]
+import { useEffect, useState, type KeyboardEvent } from 'react'
+import { flushSync } from 'react-dom'
 import { useEditorStore } from '../state/editorStore'
 import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
 import { pdfFolderProblem } from '../model/pdfFolder'
 import { getPlatform } from '../platform'
-import { getLanguage, rich, tp, useT } from '../i18n'
+import { getLanguage, rich, tp, useT, type MessageKey } from '../i18n'
 import { SchemaTreeEditor } from './SchemaTreeEditor'
 import { ScreeningReasonsEditor } from './ScreeningReasonsEditor'
 import { ProtocolEditor } from './ProtocolEditor'
 import { PapersEditor } from './PapersEditor'
 import { StrictModeEditor } from './StrictModeEditor'
+import { SchemaPreview } from './SchemaPreview'
 import type { ProjectProvenance } from '../model/project'
 import type { MetadataEditMode } from '../model/metadata'
 import '../styles/editor.css'
@@ -29,6 +33,14 @@ const ISSUE_PAPER_PREFIX = /^Paper (\d+)/
  *  hundred papers `validateDraft` emits one line per paper, which otherwise
  *  pushes the whole editor off-screen (see PapersEditor.tsx / #82). */
 const ISSUE_DISPLAY_LIMIT = 12
+
+type EditorTab = 'schema' | 'papers' | 'settings' | 'preview'
+const TAB_LABELS: Record<EditorTab, MessageKey> = {
+  schema: 'editor.tabs.schema',
+  papers: 'editor.tabs.papers',
+  settings: 'editor.tabs.settings',
+  preview: 'editor.tabs.preview',
+}
 
 /**
  * Full-screen editor for a project JSON: pick where it lives, build the
@@ -83,8 +95,38 @@ export function ProjectEditor() {
   const close = useEditorStore((s) => s.close)
   const clearError = useEditorStore((s) => s.clearError)
   const clearNotice = useEditorStore((s) => s.clearNotice)
+  const [tab, setTab] = useState<EditorTab>('schema')
+  useEffect(() => {
+    if (!open) setTab('schema')
+  }, [open])
 
   if (!open) return null
+
+  const tabs: EditorTab[] = screening ? ['schema', 'papers', 'settings'] : ['schema', 'papers', 'settings', 'preview']
+  const activeTab = tab === 'preview' && screening ? 'schema' : tab
+  const tabPanel = (id: EditorTab) => ({
+    role: 'tabpanel',
+    id: `editor-panel-${id}`,
+    'aria-labelledby': `editor-tab-${id}`,
+    hidden: activeTab !== id,
+  })
+  const onTabKey = (e: KeyboardEvent) => {
+    const rtl = document.documentElement.dir === 'rtl'
+    const i = tabs.indexOf(activeTab)
+    const step = { ArrowRight: rtl ? -1 : 1, ArrowLeft: rtl ? 1 : -1 }[e.key]
+    const next =
+      e.key === 'Home'
+        ? tabs[0]
+        : e.key === 'End'
+          ? tabs[tabs.length - 1]
+          : step
+            ? tabs[(i + step + tabs.length) % tabs.length]
+            : null
+    if (!next) return
+    e.preventDefault()
+    setTab(next)
+    document.getElementById(`editor-tab-${next}`)?.focus()
+  }
 
   const onClose = () => {
     if (dirty && !window.confirm(t('editor.project.discardConfirm'))) return
@@ -92,8 +134,9 @@ export function ProjectEditor() {
   }
 
   // "Paper N: …" issues carry which row they're about; scroll to and focus
-  // it in the (always-visible, never-modal) Papers section below.
+  // it in the (never-modal) Papers tab, switched to first.
   const jumpToPaper = (index: number) => {
+    flushSync(() => setTab('papers'))
     const row = document.getElementById(`papers-row-${index}`)
     if (!row) return
     row.scrollIntoView({ behavior: 'smooth', block: 'center' })
@@ -144,200 +187,6 @@ export function ProjectEditor() {
           {t('editor.project.change')}
         </button>
       </div>
-
-      <div className="editor-location">
-        <span className="editor-location-label">{t('editor.project.annotationsFolder')}</span>
-        <input
-          className="editor-title-input"
-          type="text"
-          value={annotationsDir}
-          onChange={(e) => setAnnotationsDir(e.target.value)}
-          placeholder={t('editor.project.annotationsDirPlaceholder', { dir: DEFAULT_ANNOTATIONS_DIR })}
-          title={t('editor.project.annotationsDirTitle')}
-          disabled={busy}
-          aria-invalid={annotationsDirIssue !== null}
-        />
-      </div>
-      {annotationsDirIssue && <p className="editor-field-problem">{annotationsDirIssue}</p>}
-
-      {provenance && <ProvenanceNote provenance={provenance} />}
-
-      <div className="editor-location">
-        <span className="editor-location-label">{t('editor.project.projectTitle')}</span>
-        <input
-          className="editor-title-input"
-          type="text"
-          value={title}
-          onChange={(e) => setTitle(e.target.value)}
-          placeholder={t('editor.project.titlePlaceholder', {
-            name: location?.name ?? t('editor.project.fileNameFallback'),
-          })}
-          disabled={busy}
-        />
-      </div>
-
-      <div className="editor-location">
-        <span className="editor-location-label">{t('editor.project.screening')}</span>
-        <label className="editor-ai-toggle" title={t('editor.project.screeningTitle')}>
-          <input
-            type="checkbox"
-            checked={screening !== null}
-            onChange={(e) => setScreening(e.target.checked)}
-            disabled={busy}
-          />
-          <span>{t('editor.project.screeningToggle')}</span>
-        </label>
-      </div>
-      {screening && <p className="editor-hint editor-screening-hint">{rich('editor.project.screeningHint')}</p>}
-
-      <div className="editor-location">
-        <span className="editor-location-label">{t('editor.project.reviewers')}</span>
-        <label className="editor-ai-toggle" title={t('editor.project.reviewersTitle')}>
-          <input
-            type="checkbox"
-            checked={multiReviewer}
-            onChange={(e) => setReviewers(e.target.checked ? 2 : 1)}
-            disabled={busy}
-          />
-          <span>{t('editor.project.multiReviewers')}</span>
-        </label>
-        {multiReviewer && (
-          <input
-            className="editor-reviewers-input"
-            type="number"
-            min={2}
-            max={10}
-            value={reviewers}
-            onChange={(e) => setReviewers(Number(e.target.value) || 2)}
-            disabled={busy}
-          />
-        )}
-      </div>
-      {multiReviewer && (
-        <p className="editor-hint editor-reviewers-hint">{rich('editor.project.reviewersHint', { reviewers })}</p>
-      )}
-
-      <div className="editor-location">
-        <span className="editor-location-label">{t('editor.project.aiLabel')}</span>
-        <label
-          className="editor-ai-toggle"
-          title={screening ? t('editor.project.aiTitleScreening') : t('editor.project.aiTitleAnnotation')}
-        >
-          <input
-            type="checkbox"
-            checked={aiEnabled}
-            onChange={(e) => setAiEnabled(e.target.checked)}
-            disabled={busy}
-          />
-          <span>{screening ? t('editor.project.allowAiScreening') : t('editor.project.allowAiAnnotation')}</span>
-        </label>
-      </div>
-      {/* Only meaningful with AI use allowed and at least one other, human,
-          reviewer to compare it against — disabled-with-a-reason otherwise
-          rather than hidden, so turning either on reveals a control that
-          already exists rather than a surprise new one. */}
-      <div className="editor-location">
-        <span className="editor-location-label">{t('editor.project.aiSeatLabel')}</span>
-        <label
-          className="editor-ai-toggle"
-          title={
-            !aiEnabled
-              ? t('editor.project.aiSeatNeedsAi')
-              : !multiReviewer
-                ? t('editor.project.aiSeatNeedsReviewers')
-                : t('editor.project.aiSeatTitle', { n: reviewers })
-          }
-        >
-          <input
-            type="checkbox"
-            checked={aiSeat}
-            onChange={(e) => setAiSeat(e.target.checked)}
-            disabled={busy || !aiEnabled || !multiReviewer}
-          />
-          <span>{t('editor.project.aiSeatToggle', { n: reviewers })}</span>
-        </label>
-        {aiSeat && aiEnabled && multiReviewer && (
-          <p className="editor-hint editor-reviewers-hint">{t('editor.project.aiSeatHint', { n: reviewers })}</p>
-        )}
-      </div>
-
-      {/* Hidden for a screening draft: one include/exclude decision already
-          settles a paper there, so the annotation panel shows no checkbox and
-          the setting would configure nothing. */}
-      {!screening && (
-        <>
-          <div className="editor-location">
-            <span className="editor-location-label">{t('editor.project.finishing')}</span>
-            <label className="editor-ai-toggle" title={t('editor.project.finishingTitle')}>
-              <input
-                type="checkbox"
-                checked={finishCheckbox}
-                onChange={(e) => setFinishCheckbox(e.target.checked)}
-                disabled={busy}
-              />
-              <span>{t('editor.project.finishingToggle')}</span>
-            </label>
-          </div>
-          <p className="editor-hint editor-reviewers-hint">
-            {finishCheckbox ? (
-              <>
-                {rich('editor.project.finishedHintOn')}
-                {multiReviewer && (
-                  <>
-                    {' '}
-                    {rich('editor.project.finishedHintOnMulti')}
-                  </>
-                )}
-              </>
-            ) : (
-              rich('editor.project.finishedHintOff')
-            )}
-          </p>
-        </>
-      )}
-
-      <div className="editor-location">
-        <label className="editor-location-label" htmlFor="editor-metadata-edit">
-          {t('editor.project.metadataEdit')}
-        </label>
-        <select
-          id="editor-metadata-edit"
-          value={metadataEdit}
-          title={t('editor.project.metadataEditTitle')}
-          onChange={(e) => setMetadataEdit(e.target.value as MetadataEditMode)}
-          disabled={busy}
-        >
-          <option value="off">{t('editor.project.metadataEditOff')}</option>
-          <option value="annotation">{t('editor.project.metadataEditAnnotation')}</option>
-        </select>
-      </div>
-
-      <div className="editor-location">
-        <label className="editor-location-label" htmlFor="editor-pdf-folder">
-          {t('editor.project.pdfFolder')}
-        </label>
-        <input
-          id="editor-pdf-folder"
-          className="editor-title-input"
-          type="text"
-          value={pdfFolder}
-          onChange={(e) => setPdfFolder(e.target.value)}
-          placeholder={t('editor.project.pdfFolderPlaceholder')}
-          title={t('editor.project.pdfFolderTitle')}
-          disabled={busy}
-          aria-invalid={pdfFolderIssue !== null}
-        />
-        <label className="editor-ai-toggle" title={t('editor.project.crossrefLookupTitle')}>
-          <input
-            type="checkbox"
-            checked={crossrefLookup}
-            onChange={(e) => setCrossrefLookup(e.target.checked)}
-            disabled={busy}
-          />
-          <span>{t('editor.project.crossrefLookup')}</span>
-        </label>
-      </div>
-      {pdfFolderIssue && <p className="editor-field-problem">{pdfFolderIssue}</p>}
 
       {error && (
         <div className="editor-error" role="alert">
@@ -395,25 +244,25 @@ export function ProjectEditor() {
         </div>
       )}
 
-      <div className="editor-body">
-        <section className="editor-section">
-          {/* Collapsed by default: optional, and most projects that use it set
-              it once at the start and rarely reopen it — but open on its own
-              when the project already has a protocol, so an existing one is
-              never hidden behind a closed disclosure the reviewer must know to
-              expand. */}
-          <details className="editor-protocol-details" open={protocol !== null}>
-            <summary>
-              <h2>{t('editor.project.protocolTitle')}</h2>
-              <span className="editor-protocol-summary-hint">
-                {protocol ? t('editor.project.recorded') : t('editor.project.optional')}
-              </span>
-            </summary>
-            <p className="editor-hint">{t('editor.project.protocolHint')}</p>
-            <ProtocolEditor />
-          </details>
-        </section>
+      <div className="editor-tabs" role="tablist" aria-label={t('editor.tabs.label')} onKeyDown={onTabKey}>
+        {tabs.map((id) => (
+          <button
+            key={id}
+            id={`editor-tab-${id}`}
+            type="button"
+            role="tab"
+            className="editor-tab"
+            aria-selected={activeTab === id}
+            aria-controls={`editor-panel-${id}`}
+            tabIndex={activeTab === id ? 0 : -1}
+            onClick={() => setTab(id)}
+          >
+            {t(TAB_LABELS[id])}
+          </button>
+        ))}
+      </div>
 
+      <div {...tabPanel('schema')} className="editor-body">
         <section className="editor-section">
           {/* Same "open when already recorded" rule as the protocol section
               above, for the same reason. */}
@@ -448,9 +297,9 @@ export function ProjectEditor() {
             <SchemaTreeEditor />
           </section>
         )}
+      </div>
 
-        {multiReviewer && !screening && <StrictModeEditor />}
-
+      <div {...tabPanel('papers')} className="editor-body">
         <section className="editor-section">
           <h2>{t('editor.project.papersTitle')}</h2>
           <p className="editor-hint">{t('editor.project.papersHint')}</p>
@@ -476,6 +325,230 @@ export function ProjectEditor() {
           <PapersEditor />
         </section>
       </div>
+
+      <div {...tabPanel('settings')} className="editor-tabpanel">
+        <div className="editor-location">
+          <span className="editor-location-label">{t('editor.project.annotationsFolder')}</span>
+          <input
+            className="editor-title-input"
+            type="text"
+            value={annotationsDir}
+            onChange={(e) => setAnnotationsDir(e.target.value)}
+            placeholder={t('editor.project.annotationsDirPlaceholder', { dir: DEFAULT_ANNOTATIONS_DIR })}
+            title={t('editor.project.annotationsDirTitle')}
+            disabled={busy}
+            aria-invalid={annotationsDirIssue !== null}
+          />
+        </div>
+        {annotationsDirIssue && <p className="editor-field-problem">{annotationsDirIssue}</p>}
+
+        {provenance && <ProvenanceNote provenance={provenance} />}
+
+        <div className="editor-location">
+          <span className="editor-location-label">{t('editor.project.projectTitle')}</span>
+          <input
+            className="editor-title-input"
+            type="text"
+            value={title}
+            onChange={(e) => setTitle(e.target.value)}
+            placeholder={t('editor.project.titlePlaceholder', {
+              name: location?.name ?? t('editor.project.fileNameFallback'),
+            })}
+            disabled={busy}
+          />
+        </div>
+
+        <div className="editor-location">
+          <span className="editor-location-label">{t('editor.project.screening')}</span>
+          <label className="editor-ai-toggle" title={t('editor.project.screeningTitle')}>
+            <input
+              type="checkbox"
+              checked={screening !== null}
+              onChange={(e) => setScreening(e.target.checked)}
+              disabled={busy}
+            />
+            <span>{t('editor.project.screeningToggle')}</span>
+          </label>
+        </div>
+        {screening && <p className="editor-hint editor-screening-hint">{rich('editor.project.screeningHint')}</p>}
+
+        <div className="editor-location">
+          <span className="editor-location-label">{t('editor.project.reviewers')}</span>
+          <label className="editor-ai-toggle" title={t('editor.project.reviewersTitle')}>
+            <input
+              type="checkbox"
+              checked={multiReviewer}
+              onChange={(e) => setReviewers(e.target.checked ? 2 : 1)}
+              disabled={busy}
+            />
+            <span>{t('editor.project.multiReviewers')}</span>
+          </label>
+          {multiReviewer && (
+            <input
+              className="editor-reviewers-input"
+              type="number"
+              min={2}
+              max={10}
+              value={reviewers}
+              onChange={(e) => setReviewers(Number(e.target.value) || 2)}
+              disabled={busy}
+            />
+          )}
+        </div>
+        {multiReviewer && (
+          <p className="editor-hint editor-reviewers-hint">{rich('editor.project.reviewersHint', { reviewers })}</p>
+        )}
+
+        <div className="editor-location">
+          <span className="editor-location-label">{t('editor.project.aiLabel')}</span>
+          <label
+            className="editor-ai-toggle"
+            title={screening ? t('editor.project.aiTitleScreening') : t('editor.project.aiTitleAnnotation')}
+          >
+            <input
+              type="checkbox"
+              checked={aiEnabled}
+              onChange={(e) => setAiEnabled(e.target.checked)}
+              disabled={busy}
+            />
+            <span>{screening ? t('editor.project.allowAiScreening') : t('editor.project.allowAiAnnotation')}</span>
+          </label>
+        </div>
+        {/* Only meaningful with AI use allowed and at least one other, human,
+            reviewer to compare it against — disabled-with-a-reason otherwise
+            rather than hidden, so turning either on reveals a control that
+            already exists rather than a surprise new one. */}
+        <div className="editor-location">
+          <span className="editor-location-label">{t('editor.project.aiSeatLabel')}</span>
+          <label
+            className="editor-ai-toggle"
+            title={
+              !aiEnabled
+                ? t('editor.project.aiSeatNeedsAi')
+                : !multiReviewer
+                  ? t('editor.project.aiSeatNeedsReviewers')
+                  : t('editor.project.aiSeatTitle', { n: reviewers })
+            }
+          >
+            <input
+              type="checkbox"
+              checked={aiSeat}
+              onChange={(e) => setAiSeat(e.target.checked)}
+              disabled={busy || !aiEnabled || !multiReviewer}
+            />
+            <span>{t('editor.project.aiSeatToggle', { n: reviewers })}</span>
+          </label>
+          {aiSeat && aiEnabled && multiReviewer && (
+            <p className="editor-hint editor-reviewers-hint">{t('editor.project.aiSeatHint', { n: reviewers })}</p>
+          )}
+        </div>
+
+        {/* Hidden for a screening draft: one include/exclude decision already
+            settles a paper there, so the annotation panel shows no checkbox and
+            the setting would configure nothing. */}
+        {!screening && (
+          <>
+            <div className="editor-location">
+              <span className="editor-location-label">{t('editor.project.finishing')}</span>
+              <label className="editor-ai-toggle" title={t('editor.project.finishingTitle')}>
+                <input
+                  type="checkbox"
+                  checked={finishCheckbox}
+                  onChange={(e) => setFinishCheckbox(e.target.checked)}
+                  disabled={busy}
+                />
+                <span>{t('editor.project.finishingToggle')}</span>
+              </label>
+            </div>
+            <p className="editor-hint editor-reviewers-hint">
+              {finishCheckbox ? (
+                <>
+                  {rich('editor.project.finishedHintOn')}
+                  {multiReviewer && (
+                    <>
+                      {' '}
+                      {rich('editor.project.finishedHintOnMulti')}
+                    </>
+                  )}
+                </>
+              ) : (
+                rich('editor.project.finishedHintOff')
+              )}
+            </p>
+          </>
+        )}
+
+        <div className="editor-location">
+          <label className="editor-location-label" htmlFor="editor-metadata-edit">
+            {t('editor.project.metadataEdit')}
+          </label>
+          <select
+            id="editor-metadata-edit"
+            value={metadataEdit}
+            title={t('editor.project.metadataEditTitle')}
+            onChange={(e) => setMetadataEdit(e.target.value as MetadataEditMode)}
+            disabled={busy}
+          >
+            <option value="off">{t('editor.project.metadataEditOff')}</option>
+            <option value="annotation">{t('editor.project.metadataEditAnnotation')}</option>
+          </select>
+        </div>
+
+        <div className="editor-location">
+          <label className="editor-location-label" htmlFor="editor-pdf-folder">
+            {t('editor.project.pdfFolder')}
+          </label>
+          <input
+            id="editor-pdf-folder"
+            className="editor-title-input"
+            type="text"
+            value={pdfFolder}
+            onChange={(e) => setPdfFolder(e.target.value)}
+            placeholder={t('editor.project.pdfFolderPlaceholder')}
+            title={t('editor.project.pdfFolderTitle')}
+            disabled={busy}
+            aria-invalid={pdfFolderIssue !== null}
+          />
+          <label className="editor-ai-toggle" title={t('editor.project.crossrefLookupTitle')}>
+            <input
+              type="checkbox"
+              checked={crossrefLookup}
+              onChange={(e) => setCrossrefLookup(e.target.checked)}
+              disabled={busy}
+            />
+            <span>{t('editor.project.crossrefLookup')}</span>
+          </label>
+        </div>
+        {pdfFolderIssue && <p className="editor-field-problem">{pdfFolderIssue}</p>}
+
+        <div className="editor-body">
+          <section className="editor-section">
+            {/* Collapsed by default: optional, and most projects that use it set
+                it once at the start and rarely reopen it — but open on its own
+                when the project already has a protocol, so an existing one is
+                never hidden behind a closed disclosure the reviewer must know to
+                expand. */}
+            <details className="editor-protocol-details" open={protocol !== null}>
+              <summary>
+                <h2>{t('editor.project.protocolTitle')}</h2>
+                <span className="editor-protocol-summary-hint">
+                  {protocol ? t('editor.project.recorded') : t('editor.project.optional')}
+                </span>
+              </summary>
+              <p className="editor-hint">{t('editor.project.protocolHint')}</p>
+              <ProtocolEditor />
+            </details>
+          </section>
+
+          {multiReviewer && !screening && <StrictModeEditor />}
+        </div>
+      </div>
+
+      {activeTab === 'preview' && (
+        <div {...tabPanel('preview')} className="editor-body">
+          <SchemaPreview />
+        </div>
+      )}
     </div>
   )
 }
