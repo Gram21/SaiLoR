@@ -294,7 +294,7 @@ export interface PlatformAdapter {
   // future caller that already knows the destination can skip to `writeTextFile`.
 
   /** Ask where a text file should be saved. Null if cancelled. */
-  pickTextExportPath(suggestedName: string): Promise<string | null>
+  pickTextExportPath(suggestedName: string, extension?: string): Promise<string | null>
 
   /** Write `text` to `absPath`. Never throws — failures come back as `{ ok: false, error }`. */
   writeTextFile(absPath: string, text: string): Promise<{ ok: true; path: string } | { ok: false; error: string }>

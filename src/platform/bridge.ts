@@ -73,7 +73,7 @@ export interface SlrBridge {
   /** Pick where a new annotated PDF should be saved. Null if cancelled. */
   pickPdfExportPath(suggestedName: string): Promise<string | null>
   /** Pick where a plain-text export should be saved. Null if cancelled. */
-  pickTextExportPath(suggestedName: string): Promise<string | null>
+  pickTextExportPath(suggestedName: string, extension?: string): Promise<string | null>
   /** Write `text` to `absPath`. */
   writeTextFile(absPath: string, text: string): Promise<{ ok: true; path: string } | { ok: false; error: string }>
   /** For each project path: does it still exist, and what title does it now carry? */

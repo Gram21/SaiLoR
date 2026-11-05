@@ -195,18 +195,30 @@ pub async fn pdf_pick_export_path(
     )
 }
 
+// [impl->req~dat-520~1]
+fn text_export_extension(extension: Option<&str>) -> Result<&'static str, String> {
+    let ext = extension.unwrap_or("txt");
+    ["txt", "jsonld", "ttl", "graphml", "csv"]
+        .into_iter()
+        .find(|known| *known == ext)
+        .ok_or_else(|| format!("\"{ext}\" is not a known export file type."))
+}
+
+// [impl->req~dat-520~1]
 #[tauri::command]
 pub async fn text_pick_export_path(
     app: AppHandle,
     session: State<'_, Mutex<Session>>,
     suggested_name: String,
+    extension: Option<String>,
 ) -> Result<Option<String>, String> {
+    let ext = text_export_extension(extension.as_deref())?;
     export_path(
         &app,
         &session,
         "Export as text",
         &suggested_name,
-        ("Text", &["txt"]),
+        (&ext.to_uppercase(), &[ext]),
     )
 }
 
@@ -586,6 +598,16 @@ mod tests {
             ))["ok"],
             false
         );
+    }
+
+    // [utest->req~dat-520~1]
+    #[test]
+    fn text_export_extension_allows_known_extensions() {
+        assert_eq!(text_export_extension(None), Ok("txt"));
+        assert_eq!(text_export_extension(Some("ttl")), Ok("ttl"));
+        assert_eq!(text_export_extension(Some("graphml")), Ok("graphml"));
+        assert!(text_export_extension(Some("exe")).is_err());
+        assert!(text_export_extension(Some("csv;sh")).is_err());
     }
 
     // [utest->req~plt-260~1]
