@@ -110,6 +110,13 @@ export. See the [index](index.md) for the glossary.
 - **Evidence:** `src/components/ValidationDialog.tsx:185-242,296-321`
 - **Status:** Implemented
 
+### REQ-ANN-180: Confirm each metadata correction
+- **Description:** When the metadata correction mode is not `off`, the toolbar shall open a Metadata dialog. The dialog shall show the current paper as an entry with editable title, authors, year and DOI. After "Check PDFs", the dialog shall add one entry per proposal (REQ-DAT-470). For each entry, the reviewer shall be able to edit the values, accept the entry, skip the entry for this session or ignore the entry permanently. "Accept all" shall accept every proposal and every agreed consolidation entry at once, and shall be one undo step. The system shall change no paper without one of these confirmations.
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/components/MetadataDialog.tsx` (`MetadataDialog`), `src/components/Toolbar.tsx`, `src/state/store.ts` (`applyMetadataEdits`)
+- **Verified by:** `src/components/MetadataDialog.test.tsx` (`MetadataDialog`), `src/state/store.metadata.test.ts` (`applyMetadataEdits`)
+- **Status:** Implemented
+
 ## Paper list
 
 ### REQ-LST-10: List papers with status
@@ -158,6 +165,13 @@ export. See the [index](index.md) for the glossary.
 - **Description:** When a project reopens, the system shall select the paper, PDF page, and intra-page scroll offset stored at last use (persisted locally per project path, debounced at 500 ms), falling back to the first paper the active seat has not finished; stored positions shall never be written to the project file, leak between projects, or survive the referenced paper's deletion.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/state/store.ts:256-313`, `src/state/store.readingPosition.test.ts:73-143`, commits `bb44dc8`, `e8efa2e`
+- **Status:** Implemented
+
+### REQ-LST-80: Mark corrected metadata in the paper list
+- **Description:** The paper list and the annotation panel header shall show the corrected title and authors of the active seat. The paper list shall show a badge on each paper with a corrected field. The badge tooltip shall name the corrected fields.
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/model/metadata.ts` (`effectiveMetadata`, `editedFields`), `src/components/PaperList.tsx`, `src/components/AnnotationPanel.tsx`
+- **Verified by:** `src/model/metadata.test.ts` (`editedFields`), `src/components/MetadataDialog.test.tsx` (`paper list badge`)
 - **Status:** Implemented
 
 ## PDF viewer

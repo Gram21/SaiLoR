@@ -656,6 +656,38 @@ my-review/
 With that layout, each paper's `pdf` is simply `"pdfs/paper-a.pdf"`. This folder travels as a
 unit — you can zip `my-review/` and hand it to a colleague, and every PDF path still resolves.
 
+### Correcting paper metadata
+
+Set `config.metadataEdit` to let reviewers correct the title, the authors, the year and the DOI.
+The key is optional. The app writes it only when the value is not `off`.
+
+| Value | Effect |
+| --- | --- |
+| `off` | The default. The metadata is read-only. |
+| `project` | A confirmed correction goes into the paper in `project.json`. |
+| `annotation` | A confirmed correction of a numbered seat goes into the annotation file of that seat. |
+
+Open the **Metadata** dialog from the toolbar. The dialog shows the current paper.
+Click **Check PDFs** to read the title, the authors and the DOI from each PDF file.
+The app reads the PDF files on your computer. It uses no network service and no AI model.
+The app proposes a value only when it differs from the current value.
+For each entry, you can edit the values, accept the entry, skip it or ignore it.
+**Skip** hides the entry until you open the dialog again.
+**Ignore** stores the proposed values, so that the app does not propose them again.
+**Accept all** accepts each proposal at once. You can undo it in one step.
+
+With `project`, the app keeps the first value of each changed field in the paper key
+`metadataOriginal`. With `annotation`, the annotation file `reviewer-N.json` holds only the
+changed fields in `metadataOverrides`. A project with one reviewer writes as with `project`.
+
+With `annotation` and more than one reviewer, the Consolidation seat shows one entry per paper
+with overrides. A field that no seat changed keeps its value. A field is agreed only when every
+human seat changed it to the same value. Any other changed field is a disagreement, and the
+dialog shows the value of each seat. **Accept** writes the values
+into `project.json`. **Accept all** skips entries with a disagreement.
+
+The paper `id` never changes. A badge in the paper list marks each paper with a corrected field.
+
 ---
 
 ## 5. What the file looks like after annotating

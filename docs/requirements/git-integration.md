@@ -417,3 +417,10 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src-tauri/src/git.rs` (`pull_finish`), commit `288897c`
 - **Verified by:** `src-tauri/src/git.rs` (`finish_refuses_a_merge_that_is_not_valid_json`, `generated_merges_between_clones_of_a_bare_remote_stay_openable`)
 - **Status:** Implemented
+
+### REQ-GIT-580: Merge and commit metadata corrections
+- **Description:** A merge shall keep the metadata overrides of each seat. When both sides changed the overrides of the same seat differently, the merge shall keep the local overrides. A commit shall carry the metadata overrides and the metadata records of the project file with the paper.
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `src/git/merge.ts` (`mergePaper`, `canonicalPaper`), `src/git/changes.ts` (`BOOKKEEPING_FIELDS`)
+- **Verified by:** `src/git/merge.test.ts` (`merge of metadata overrides`)
+- **Status:** Implemented

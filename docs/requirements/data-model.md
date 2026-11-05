@@ -337,6 +337,43 @@ the project editor. See the [index](index.md) for the glossary.
 - **Verified by:** `src/model/unique.test.ts` (`validatePaper duplicate issues`)
 - **Status:** Implemented
 
+## Metadata correction
+
+### REQ-DAT-430: Metadata correction mode
+- **Description:** The system shall read the optional project key `config.metadataEdit` with the values `off`, `project` and `annotation`. An absent or unknown value shall mean `off`. The system shall write the key only when the value is not `off`, so that a project without the key opens and saves unchanged. With `off`, the title, authors, year and DOI of a paper shall stay read-only in the annotation view.
+- **Type:** Functional (ISO 25010: Functional Suitability, Compatibility)
+- **Evidence:** `src/model/metadata.ts` (`parseMetadataEditMode`, `metadataTarget`), `src/model/project.ts` (`loadProject`, `serializeProject`, `splitProjectFiles`)
+- **Verified by:** `src/model/metadata.test.ts` (`metadata edit mode`, `metadata storage round trip`)
+- **Status:** Implemented
+
+### REQ-DAT-440: Stable paper identifier on metadata correction
+- **Description:** A metadata correction shall change only the title, the authors, the year and the DOI. The system shall never change the paper identifier, the PDF path or the annotations folder of the paper.
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `src/model/metadata.ts` (`applyProjectEdit`, `applySeatEdit`), `src/state/store.ts` (`applyMetadataEdits`)
+- **Verified by:** `src/state/store.metadata.test.ts` (`applyMetadataEdits`)
+- **Status:** Implemented
+
+### REQ-DAT-450: Write corrections into the project file
+- **Description:** With `config.metadataEdit: project`, the system shall write a confirmed correction into the paper in the project file. The system shall record the value before the first change of each field in the paper key `metadataOriginal`. When a field returns to its first value, the system shall remove the field from `metadataOriginal`.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/metadata.ts` (`applyProjectEdit`), `src/state/store.ts` (`applyMetadataEdits`)
+- **Verified by:** `src/model/metadata.test.ts` (`applyProjectEdit`), `src/state/store.metadata.test.ts` (`applyMetadataEdits`)
+- **Status:** Implemented
+
+### REQ-DAT-460: Write corrections into the annotation file
+- **Description:** With `config.metadataEdit: annotation` and more than one reviewer, the system shall write a confirmed correction of a numbered human seat as `metadataOverrides` into the annotation file of that seat, and shall not change the project file. The system shall store only the fields that differ from the project file. An empty input shall mean no override. With one reviewer, or in the Consolidation seat, the system shall write as in REQ-DAT-450. The system shall not accept a correction in the AI seat.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/metadata.ts` (`applySeatEdit`, `metadataTarget`), `src/model/project.ts` (`splitProjectFiles`, `assembleLegacyProjectJson`, `loadProject`)
+- **Verified by:** `src/model/metadata.test.ts` (`applySeatEdit`, `metadata storage round trip`)
+- **Status:** Implemented
+
+### REQ-DAT-470: Propose corrections from the PDF files
+- **Description:** On request, the system shall read the title, the authors and the DOI of each paper from its PDF file on the local computer. The system shall propose a correction only for a field that differs from the current value. The system shall not propose a value that the reviewer ignored before for that field. The system shall not propose a year, and shall not use a network service or an AI model. The system shall not change a paper until the reviewer confirms the correction.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/pdfMeta.ts` (`findDoi`, `extractPdfMeta`), `src/model/metadata.ts` (`proposeFromPdf`), `src/state/store.ts` (`scanPdfMetadata`)
+- **Verified by:** `src/model/metadata.test.ts` (`proposeFromPdf`), `src/model/pdfMeta.test.ts` (`findDoi`)
+- **Status:** Implemented
+
 ## Project editor
 
 ### REQ-EDT-10: Validate drafts before save
@@ -478,4 +515,11 @@ the project editor. See the [index](index.md) for the glossary.
 - **Description:** The project editor shall let the user reopen the finished work of a person on a paper. Reopening shall remove the finished flag of that seat on that paper.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/StrictModeEditor.tsx` (`StrictModeEditor`), `src/state/editorStore.ts` (`reopenWork`)
+- **Status:** Implemented
+
+### REQ-EDT-180: Select the metadata correction mode
+- **Description:** The project editor shall let the user select the metadata correction mode `off`, `project` or `annotation` (REQ-DAT-430). The default shall be `off`. The change shall be part of the editor undo history.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/editorStore.ts` (`setMetadataEdit`, `buildProjectJson`), `src/components/ProjectEditor.tsx`
+- **Verified by:** `src/state/editorStore.metadata.test.ts` (`metadata edit setting`)
 - **Status:** Implemented
