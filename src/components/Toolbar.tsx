@@ -1,4 +1,5 @@
 // [impl->req~plt-340~1]
+// [impl->req~ann-210~1]
 // [impl->req~ui-70~1]
 // [impl->req~ui-80~1]
 // [impl->req~ui-100~1]
@@ -19,6 +20,7 @@ import type { GitProbe, GitRepoInfo } from '../git/types'
 import { aiSeatId, seatLabel } from '../model/project'
 import { canUpdateProject, metadataSeatKey } from '../model/metadata'
 import { MetadataDialog } from './MetadataDialog'
+import { PdfFolderDialog } from './PdfFolderDialog'
 import { t, tp, useT, type MessageKey } from '../i18n'
 
 /** Shown on every git entry point in the browser build, where `getGit()` is
@@ -170,6 +172,9 @@ export function Toolbar() {
   const selectReviewer = useStore((s) => s.selectReviewer)
   const readOnly = useStore((s) => s.readOnly)
   const setReadOnly = useStore((s) => s.setReadOnly)
+  const scanPdfFolder = useStore((s) => s.scanPdfFolder)
+  const pdfDialogOpen = useStore((s) => s.pdfDialogOpen)
+  const pdfProposalCount = useStore((s) => s.pdfProposals.length)
   const corruptFiles = useStore((s) => s.corruptFiles)
   const showCorruptFiles = useStore((s) => s.showCorruptFiles)
   const openAnnotationAi = useAiStore((s) => s.openDialog)
@@ -555,8 +560,20 @@ export function Toolbar() {
               {t('toolbar.metadata.label')}
             </button>
           )}
+          {project?.pdfFolder && getPlatform().kind !== 'browser' && (
+            <button
+              type="button"
+              className="tb-btn"
+              title={t('toolbar.rescan.title')}
+              onClick={() => void scanPdfFolder(true)}
+              disabled={busy || editorOpen}
+            >
+              {pdfProposalCount > 0 ? t('toolbar.rescan.count', { count: pdfProposalCount }) : t('toolbar.rescan.label')}
+            </button>
+          )}
         </div>
         {metadataOpen && <MetadataDialog onClose={() => setMetadataOpen(false)} />}
+        {pdfDialogOpen && !editorOpen && <PdfFolderDialog />}
 
         <div className="toolbar-view">
           <div className="font-controls" role="group" aria-label={t('toolbar.font.group')}>
