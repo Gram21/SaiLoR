@@ -361,3 +361,23 @@ describe('schema feedback', () => {
     expect(st().project!.papers[0].annotations.Year[0].value).toBe(2020)
   })
 })
+
+describe('prompt overrides in a run', () => {
+  // [utest->req~llm-792~1]
+  // [utest->req~llm-793~1]
+  it('sends the project role and marks the recorded prompt version', async () => {
+    useStore.setState((s) => ({ project: { ...s.project!, promptOverrides: { role: 'You are a careful test reviewer.' } } }))
+    mockLlm()
+    await ai().run()
+    expect(mockPlatform.callLlm.mock.calls[0][0].body).toContain('You are a careful test reviewer.')
+    ai().apply()
+    expect(st().project!.papers[0].aiUsage[0].promptVersion).toMatch(/^extract-1\+overrides-[0-9a-z]+$/)
+  })
+
+  it('records the plain version without overrides', async () => {
+    mockLlm()
+    await ai().run()
+    ai().apply()
+    expect(st().project!.papers[0].aiUsage[0].promptVersion).toBe('extract-1')
+  })
+})
