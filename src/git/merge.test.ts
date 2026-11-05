@@ -1462,3 +1462,31 @@ describe('mergeProjects — strict mode settings', () => {
     expect(outcome.merged.strict).toEqual(strict)
   })
 })
+
+// [utest->req~git-580~1]
+describe('merge of metadata overrides', () => {
+  const withMeta = (reviewMetadata?: Record<string, unknown>) =>
+    project({ reviewers: 2, papers: [paper('a', { extra: reviewMetadata ? { reviewMetadata } : {} })] })
+
+  it('keeps the overrides of both seats without a conflict', () => {
+    const base = withMeta()
+    const ours = withMeta({ '1': { overrides: { title: 'Ours' } } })
+    const theirs = withMeta({ '2': { overrides: { doi: '10.1/x' } } })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.conflicts).toEqual([])
+    expect(outcome.merged.papers[0].reviewMetadata).toEqual({
+      '1': { overrides: { title: 'Ours' } },
+      '2': { overrides: { doi: '10.1/x' } },
+    })
+    expect(outcome.merged.papers[0].title).toBe('Paper a')
+  })
+
+  it('takes the mode one side changed', () => {
+    const base = withMeta()
+    const theirs: Project = { ...withMeta(), metadataEdit: 'annotation' }
+    const outcome = mergeProjects(base, withMeta(), theirs)
+    expectMerged(outcome)
+    expect(outcome.merged.metadataEdit).toBe('annotation')
+  })
+})

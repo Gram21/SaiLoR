@@ -24,7 +24,7 @@ import { formatPath, displayPath, resolvePath, type RawSeg } from '../llm/paths'
 import { parseYear } from '../model/year'
 import { t, tp, type MessageKey } from '../i18n'
 import { mergeMarksList, type PdfMark } from '../model/pdfMarks'
-import type { StoredAlignment } from '../model/alignment'
+import type { MetadataEditMode, SeatMetadata } from '../model/metadata'
 import {
   ancestorsOf,
   mergeHistories,
@@ -649,7 +649,7 @@ function mergePaper(
     reviews,
     aiUsage: mergeAiUsage(ours.aiUsage, theirs.aiUsage),
     equal: mergeEqual(base?.equal, ours.equal, theirs.equal),
-    alignment: mergeAlignment(base?.alignment, ours.alignment, theirs.alignment),
+    alignment: mergePerKey(base?.alignment, ours.alignment, theirs.alignment),
     // Not merged: it records what *this* checkout's Consolidation seat last
     // ran against. Keeping ours means a merge that brought in reviewer edits
     // reads as stale and prompts, which is the right outcome; taking theirs
@@ -664,8 +664,17 @@ function mergePaper(
       merge3<boolean>(base?.finished ?? false, ours.finished, theirs.finished, (a, b) => a === b)
         ?.value ?? true,
     reviewsFinished: mergeReviewsFinished(base?.reviewsFinished, ours.reviewsFinished, theirs.reviewsFinished),
+    ...reviewMetadataField(mergePerKey(base?.reviewMetadata, ours.reviewMetadata ?? {}, theirs.reviewMetadata ?? {})),
     extra,
   }
+}
+
+function reviewMetadataField(m: Record<string, SeatMetadata>): { reviewMetadata?: Record<string, SeatMetadata> } {
+  return Object.keys(m).length > 0 ? { reviewMetadata: m } : {}
+}
+
+function metadataEditField(mode: MetadataEditMode | undefined): { metadataEdit?: MetadataEditMode } {
+  return mode && mode !== 'off' ? { metadataEdit: mode } : {}
 }
 
 /**
@@ -682,12 +691,13 @@ function mergePaper(
  * holds) is the same staleness `alignedReviews` already tolerates: unmapped
  * entries are appended, not dropped.
  */
-function mergeAlignment(
-  base: StoredAlignment | undefined,
-  ours: StoredAlignment,
-  theirs: StoredAlignment,
-): StoredAlignment {
-  const out: StoredAlignment = {}
+// [impl->req~git-580~1]
+function mergePerKey<T>(
+  base: Record<string, T> | undefined,
+  ours: Record<string, T>,
+  theirs: Record<string, T>,
+): Record<string, T> {
+  const out: Record<string, T> = {}
   for (const name of new Set([...Object.keys(ours), ...Object.keys(theirs)])) {
     const merged = merge3(base?.[name], ours[name], theirs[name], deepEqualJson)
     const value = merged ? merged.value : ours[name]
@@ -764,6 +774,7 @@ function canonicalPaper(schema: ResolvedDef[], p: Paper) {
         .sort()
         .map((k) => [k, true]),
     ),
+    reviewMetadata: p.reviewMetadata ?? {},
     extra: p.extra,
   }
 }
@@ -1443,6 +1454,10 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
       aiEnabled: aiM ? aiM.value! : ours.aiEnabled,
       aiSeat: aiSeatM ? aiSeatM.value! : ours.aiSeat,
       finishCheckbox: finishM ? finishM.value! : ours.finishCheckbox,
+      ...metadataEditField(
+        merge3(base?.metadataEdit ?? 'off', ours.metadataEdit ?? 'off', theirs.metadataEdit ?? 'off', (a, b) => a === b)
+          ?.value ?? ours.metadataEdit,
+      ),
       reviewers: reviewersM ? reviewersM.value! : ours.reviewers,
       screening: screeningValue,
       ...(strict ? { strict } : {}),
