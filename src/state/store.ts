@@ -44,7 +44,19 @@ import {
   type AnnotationFilter,
 } from '../model/annotationState'
 import { screeningIssues } from '../screening/validate'
-import { extractPdfMeta } from '../model/pdfMeta'
+import { extractPdfMeta, type PdfMeta } from '../model/pdfMeta'
+import {
+  crossrefUrl,
+  ignoredPdfsOf,
+  missingPaperIds,
+  newPaper,
+  newPdfFiles,
+  parseCrossrefWork,
+  pdfFolderProblem,
+  pdfHashOf,
+  proposeNewPaper,
+  type PdfProposal,
+} from '../model/pdfFolder'
 import {
   applyProjectEdit,
   applySeatEdit,
@@ -606,6 +618,7 @@ let diskProject: Project | null = null
  * edit (reference equality would look stale mid-read, discarding a good abstract).
  */
 let projectGeneration = 0
+const offeredPdfs = new Set<string>()
 
 /** One confirmed metadata change: seat values, ignored proposal values, or the agreed values for the project file. */
 export interface MetadataEdit {
@@ -681,6 +694,13 @@ interface AppState {
   agreementOpen: boolean
   /** Whether the "export PDF with annotations" dialog is open. Session-only, like `validationOpen`. */
   exportPdfOpen: boolean
+  /** New PDF files of the last PDF folder scan, not yet added or ignored. Session-only. */
+  pdfProposals: PdfProposal[]
+  /** Paper ids whose PDF file the last scan did not find. Session-only. */
+  missingPdfs: string[]
+  pdfDialogOpen: boolean
+  pdfScanning: boolean
+  pdfScanError: string | null
   /** Whether the schema-info dialog is open — auto-set true by `loadFromText`
    *  when the project has a `schemaInfo` comment, else toggled manually. Session-only. */
   schemaInfoOpen: boolean
@@ -1139,6 +1159,13 @@ interface AppState {
   applyMetadataEdits: (edits: MetadataEdit[]) => boolean
   /** Reads every PDF and returns the values that differ from the paper; changes nothing. */
   scanPdfMetadata: () => Promise<{ paperId: string; values: MetadataValues }[]>
+  /** Scans the PDF folder; a manual scan always opens the dialog, an automatic one only for a file not offered yet. */
+  scanPdfFolder: (manual?: boolean) => Promise<void>
+  /** Appends one paper per confirmed proposal in one undo step. Returns how many were added. */
+  addPdfPapers: (proposals: PdfProposal[]) => number
+  /** Adds the hashes to the root key `ignoredPdfs` in one undo step. */
+  ignorePdfs: (hashes: string[]) => boolean
+  setPdfDialogOpen: (open: boolean) => void
   /**
    * Adopt every paper's unanimous screening decision into the consolidated
    * tree, in one undo step. Returns how many papers were filled.
@@ -1363,6 +1390,11 @@ export const useStore = create<AppState>()(
     validationOpen: false,
     agreementOpen: false,
     exportPdfOpen: false,
+    pdfProposals: [],
+    missingPdfs: [],
+    pdfDialogOpen: false,
+    pdfScanning: false,
+    pdfScanError: null,
     schemaInfoOpen: false,
     pendingMarkJump: null,
     initialPdfPosition: null,
@@ -1560,6 +1592,11 @@ export const useStore = create<AppState>()(
         s.validationOpen = false
         s.agreementOpen = false
         s.exportPdfOpen = false
+        s.pdfProposals = []
+        s.missingPdfs = []
+        s.pdfDialogOpen = false
+        s.pdfScanning = false
+        s.pdfScanError = null
         s.schemaInfoOpen = false
         s.pendingMarkJump = null
         s.openLinkPopoverField = null
@@ -1710,6 +1747,11 @@ export const useStore = create<AppState>()(
           s.validationUnannotated = null
           s.validationOpen = false
           s.agreementOpen = false
+          s.pdfProposals = []
+          s.missingPdfs = []
+          s.pdfDialogOpen = false
+          s.pdfScanning = false
+          s.pdfScanError = null
           // Opened once per project load so a reviewer sees it before annotating.
           // Reset here (unlike `exportPdfOpen`) so switching projects never
           // leaves a stale dialog open or skips a schema comment the new file has.
@@ -3788,6 +3830,145 @@ export const useStore = create<AppState>()(
       }
       return projectGeneration === generation ? out : []
     },
+
+    // [impl->req~dat-510~1]
+    // [impl->req~dat-520~1]
+    // [impl->req~dat-530~1]
+    // [impl->req~ann-210~1]
+    // [impl->req~lst-90~1]
+    scanPdfFolder: async (manual = false) => {
+      const st = get()
+      const project = st.project
+      const handle = st.saveHandle
+      if (!project?.pdfFolder || !handle) return
+      if (manual) {
+        set((s) => {
+          s.pdfDialogOpen = true
+        })
+      }
+      if (st.pdfScanning) return
+      const problem = pdfFolderProblem(project.pdfFolder)
+      if (problem) {
+        set((s) => {
+          s.pdfScanError = problem
+        })
+        return
+      }
+      const generation = projectGeneration
+      set((s) => {
+        s.pdfScanning = true
+      })
+      try {
+        const scan = await getPlatform().scanPdfFolder(project.pdfFolder, project.papers.map((p) => p.pdf), handle)
+        if (projectGeneration !== generation) return
+        const current = get().project ?? project
+        const kept = new Map(get().pdfProposals.map((p) => [p.file.sha256, p]))
+        const proposals: PdfProposal[] = []
+        for (const file of newPdfFiles(current.papers, scan, ignoredPdfsOf(current))) {
+          const old = kept.get(file.sha256)
+          if (old) {
+            proposals.push({ ...old, file })
+            continue
+          }
+          let meta: PdfMeta = {}
+          try {
+            const src = await getPlatform().getPdfSource(file.path, handle)
+            try {
+              meta = await extractPdfMeta(await (await fetch(src.url)).arrayBuffer())
+            } finally {
+              src.revoke?.()
+            }
+          } catch {
+            meta = {}
+          }
+          let crossref: MetadataValues | undefined
+          if (get().project?.crossrefLookup === true && meta.doi) {
+            const res = await getPlatform().fetchWeb(crossrefUrl(meta.doi)).catch(() => null)
+            if (res?.ok) crossref = parseCrossrefWork(res.body)
+          }
+          if (projectGeneration !== generation) return
+          proposals.push(proposeNewPaper(file, meta, crossref))
+        }
+        const unseen = proposals.some((p) => !offeredPdfs.has(p.file.sha256))
+        for (const p of proposals) offeredPdfs.add(p.file.sha256)
+        set((s) => {
+          s.pdfProposals = proposals
+          s.missingPdfs = missingPaperIds(project.papers, scan.known)
+          s.pdfScanError = null
+          if (unseen) s.pdfDialogOpen = true
+        })
+      } catch (e) {
+        if (projectGeneration === generation) {
+          set((s) => {
+            const code = e instanceof Error ? e.message : String(e)
+            s.pdfScanError =
+              code === 'not-found'
+                ? t('pdfFolder.notFound', { folder: project.pdfFolder! })
+                : code === 'escapes'
+                  ? t('pdfFolder.escapes', { folder: project.pdfFolder! })
+                  : t('pdfFolder.scanFailed', { error: code })
+          })
+        }
+      } finally {
+        if (projectGeneration === generation) {
+          set((s) => {
+            s.pdfScanning = false
+          })
+        }
+      }
+    },
+
+    // [impl->req~ann-200~1]
+    // [impl->req~dat-520~1]
+    // [impl->req~dat-540~1]
+    addPdfPapers: (proposals) => {
+      const prev = get()
+      if (prev.readOnly || !prev.project) return 0
+      const project = prev.project
+      const ids = new Set(project.papers.map((p) => p.id))
+      const hashes = new Set(project.papers.map(pdfHashOf))
+      const added: Paper[] = []
+      for (const proposal of proposals) {
+        if (hashes.has(proposal.file.sha256)) continue
+        const paper = newPaper(project, proposal, ids)
+        ids.add(paper.id)
+        hashes.add(proposal.file.sha256)
+        added.push(paper)
+      }
+      if (added.length === 0) return 0
+      lastFieldKey = null
+      const snap: HistoryEntry = { project, paperId: prev.currentPaperId }
+      set((s) => {
+        pushPast(s, snap)
+        s.project!.papers.push(...added)
+        s.pdfProposals = s.pdfProposals.filter((p) => !hashes.has(p.file.sha256))
+        s.dirty = true
+      })
+      return added.length
+    },
+
+    // [impl->req~ann-200~1]
+    ignorePdfs: (hashes) => {
+      const prev = get()
+      if (prev.readOnly || !prev.project) return false
+      const ignored = ignoredPdfsOf(prev.project)
+      const add = [...new Set(hashes)].filter((h) => !ignored.includes(h))
+      if (add.length === 0) return false
+      lastFieldKey = null
+      const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
+      set((s) => {
+        pushPast(s, snap)
+        s.project!.extra.ignoredPdfs = [...ignored, ...add]
+        s.pdfProposals = s.pdfProposals.filter((p) => !add.includes(p.file.sha256))
+        s.dirty = true
+      })
+      return true
+    },
+
+    setPdfDialogOpen: (open) =>
+      set((s) => {
+        s.pdfDialogOpen = open
+      }),
 
     adoptAllUnanimousScreening: () => {
       if (get().readOnly) return 0
