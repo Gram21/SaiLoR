@@ -523,17 +523,17 @@ inspection only.
 
 ## Coverage statistics
 
-Counts come from `python3 technical-report/trace_stats.py` at the revision that adds the settings, unique values, git hardening and consolidation alignment merge.
+Counts come from `python3 technical-report/trace_stats.py` at the revision that adds metadata correction.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 428 | 100% |
-| With an implementing source link | 402 | 94% |
-| With at least one verifying test | 398 | 93% |
+| Requirements traced | 438 | 100% |
+| With an implementing source link | 412 | 94% |
+| With at least one verifying test | 408 | 93% |
 | Without an automated check (source inspection only) | 30 | 7% |
-| With an introducing/pinning commit | 122 | 29% |
-| With a documentation link | 364 | 85% |
+| With an introducing/pinning commit | 122 | 28% |
+| With a documentation link | 374 | 85% |
 | Security-related (ISO 25010 Security) | 33 | 8% |
-| Distinct test files linked | 198 | — |
-| Distinct source files linked | 188 | — |
+| Distinct test files linked | 202 | — |
+| Distinct source files linked | 190 | — |
 | Linked files missing at this revision | 0 | — |
