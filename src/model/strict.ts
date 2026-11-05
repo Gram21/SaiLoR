@@ -147,6 +147,18 @@ export function missingFinishers(project: StrictProject, paper: Pick<Paper, 'id'
     .filter((p): p is Person => p !== undefined)
 }
 
+// [impl->req~con-540~1]
+// [impl->req~con-560~1]
+/** True when strict mode is on and the locking save wrote `finishedAt` for this seat. */
+export function seatLocked(
+  project: (StrictProject & Pick<Project, 'papers'>) | null | undefined,
+  paperId: string | null | undefined,
+  seat: string | null | undefined,
+): boolean {
+  if (!strictActive(project) || !paperId || !seat) return false
+  return !!project.papers.find((p) => p.id === paperId)?.reviewsLock?.[seat]?.finishedAt
+}
+
 // [impl->req~edt-160~1]
 export function personCounts(
   strict: StrictConfig,
