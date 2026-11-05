@@ -1471,13 +1471,13 @@ Tags: Functional, Functional_Suitability
 ### REQ-LLM-830: Show the AI evaluation in a read-only dialog
 `req~llm-830~1`
 
-The toolbar shall show an "AI evaluation" button when the project turns AI on. The button shall open a dialog with one table row per field. The table shall show the field path, the number of compared values and the agreement in percent. The dialog shall show no paper text and no values. The dialog shall not change the project.
+The Consolidation overview shall show an "AI evaluation" button when the project turns AI on. The toolbar shall not show this button. The button shall open a dialog with one table row per field. The table shall show the field path, the number of compared values and the agreement in percent. The dialog shall show no paper text and no values. The dialog shall not change the project.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability: Operability, Security: Confidentiality)
-- **Evidence:** `src/components/AiEvaluationDialog.tsx`, `src/components/Toolbar.tsx`
+- **Evidence:** `src/components/AiEvaluationDialog.tsx`, `src/components/ConsolidationOverview.tsx`
 - **Status:** Implemented
-- **Tests:** `src/components/AiEvaluationDialog.test.tsx`, `src/components/Toolbar.test.tsx`
+- **Tests:** `src/components/AiEvaluationDialog.test.tsx`, `src/components/ConsolidationOverview.test.tsx`
 
 Needs: impl, utest
 

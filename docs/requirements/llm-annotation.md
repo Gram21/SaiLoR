@@ -668,11 +668,11 @@ See the [index](index.md) for the glossary.
 - **Tests:** `src/llm/evaluation.test.ts`
 
 ### REQ-LLM-830: Show the AI evaluation in a read-only dialog
-- **Description:** The toolbar shall show an "AI evaluation" button when the project turns AI on. The button shall open a dialog with one table row per field. The table shall show the field path, the number of compared values and the agreement in percent. The dialog shall show no paper text and no values. The dialog shall not change the project.
+- **Description:** The Consolidation overview shall show an "AI evaluation" button when the project turns AI on. The toolbar shall not show this button. The button shall open a dialog with one table row per field. The table shall show the field path, the number of compared values and the agreement in percent. The dialog shall show no paper text and no values. The dialog shall not change the project.
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability: Operability, Security: Confidentiality)
-- **Evidence:** `src/components/AiEvaluationDialog.tsx`, `src/components/Toolbar.tsx`
+- **Evidence:** `src/components/AiEvaluationDialog.tsx`, `src/components/ConsolidationOverview.tsx`
 - **Status:** Implemented
-- **Tests:** `src/components/AiEvaluationDialog.test.tsx`, `src/components/Toolbar.test.tsx`
+- **Tests:** `src/components/AiEvaluationDialog.test.tsx`, `src/components/ConsolidationOverview.test.tsx`
 
 ### REQ-LLM-831: Export the AI evaluation as CSV
 - **Description:** The dialog shall export the table as a CSV file. Each row shall contain the field path, the compared, equal and different counts, the AI-only and missed counts, and the agreement in percent. The system shall escape a cell that starts like a spreadsheet formula. The file shall contain no paper text and no values.

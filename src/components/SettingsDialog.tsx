@@ -1,3 +1,4 @@
+// [impl->req~ui-170~1]
 import { useEffect, useRef, type ComponentType, type KeyboardEvent as ReactKeyboardEvent } from 'react'
 import { useStore } from '../state/store'
 import { useAiStore } from '../state/aiStore'
@@ -107,6 +108,7 @@ export const SETTINGS_SECTIONS: Array<{ id: string; title: MessageKey; Body: Com
 // [impl->req~ui-90~1]
 export function SettingsDialog() {
   const t = useT()
+  const aiEnabled = useStore((s) => s.project?.aiEnabled === true)
   const open = useStore((s) => s.userSettingsOpen)
   const setOpen = useStore((s) => s.setUserSettingsOpen)
   const ref = useRef<HTMLDivElement>(null)
@@ -159,7 +161,7 @@ export function SettingsDialog() {
           </button>
         </div>
         <div className="modal-body">
-          {SETTINGS_SECTIONS.map(({ id, title, Body }) => (
+          {SETTINGS_SECTIONS.filter(({ id }) => id !== 'ai' || aiEnabled).map(({ id, title, Body }) => (
             <section key={id} aria-labelledby={`settings-${id}`}>
               <h3 id={`settings-${id}`}>{t(title)}</h3>
               <Body />

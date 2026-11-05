@@ -541,7 +541,7 @@ export function ProjectEditor() {
             </details>
           </section>
 
-          {!screening && <PromptOverridesEditor />}
+          {!screening && aiEnabled && <PromptOverridesEditor />}
 
           {multiReviewer && !screening && <StrictModeEditor />}
         </div>

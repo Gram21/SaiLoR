@@ -1,3 +1,5 @@
+// [impl->req~ui-160~1]
+// [impl->req~ui-170~1]
 // [impl->req~plt-340~1]
 // [impl->req~ann-210~1]
 // [impl->req~ui-70~1]
@@ -22,7 +24,6 @@ import { aiSeatId, seatLabel } from '../model/project'
 import { canUpdateProject, metadataSeatKey } from '../model/metadata'
 import { MetadataDialog } from './MetadataDialog'
 import { ExportGraphDialog } from './ExportGraphDialog'
-import { AiEvaluationDialog } from './AiEvaluationDialog'
 import { PdfFolderDialog } from './PdfFolderDialog'
 import { t, tp, useT, type MessageKey } from '../i18n'
 
@@ -206,7 +207,6 @@ export function Toolbar() {
   const [showSaved, setShowSaved] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
   const [graphOpen, setGraphOpen] = useState(false)
-  const [aiEvalOpen, setAiEvalOpen] = useState(false)
   useEffect(() => {
     if (lastSavedAt === null) return
     setShowSaved(true)
@@ -336,6 +336,10 @@ export function Toolbar() {
     },
   ]
 
+  const exportItems: MenuItem[] = [
+    { type: 'item', label: t('toolbar.graph.label'), hint: t('toolbar.graph.title'), onSelect: () => setGraphOpen(true) },
+  ]
+
   return (
     <header className="toolbar">
       {/* Three tracks (left / center / right) so the reviewer switch can sit
@@ -373,23 +377,26 @@ export function Toolbar() {
 
         <div className="toolbar-actions">
           <Dropdown label={t('toolbar.open.label')} title={t('toolbar.open.title')} disabled={busy} items={openItems} />
-          <Dropdown label={t('common.save')} title={t('toolbar.save.title')} disabled={busy} items={saveItems} />
-          <span className="toolbar-sep" aria-hidden="true" />
-          {/* Always rendered, disabled with an honest reason rather than hidden —
-              the browser (no local git at all), the desktop with no git binary, the
-              start screen with no project yet, and a project outside a work tree
-              all read as a dimmed button with a tooltip, never a hole in the
-              toolbar. `gitButtonState` owns the precedence. */}
-          <button
-            type="button"
-            className="tb-btn"
-            title={gitBtn.title}
-            onClick={() => void openGitPanel()}
-            disabled={gitBtn.disabled}
-          >
-            <Icon name="git" />
-            Git
-          </button>
+          {project && (
+            <>
+              <Dropdown label={t('common.save')} title={t('toolbar.save.title')} disabled={busy} items={saveItems} />
+              <Dropdown label={t('consolidation.export')} disabled={busy || editorOpen} items={exportItems} />
+              <span className="toolbar-sep" aria-hidden="true" />
+              {/* Disabled with an honest reason when the browser has no local git,
+                  the desktop has no git binary, or the project is outside a work
+                  tree. `gitButtonState` owns the precedence. */}
+              <button
+                type="button"
+                className="tb-btn"
+                title={gitBtn.title}
+                onClick={() => void openGitPanel()}
+                disabled={gitBtn.disabled}
+              >
+                <Icon name="git" />
+                Git
+              </button>
+            </>
+          )}
         </div>
       </div>
 
@@ -526,6 +533,7 @@ export function Toolbar() {
             with no PDF is not one of those reasons — the dialog itself
             handles that case once opened. */}
         <div className="toolbar-tools" role="group" aria-label={t('toolbar.review.group')}>
+          {project && (
           <button
             type="button"
             className="tb-btn"
@@ -542,6 +550,7 @@ export function Toolbar() {
             <Icon name="check" />
             {t('toolbar.validate.label')}
           </button>
+          )}
           {project?.aiEnabled && (
             <button
               type="button"
@@ -552,17 +561,6 @@ export function Toolbar() {
             >
               <Icon name="spark" />
               {t('toolbar.ai.label')}
-            </button>
-          )}
-          {project?.aiEnabled && (
-            <button
-              type="button"
-              className="tb-btn"
-              title={t('toolbar.aiEval.title')}
-              onClick={() => setAiEvalOpen(true)}
-              disabled={busy || editorOpen}
-            >
-              {t('toolbar.aiEval.label')}
             </button>
           )}
           {project && (project.metadataEdit ?? 'off') !== 'off' && (
@@ -576,15 +574,6 @@ export function Toolbar() {
               {t('toolbar.metadata.label')}
             </button>
           )}
-          <button
-            type="button"
-            className="tb-btn"
-            title={t('toolbar.graph.title')}
-            onClick={() => setGraphOpen(true)}
-            disabled={!project || busy || editorOpen}
-          >
-            {t('toolbar.graph.label')}
-          </button>
           {project?.pdfFolder && getPlatform().kind !== 'browser' && (
             <button
               type="button"
@@ -599,7 +588,6 @@ export function Toolbar() {
         </div>
         {metadataOpen && <MetadataDialog onClose={() => setMetadataOpen(false)} />}
         {graphOpen && <ExportGraphDialog onClose={() => setGraphOpen(false)} />}
-        {aiEvalOpen && <AiEvaluationDialog onClose={() => setAiEvalOpen(false)} />}
         {pdfDialogOpen && !editorOpen && <PdfFolderDialog />}
 
         <div className="toolbar-view">

@@ -55,13 +55,13 @@ per category so requirements can be inserted without renumbering.
 | Category | Requirements |
 |---|---|
 | Data model & editor (DAT/EDT) | 92 |
-| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 66 |
+| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 68 |
 | Screening (SCR) | 39 |
 | Consolidation (CON) | 61 |
 | Git integration (GIT) | 66 |
 | LLM annotation (LLM) | 103 |
 | Platform & shell (PLT) | 52 |
-| **Total** | **479** |
+| **Total** | **481** |
 
 ## Method & evidence notes
 
@@ -145,6 +145,8 @@ per category so requirements can be inserted without renumbering.
   The coverage counts above were not recounted.
 - **Settings in the help (2026-11-05).** REQ-UI-150 added for the "Settings…" item in the Help menus and
   the "Open settings" button in the Help dialog. The coverage counts above were not recounted.
+- **Toolbar rework (2026-11-05).** REQ-UI-160 and REQ-UI-170 added for the project-only toolbar entries, the Export menu
+  and the hidden AI entries. REQ-LLM-830 and REQ-DAT-490 moved their entry point. The coverage counts above were not recounted.
 - **Editor tabs and preview (2026-11-05).** REQ-EDT-300 to REQ-EDT-320 added for the project editor tabs,
   the preview of the draft schema and the list of schema problems. The coverage counts above were not recounted.
 - **AI evaluation (2026-11-05).** REQ-LLM-820 to REQ-LLM-832 added for the per-field comparison of the

@@ -949,3 +949,33 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Usability
+
+### REQ-UI-160: Show project entries only with a project
+`req~ui-160~1`
+
+The toolbar shall show the Save menu, the Export menu, the Git button and the Validate button only when a project is open. The toolbar shall have no knowledge graph button. The Export menu shall sit on the left of the toolbar, after the Save menu. The Export menu shall have a "Knowledge graph" item that opens the export dialog of REQ-DAT-520.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/Toolbar.tsx` (`Toolbar`)
+- **Verified by:** `src/components/Toolbar.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Usability
+
+### REQ-UI-170: Hide AI entries when AI is off
+`req~ui-170~1`
+
+If no open project turns AI on, the system shall show no AI entry. The toolbar shall have no AI button. The Settings dialog shall have no AI section. The project editor shall have no prompt override section. The Consolidation overview shall have no AI evaluation button. When the project turns AI on, the Consolidation overview shall show the "AI evaluation" button, and the system shall show the other entries again.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/Toolbar.tsx` (`Toolbar`), `src/components/SettingsDialog.tsx` (`SettingsDialog`), `src/components/ProjectEditor.tsx`, `src/components/ConsolidationOverview.tsx` (`ConsolidationOverview`)
+- **Verified by:** `src/components/Toolbar.test.tsx`, `src/components/SettingsDialog.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Usability

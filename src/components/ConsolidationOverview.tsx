@@ -1,3 +1,5 @@
+// [impl->req~ui-170~1]
+// [impl->req~llm-830~1]
 import { useEffect, useMemo, useState } from 'react'
 import { projectVerdicts, type FieldVerdict } from '../consolidate/disagreements'
 import { projectDisagreementsText } from '../consolidate/exportDisagreements'
@@ -5,6 +7,7 @@ import { consolidationFieldStatus } from './ConsolidationVerdicts'
 import { paperMetadataHaystack } from './PaperList'
 import { useStore } from '../state/store'
 import { Dropdown } from './Dropdown'
+import { AiEvaluationDialog } from './AiEvaluationDialog'
 import { useExportTextMenu } from '../hooks/useExportTextMenu'
 import { tp, useT } from '../i18n'
 
@@ -26,6 +29,7 @@ export function ConsolidationOverview() {
   const openDisagreementsFromOverview = useStore((s) => s.openDisagreementsFromOverview)
   const adoptAllUnanimousAnnotations = useStore((s) => s.adoptAllUnanimousAnnotations)
   const readOnly = useStore((s) => s.readOnly)
+  const [aiEvalOpen, setAiEvalOpen] = useState(false)
   const unanimousRun = useStore((s) => s.unanimousRun)
   const dismissUnanimousRun = useStore((s) => s.dismissUnanimousRun)
   const [query, setQuery] = useState('')
@@ -37,11 +41,11 @@ export function ConsolidationOverview() {
   useEffect(() => {
     if (!open) return
     const onKey = (event: KeyboardEvent) => {
-      if (event.key === 'Escape') setOpen(false)
+      if (event.key === 'Escape' && !aiEvalOpen) setOpen(false)
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [open, setOpen])
+  }, [open, setOpen, aiEvalOpen])
 
   // Every disagreement verdict, grouped by paper — the export's own input, and
   // what `papers` below derives its per-paper counts from, so the two can
@@ -101,6 +105,7 @@ export function ConsolidationOverview() {
   const total = papers.reduce((count, paper) => count + paper.disagreements, 0)
 
   return (
+    <>
     <div className="modal-overlay" onClick={() => setOpen(false)}>
       <div
         className="modal consolidation-overview"
@@ -134,6 +139,11 @@ export function ConsolidationOverview() {
             <button type="button" onClick={openAgreementFromOverview} title={t('consolidation.overview.agreementTitle')}>
               {t('consolidation.overview.agreement')}
             </button>
+            {project.aiEnabled && (
+              <button type="button" onClick={() => setAiEvalOpen(true)} title={t('consolidation.overview.aiEvalTitle')}>
+                {t('consolidation.overview.aiEval')}
+              </button>
+            )}
             <Dropdown label={t('consolidation.export')} title={t('consolidation.overview.exportTitle')} items={exportMenu.items} />
             {exportMenu.status && <span className="export-status">{exportMenu.status}</span>}
           </div>
@@ -192,5 +202,7 @@ export function ConsolidationOverview() {
         </div>
       </div>
     </div>
+    {aiEvalOpen && <AiEvaluationDialog onClose={() => setAiEvalOpen(false)} />}
+    </>
   )
 }

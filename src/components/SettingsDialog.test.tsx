@@ -31,10 +31,19 @@ beforeEach(() => {
   })
   useStore.setState({ userSettingsOpen: false, theme: 'light', fontScale: 1, autosaveEnabled: false })
   useAiStore.setState({ settingsOpen: false })
+  useStore.setState({ project: { aiEnabled: true } as never })
   useGitStore.setState({ probe: null })
 })
 
+// [utest->req~ui-170~1]
 describe('SettingsDialog (REQ-UI-90, REQ-UI-100)', () => {
+  it('has no AI section when the project does not turn AI on', () => {
+    useStore.setState({ project: { aiEnabled: false } as never, userSettingsOpen: true })
+    render(<SettingsDialog />)
+    expect(screen.queryByRole('heading', { name: 'AI' })).toBeNull()
+    expect(screen.queryByRole('button', { name: 'AI models…' })).toBeNull()
+  })
+
   it('opens with Ctrl/Cmd+, and closes with Escape', () => {
     render(<Host />)
     expect(screen.queryByRole('dialog')).toBeNull()

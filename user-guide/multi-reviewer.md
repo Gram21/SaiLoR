@@ -124,7 +124,7 @@ fields need a better prompt.
 1. Turn on AI and the AI seat in the project settings.
 2. Run the AI on the papers. The AI writes its answers into the AI seat.
 3. Consolidate the papers.
-4. Click **AI evaluation** in the toolbar.
+4. Open the Consolidation overview and click **AI evaluation**.
 
 The dialog shows one row per field:
 

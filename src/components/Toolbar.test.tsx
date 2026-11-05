@@ -141,17 +141,33 @@ describe('the AI button in the toolbar', () => {
   })
 })
 
-// [utest->req~llm-830~1]
-describe('the AI evaluation button in the toolbar', () => {
-  it('opens the AI evaluation dialog when AI is on', async () => {
-    st().loadFromText(annotationProjectJson({ reviewers: 2 }), null, 'test.json')
+// [utest->req~ui-160~1]
+// [utest->req~ui-170~1]
+describe('toolbar entries that need a project or AI', () => {
+  const names = [/Validate/, /Git/, /^Save/, /^Export/]
+
+  it('hides project-only entries when no project is open', () => {
     render(<Toolbar />)
-    await userEvent.click(screen.getByRole('button', { name: 'AI evaluation' }))
-    expect(screen.getByRole('dialog', { name: 'AI evaluation' })).toBeInTheDocument()
+    for (const name of names) expect(screen.queryByRole('button', { name })).not.toBeInTheDocument()
   })
 
-  it('is not rendered when the project turns AI off', () => {
+  it('shows project-only entries when a project is open', () => {
     st().loadFromText(annotationProjectJson({ ai: false }), null, 'test.json')
+    render(<Toolbar />)
+    for (const name of names) expect(screen.getByRole('button', { name })).toBeInTheDocument()
+  })
+
+  it('puts the knowledge graph export in the Export menu, not on the toolbar', async () => {
+    st().loadFromText(annotationProjectJson({ ai: false }), null, 'test.json')
+    render(<Toolbar />)
+    expect(screen.queryByRole('button', { name: 'Knowledge graph' })).not.toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: /^Export/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /Knowledge graph/ }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('never shows the AI evaluation on the toolbar', () => {
+    st().loadFromText(annotationProjectJson({ reviewers: 2 }), null, 'test.json')
     render(<Toolbar />)
     expect(screen.queryByRole('button', { name: 'AI evaluation' })).not.toBeInTheDocument()
   })
@@ -204,6 +220,7 @@ describe('REQ-UI-20: toolbar project controls', () => {
   })
 
   it('the autosave toggle in the Save menu flips autosaveEnabled', async () => {
+    st().loadFromText(projectJson(), null, 'test.json')
     useStore.setState({ autosaveEnabled: false })
     render(<Toolbar />)
     await userEvent.click(screen.getByRole('button', { name: /Save/ }))
