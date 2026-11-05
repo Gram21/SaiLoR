@@ -63,7 +63,7 @@ OFT_SOURCES := src src-tauri/src samples/git-scenarios e2e
 
 $(OFT_JAR):
 	mkdir -p $(@D)
-	curl -fsSL -o $@.part https://repo1.maven.org/maven2/org/itsallcode/openfasttrace/openfasttrace/$(OFT_VERSION)/openfasttrace-$(OFT_VERSION).jar
+	curl -fsSL --retry 5 --retry-delay 15 --retry-all-errors -o $@.part https://repo1.maven.org/maven2/org/itsallcode/openfasttrace/openfasttrace/$(OFT_VERSION)/openfasttrace-$(OFT_VERSION).jar
 	echo "$(OFT_SHA256)  $@.part" | shasum -a 256 -c -
 	mv $@.part $@
 
