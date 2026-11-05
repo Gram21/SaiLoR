@@ -361,6 +361,11 @@ body.resizing * {
   font-weight: 600;
   white-space: nowrap;
 }
+.strict-person-bar .finish-ready:not(:disabled) {
+  background: var(--ok);
+  border-color: var(--ok);
+  color: #fff;
+}
 .reviewer-btn {
   min-width: 26px;
   padding: 3px 8px;
@@ -3210,6 +3215,17 @@ kbd {
 
 /* "You are looking at the AI's seat" — see AnnotationPanel.tsx. Same shape as
    .seat-conflict-notice but not an alarm, so a neutral border instead of danger. */
+.strict-lock-banner {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin: 0;
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--border);
+  background: var(--accent-weak);
+  font-size: 0.85em;
+}
 .ai-seat-notice {
   margin: 0;
   padding: 8px 12px;

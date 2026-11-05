@@ -1,9 +1,11 @@
-import { STRICT_MANAGER, activePerson, useStore } from '../state/store'
-import { assignedSeat, personPapers, strictActive } from '../model/strict'
+import { useMemo } from 'react'
+import { STRICT_MANAGER, activePerson, finishReady, useStore } from '../state/store'
+import { assignedSeat, personPapers, seatLocked, strictActive } from '../model/strict'
 import { useT } from '../i18n'
 
 // [impl->req~con-480~1]
 // [impl->req~con-490~1]
+// [impl->req~con-540~1]
 /** Toolbar part for strict mode: who works, Switch person and Finish. */
 export function StrictPersonBar() {
   const project = useStore((s) => s.project)
@@ -14,21 +16,17 @@ export function StrictPersonBar() {
   const readOnly = useStore((s) => s.readOnly)
   const switchPerson = useStore((s) => s.switchPerson)
   const finishPersonWork = useStore((s) => s.finishPersonWork)
+  const ready = useMemo(() => finishReady(project, person), [project, person])
   const t = useT()
   if (!strictActive(project) || strictPerson === null) return null
 
   const name =
     strictPerson === STRICT_MANAGER ? t('strict.manager') : (project.strict.persons.find((p) => p.id === strictPerson)?.name ?? '')
   const papers = person ? personPapers(project, person) : []
-  const open = person
-    ? papers.filter((id) => {
-        const paper = project.papers.find((p) => p.id === id)
-        return paper?.reviewsFinished[assignedSeat(project, id, person)!] !== true
-      }).length
-    : 0
+  const open = person ? papers.filter((id) => !seatLocked(project, id, assignedSeat(project, id, person))).length : 0
 
   const finish = () => {
-    const message = t('strict.bar.finishConfirm', { count: papers.length })
+    const message = t(ready ? 'strict.bar.finishConfirm' : 'strict.bar.finishConfirmNotReady', { count: papers.length })
     if (window.confirm(message)) void finishPersonWork()
   }
 
@@ -47,9 +45,11 @@ export function StrictPersonBar() {
       {person && (
         <button
           type="button"
-          className="tb-btn"
+          className={ready ? 'tb-btn finish-ready' : 'tb-btn'}
           disabled={busy || readOnly || open === 0}
-          title={open === 0 ? t('strict.bar.finishedAll') : t('strict.bar.finishTitle')}
+          title={
+            open === 0 ? t('strict.bar.finishedAll') : ready ? t('strict.bar.finishTitle') : t('strict.bar.finishNotReady')
+          }
           onClick={finish}
         >
           {t('strict.bar.finish')}

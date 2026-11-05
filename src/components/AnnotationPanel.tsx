@@ -15,6 +15,8 @@ import { AnnotationNode } from './AnnotationNode'
 import { SeatConflictNotice } from './SeatConflictNotice'
 import { AiUsageDisclosure } from './AiUsageDisclosure'
 import { StrictGate } from './StrictGate'
+import { StrictLockBanner } from './StrictLockBanner'
+import { seatLocked } from '../model/strict'
 import {
   consolidationFieldStatus,
   ConsolidationVerdictsContext,
@@ -41,6 +43,8 @@ export function AnnotationPanel() {
   const flashFieldPath = useStore((s) => s.flashFieldPath)
   const setFlashFieldPath = useStore((s) => s.setFlashFieldPath)
   const gated = useStore((s) => consolidationGateMissing(s).length > 0)
+  // [impl->req~con-550~1]
+  const locked = useStore((s) => seatLocked(s.project, s.currentPaperId, s.currentReviewer))
 
   // Consolidation is the pass where a human decides between what the reviewers
   // actually said. A model has no standing there: its answer would be a fresh
@@ -189,6 +193,7 @@ export function AnnotationPanel() {
   return (
     <div className="panel annotations">
       <SeatConflictNotice />
+      <StrictLockBanner />
       {isAiSeat && (
         <p className="ai-seat-notice" role="status">
           {t('annotation.panel.aiSeat')}
@@ -274,7 +279,7 @@ export function AnnotationPanel() {
             <input
               type="checkbox"
               checked={isFinished}
-              disabled={readOnly}
+              disabled={readOnly || locked}
               onChange={(e) => setAnnotationFinished(e.target.checked)}
             />
             <span>
@@ -290,7 +295,7 @@ export function AnnotationPanel() {
         )}
       </div>
       <div className="annotations-body">
-        <fieldset className="read-only-fieldset" disabled={readOnly}>
+        <fieldset className="read-only-fieldset" disabled={readOnly || locked}>
         <ConsolidationVerdictsContext.Provider value={consolidationVerdicts}>
           {schema
             // `container` is both the top level and the root a cross-branch
