@@ -1998,6 +1998,10 @@ export const useEditorStore = create<EditorState>()(
         const finished = paper.extra.reviewsFinished as Record<string, unknown>
         delete finished[String(seat)]
         if (Object.keys(finished).length === 0) delete paper.extra.reviewsFinished
+        // [impl->req~con-570~1]
+        const lock = (paper.extra.reviewsLock ?? {}) as Record<string, unknown>
+        lock[String(seat)] = { reopenedAt: new Date().toISOString() }
+        paper.extra.reviewsLock = lock
         s.dirty = true
       })
     },

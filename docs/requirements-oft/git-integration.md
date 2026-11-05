@@ -936,3 +936,18 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Functional_Suitability, Reliability
+
+### REQ-GIT-590: Keep finished work locked in a merge
+`req~git-590~1`
+
+A merge shall merge the lock record (`finishedAt`, `reopenedAt`) of each seat on a paper three-way. When both sides changed the lock record of the same seat differently, the locked side shall win. When the merged seat is locked, the merge shall keep the finished flag of that seat. A pull shall thus not reopen finished work silently.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `src/git/merge.ts` (`mergePaper`, `mergeReviewsLock`, `canonicalPaper`), `src/git/changes.ts` (`BOOKKEEPING_FIELDS`)
+- **Verified by:** `src/git/merge.test.ts` (`merge of the edit lock`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Reliability

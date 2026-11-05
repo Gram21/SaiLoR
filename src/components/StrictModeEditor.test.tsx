@@ -97,9 +97,15 @@ describe('StrictModeEditor', () => {
     expect(useEditorStore.getState().strict?.persons).toHaveLength(2)
   })
 
+  // [utest->req~con-570~1]
   it('locks a finished seat until the work is reopened', async () => {
     useEditorStore.setState({
       strict: { enabled: true, persons: [{ id: 'p1', name: 'Ann' }], assignments: { u2: [{ person: 'p1', seat: 1 }] } },
+      papers: [
+        paper('u1', 'a'),
+        paper('u2', 'b', { reviewsFinished: { '1': true }, reviewsLock: { '1': { finishedAt: '2026-11-05T10:00:00Z' } } }),
+        paper('u3', 'c'),
+      ],
     })
     render(<StrictModeEditor />)
     const select = screen.getByLabelText('Person for b seat 1')
@@ -108,7 +114,9 @@ describe('StrictModeEditor', () => {
     expect(useEditorStore.getState().error?.message).toMatch(/finished work/)
 
     await userEvent.click(within(select.parentElement!).getByRole('button', { name: 'Reopen' }))
-    expect(useEditorStore.getState().papers[1].extra).toEqual({})
+    expect(useEditorStore.getState().papers[1].extra).toEqual({
+      reviewsLock: { '1': { reopenedAt: expect.stringMatching(/^\d{4}-/) } },
+    })
     expect(screen.getByLabelText('Person for b seat 1')).toBeEnabled()
     await userEvent.selectOptions(screen.getByLabelText('Person for b seat 1'), '')
     expect(useEditorStore.getState().strict?.assignments).toEqual({})

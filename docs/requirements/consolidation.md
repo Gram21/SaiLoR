@@ -322,7 +322,7 @@ for the glossary.
 - **Status:** Implemented
 
 ### REQ-CON-490: Finish the work of a person
-- **Description:** When a person selects Finish and confirms, the system shall set the finished flag of the person's seat on every assigned paper and save the project. A person shall not remove a finished flag that is saved on disk; the Manager reopens work in the project editor.
+- **Description:** When a person selects Finish and confirms, the system shall set the finished flag of the person's seat on every assigned paper and save the project. A person shall not remove a finished flag that is saved on disk; the Manager reopens work in the project editor or in the annotation panel (REQ-CON-570).
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/StrictPersonBar.tsx` (`StrictPersonBar`), `src/state/store.ts` (`finishPersonWork`, `setAnnotationFinished`)
 - **Status:** Implemented
@@ -350,4 +350,32 @@ for the glossary.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/model/metadata.ts` (`mergeSeatMetadata`, `metadataFingerprint`), `src/components/MetadataDialog.tsx` (`MetadataDialog`), `src/state/store.ts` (`applyMetadataEdits`)
 - **Verified by:** `src/model/metadata.test.ts` (`mergeSeatMetadata`), `src/state/store.metadata.test.ts` (`metadata consolidation`)
+- **Status:** Implemented
+
+### REQ-CON-540: Lock finished work at the next save
+- **Description:** In strict mode, the Finish button shall be green when every assigned paper of the person that is not locked has no validation issue in the seat of the person. Finish shall not lock by itself. Finish shall start a finish request. The first save after Finish shall lock the seat of the person on every assigned and finished paper, but only when the Finish button is green at that save. The locking save shall write `finishedAt` (ISO time) into the annotation file of that seat. Any edit before that save shall cancel the finish request. When the Finish button is not green, the save shall not lock, and the person shall keep editing. The locking save shall clear the undo history.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/model/strict.ts` (`seatLocked`), `src/state/store.ts` (`finishReady`, `finishPersonWork`, `save`), `src/components/StrictPersonBar.tsx` (`StrictPersonBar`), `src/model/project.ts` (`splitProjectFiles`, `assembleLegacyProjectJson`)
+- **Verified by:** `src/state/store.strict.test.ts` (`edit lock`)
+- **Status:** Implemented
+
+### REQ-CON-550: Show locked work read-only
+- **Description:** When the seat of the current paper is locked, the annotation panel shall show the banner "Finished. Ask the manager to reopen." and shall show the form read-only.
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/components/AnnotationPanel.tsx` (`AnnotationPanel`), `src/components/StrictLockBanner.tsx` (`StrictLockBanner`)
+- **Verified by:** `src/components/StrictLockBanner.test.tsx`
+- **Status:** Implemented
+
+### REQ-CON-560: Refuse edits of locked work in the store
+- **Description:** The store shall refuse every edit of a locked seat on a paper: field values, add and remove entry, the finished checkbox, PDF marks, AI batch apply and metadata corrections. One guard `isLocked(paperId, seat)` shall decide for all these edit paths.
+- **Type:** Functional (ISO 25010: Functional Suitability, Reliability)
+- **Evidence:** `src/model/strict.ts` (`seatLocked`), `src/state/store.ts` (`isLocked`)
+- **Verified by:** `src/state/store.strict.test.ts` (`edit lock`)
+- **Status:** Implemented
+
+### REQ-CON-570: Reopen locked work as the Manager
+- **Description:** Only the Manager shall reopen a locked seat on a paper. The banner of a locked seat shall show a Reopen button to the Manager. Reopen shall ask for a confirmation. Reopen shall remove the finished flag and `finishedAt` of that seat, and shall write `reopenedAt` (ISO time) into the annotation file of that seat.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/state/store.ts` (`reopenSeat`), `src/components/StrictLockBanner.tsx` (`StrictLockBanner`)
+- **Verified by:** `src/state/store.strict.test.ts` (`edit lock`), `src/components/StrictLockBanner.test.tsx`
 - **Status:** Implemented

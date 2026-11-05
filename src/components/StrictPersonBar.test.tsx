@@ -35,18 +35,22 @@ describe('StrictPersonBar', () => {
     expect(st().strictPerson).toBeNull()
   })
 
-  it('finishes all assigned papers and saves after the confirmation', async () => {
+  // [utest->req~con-540~1]
+  it('finishes all assigned papers and saves after the confirmation, without a lock when not green', async () => {
     st().choosePerson('ann')
     const confirm = vi.spyOn(window, 'confirm').mockReturnValue(true)
     render(<StrictPersonBar />)
-    await userEvent.click(screen.getByRole('button', { name: 'Finish' }))
+    const button = screen.getByRole('button', { name: 'Finish' })
+    expect(button).not.toHaveClass('finish-ready')
+    await userEvent.click(button)
     expect(confirm).toHaveBeenCalledOnce()
     await vi.waitFor(() => expect(written).toHaveLength(1))
     const saved = JSON.parse(written[0])
-    const finished = (id: string) => saved.papers.find((p: { id: string }) => p.id === id).reviewsFinished
-    expect(finished('a')).toMatchObject({ '1': true })
-    expect(finished('c')).toMatchObject({ '2': true })
-    expect(await screen.findByRole('button', { name: 'Finish' })).toBeDisabled()
+    const paper = (id: string) => saved.papers.find((p: { id: string }) => p.id === id)
+    expect(paper('a').reviewsFinished).toMatchObject({ '1': true })
+    expect(paper('c').reviewsFinished).toMatchObject({ '2': true })
+    expect(paper('a').reviewsLock).toBeUndefined()
+    expect(await screen.findByRole('button', { name: 'Finish' })).toBeEnabled()
   })
 
   it('does nothing when the confirmation is cancelled', async () => {

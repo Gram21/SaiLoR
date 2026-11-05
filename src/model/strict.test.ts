@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { loadProject, serializeProject, splitProjectFiles, ProjectLoadError } from './project'
+import { loadProject, serializeProject, splitProjectFiles, assembleLegacyProjectJson, ProjectLoadError } from './project'
 import {
   parseStrictConfig,
   strictConfigJson,
@@ -9,6 +9,7 @@ import {
   missingFinishers,
   personCounts,
   bulkAssign,
+  seatLocked,
   type StrictConfig,
 } from './strict'
 
@@ -156,5 +157,51 @@ describe('strict helpers', () => {
     })
     expect(bulkAssign(persons, ['a'], {}, 5, [1])).toEqual({ a: [{ person: 'p1', seat: 1 }] })
     expect(bulkAssign([], ['a'], {}, 2, [1, 2])).toEqual({})
+  })
+})
+
+// [utest->req~con-540~1]
+describe('edit lock record', () => {
+  const lockedFile = (strict: boolean) =>
+    JSON.stringify({
+      version: 1,
+      config: { schema, reviewers: 2, strict, persons, assignments: { a: [{ person: 'p1', seat: 1 }] } },
+      papers: [
+        {
+          ...papers[0],
+          reviewsFinished: { '1': true },
+          reviewsLock: { '1': { finishedAt: '2026-11-05T10:00:00Z', reopenedAt: '2026-11-04T10:00:00Z' }, '2': {} },
+        },
+        papers[1],
+      ],
+    })
+
+  it('round-trips finishedAt and reopenedAt through both file formats', () => {
+    const p = loadProject(lockedFile(true))
+    const lock = { '1': { finishedAt: '2026-11-05T10:00:00Z', reopenedAt: '2026-11-04T10:00:00Z' } }
+    expect(p.papers[0].reviewsLock).toEqual(lock)
+    expect(p.papers[1].reviewsLock).toBeUndefined()
+    expect(JSON.parse(serializeProject(p)).papers[0].reviewsLock).toEqual(lock)
+
+    const { meta, files } = splitProjectFiles(p)
+    const seatFile = files.find((f) => f.relPath === 'a/reviewer-1.json')
+    expect(JSON.parse(seatFile!.text!)).toMatchObject({ finished: true, ...lock['1'] })
+    const reviewers = new Map<string, unknown>()
+    for (const f of files) {
+      const m = /^a\/reviewer-(\d+)\.json$/.exec(f.relPath)
+      if (m && f.text !== null) reviewers.set(m[1], JSON.parse(f.text))
+    }
+    const again = loadProject(assembleLegacyProjectJson(meta, new Map([['a', { reviewers, reviewMarks: new Map() }]])))
+    expect(again.papers[0].reviewsLock).toEqual(lock)
+  })
+
+  it('locks a seat only in strict mode and only with finishedAt', () => {
+    const on = loadProject(lockedFile(true))
+    expect(seatLocked(on, 'a', '1')).toBe(true)
+    expect(seatLocked(on, 'a', '2')).toBe(false)
+    expect(seatLocked(on, 'b', '1')).toBe(false)
+    expect(seatLocked(on, null, '1')).toBe(false)
+    expect(seatLocked(loadProject(lockedFile(false)), 'a', '1')).toBe(false)
+    expect(serializeProject(loadProject(file({})))).not.toContain('reviewsLock')
   })
 })

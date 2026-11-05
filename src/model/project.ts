@@ -77,6 +77,12 @@ export interface AiUsageRecord {
   reviewer?: string
 }
 
+/** ISO times of the locking save and of the last reopen by the Manager. */
+export interface SeatLock {
+  finishedAt?: string
+  reopenedAt?: string
+}
+
 // [impl->req~dat-240~1]
 export interface Paper {
   id: string
@@ -160,6 +166,8 @@ export interface Paper {
   /** Each numbered seat's metadata overrides and ignored proposals, keyed
    *  "1".."N". Absent when no seat has any. See `model/metadata.ts`. */
   reviewMetadata?: Record<string, SeatMetadata>
+  /** Each numbered seat's strict-mode edit lock, keyed "1".."N". Absent when no seat has one. */
+  reviewsLock?: Record<string, SeatLock>
   /** Any additional fields present in the source file are preserved on save. */
   extra: Record<string, unknown>
   /** Files of this paper written under a schema version the project's
@@ -352,6 +360,7 @@ const KNOWN_PAPER_KEYS = new Set([
   'finished',
   'reviewsFinished',
   'reviewMetadata',
+  'reviewsLock',
   'schemaVersions',
 ])
 // [impl->req~dat-270~1]
@@ -431,6 +440,27 @@ function parseReviewsFinished(raw: unknown): Record<string, boolean> {
     out[key] = true
   }
   return out
+}
+
+// [impl->req~con-540~1]
+/** Parse `reviewsLock`: keeps reviewer-number keys and string times only. */
+function parseReviewsLock(raw: unknown): Record<string, SeatLock> {
+  if (typeof raw !== 'object' || raw === null || Array.isArray(raw)) return {}
+  const out: Record<string, SeatLock> = {}
+  for (const [key, value] of Object.entries(raw as Record<string, unknown>)) {
+    if (!/^[1-9]\d*$/.test(key) || typeof value !== 'object' || value === null) continue
+    const { finishedAt, reopenedAt } = value as Record<string, unknown>
+    const lock: SeatLock = {
+      ...(typeof finishedAt === 'string' ? { finishedAt } : {}),
+      ...(typeof reopenedAt === 'string' ? { reopenedAt } : {}),
+    }
+    if (Object.keys(lock).length > 0) out[key] = lock
+  }
+  return out
+}
+
+function reviewsLockField(m: Record<string, SeatLock> | undefined): { reviewsLock?: Record<string, SeatLock> } {
+  return m && Object.keys(m).length > 0 ? { reviewsLock: m } : {}
 }
 
 /**
@@ -806,6 +836,7 @@ export function loadProject(input: string | unknown): Project {
     finished: (p as { finished?: unknown }).finished === true,
     reviewsFinished: parseReviewsFinished((p as { reviewsFinished?: unknown }).reviewsFinished),
     ...reviewMetadataField(parseReviewMetadata((p as { reviewMetadata?: unknown }).reviewMetadata)),
+    ...reviewsLockField(parseReviewsLock((p as { reviewsLock?: unknown }).reviewsLock)),
     extra: extractExtra(p, KNOWN_PAPER_KEYS),
     ...(unknownSchemaFiles.length > 0 ? { unknownSchemaFiles } : {}),
     }
@@ -955,6 +986,7 @@ export function serializeProject(project: Project): string {
         )
       }
       Object.assign(paper, reviewMetadataField(p.reviewMetadata))
+      Object.assign(paper, reviewsLockField(p.reviewsLock))
       // Every tree held here is at the project's version — it was carried
       // there on load — so reading this text back must not move it again.
       if (project.schemaVersion) {
@@ -1050,6 +1082,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
     for (const key of Object.keys(p.reviewMarks)) reviewerSlots.add(Number(key))
     for (const key of Object.keys(p.reviewsFinished)) reviewerSlots.add(Number(key))
     for (const key of Object.keys(p.reviewMetadata ?? {})) reviewerSlots.add(Number(key))
+    for (const key of Object.keys(p.reviewsLock ?? {})) reviewerSlots.add(Number(key))
     if (reviewerSlots.size > 0) {
       for (const k of [...reviewerSlots].sort((a, b) => a - b)) {
         const tree = p.reviews[String(k)]
@@ -1060,10 +1093,11 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
         // something, and dropping the file would un-say it.
         const finished = p.reviewsFinished[String(k)] === true
         const metadata = p.reviewMetadata?.[String(k)]
+        const lock = p.reviewsLock?.[String(k)]
         files.push({
           relPath: `${p.id}/${reviewerName}-${k}.json`,
           text:
-            has || finished || metadata
+            has || finished || metadata || lock
               ? JSON.stringify(
                   {
                     ...stamp,
@@ -1071,6 +1105,8 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
                     ...(finished ? { finished: true } : {}),
                     ...(metadata?.overrides ? { metadataOverrides: metadata.overrides } : {}),
                     ...(metadata?.ignored ? { metadataIgnored: metadata.ignored } : {}),
+                    ...(lock?.finishedAt ? { finishedAt: lock.finishedAt } : {}),
+                    ...(lock?.reopenedAt ? { reopenedAt: lock.reopenedAt } : {}),
                   },
                   null,
                   2,
@@ -1274,6 +1310,7 @@ export function assembleLegacyProjectJson(
       const reviews: Record<string, unknown> = {}
       const reviewsFinished: Record<string, unknown> = {}
       const reviewMetadata: Record<string, unknown> = {}
+      const reviewsLock: Record<string, unknown> = {}
       for (const [k, v] of entry?.reviewers ?? []) {
         reviews[k] = (v as { annotations?: unknown })?.annotations ?? {}
         // Only lifted when actually declared — `loadProject` rejects anything
@@ -1283,6 +1320,8 @@ export function assembleLegacyProjectJson(
         if (metadataOverrides !== undefined || metadataIgnored !== undefined) {
           reviewMetadata[k] = { overrides: metadataOverrides, ignored: metadataIgnored }
         }
+        const { finishedAt, reopenedAt } = (v ?? {}) as { finishedAt?: unknown; reopenedAt?: unknown }
+        if (finishedAt !== undefined || reopenedAt !== undefined) reviewsLock[k] = { finishedAt, reopenedAt }
       }
       const marksConsolidated = (entry?.marksConsolidated ?? {}) as { marks?: unknown }
       const reviewMarks: Record<string, unknown> = {}
@@ -1304,6 +1343,7 @@ export function assembleLegacyProjectJson(
         ...(consolidated.finished !== undefined ? { finished: consolidated.finished } : {}),
         ...(Object.keys(reviewsFinished).length > 0 ? { reviewsFinished } : {}),
         ...(Object.keys(reviewMetadata).length > 0 ? { reviewMetadata } : {}),
+        ...(Object.keys(reviewsLock).length > 0 ? { reviewsLock } : {}),
         ...(Object.keys(schemaVersions).length > 0 ? { schemaVersions } : {}),
       }
     }),
