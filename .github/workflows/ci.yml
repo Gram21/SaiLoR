@@ -88,8 +88,6 @@ jobs:
     defaults:
       run:
         shell: bash
-    env:
-      REPORT: ${{ runner.temp }}/probe-report.txt
     steps:
       - uses: actions/checkout@v7
 
@@ -109,6 +107,8 @@ jobs:
           workspaces: src-tauri
 
       - run: scripts/ci/bundle.sh
+        env:
+          REPORT: ${{ runner.temp }}/probe-report.txt
 
       - name: Upload report
         if: always()
