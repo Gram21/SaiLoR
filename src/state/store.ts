@@ -79,7 +79,7 @@ import {
   type Resolutions,
 } from '../git/merge'
 import type { RecentEntry } from '../platform/recents'
-import { assignedSeat, missingFinishers, personPapers, strictActive, type Person } from '../model/strict'
+import { assignedSeat, missingFinishers, personPapers, seatLocked, strictActive, type Person } from '../model/strict'
 import {
   type Theme,
   loadTheme,
@@ -449,6 +449,43 @@ export function consolidationGateMissing(
   if (s.consolidationOverrides[currentPaperId]) return []
   const paper = project.papers.find((p) => p.id === currentPaperId)
   return paper ? missingFinishers(project, paper) : []
+}
+
+// [impl->req~con-560~1]
+/** True when the seat holds locked strict-mode work; every edit action refuses it. */
+function isLocked(paperId: string | null, seat: string | null): boolean {
+  return seatLocked(useStore.getState().project, paperId, seat)
+}
+
+// [impl->req~con-540~1]
+/** The Finish button is green: the person's unlocked papers exist and validate without issues. */
+export function finishReady(project: Project | null, person: string | null): boolean {
+  if (!project || !person || !strictActive(project)) return false
+  const papers = project.papers.flatMap((p) => {
+    const seat = assignedSeat(project, p.id, person)
+    if (!seat || seatLocked(project, p.id, seat)) return []
+    return [{ ...p, annotations: currentTree(project, seat, p) ?? p.annotations }]
+  })
+  if (papers.length === 0) return false
+  const { issues, unannotated } = validateProject({ ...project, papers })
+  return issues.length === 0 && unannotated.length === 0
+}
+
+/** The project that Finish asked to lock at its next save; any later edit makes it stale. */
+let finishRequest: Project | null = null
+
+// [impl->req~con-540~1]
+function lockFinished(project: Project, person: string | null): Project {
+  if (!person || !finishReady(project, person)) return project
+  const now = new Date().toISOString()
+  let changed = false
+  const papers = project.papers.map((p) => {
+    const seat = assignedSeat(project, p.id, person)
+    if (!seat || p.reviewsFinished[seat] !== true || seatLocked(project, p.id, seat)) return p
+    changed = true
+    return { ...p, reviewsLock: { ...p.reviewsLock, [seat]: { ...p.reviewsLock?.[seat], finishedAt: now } } }
+  })
+  return changed ? { ...project, papers } : project
 }
 
 const READING_POSITION_KEY_PREFIX = 'slr.readingPosition.'
@@ -1057,6 +1094,8 @@ interface AppState {
   switchPerson: () => void
   /** Strict mode: set the finished flag of the person's seat on every assigned paper, then save. */
   finishPersonWork: () => Promise<boolean>
+  /** Strict mode: the Manager unlocks a locked seat, removes its finished flag and writes `reopenedAt`. */
+  reopenSeat: (paperId: string, seat: string) => void
   /** Strict mode: the Manager opens a paper for consolidation before every person finished. */
   overrideConsolidationGate: (paperId: string) => void
   /** Consolidation clicked "compare" on one field — open the popup for it. */
@@ -1800,10 +1839,13 @@ export const useStore = create<AppState>()(
       set((s) => {
         s.busy = true
       })
+      // [impl->req~con-540~1]
+      const toSave = finishRequest === project ? lockFinished(project, activePerson(get())) : project
+      finishRequest = null
       try {
-        const text = serializeProject(project)
+        const text = serializeProject(toSave)
         const handle = await platform.saveProject(text, saveHandle)
-        diskProject = project
+        diskProject = toSave
         // Nothing blocks input while the write above is in flight (Field.tsx
         // writes every keystroke straight to the store, and screening's I/E/U
         // keys aren't gated on `busy` either), so a reviewer can type a new
@@ -1815,6 +1857,16 @@ export const useStore = create<AppState>()(
         // `loadFromText` above.
         const stillCurrent = get().project === project
         set((s) => {
+          if (toSave !== project) {
+            if (stillCurrent) s.project = toSave
+            else
+              for (const p of toSave.papers) {
+                const draft = s.project?.papers.find((d) => d.id === p.id)
+                if (draft && p.reviewsLock) draft.reviewsLock = p.reviewsLock
+              }
+            s.past = []
+            s.future = []
+          }
           s.saveHandle = handle
           if (stillCurrent) s.dirty = false
           s.busy = false
@@ -2518,7 +2570,7 @@ export const useStore = create<AppState>()(
 
     // [impl->req~dat-410~1]
     setFieldValue: (path, name, index, value) => {
-      if (get().readOnly) return null
+      if (get().readOnly || isLocked(get().currentPaperId, get().currentReviewer)) return null
       // [impl->req~con-255~1]
       const prev = get()
       if (!prev.project) return null
@@ -2574,7 +2626,7 @@ export const useStore = create<AppState>()(
     },
 
     addInstance: (path, def) => {
-      if (get().readOnly) return
+      if (get().readOnly || isLocked(get().currentPaperId, get().currentReviewer)) return
       const prev = get()
       if (!prev.project) return
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
@@ -2597,7 +2649,7 @@ export const useStore = create<AppState>()(
     },
 
     removeInstance: (path, name, index) => {
-      if (get().readOnly) return
+      if (get().readOnly || isLocked(get().currentPaperId, get().currentReviewer)) return
       const prev = get()
       if (!prev.project) return
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return
@@ -2716,7 +2768,7 @@ export const useStore = create<AppState>()(
 
     // [impl->req~con-490~1]
     setAnnotationFinished: (finished) => {
-      if (get().readOnly) return
+      if (get().readOnly || isLocked(get().currentPaperId, get().currentReviewer)) return
       const prev = get()
       if (!prev.project) return
       // No declaration to make when the project derives "done" from the data
@@ -2759,7 +2811,7 @@ export const useStore = create<AppState>()(
     },
 
     addHighlight: (page, rects, color, kind, text, groupId) => {
-      if (get().readOnly) return null
+      if (get().readOnly || isLocked(get().currentPaperId, get().currentReviewer)) return null
       const prev = get()
       if (!prev.project || rects.length === 0) return null
       if (prev.project.reviewers > 1 && prev.currentReviewer === null) return null
@@ -2794,7 +2846,7 @@ export const useStore = create<AppState>()(
     },
 
     setMarkComment: (id, comment) => {
-      if (get().readOnly) return
+      if (get().readOnly || isLocked(get().currentPaperId, get().currentReviewer)) return
       const prev = get()
       if (!prev.project) return
       // Typed character by character, like a field value — collapse a run of
@@ -2829,7 +2881,7 @@ export const useStore = create<AppState>()(
     },
 
     setMarkColor: (id, color) => {
-      if (get().readOnly) return
+      if (get().readOnly || isLocked(get().currentPaperId, get().currentReviewer)) return
       const prev = get()
       if (!prev.project) return
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
@@ -2858,7 +2910,7 @@ export const useStore = create<AppState>()(
     },
 
     removeMark: (id) => {
-      if (get().readOnly) return
+      if (get().readOnly || isLocked(get().currentPaperId, get().currentReviewer)) return
       const prev = get()
       if (!prev.project) return
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
@@ -2884,7 +2936,7 @@ export const useStore = create<AppState>()(
     // is fulfilled — `clearPendingMarkLink` below consuming it is the "offered
     // once" behavior.
     linkMarkToField: (markId, path, name, index) => {
-      if (get().readOnly) return
+      if (get().readOnly || isLocked(get().currentPaperId, get().currentReviewer)) return
       const prev = get()
       if (!prev.project) return
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
@@ -2912,7 +2964,7 @@ export const useStore = create<AppState>()(
     },
 
     unlinkMarkFromField: (markId, canonicalPath) => {
-      if (get().readOnly) return
+      if (get().readOnly || isLocked(get().currentPaperId, get().currentReviewer)) return
       const prev = get()
       if (!prev.project) return
       const snap: HistoryEntry = { project: prev.project, paperId: prev.currentPaperId }
@@ -3018,7 +3070,7 @@ export const useStore = create<AppState>()(
           continue
         }
         const paperNow = prev.project.papers.find((p) => p.id === item.paperId)
-        if (!paperNow) {
+        if (!paperNow || isLocked(item.paperId, item.reviewer)) {
           skipped += itemCount
           continue
         }
@@ -3271,7 +3323,23 @@ export const useStore = create<AppState>()(
           }
         }
       })
+      finishRequest = get().project
       return get().save()
+    },
+
+    // [impl->req~con-570~1]
+    reopenSeat: (paperId, seat) => {
+      const prev = get()
+      if (prev.readOnly || prev.strictPerson !== STRICT_MANAGER || !seatLocked(prev.project, paperId, seat)) return
+      lastFieldKey = null
+      const snap: HistoryEntry = { project: prev.project!, paperId: prev.currentPaperId }
+      set((s) => {
+        const paper = s.project!.papers.find((p) => p.id === paperId)!
+        pushPast(s, snap)
+        delete paper.reviewsFinished[seat]
+        paper.reviewsLock![seat] = { reopenedAt: new Date().toISOString() }
+        s.dirty = true
+      })
     },
 
     // [impl->req~con-510~1]
@@ -3733,6 +3801,7 @@ export const useStore = create<AppState>()(
         const original = project.papers.find((p) => p.id === edit.paperId)
         if (!original) continue
         const seat = metadataSeat(prev, edit.paperId)
+        if (isLocked(edit.paperId, seat)) continue
         const seatKey = metadataSeatKey(project, seat)
         const paper = changed.get(edit.paperId) ?? structuredClone(original)
         if (seatKey) {

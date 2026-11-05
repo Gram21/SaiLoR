@@ -30,7 +30,7 @@ const mockPlatform = {
 }
 vi.mock('../platform', () => ({ getPlatform: () => mockPlatform }))
 
-const { useStore, activePerson, consolidationGateMissing, STRICT_MANAGER } = await import('./store')
+const { useStore, activePerson, consolidationGateMissing, finishReady, STRICT_MANAGER } = await import('./store')
 
 const HANDLE = { kind: 'electron' as const, path: '/reviews/strict.json' }
 const paper = (id: string, extra: Record<string, unknown> = {}) => ({ id, title: id, authors: [], pdf: `${id}.pdf`, ...extra })
@@ -164,5 +164,102 @@ describe('strict mode consolidation gate', () => {
     st().choosePerson('ann')
     st().overrideConsolidationGate('a')
     expect(st().consolidationOverrides).toEqual({})
+  })
+})
+
+// [utest->req~con-540~1]
+// [utest->req~con-560~1]
+// [utest->req~con-570~1]
+describe('edit lock', () => {
+  const paperA = () => st().project!.papers.find((p) => p.id === 'a')!
+  const answerAll = () => {
+    st().selectPaper('a')
+    st().setFieldValue([], 'Relevant', 0, true)
+    st().selectPaper('c')
+    st().setFieldValue([], 'Relevant', 0, true)
+    st().selectPaper('a')
+  }
+  const lockAsAnn = async () => {
+    st().choosePerson('ann')
+    answerAll()
+    expect(finishReady(st().project, 'ann')).toBe(true)
+    expect(await st().finishPersonWork()).toBe(true)
+  }
+
+  it('locks at the save after a green Finish and writes finishedAt', async () => {
+    await lockAsAnn()
+    expect(paperA().reviewsLock?.['1']?.finishedAt).toMatch(/^\d{4}-/)
+    expect(st().project!.papers.find((p) => p.id === 'c')!.reviewsLock?.['2']?.finishedAt).toBeDefined()
+    expect(st().project!.papers.find((p) => p.id === 'b')!.reviewsLock).toBeUndefined()
+    expect(JSON.parse(written.at(-1)!).papers[0].reviewsLock['1'].finishedAt).toBe(paperA().reviewsLock!['1'].finishedAt)
+    expect(st().past).toEqual([])
+    expect(finishReady(st().project, 'ann')).toBe(false)
+  })
+
+  it('does not lock when the Finish button is not green', async () => {
+    st().choosePerson('ann')
+    st().setFieldValue([], 'Relevant', 0, true)
+    expect(finishReady(st().project, 'ann')).toBe(false)
+    expect(await st().finishPersonWork()).toBe(true)
+    expect(paperA().reviewsFinished).toEqual({ '1': true })
+    expect(paperA().reviewsLock).toBeUndefined()
+    expect(JSON.parse(written.at(-1)!).papers[0].reviewsLock).toBeUndefined()
+  })
+
+  it('drops the finish request when the person edits before the save', async () => {
+    st().choosePerson('ann')
+    answerAll()
+    useStore.setState({ staleSave: { paths: [], refusal: null, merge: null, error: null, dismissed: true } })
+    expect(await st().finishPersonWork()).toBe(false)
+    st().setFieldValue([], 'Relevant', 0, false)
+    st().setFieldValue([], 'Relevant', 0, true)
+    expect(finishReady(st().project, 'ann')).toBe(true)
+    useStore.setState({ staleSave: null })
+    expect(await st().save()).toBe(true)
+    expect(paperA().reviewsLock).toBeUndefined()
+  })
+
+  it('refuses every edit path on a locked seat', async () => {
+    useStore.getState().loadFromText(
+      projectText().replace('"strict":true', '"strict":true,"metadataEdit":"annotation"'),
+      HANDLE,
+      'strict.json',
+    )
+    await lockAsAnn()
+    const before = st().project
+    st().setFieldValue([], 'Relevant', 0, false)
+    st().addInstance([], st().project!.schema[0])
+    st().removeInstance([], 'Relevant', 0)
+    st().setAnnotationFinished(false)
+    expect(st().addHighlight(1, [{ x: 0.1, y: 0.2, width: 0.3, height: 0.05 }])).toBeNull()
+    expect(
+      st().applyAiSuggestionsBatch([
+        {
+          paperId: 'a',
+          reviewer: '1',
+          suggestions: [{ path: 'Relevant', value: false, evidence: 'e', confidence: 0.9 }],
+          usage: { provider: 'openai', model: 'gpt-5.5' },
+        },
+      ]).skipped,
+    ).toBe(1)
+    expect(st().applyMetadataEdits([{ paperId: 'a', values: { title: 'New' } }])).toBe(false)
+    expect(st().project).toBe(before)
+    expect(st().dirty).toBe(false)
+  })
+
+  it('lets only the Manager reopen, which writes reopenedAt', async () => {
+    await lockAsAnn()
+    st().reopenSeat('a', '1')
+    expect(paperA().reviewsLock?.['1']?.finishedAt).toBeDefined()
+
+    useStore.setState({ strictPerson: STRICT_MANAGER })
+    st().reopenSeat('a', '1')
+    expect(paperA().reviewsFinished).toEqual({})
+    expect(paperA().reviewsLock?.['1']).toEqual({ reopenedAt: expect.stringMatching(/^\d{4}-/) })
+    expect(st().dirty).toBe(true)
+    st().selectPaper('a')
+    st().selectReviewer('1')
+    st().setFieldValue([], 'Relevant', 0, false)
+    expect(paperA().reviews['1'].Relevant[0].value).toBe(false)
   })
 })
