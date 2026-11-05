@@ -174,10 +174,12 @@ const SUBWIKI_PAGES = [
   ['concepts/annotation-schema', 'Concepts-Annotation-Schema'],
   ['concepts/data-model', 'Concepts-Data-Model'],
   ['operations/build-release', 'Operations-Build-Release'],
-  ['operations/electron-shell', 'Operations-Electron-Shell'],
+  ['operations/tauri-shell', 'Operations-Tauri-Shell'],
+  ['workflows/ai-screening', 'Workflows-AI-Screening'],
   ['workflows/consolidation', 'Workflows-Consolidation'],
   ['workflows/git-integration', 'Workflows-Git-Integration'],
   ['workflows/llm-annotation', 'Workflows-LLM-Annotation'],
+  ['workflows/local-models', 'Workflows-Local-Models'],
   ['workflows/pdf-viewing', 'Workflows-PDF-Viewing'],
   ['workflows/screening', 'Workflows-Screening'],
 ]

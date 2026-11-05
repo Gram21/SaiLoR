@@ -1,0 +1,288 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:a3f0190219b12aec819ae06997749e84bdfb0cc2d9a5fb3bd99d802e9065d1c4",
+  "claims": [
+    {
+      "id": "claim_eaef87a5f139424fa5f75b41af39d806",
+      "statement": "The renderer reaches the Rust shell only through the SlrBridge interface (src/platform/bridge.ts) implemented by tauriBridge in src/platform/tauri.ts, whose command() mapping turns Electron-style channel names into snake_case Tauri command names (':' → '_', each capital → '_' + lowercase, e.g. project:open → project_open, pdf:embedMarks → pdf_embed_marks); call() packs positional args into named fields, send() is fire-and-forget with errors swallowed, and subscribe()/replace() wrap listen() for shell-emitted events, with replace() unsubscribing the previous listener first.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/tauri.ts#L116-L120",
+          "version": "repo-lines-v1:sha256:b9a856129aacb48a26ee8f1e62a88671051017e91464ba9a4cc44c72097b734a:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWMxZmJlMTMxY2U1Mjk5NjY0ZmZmZmM3ZjZjN2Q4NGU1OWEwZjU2MjNkYjBjZjBiMWQ4MWZmNjIzYTgwNGU5MCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTkwNzk2MTRhYmE1YWFiNWE2MjZmYjE5MmU2M2RkYmYwNWI2MjA2Njg4MDJjZmE3ODZiODQzOWJkNmIyOTI0YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjE1ZmM5YTNhODU4ZTEwNDZhZTBlOGNmNTNkOTAwNmVjNTBiMzQyYWEwMDkxODZmZjNiMDA0OWE5YmI3OGFlMCJ9"
+        },
+        {
+          "resource": "repo://src/platform/tauri.ts#L80-L114",
+          "version": "repo-lines-v1:sha256:e3b9b234f6edb8e0ba47b9aa465e9faba758dc241c176562cbc27d5c8a8c5a71:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMxZjYyYzU0ODYwOGQ3ODdkOTQ3MmIzNzdhZjg0NWZhZjA1M2ViYmE3MzQ2NzA0ODZlMjgzZGZkM2JlZjQxNmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc5MzY5NGZmYzE3MDM0MTJlNDViMGRmYTNhNzcyZGFmNTVlYjgxMzdiNzIzYWZmNWJmMDZkOTkzMTY5MmU0NjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIyMjlkYmY1MTYzNTVkMWY5ZTY0NThkNGMyNzgwMGJmOTZjMjhmMmU0ZWUwMmE2ODM4MDNjOWYxZjYzYTgzMWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRjMGY1NmQ1ZDQ3YTcwM2M2MjdkOGUzMjQ5ODljZWRkMWI4N2FmODJiZWM5ZTIwYTc3ZTRhM2ZjNTg4NzIzODUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8ff24484fbeb4e66bf083696d6e1ce0a",
+      "statement": "Rust project and git commands return a RawProject (project.json text plus {relPath, text} annotation files and optional siblings) rather than assembled JSON; the TypeScript-side assembleProject() in src/platform/tauri.ts reassembles it into the single-project text loadProject accepts, collecting files that fail JSON.parse into a corrupt list instead of failing the open, and the git snapshot/merge/log commands route their results through the same assembly.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/project.rs#L190-L240",
+          "version": "repo-lines-v1:sha256:c90fcb17b991d1a87200566e3a06b7f71dc0b361754b2d198386701e0e671fd2:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5YmRlMTljZGU2MzhjMmM2NTE5NzU4MjMxYzViZDJmODc1MTQzM2E0MjkxMDIzY2RjMTE5NGJhZDk2NGNhMmEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNkNTBhZDNiMzgxMmM0ODQ1MTgxYjUwMzM5MzJkOTY0YWFhOTk5N2I2YTRjMzc1MjllYTQ2N2MzYjY1NDNkZTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA2YjhjOTAyYzg3ODQ2YzcyNWMwNzk4ZTg4NDAzYmJhNzU3MDJhNmM3YWVmMjdlZGVlYmNkYmRmOWI4MzBhYTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFlMzcwNjYxMWY4NmIzYjdiZWEzZTczM2RlYmU2MGJmZDU5OWU3MmZlOTYwODZmMDM1MGVhYzVlYzYxODA4NDgifQ"
+        },
+        {
+          "resource": "repo://src/platform/tauri.ts#L19-L76",
+          "version": "repo-lines-v1:sha256:7b6ae509156163c914e67593b533e1158ee7959f24f453ae7d1b55a3945af9bc:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc0NTUzMTQwZDMzM2JjYmRmNGIxZWMyZDg0NDIwZWFlMTBmZDg2ODk2ZTNmMTRjMDgzZmVlMDUwODBmYTYyYzAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgwYTYyNWI4ZTBkYjc2MmM4N2YzMzg1NTZhM2ZhNjc1NTBlOGM3ZWZiM2FhYTFhYmQwOGJkMmI2MTc5OGI1MTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyMjlkYmY1MTYzNTVkMWY5ZTY0NThkNGMyNzgwMGJmOTZjMjhmMmU0ZWUwMmE2ODM4MDNjOWYxZjYzYTgzMWYifQ"
+        },
+        {
+          "resource": "repo://src/platform/tauri.ts#L78-L87",
+          "version": "repo-lines-v1:sha256:4ac92207aaa145d6e85bdf2bb6ab15b313dd8a638dc39a3a40186989836f51b3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1MDFjNWQ0MGQxNjdmNzlmMDg1YmI4OGFkZGJlMzBhMDI3ZWM5MzZlZTkxMDUwZDg0OTBhMGY1YTllNTJhOTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkY2MxMjM4OTYzYTg0NTFmYmQzOTUxYjA0NWU3NzFiMTBmMWJlOTBhNWM1ZDYyZmRkYzMxOWE2NTAwMWMxZmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA4MWQwNDQyZWQ4YWRmYzQzNDg0MjcwMjJkZmJjMzdjMTFlMzJlZjg4ZTZkOTg5ZDQ5MjEwNGJjZmE3MjViN2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJmZDk3NWU3MzFhODFiZWU0ZTZjYWYxOTc4OWIyOWIyMDhjZWU2MDAyZThhMzg3MDA0N2Y5Y2MyZjRmMGY4ZDcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_891f6c09dbd64260a73eaca3f7f05f7a",
+      "statement": "main.rs registers every command in one invoke_handler(tauri::generate_handler![...]) grouped by module — probe (feature-gated), project, annotations, feedback, pdf/text, paths, webfetch, llm, ollama, localserver, hardware/local, localruntime, git, update, and close — and this registry is the complete, authoritative list of what the renderer can invoke.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/main.rs#L106-L208",
+          "version": "repo-lines-v1:sha256:fd6f45f020739e706f957e342705ffe0760e1863b9da3df1d0d1b0fd5a2fa5ac:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiYTNiOTVhZTM4MjFiY2ZmYzQ0M2I0MzllMWY2OTc3NTJlMTYwNWQ3ZDU1ZmYwNjhmOGQ5ODcxNjMxYTI0ZGQxIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwMjc2YzFkMWY5Nzg1ZTU1NjBkMGJiNWY3OWMyZTk3OTk5N2I3MGNkZWQxZjNiNjhlZWIwY2QxOTEwYWUyMjdhIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI4NmU5ODZiNzgwMTM0NWUwNWQyNTM1ZWMyNzU2NmMzZWY1YjBjOWUyYWJjYjdmZTI0OTAyYWRiODExN2QyYjNmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJiOGViMzk0MjEwNDEzNjg5YWIzYmI4OTUyY2Y2ZjE1ZmJlYjdiZWNkMzAwZTAwZTk4MjNiMjJlYjJkNTBiZjVjIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_862ce8b6c0df478b836c2464bb957dde",
+      "statement": "The probe_auto and probe_report commands exist only under the probe Cargo feature (#[cfg(feature = 'probe')], never compiled into release builds): probe_auto opens $SAILOR_PROBE_PROJECT without a dialog and sets the session project dir, and probe_report appends to $SAILOR_PROBE_REPORT; CI builds with --features probe --config src-tauri/tauri.probe.conf.json and asserts the report contains RENDER OK and a -> 403 traversal refusal, with e2e/probe.test.mjs driving the same binary via tauri-driver on Linux and Windows.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/ci.yml#L108-L137",
+          "version": "repo-lines-v1:sha256:bc63ed1d9cd35067c1f4cfab57cb23c4315bb7b3571ee27cb649ff5fe821934f:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1YTQzNWFhYTlkMTlkY2Q3NTI4YjA3NzgzMmQ1ZDgwMzhhY2IyMGNhZjA2ZGM5OTlmNmUyMjFhZDNmZmQzM2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhiNzNiMDBlZTQzOGE3NmMyMGMwNThjZjA0YTJlNzBjYWFiOTkxZWExNjM1NjQzNDY1NjEzZWZjYTE1YzQzMGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA3NDJlNzFkNWNkN2RhOTAwNjk0NjNiODYwZTY1OTkzMTcxNzdmMzI0MTQ2NWEyNzIyOGQzYzgyN2MwNjAxZjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI4NGU3YjgzODNiM2RhOGQ1OGY3YWUzZTgxZmU3NTU5OWVkZTA2MzQzOTY3NjQ4MmFjYzlmNTkxOWEwZTcwODAifQ"
+        },
+        {
+          "resource": "repo://e2e/probe.test.mjs#L20-L40",
+          "version": "repo-lines-v1:sha256:57f68ba901f16d5b65a088d5d6e2095e360c0c70305ee2d73fb4edba8c08219b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg4YzlmYjc5MmNhYWQ5ODM3Y2IxZGQ3MTJkZGQ3OGJjMDdmOTRjODc1N2U4ZDdlZTJiMjAxYThkNjEwZWU2ODAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU4YzcwZWI5NDg4Y2U3NTI3ZjRlMmE4NDA4NjU4NGIyMmRjMDFkNjgwOTdjY2UxZTBjNDEzYmQzNDAzYWJjNTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/Cargo.toml#L7-L9",
+          "version": "repo-lines-v1:sha256:49a673592a2f7d3f43ef176e19f68766c1f241141ef255fe6ee5d081df4082f0:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzFiMTI0ZmZkZjhjYmNhYzE3Y2MxYTk5ZmI2MWE0ZmI2M2ZiZjU4ZjFmZGIyNGY0MWQ2NzYxN2FjZThlMjdlOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDhjM2MwNGFkMDY2ZTY2YzE4N2IyNWVjODU1ZjkwY2QwZjMyZjZmNmI2MzAwNGQ3OGRlYzY0Zjg0NGViMThhZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWM0MmNlNWQxNzExNjkxMDA1ZmIyZGY5MjNjMmIyMDg2Yzk2MWMwM2Q3MjM3NGY3M2M0NmRkMDNjYzY1YWQ0OCJ9"
+        },
+        {
+          "resource": "repo://src-tauri/src/main.rs#L24-L49",
+          "version": "repo-lines-v1:sha256:fd76d1cceb1786bf259499e36c9597909b41595937714eaa94e492899a3dc9cf:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJjYThjZjEwYTc4YjI4ODE5YmM5NDU2NDNmMDQ0ZGYzMmFkYjhkODc2NzViYzk5YzlmMzU1ZWQwNzg1NmRkOTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZhOTMwNWU0MGY0YzU3YTllMDZmOGQxMmE3MzNhNjM0MjRkODJjMTgyZGIwN2Q0MDY2NDcxNmZmYTE4Y2FiZWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNlZjkzN2UwMGVkMTJkMGE4ZjQ0MzBhNmQwODc4Y2RiMDgzYzllYzgxNzk4NThkNzA4MmNmYjIxOTlhNWViMjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA1MDQ1NDAwODY5Y2M5MTM0NGJhMTM1MTI2YjU1MWRmNDEyMDllOTg1MTZhMzM4ZDYwOTgxMDIwMTczZDQ4ZTkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8a07020c5d4c4166b97fd68e71e6591d",
+      "statement": "main() wires the shell: single-instance (refocus existing window), window-state (size/position/maximized), dialog, updater, a custom slr-os plugin injecting window.__SLR_OS__ with Node-style platform/arch names, a deny-all on_permission_request, .manage() of update::State, close::Guard and Mutex<Session>, and the slr-file scheme registered as an asynchronous protocol handler serving each request on a spawned thread; the run() closure intercepts ExitRequested{code:None} and CloseRequested through close::intercept and calls localruntime::stop_all() on RunEvent::Exit so managed llama.cpp servers are killed.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/main.rs#L210-L223",
+          "version": "repo-lines-v1:sha256:7c468f22751768e59c364168862f86961cc5df6fb2c1e517e48f50488043c144:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExMjIyNjM2ZjQ4MzVkOTU3ZDExM2IyNDY4N2Y2MDk4YjM5ZjZlYjUwMDZiMjdlN2UwODUwOTZhZjdiMDIzNGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyMmY1YzJlY2FmYzBkOTNjYjI0NTYzNDg4OWI0MGJhNjUzZGY0MDExNDA0NzBhOTU3Yjk4NWY3MWFmZWEzMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/main.rs#L69-L105",
+          "version": "repo-lines-v1:sha256:8125d0761f202e1eeb177c8887da9cabc2db94570d0c540b91d355222c9d3046:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFhZTBiYjQyYmNjYzhhZjIzOGU1YWVlNjA4ODM5ODFiY2ZjZTFjM2I5NzY3ZGQzOWQwZDQxNjQ2MGM2YjFmYzMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5YjE5ODJlOGRkNzQ4MTE4MTQ2YjM5YTJkMDA2MmY0MDgxZTM0Nzc5Yjg2NzVjMjM0YzRmYjEyNGRjMzkzOTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJiNmY0MGJiNzY4NDZkZDc3MDlkOTNlZTIxNDY0MjBhYzI2NjZjNTVlZTI3MjE2ODBkZWNmY2NjZmQxMjkxZTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1N2EyNWQyZWY1YTg1NTY2ZDdlMmZlZTYxODFlNzkwZmIyNTYxOGE2ZGIzYzllYjgwMjI0MDY0MTNlMzQ1NjAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_da15c42bfc0d4f01af5188f1d9074544",
+      "statement": "authz.rs's Session (in-memory, never persisted) carries the allowlists the whole trust model hangs on: project_dir (set by project:setDir, cleared of allowed_escapes when it changes), allowed_escapes (pdf:allowPath approvals), known_projects (save refuses anything else), readable_pdfs (pdf_read refuses anything else), writable_exports (text_write and pdf_embed_marks' newPath target refuse anything else), stamps (mtime_nanos:len per file for stale-write detection via changed(): Some→None is not changed, None→Some is), known_git_roots (assert_root re-checks every mutating git command), and listed_splits.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/authz.rs#L11-L56",
+          "version": "repo-lines-v1:sha256:773ae495eb63a69c68fda6d0030d969073e2622ef1a766a4108734231f4c7db4:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwNTY1ODQxMDgxYzdjODEyZDU0MDBlZTQwZGI3NWE0M2Q3YmNlMjg0MzBhYzQ3YzA0ZjBiZTgzNGM4MDhhN2UiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY1Y2NhNjg5MjIzYmIzNWU3MzY0YTVmYTViYTdjMjI1YTdmY2Q4NGNlNjBkNWRkMmQ3MmE3ZDJkYTEyYjdmZWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY1ZmU0ZjE3Y2NkNWJiMjc5MDQ1NGRlYjVmN2FkMTk4N2M0OWZkOGY1YjYxZWFlYjFiOThkNWFkYzJmYTJlMjAifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/git.rs#L455-L466",
+          "version": "repo-lines-v1:sha256:c793a4901f65f3a2af1e99be044544701fe78beac620b161f9ee82cad84d2b58:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxNGQzNzk1OWI0NGY4NWY4NWZjNDc1ZWJhODVjZDBkMTVhMzhiNjk2N2IyYmE3Zjc0NzMwNDc1NmQxYWJkOTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNmNTE5MGI1OTJjYTRmZGFjMmE4NWJhN2MwZjhhMTZiZmUzMmJmNmZhMGVlNGE1NTA2NjQ5Yzg3NjE1ZGZlNDUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFjOTVkYjkzMjdmNDAwYjdkOTNmMDE2MjZmMmNkMGFhNmE2YWM1MTkwYjdiNzM3ODMxMjYyNjE1OTc1YTU3N2MiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEwNjFmOTI5NjhjYzAxYWIwZDRjZjljN2YxMDFjNTRjZDU3YjJjYTI1MTMzODAyNzJiYjUyNDczMjFjY2Y3NjcifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/project.rs#L381-L399",
+          "version": "repo-lines-v1:sha256:98a4682b70bc380ef1cb5d2855c0a3ab76ad81dc26ab94ce8aa23ce1f99521b9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ2MzlhMWFlN2FhMjQyMWRhMWM5ZGM2ZTc0YjJmYmRhZTEyYjFlNWMzMDIyMDQ4MGY4NDdmY2U4NjVmZjU5NDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1MjgxMmRjZWI1MWRiM2NkMGJjNDU5YzQ0OGVlNTMzNzk3ZGMxYTM0ZGVlY2U5NDUzOTYwZmJjNmMwOWU2NDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk2NmVlYTJmNTM5ZGUxZDBiMDFlODlmN2FjYmYzYjU5OTg1ZjBiZjM0ZmEyNDFjY2Q3YWNmMTY5YWYxNzg5ZTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY1MzI3NmFmMmJhMjZmOTBmNDNiN2QxM2JlYWUyNzczMGExMTM5ODhiNzU4OTYyMzc4NGY2YTUwNDM3MjE1ZjUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/project.rs#L431-L449",
+          "version": "repo-lines-v1:sha256:8a8cb9a13580bf27a8698309efc9c4e325ede7d51c77b61ac110238973836fca:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwYzFmMTg4ZjE0MmVkN2E4MjQ2ODBiMjA3MTcyYzU1MTliYzYxNGE0OGZkYTdjZjE2N2VkYjhkZGY3OTk1NmMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4OTc3MWZlMWI2NjI4ODc1YWEyM2U3ZGJlNGFhNzE0NjFkMDBjZGZiNjZkZGYxMWI5ZDgyMGFjNTg5N2ZkZjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyNDVjZDgzZjBmZjVjODhhYTJhMjRjZTM3NjRjOWIxYTA5ODQ5MmVjOGUwZWM0ODY5MmI1MTMwOTQyMmZhNzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRhZWM5ZTY3YWM1MDAxNWI5ZDQ0ODYwMzAzMDQ5YjM5NDJjMjZjOTljM2I3YmM5ODc5OTM4NTU4Njg0ZWUyNzMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c0feeda3d3804630b18c6a62279fb430",
+      "statement": "Every renderer-named write path is validated with within() (component-wise containment on normalized absolute paths) applied both after lexical resolution and again after canonicalize(), plus assert_not_symlink() (symlink_metadata refuses writing through a link; a missing file is fine); paths.rs implements Node's path.resolve/relative semantics so renderer path strings behave as the old TypeScript checks expected.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/authz.rs#L82-L96",
+          "version": "repo-lines-v1:sha256:4103d39397fda0b80d89b33c5a1fdb44e171f0c80fb152a5116b5dc501ac52d6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE5YTdiZmY0YmVhZGMwNTU2NDZiMDcwZTY3MjMxOTc4NTA0ZjRhMzRiOTkyZWZjMDI3YjYyZWRhOWMwYzg5MWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQxMDA4MzQ4NDFjYjI1ZjZkNTExMTRjOTE5ZmNmNGVjOTBkZTQ5NWU1YWNmMTZmOTJjZDEyZTAxZTg3N2ZmMTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiYzk4ZDZiMGRjNDkyYzUwMTZkZjEwODA1YTNhNTRlYjljMTg0YTVhNjEzN2U3ZjRiZWNmYTBjMjIwNTUwZDAifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/paths.rs#L4-L40",
+          "version": "repo-lines-v1:sha256:015cfc4eed5bfe480a6abf84dd7497823e9f1e19abecee1b60d39c7fd0df9e81:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJiYTQxYjIxMTE4MGVmNmNhZGUyMjhmN2NmYzc4YmVlNWY3OGE4NDJhZGIxNGI3MTA0NWZmODlhNzBlYzkxNmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk5Yzg4MWM2YzBhM2MwMGVlNWRkN2YwOGU5NGJmNjI4YWYzMGJjOTZlZmZhYWE0MzcwZDExNzI1N2U5ZWM2NzUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ5MGQwNGUwZTIwOTUyNDZjZjcyNDY3N2QxNWE1Mzc3OWUzNWNjMzU0MTA4OGZkNzNkOTRhYTZhOGZhNzZmOGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNkNjA0YzI0MTBmZTNmZjAwZDQwZjc0ZDY2ZGM0YTc5M2ViNTVmYjc4M2VlYzI4NzkyZWU2YWNhZWRiZGNhZjAifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/pdf.rs#L17-L40",
+          "version": "repo-lines-v1:sha256:25b6e6d2cd82d92546f214a3733113af0804091e2e0b980a1e8cc77cd882b3da:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJlNGIxY2IwNjlhNzlmMmY1NmM1Njk0NmYwMDk1ODBjZWFjNmJhYTQxMDQ0ZjhlZDc1MGEzN2Y3ZDNjOTk3OTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMwMjhmODQzODU5OGJlMDBmZGQ5MjZhN2E1ZGIwNzQwM2Y2ZjBkZTMxZGIxMGM3YTNlYzVmZGYwMjQ0NGNiODIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM2ODEzNTY2NGQ0MGVmMDcwMGZmMTVmMWFiMDk2OGRhMTgxMzAzYzM0OWVjYThhOWU2N2NhZmNhN2U3M2E4MGEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_21d38952f5504355afb68ecd3a7829df",
+      "statement": "The slr-file scheme (slr-file://project/pdf?path=<rel>, built by DesktopAdapter) serves PDFs from the open project's directory with the path carried as a query parameter (Chromium collapses '..' in URL paths but not query values); protocol.rs answers OPTIONS with CORS headers advertising Range, returns 403 Forbidden for paths escaping project_dir without an allowed escape, 404 for no-project/missing, re-checks containment after canonicalize(), and serves single byte ranges (206 + Content-Range, 416 with bytes */len, full 200 otherwise, HEAD supported) so pdf.js can stream.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/protocol.rs#L57-L145",
+          "version": "repo-lines-v1:sha256:8ee6101992f2db3c99fead1aeb105d658443e7fe37bf706e916fbb2ecdc7a50e:eyJzZWxlY3RlZExpbmVDb3VudCI6ODksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU0ZjlkOGViNGQ5MDI4NmZkMmMxNDNhYmNiOGJjODhiNThjNTExYTdkZWRmMWQ5MDE4YzlhOTQ5ZDg2MTYzOWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlMGE5ZTY2MGM5NjgzN2ViNWZhNDJlY2MzMWQwNmQ2YzEwZTM0MzYyYjA1OTU4ZWQzYjk2ZmYxNWJiYzkxYjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYwNjNjNGQxYWY4Y2Q4OWJiMGJkZDc2NTdmZmNiZjY4MDZhNjEwZDc5ZDZjOGQ0YzMwN2MyNDFkZjM5MDA1MjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNmN2E3NTY1YjkxNDU5MDUyMmUyOWExZjcwZjVkOGM4YjM0YjY2MThhODk0MGQ3YTUyZTIzZTZlYzZkMDgzNzcifQ"
+        },
+        {
+          "resource": "repo://src/platform/desktop.ts#L239-L243",
+          "version": "repo-lines-v1:sha256:6393bcc5f3692f1a3561a2e8236524372dd0c80bc09bd3f081ecb702ab9aea3d:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzJmZDRhODVhNzNjMTM3YjkyZmM3ZjkxOWE0MTQyNzhjMzAzN2Y3ZjcxMjlmYTRkOTBjNzM2Mjk0M2NmYThiNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjM0ZmRiMjZmNzk3MmI0NGVlYjIyNWQ0ZDZmZWI5MTRkMjcwYTI1ODQ0YWE0MWZkZjIzOTAxNDBjYmZiMzhiNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjEwNzdhM2E2OGVjOTEyMjY3NThlYjZiNmE5NWQ1ZTk2YzRlNTJhNWM3NThkZmQ1M2E1NzI0NzYyOTI2YWE5YSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_9c05a5659c5349c1be9c2da66650a9c7",
+      "statement": "LLM API keys never reach the renderer: llm_save_config stores a non-empty key in the OS keychain (keyring crate, service 'SaiLoR', account 'llm:<id>') and writes only a 'keyring': true marker into llm-config.json (Electron-era format, raw JSON entries, mode 0600 on Unix); llm_configs and save/delete return public_configs stripping key/marker and exposing only hasKey, so there is no read-back and an edit with a blank key field keeps the stored key; at call time build_call_headers substitutes the {{apiKey}} sentinel into headers, dropping sentinel headers for noKey targets.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/llm.rs#L1-L46",
+          "version": "repo-lines-v1:sha256:905dccb424832e0a8cac771beebb883e890814728cc4bf1edd9e2cce577c7341:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQzMGQwZjdlZGE0NmVkYzYzYzdmMWNhMzY3M2RhNWRlNWZkOGZkZmRiZWI5MzNhYzY3Y2U4NTJhZDk3NWM5ZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImExZjU5YTEyZDc4N2QyYTNkY2Y5Y2UzYjU1MjU3YmZmOTQ2YWI2NGI4NDg4NzNjMGU1M2IxMmI1NDE1Mjg3NTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImViOWEwOGJjMjlmNmViZWJlOWE1ZjAxOTAzZDk4NDVkYmNiNTg0MmE0NTVmMDdkNWY0MDAyZGFjMzJhNWM2MDUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/llm.rs#L107-L127",
+          "version": "repo-lines-v1:sha256:ab2f2c155a3320eb374ddeef2943e3f2014631c1ea7a24f66712a5708bc93958:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEzY2JjZWI1M2I1YWZlOWU0NjNmYzgwNzNjMDVlZTUwODk0MWExMjE1ZWZmNGNjMmJiMTY1NDkxMTI2YzVkOTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg5N2U4ZmI0NmE5YWQ3YWU1NzA3M2JkMjI0ZmZlZGFlZTUzMmY4Y2U2NTliYjNlM2VjZTgxMjM4ZDcyYzEyYWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVjOWFjY2M4ODg5MWYyMmRiY2E0YWU4OGU3NDMzYzc5OGQyOGViZTAxYmUxYzhhMjA0Yjk0NGRhMDE2OTM0YTUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/llm.rs#L154-L175",
+          "version": "repo-lines-v1:sha256:10da957652130a02ee8eb6c1699444cf410ad427af3a395f64bc42394f2b3c51:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI2MDdjOWQwY2M2ZTcwZTI1NTJiZjYxZDYxM2UxNzE0NWYwMGViNjJhN2M5MzIyZDY4OTllNGY2MDZkZmE0MDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzZTFjZGQ1MzIxYjMzNDhjYjU4MDBmMGQ2NDQ4YmExZWY3NzM5YjVkNTE4NDkzMzk0ZjAxZDk2Mzk2NjY4YWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2YmY2MGZhNmUzNzliMDQwMWEwY2QwNTM3ZWY0NTJhNjNjNjRhNGQ1YWMzYzVmNDZlOGQyYjM4YWY2Y2YyM2UiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNlM2IxZWU1M2NlNzM4ODNkYmFmMmFkMGQwMjU1ZWNkMDM3ODA3Mzc4ZmI5NGM5ZGUzODZlODcyMGY1YThjMTAifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/llm.rs#L174-L236",
+          "version": "repo-lines-v1:sha256:459bb5a46c5714a92d528b43b9b2beb8be1b902462322d9e0593aa7abc77765c:eyJzZWxlY3RlZExpbmVDb3VudCI6NjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0Y2Q5NDhkZjQ4ZGQ5YjM2Nzk5MGU3OWYxN2RiNTk1ODlkMzQ2NWE1NWJiNDMzYjIxN2MzYWE4MTUwZDlhOWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNjODFiMTQ3ZGYxMzc0Mjc5NDc2YjY3ZmYxMDBhNGExNDllMTYxNWZlYzc1YjMyMDQyYWFhODEwN2FlZDg2ZmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAxM2VhZDE2ZGExOWI0NjhhOGU5ZTliMmZhNmQ3NTMyN2Q2MzNjYWI0MTZmMmE4Nzg3ZGFjYTI4ZjRlM2VmNTgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_228add18214c4655ad7cfbaaca14e474",
+      "statement": "llm_call pins the call to the configured origin: it refuses to send the key unless the named URL's scheme matches and its origin equals the config baseUrl's origin, follows no redirects (NO_REDIRECT client) since a 3xx would carry the Authorization header to an unchecked origin, and for managed catalogId targets redirects the call to the shell-run llama.cpp server's 127.0.0.1 endpoint with its per-session key, restricted to /v1/* and /health paths via the proxy-free LOOPBACK client; calls run under Flight id llm:<requestId> with a 10-minute timeout.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/llm.rs#L328-L430",
+          "version": "repo-lines-v1:sha256:5941f9463d8a085c61a82c41482b080b0bc4917aa6f5aedb0d9efdf7047de2ee:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAzLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkMGFhMGEwYjNiZTVlYjUzZmEzYmVjNDk1MTA4OWFjMmQwNzQzNjdjYWRmMDBkYWVjNDkyNzU4ZmQzMmU1NzMyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJjNjcxY2RmMDNiNTdhNjg3Y2RmNTZkYmJjZDliMzIwMTE5ZmE2YjcyMzFiNDQyOWMzZDM1NzZiODRjMDkxZTMzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJhNzE3ZDk4YTVjNTcyZDI4M2Y1YTViYzhlZDhiODEwNDhhMjg2ZTNiMTE3ZTI1YTM2YzgyMDJhYjJhZTI0Nzc3IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJhOTkyYmQ5NmJhNmI2ZmNjNWQ0YmMxNmI4Yzc4M2IxYTMyN2NjMzQyZWYzMTgyOTNkOWQ4MTVlZGZlMzlmYTUyIn0"
+        },
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L1426-L1430",
+          "version": "repo-lines-v1:sha256:91228afa783d0b4d38d7a521b8f9b72b2e00b2844c6ca1bdf1e3de0ed6630180:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTI2NGIxNTQ0NWU3NjFiYTc0NTY0Y2U0ZTU5ZDE1MjU2ODBiNGE1YjBmZWY2NmZjOGI0M2ZhZmI5OWI1ZWZiZiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODMyY2ZjNmZkNDgzM2MxMGJkMzE5ODJiZThmOTBhM2IwZTA1NjFkOGI5NGFjZDljODUyNzk5ZGIyMjFiOWNmZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmFjYzBhNDQ4MDZjY2NiZWFmYjRmNjIxZjIzYzY1MjIyZjhkOGQ5ZmNkYWI1Zjc0MWE2MTVkNTRjZTY2MTk4NSJ9"
+        },
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L524-L530",
+          "version": "repo-lines-v1:sha256:7871d654528131d48e9deb10c8503ea3a70c3eb45ed3367ee03a59598765d71e:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjFmYjc2ZWEyMmM0ZjJhNDlmZmJhNmFkNGNmNTY5YzI1ZTk3NzdjNTNlZDVlMTJmMThlZDg3YWE1ZDUxMmE4NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzFjZmJhMTQ0YTU0Yjg0OTNmYzFlZDE4ODFlMGIzMDFiMzFmNmViNzE0NmEyZTg1OTA2MDFlMWI0ZDIyNmM5ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDA4YmQ2NGY2YjhmN2U1NzdmN2NmZmU0Y2I1OWRkOWEyYWJhYjVhMDUyZTgwODgzM2IyNGM1NTcyMjQ0ZWYyMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMGNhOTE3NjgyNDZkODQ0MDJlZDZjYjczMzExMDQ3ZWQyY2JlMDk3NTM3MDdlOTgzZGY5Y2EyYzAwZWMxMzIwNyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_dc7c027b47bb45a782e98c572ab4b373",
+      "statement": "net.rs provides the shared rustls/ring HTTP plumbing: a builder with no cookies or decompression, the NO_REDIRECT client with redirect::Policy::none() used by the LLM, Ollama and local-server calls, and the Flight abort registry — Flight::new(id) registers a Notify, run() races the future against abort(id) and a timeout, Drop removes the entry, and the abort commands (llm_abort with llm:<id>, web_abort with the bare requestId, ollama_cancel_pull with pull:<id>, local_cancel with local:<id> or 'runtime') all funnel through net::abort.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/net.rs#L11-L79",
+          "version": "repo-lines-v1:sha256:653662252821040b9f1906e9e87b50caae42cf3c6a897c9ca1460cdd98256a41:eyJzZWxlY3RlZExpbmVDb3VudCI6NjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzMGM1NDkzNTQ1MzIzOTU0YWM5MDI2ZjhjNmFhNDk1YWY4ZjBlYjE4MmQ2NDg3ZWQ4NmYyZWU4MDc2ZGU0YTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiOWUwMzFhYTBmYmYxZDMwZTNkMzdjZjkyOWJkNzZlYzQ5YmUwYWEyODJjZGE1YjVmNDM3ZDk1MTNlNjcwN2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyYTc0YjQ0M2UwMDdiNzMyZmMwMjE5ZGVhMjBhOWViNWZkMDg0YjIzMDZmMjEzZTI3ODBjMzBlMzliMjJkZmYifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/webfetch.rs#L269-L302",
+          "version": "repo-lines-v1:sha256:788fca95c2eeff6e68cb9caf64e64c7ebfe79fec23603fca39fd261f23d1630d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhkOWQ2MDYxN2JjMzdjOWQzNDhkNjhkMjhkMDQ4OTQwNTgxNTZkOGMwNGNiOTYzZDg4NTY4YjEwZTViMDI3OWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUzMjc5MTYzZGQ3NDc4NTAxNGMyM2Y3MTkzODZkYzZmYjVlYTdjNTJhNTRlMGE1NzdkNDNhNDNkN2M3ZDVhMWIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkwZmEzOGQwMDA0MjE4YTM4OGIzMWY4ODJhYzJjZjMyODM2MWZlNTUzZmM5YjVlZTgxZDdmYTU2YTBjMTUwZjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMxZGIyZDA4ZjQwYjgzMzI0YWQyM2Q3Njk0YjkzYjc5MjNhNDBlOTQ4MTYwZTdlNmIzN2ZjYWQzNGVlNWE4ZGIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a959133aa2284871826faf94adc3d8bb",
+      "statement": "webfetch.rs guards web:fetch against SSRF from LLM-supplied URLs: validate_fetch_url re-runs on every hop (http/https only, no embedded credentials, blocked literal IP ranges and localhost/.local/.internal/.localhost hostnames refused — blocked v4 includes 0/8, 10/8, 127/8, 100.64/10, 169.254/16, 172.16/12, 192.168/16 and ≥224; blocked v6 covers loopback, unspecified, v4-mapped, fe80, fc/fd, ff), check_public_host refuses domains with any non-public address, and the PublicOnly reqwest DNS resolver re-runs the same rule for the actual connection, closing the DNS-rebinding window; redirects are followed manually with re-validation up to 5 hops, with a 20-second timeout, a 2 MB body cap (truncated flag), and a textual-content-type gate.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/webfetch.rs#L11-L130",
+          "version": "repo-lines-v1:sha256:81a3ea34eb26f732bff20f6b1d12e8e04175ed2017ec92341830d45fcd2291dd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI0NDFhYmE0MGIxMmFkZDBkMDk4NDQyYmU2NTA4NDE3Yzk1NTFhN2YwZDNmMTRhZjFmMWQwMzczYWI1YTlhMzZlIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0YjhjNWQyMzMwYTNhMGQ3NTEwNGE1MTAxYzVhZWUwODU2NzkyYWFlYmEzZTQ4ZTIxZmI3NWJhNTY5MWRmYzQ3IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlOWNhNjUxMDJlYTY4NTNiYTE1Mzk5ZjY5MTlmYzVhM2JmYjkyNGViZDA5ZjNhNmRjOWQxOTZjOTAyODQ1NzczIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIxNDc3Y2JiNzZlZjYyMWMxZTJjMWVkMmE2MzIwODQ4ZDk0NDk0NzU1Y2E4Yjc0ZjFlZTk1MzdiNWNjYTEzYmEyIn0"
+        },
+        {
+          "resource": "repo://src-tauri/src/webfetch.rs#L196-L268",
+          "version": "repo-lines-v1:sha256:127d3f7f2791f16015f7a346ccc007ae556635f10daae2f1f2f78f5f985b56f4:eyJzZWxlY3RlZExpbmVDb3VudCI6NzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE3NDc3Njg0NTc4YTg5ODY5ZWZjNDZkZTFkNDgwYTI2MjJjZGRlMDc5NDU4YTE5Y2IyMGMxM2JiNDJlOWNhMDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM4N2IzMjMxMWRhM2IxM2RhNjQ4YjRjYWRiYTgwNWVkMmJiNDgxOTY0MTU0MTY1Nzg1OGUxMTVjYjhmMjVhMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA2NjVkYTIzYWU5MThhZGJkYjgzMGFlNzE4MGY2NGNhMGQzNDBiNGFlOGU1NmNkMmExODIxZDJkNTNkZmQ5MWUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_c8956f766c4f455cbd6fe98393fb249a",
+      "statement": "close.rs implements the unsaved-changes guard as a Guard of four atomics (dirty, asking, saving, allow) managed in main(): the run closure intercepts user-initiated ExitRequested{code:None} and WindowEvent::CloseRequested; when dirty it shows the native Save / Don't Save / Cancel dialog once (asking dedupes), Save emits app:requestSave and only app_save_complete(ok=true) from that guard-requested save (not any ordinary saveComplete) exits the app via app.exit(0), Don't Save latches allow so every later close passes, and Cancel keeps the window open; the renderer's useCloseGuard pushes both stores' combined dirty state via app:setDirty.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/close.rs#L16-L78",
+          "version": "repo-lines-v1:sha256:98cfa8465db99657f8d7577b3c70c3d9c60fa079b049353f15c17cdd93aa299d:eyJzZWxlY3RlZExpbmVDb3VudCI6NjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhMDIxMDU4MjUzNTk3ZjI3ZGNkNjI3ZTA2MDNmYTZlMTkxMGNmNjY5YWFiZmE3M2EyNGQ2ODg5MDIyOWRjOTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM3OGUyNGY1ZWZjMDY0MTFhYzlkNjY5Y2QxNmI4Mjk1NDliMmVkMTI0OGQ5NzBhOTJmYmRkYjExNGZlYzRhNTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU4YjgwNTUwOTgyMzAxOTZhYThlNTIwMmMyNDY2YjJlYjIwYmVjNDdmZTk2MThkNzZiMjYyZGFkYTFiMTIxNDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYxOTg2ZGRlYWJhNzE2YzEwY2IwYjY3NmVlZjIyYzY3OGQ1MjYzNDYzOGE1NTFlNDUwODhjNWNjYmZlOWYwYjkifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/close.rs#L79-L109",
+          "version": "repo-lines-v1:sha256:a89ee6aba8d9d234e3f59ebd480acb698d81006b32da4e79f94b9f8865e89b62:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxZmViZGE0NDQ5MDRhNWRmNDI5MDZkZWY4ZDYzYzUyYTlkNWI0MTU1N2QwNTE3YWRhM2E4N2NkZjE3NGNlMGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ3NDU0NDAwNTNiYWYwY2YxNDM5MjUxODI1MDdmNjdjNmIxYTJmM2Q0ZjgzM2I1NzM3MzI1OGEzNmI2NGFkYTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE3MTljOGVhY2M3ZDQ4NjM5NTg2OGI1NTA5ZTU4OGYwZDg1OTViZGQ5ODNiZTI0NzliZmMxOWM2ZDhkMmEyNGQifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/main.rs#L210-L219",
+          "version": "repo-lines-v1:sha256:c1a43461a7311679b1414e49edbd8104555188264b0f2f287d18a36d6d2725cd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExMjIyNjM2ZjQ4MzVkOTU3ZDExM2IyNDY4N2Y2MDk4YjM5ZjZlYjUwMDZiMjdlN2UwODUwOTZhZjdiMDIzNGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3YjUxNmI4ODM1ZTY2NGJlN2YzNzdkNDJmMjZjZTk4MGM0Nzc2NGI5ZDY0MjVkZmNjNGEzMjNkNGFjMmQyYjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyMmY1YzJlY2FmYzBkOTNjYjI0NTYzNDg4OWI0MGJhNjUzZGY0MDExNDA0NzBhOTU3Yjk4NWY3MWFmZWEzMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY5YTJmZGE5NDEwZWU1MjViMWQ3NTg4Njc0NmM4ZTBiZTlhYzkwYjU4ZDBiYjJlNmUwNjk2NmU3ZmJhZjc3NDUifQ"
+        },
+        {
+          "resource": "repo://src/hooks/useCloseGuard.ts#L22-L48",
+          "version": "repo-lines-v1:sha256:d043edc40fca46eb152126ea01e68a3b3b25c55057a154431622796ddc7ee781:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIwOTUxY2U1ODNkZjUyM2I3ZDc5YTQwN2JhMTgwZWFkZDIyMDMzMzVkYjViZjk5NDc1YTA0ZjQ2MjkyNWEyOTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5ZWY3ZGY1YjYwYTIyYWU5YWRhYzJlMThkYWNmNWZkMDRmY2M2OGFjOGJhOTdlOTRhNGY3ZmYyNGFhZDA3OGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVlNWE1YzRiNWExNWNiZWQ2ZWM3MzYwZDgxOGQ4OGU0ZDM2NTExZDI4OTIwNTJkNDUwYWNkZWE1NWI1Zjg2NDMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_24ecb5a88a0141df8df6ae941ca2074c",
+      "statement": "update.rs implements the user-triggered self-update on tauri-plugin-updater with the feed endpoint (https://github.com/Gram21/SaiLoR/releases/latest/download/latest.json), pubkey and requireSignedVersion: true fixed in tauri.conf.json and never renderer-controllable; update_check reports { supported: false, manual: true } unless the bundle is AppImage, NSIS, MSI or the macOS App (deb/rpm and unbundled builds update manually), stores a pending Update and emits update:available; update_download emits capped integer percents via update:progress and stores bytes; update_install refuses while the project is dirty ('Save your project before you install the update.'), installs the stored bytes and restarts; errors surface as update:error events.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/update.rs#L17-L105",
+          "version": "repo-lines-v1:sha256:7ff174114aeec42f055482e6308445fac9f04fe425b491c6b97e8d5684d8e952:eyJzZWxlY3RlZExpbmVDb3VudCI6ODksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjNDYwMDIzZTQ2OWE1NWQ5YmMzMmZhNjZlZDFiZGEyNzE4MDU5MDhjZWRlNDBjM2IyYWNkNDU0NWQ1NjI4NGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM3YTM3YzkwYWVjNjE2NDk0MDAwMDY1ZTM4ZDBiNjNhNTljNzM1MGIzYjEzNmM2ZTFmNWQzNjdhMTI0NzViN2UiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU1YmFmYzQ4OWNhY2JmZWJlZGM5M2YwYzM5NGVmMmZlMjQ1MGRjZjlkMmZlYTA4YmViNjc3YmQxY2U4Y2EyYmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyN2NhZWNkMmI4ZTNhNGU5NDJhZDUxNTUyNDA5NmFkOTUzMjlhMzk4OWE1ODY1YmNmYTVhYjc4YWJmYjdkYWEifQ"
+        },
+        {
+          "resource": "repo://src-tauri/tauri.conf.json#L35-L41",
+          "version": "repo-lines-v1:sha256:368b09df083d849bdc1386b180cd9bfb7497d0a2288bb9352f1e0f75750ddb3d:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTBlNWU1NjgwNmU4ZTBiMGU5MDdmNGQyOWU2MzFmODIzOTcwM2RlNzg3ODA3ODVkYWVmZDAwMDA0NTAyYmMxYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmVmY2M0ZWMxNDFkZDIxOWUwOWUxNGQwNTBkMzVkZjNhZjU3ZmEwOGI5YjRlODQwYzY3NDZiOGUwMWRmMGQyMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjQxMjllNmFhOTAyNTY3NmVhYTRiMzFhMGI0NTQ5NjNjOGQ2YjRjMDQ5ZTNmYzY3MTczMGI0ZTE2YzYxNmIwNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmNhN2Y5ZjRkZDM4NTkyNThkYmI1MDljY2NmNzAyOGZlNDZmMzRiMDUzMDNlMGIxOTY5MzQ1ZGY2OTljMGI0NyJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_3f37be8e173647f1b77980e90a5af434",
+      "statement": "shell.rs builds the main window from tauri.conf.json (create: false) with navigation guards: is_app_url admits only tauri://localhost, about:blank, http(s)://tauri.localhost and the debug dev origin; anything else is denied in-window and http/https links are handed to the OS opener, and on_new_window always denies; it also migrates legacy Electron userData (SLR Helper/slr-helper → SaiLoR, copying window-state.json and Local Storage once, skipping symlinks, never overwriting) and on macOS swaps the Edit menu's native Undo/Redo for app:undo/app:redo items.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/shell.rs#L35-L73",
+          "version": "repo-lines-v1:sha256:369579b4cb62b5f91b81c2177386c3fc83dacd1d1315234519014995bac234f4:eyJzZWxlY3RlZExpbmVDb3VudCI6MzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4MTJhOTNkMWQyNWMwYWUxYWRjOTE0N2EyYmQ5MGQ4YzM3YWY0MTBiNTBjNDdiMDMxN2NjM2MxMWQzOGJkYjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk1MjhhMmNlNWMyNjcwNGEzMmM2MGFjNmE1NjA2NGM0MDNjZjJkOWFmYjBjZGY2ZjBlZmVjNDY3NTIwNzM5M2UiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRiODExYTgzNjRkZTM2YjA4ZWE5NDcyMmMzZTljOWU3NDAzNjIyNzA4NWZjZTVhYmY1NTMzMmQyYzQ3Nzc1N2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE5ZTc2MzU1Y2YxMTk5NDgwYzNmOTk4MzZiMTQ4NmM4NDFkODkxZmFhZDkwNGM2MDhlMDkzMDIyZDM3NTdhZWUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/shell.rs#L76-L138",
+          "version": "repo-lines-v1:sha256:dbfa36cf6b4d4a552cf246808ab0a52a9721e5648c6ee4caa308097802437d0b:eyJzZWxlY3RlZExpbmVDb3VudCI6NjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ0Y2NhNDAwMTQzNjViMzAyZjUyMGUxMWJiY2FlYmQwZDQ4ODQzYjEzNzRmYjdiNDM4YTA0MDY0YTNlZjZkZGYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ3YjViNDNhMzkyZWI0YWRjYTFlNWY2NmZlNDIzMDkwOWQxYTUxNDQ1YzIxN2FjOGZlYWVhMGI4MWQ5Mzk2YjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAwYjNkNjUzMmUwZTZlMDYxODhjMDAyOWZhOTEyMDA3NzdiZTA1MWUxNjVkZTU4YzQ0OWVhZDFkOTJjYWFkN2UifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_e80e56ccb9504f4dad1c24731b2e4097",
+      "statement": "The capabilities file grants the main window only core:default plus core:window:allow-set-title: every privileged operation (file I/O, git, keychain, network, updater) goes through the app's own #[tauri::command]s, and Tauri's generic fs/shell plugins are not compiled in, preserving the session-allowlist trust model against an untrusted renderer.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/Cargo.toml#L12-L22",
+          "version": "repo-lines-v1:sha256:28a523b3da69886d20d0cb6170098eda7aedfc5ed5e77a12e494073560548023:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU1YjA0YTE0YzAxZjk2ZmM1ZTUzZDk2ZTdmYzAwYzc4Yjk0NWMyNGM2ZWU1Njc4YmQ4ZjMyMjU3OWE5ZmJjZjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFjNDUwYjhhZWIxMTM4YmYxNzVmZGMxZDk4Zjk1YWZjZDY3YzMyNzQ4MzY2YzE2ODA4NTVkOGRhYzE0NWFmZTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkzMWVhYmU2MmI3OGQwMTYxZjhhZDM5NmNmMGZjMmZmYmMyOWU5MDlmZjY1OTg5MmM4YWVhYmZiNWMwNDdlNmQifQ"
+        },
+        {
+          "resource": "repo://src-tauri/capabilities/default.json#L1-L5",
+          "version": "repo-lines-v1:sha256:15cda0dac066e01179ba5048e7f52f853ba80ff1551aa5c734cc312eeca291d9:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTZmYjA4ZmRhMWFjYjk1N2I2MTE2YmQzNzgxMWExZmU0MWEwMTYxMWMwNjMxZWRiZjc4NmQ2ODg5YTI3YTU1YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_17f3f75f2fcb4592989b904f2af39b55",
+      "statement": "The Electron shell was fully deleted in the 2.0 cutover (docs/tauri-migration.md) and nothing of electron/main.ts survives as code; deliberate legacy artifacts remain — the SlrBridge channel names still map mechanically onto the Rust command names, llm-config.json keeps the Electron entry format (an old safeStorage key blob is left in place but cannot be decrypted, so such keys must be re-entered), and the recents localStorage key keeps the name slr.recents.electron.",
+      "evidence": [
+        {
+          "resource": "repo://docs/tauri-migration.md#L1-L20",
+          "version": "repo-lines-v1:sha256:7073ce27aa4f7b489518f0d085e392c908e4e82b203dd4b40d5774809255fae1:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiNjZiMWQxM2EwMDdhYjMwMTU4ODg4MjEwMmVlYTc0NDAxODk0ZjExZTIzMzNjYmI2ZGU0MTY5NWE0NzAyOGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVjYTdlMDk0NTgzMDI3NzQ5ODRiZGI5MWFlMzk4NGVmODFmNWJkOTEyZDkyZGMyYmMwMzczOGQ0MzA3MzA3NWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4NDJjYzU5N2UyOWY1ZjQzZDZiNmMwNTQ0ZDEyNmViM2VkNDYxYTc1NWZhODk5ZTA3NjkyMGIzMGZlYzMyYTYifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/llm.rs#L1-L8",
+          "version": "repo-lines-v1:sha256:d9ec9e1efe566effc084a572c06664b64968b51933b5727c9d2fe8b69f075f9f:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDMwZDBmN2VkYTQ2ZWRjNjNjN2YxY2EzNjczZGE1ZGU1ZmQ4ZmRmZGJlYjkzM2FjNjdjZTg1MmFkOTc1YzlkNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGRmZWIxZjVlNDE5Mzg1N2JkN2JmOGFiZTMzYzNjZWNjOTNmYWNiMTc0ZDMwZmFiNDIwNjU0ODczNTgzMzA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTBlYmZjYzI0NDQ2M2FiM2Q0YmQ0YjM3NDM2NDNhOWM2ZjEzOTljNzI0MzYzMzEwZWE0MDhjMjI0MTM3ZjNmNiJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.3",
+    "at": "2026-11-02T08:58:22.323Z"
+  }
+}

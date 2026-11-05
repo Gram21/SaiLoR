@@ -1,0 +1,204 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:ca9e593c3b493d6bd9cd3dadd1fd4ea64fdd94281873655626d723fadcbf1c54",
+  "claims": [
+    {
+      "id": "claim_021acb2251d84af38709083b624938d9",
+      "statement": "The renderer only names a catalog id; URLs, file paths and the executable are decided in Rust, and every download (llama.cpp runtime from GitHub, model GGUF from Hugging Face) is SHA-256-verified against a host-published digest (GitHub asset digest / HF LFS oid), with non-matching files discarded; an install starts only after the matching plan was produced and consented to in the session.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L1-L10",
+          "version": "repo-lines-v1:sha256:dc01b2a723ad13d0a5b6faf3359b0e26bd07266824c6f2d1c71bd42468cb6d72:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4MWViNGE0NGZiNmNjYjgyNmM3YjYyNWE0MzkwMTgxZDQ4NjFmNWY1YzY3Njg0NTk4NjVmYTFjMGNkMmExNTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE1NmNlM2E0NjRhYzMxNzQ0ZWJiNDBkM2M2Y2ZjODEyYjE1YzI4NTEyYTg5YzgxYWFiYzhkNjk3OWJjYTc5NjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdjNWQ3YTVmMjA5NjY2N2FkZDU4YmUyNThhNDBmMWMyOTJmMDQyZmUyYzNjYTdlNGUzMjI4YTQxYmViNzhhODUifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L96-L168",
+          "version": "repo-lines-v1:sha256:594eea6c6e1f3229033b936e750752bd8dbe051273138933366eabe1bb1c1a27:eyJzZWxlY3RlZExpbmVDb3VudCI6NzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU3ZDBlYmU3ZDhkZDU2MzZiNmMzMDJkYTFlMmI0NTJhMDM4ZTU2ZjIxNTdmNWM3OGYxOTA2M2JmYmZkYjA3NDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJjMTcwNTNiNTk2Y2UyOTBhMGVmNzZiMDQ2YWQyODFhNjIwNDlmNTYyZjEzNjFiNWIwYzJiYzUzOTQ2YmQ0ODkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIzNmNlYjU1MzQyMWEyZmEzY2E0OTE1YWRlMTBlNmY2NGNiNDI1YjNlMzM3ZjdjNjYxMGY4ZjU3OTE3NWYxZTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRhZGYyZTQ1Y2I0MDQ5MDA4MjcwNGU1OWZhODJhMTg1ZmE2Yzg4MTU1ZTVkYTNmNTc4YWVkZTNjODVmZjM4NjUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_675d691f068f41cd8785fbe4e3668357",
+      "statement": "Every hop of every managed download is host-checked by an allow-list (github.com/api.github.com/*.githubusercontent.com for GitHub; *.huggingface.co/*.hf.co for Hugging Face; https only, port 443, no credentials), because get() follows redirects manually and re-applies the allow-list per hop.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L171-L200",
+          "version": "repo-lines-v1:sha256:c78df9df9c9ac891205b1429a3c4eae2af2f7c6f4d6277a0d6b250c8ae649d21:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcxNGE4YTIwNTI1NTlkODY5ZmRkOWQ0NDk5Mjk5MzJjYzY5N2YwYTQyMWQwZWUzOWU3NWVkODI5NmNjMzJjNDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhZTE2OTg1NzA3ZDgzZjEwOThhOGIzZTk3ZTM5MjYwOTdmZTY0NTNlMjQzMzQ0MmE0NzE5OGU2NzM2ZWMzZmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk2OGFkYWJiYjJjMTFhZGQ2MmUxNmUwYjljMDRjODlhYTFhODg3NDQ0ODIwNmE4MDcxNmUwYjZhODg1YzUwYjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcxODgyYzliNDQ5YzdkOWFmZjk5OTBhNDg2NTNjODU5MzdjMTA2ZDk5MjgwZTAyYTBkNTA1NTE4YzNmZGE2ZDgifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L427-L462",
+          "version": "repo-lines-v1:sha256:9e6145aac921efd8614979dc5ba102c6ebb60f7ae829ee4277b2ec0c5c28afa4:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcyY2M3ZjVlOGQ4OWU3MzA1NzRhOGMyMWIzNDJiMTQwYzYzYWYyODA5Y2Q2ZTA2YTg1YTk5ZTY5Mjk1NzU4MWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyODY0ZjQ2YWFjMWQ4NDU1OWYzODgwNGQ1Y2RlMTkxNjQ5OWFjYTU0ZTFjMjI5MzZlZjJkNGRhMjQ3YjQzOTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE5YjVlOThmMzMwNjVkMDY5NzkwMWU1YjVjMjQwNmE0NzEyMjJiYmQwODg5M2ViYzIyZWExMzhkZDNiNWU3M2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZkMWI5YTc2NmU3OTIwNWI0NWMyODJhYjA1NGU4ZDZmY2RjNWM3NzZhNWI3NTFiYzViYjQwZjM5M2Q4NWQ1OGQifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_0c952ecd72ca49929f4cc994f563ae7b",
+      "statement": "The local model catalog has five entries mirrored between src/llm/localCatalog.ts and the Rust CATALOG (enforced by a Rust unit test): laya-en-q8 is available; laya-multilingual-q8 and laya-typed-decisions-q8 are planned because their community GGUF uses the ggmlc architecture llama.cpp cannot load; clef-flash and clef are planned pending a llama.cpp build with Clef support.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L1600-L1630",
+          "version": "repo-lines-v1:sha256:82876b683c7d29d6bb222f2d5437497b080ab775f4a90b70ff953378ea357d4a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkZDdjZjhlMTY4NGNmNjlkZjk5NmRhY2UxNWY2NGNkZDUzYTAwOTI4OWNmOTg5MDY3ZjQzY2NmODAyZDE5NTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAwZDZkODM3MjM0ZTI3MDUxODAyMWM5OGJkNzhjMDliM2I3NTlkYzRkMTQxYmU1OTA3ZjkzZGJkODgwMTgyZTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFjZmQyMTY3NTRiNGNhZjhhOTlmYjgxNTJlZWJkMTJkNTRiNzA5Y2E3MzZhYjYzODlhY2VhNGYzZTRjOThhZDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ4NWM3NWYwN2ZhNDg2NmM1ZTBjYjA2ODlkODE5NmI3M2Q3OGNhZDQ5N2FkYmFkYzk1MjBiNTEzMDgyMzhmY2YifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L47-L93",
+          "version": "repo-lines-v1:sha256:8e653c4654cbe5f2b84f975ec652c541d595ce956d608f7c7180ec169c8fc5c4:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4ZjI2ZjZhMzQ1ZWJmZTM1MjVhMzI1YmRlMGRkZjY2MTRlOGY5ODRkOGMwY2JhZDU4ZDRlOTIwMmQ0Y2Y3ZjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM1MzVhZDY1NTQ1NDNjMTY5OWU0NjgzOTlkNjMzMWZkZGQ1NjE3MmM4MGU1NDM3OGE2MGRmMDE3NDUwNTIyNGQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQxZGVkYjIwNTc4Mzk1MmE0ZDdlYTQ1OTUzNzdjZTdlMTYyZjVjYTRkM2EzMTRjM2ExNTczZDRlNDA1MWExYWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjExNzY3NjEyOTZlNjVlZTdmZDMzY2U2M2YyYzAwZWYxYjg1MDQ1NTUzNDMwNjkyZTUzOTRkZGRhYWE3NzQ5NjUifQ"
+        },
+        {
+          "resource": "repo://src/llm/localCatalog.ts",
+          "version": "repo-file-v1:sha256:07db09fb9e3d4d6cd2d5e831b72c592daa016c6c7f4362d65a7699873bccce8d"
+        }
+      ]
+    },
+    {
+      "id": "claim_470089663b72418b936bd6411b8dc76c",
+      "statement": "Hardware probing (local_probe) detects GPUs via nvidia-smi parsing, system_profiler on macOS, Win32_VideoController via PowerShell on Windows, and lspci elsewhere, classifies vendors from adapter names, reports RAM/disk via sysinfo, and recommends a backend (metal on darwin/arm64, vulkan with an NVIDIA/AMD/Intel GPU, else cpu) that also drives release-asset selection.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/hardware.rs#L1-L240",
+          "version": "repo-lines-v1:sha256:cc9e1e0f89aacc30ef850bf3e36f2c4ccf72c9ef36dd7a29464926be2d841d22:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIwMjQ0ZGVlNzFkYWY4Y2E0MWJkNWY5ZTA0ZjQ0MDlmYWM4NmE1ODQxYWMwMDNhZjg2YTA2MjY5MDI5NTQ1NDU5IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI5NmIxNjA3NDJlOTMyYzA4ODk4MTcxZDhjYjMzY2VkZmNjN2FmZDc4OWI2ZTEwODc2MjQ3OGRmODFhNDMyMjhlIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIxOWU3NjM1NWNmMTE5OTQ4MGMzZjk5ODM2YjE0ODZjODQxZDg5MWZhYWQ5MDRjNjA4ZTA5MzAyMmQzNzU3YWVlIn0"
+        },
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L145-L170",
+          "version": "repo-lines-v1:sha256:35092dd42f1332de52611ce02630dccaca10abc6d7323a1f4ad1cb950d2851e8:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUzYmUzOWQ5MmJlMzE0MmU0YmI5NjNhZGEwNzNlMDU4Y2JmMDUwZjExZjkwOTdiNWY4NzFkOTExYTAxYjU0ZDYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNiN2QyNWFjMWJlZjg1NTg1YTlkZjFjZWNkOGJiODdmY2NhYzYwMDI2ZjExZmE0ZTYzYWM2NTU1MjEzNjM1NDAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQyMWRlODBmZTVlMTAzNmJlYTQxZTM1MzA2ZjdkMzI2MjBiMzQzMDViYzYyZDI5NTRjYzNmY2EzMzA1MmQ1NGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY1MmYwNGM4MzhlMGQ3Yjk5Mjg0Zjg2NzVjNmYwZTkyNjFkNzU1NDNlMDg2ZGJlMGVlOTJlMWM0NjMxMDU3ZGEifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_5cf0aff3dd6a43d39444eb563d9a9e9e",
+      "statement": "A managed model server is spawned per model on an OS-chosen 127.0.0.1 port with a random per-session API key, batch sizes equal to the context, one slot; its real backend is parsed from the startup log (never from what was asked); GPU start failure retries once on CPU; and after health (120s deadline) a POST /v1/systemone self-test gates serving — 404/405 means the build lacks the route and the server is stopped.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L1273-L1310",
+          "version": "repo-lines-v1:sha256:e24f2883894416a69b1b65869d09a7b71b2c525ed6dbb9484a0cb63a8bce2d7c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ2ZWQxZmNmZWJkM2IwOWY3NjZiMmE0NmZhZDc2ODBhZGQ1MGZkYzE0MDQ0NzVhMzczZjI3YmVlZTU5NjI0OTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiODBiNDQxZGVmMTQyYWJmNWVlNmE0ZmJjNWJlNjkyNDMwMzUxODU3OGY4MjNkNWEwYzczZGU1YWQyNjJjMzciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVkMmRjZGMzNWUwNDI2ODU4ZDEwZDQ0Mjc5MzgwNWMyZGM0MWIzY2M0NmIyMTVkMzdkMTBmNjhkOTdhNWEzZTcifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L206-L262",
+          "version": "repo-lines-v1:sha256:902d66fdd57419ae214fd0e294ebc739beadd7664be930fbb8a6c35a5e6b0771:eyJzZWxlY3RlZExpbmVDb3VudCI6NTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAyMDkzYWQ1MzMwMTg1NWVkYWJlM2MxM2VjNjBkMWM2MzJiODQwOGM5Y2YyNGMzODA4ZDMyYWZmMWRhZDYxNGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk1MTZiNjc2Y2FkZDg5YzhkZjdjNzY1MDUzM2Q0OTBhMjI0NTI1YjQ4NTBkMDc1MjIwYWFiZGRkMzBmZjhkYjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJiOTczOThhZTE4MmYwZTE1NDMyZjQzNWZhYzM3ODA3N2I5NmJhMjA2MWYyNTlhYjQ0YmNiZDAzMzc0OWE2NWMifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_40802b5a8790451b868e96201f3f3ba1",
+      "statement": "Server lifecycle: concurrent starts are deduplicated via a global mutex and a starting set; a background loop kills servers idle more than 10 minutes while each access resets the idle clock; stop/kill signals the whole process group (SIGTERM then SIGKILL on unix, taskkill /T /F on Windows); and stop_all on tauri RunEvent::Exit kills every server tree on app exit.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L1377-L1445",
+          "version": "repo-lines-v1:sha256:41f3b37b84a766b08768c5e30003e4c3e49161f23d95847f0da3082a5f2d0522:eyJzZWxlY3RlZExpbmVDb3VudCI6NjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBjMjE1N2I2NjdjOWIxNGU5MTMwYzdhYjU0OWMyNmY4Y2Y3YmIwNjI0MzYzZjk1MGQ1Yjk5MzQ5MWVmNzAzZmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgzZDU5MjcyOGVlMDYyOGJjZmYyMjhlMGEyNDY0MWJhMTE2Y2QxODNjZTgwOGY1MTgxNDQ5ODg3Zjg4MTQwNGYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE3MmJmYjQyY2YxYmI3MmNiYzM0YjIwNDhiMjA0MTI2ODBjYTc5OGQ3ZWJiM2ZmYmU0OGM2MmE4MjZmMjQxZTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc1ZDcxODE4Yzk2ZTkxN2I3ODhiYThkMGZkYmY2OTM3NjkxNzRlY2Q5MDJlZTIzMzFiOGQ2YTg1YTdhMzc4ODAifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/main.rs#L220-L220",
+          "version": "repo-lines-v1:sha256:772adbfa945159cbd2946a132294bd6e89b39007f511ddf28bb58728c303e63c:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzcyYWRiZmE5NDUxNTljYmQyOTQ2YTEzMjI5NGJkNmU4OWIzOTAwN2Y1MTFkZGYyOGJiNTg3MjhjMzAzZTYzYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNzcyYWRiZmE5NDUxNTljYmQyOTQ2YTEzMjI5NGJkNmU4OWIzOTAwN2Y1MTFkZGYyOGJiNTg3MjhjMzAzZTYzYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjZiMWIwOTk4MmQ2NzQ3YjhmNzA5OGFjNTA5ZTU2M2Q0OTIxMzFkYmVjNTI3OGFkMTZmN2FiMjc0NjEzNWQ2ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjhjMTY2ZTYzNjViMzY1M2U3YmJjNTE2NzA5YjBjNTAyMDdjMGE2YWVjMjg2YTI1ZDJmMjVjN2IyNjI1OGYxOCJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_643ce284987f4234babcd8b445bce9db",
+      "statement": "Managed downloads resume a kept .partial via Range only when the server confirms with 206 and a matching Content-Range (a 200 restarts the file); local_cancel or a 60-second stall keeps the partial for resuming; progress is streamed via the local:progress event through phases download, verify, extract, done.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L463-L530",
+          "version": "repo-lines-v1:sha256:2f379f7ff87d28ee9e13346ef326f01f41463a04f82cfc9a73f52a821d33f546:eyJzZWxlY3RlZExpbmVDb3VudCI6NjgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg5NTgxOWFhNzRmMTViZDg3MzM5N2U2ZGNlZDM4NmFiYjNmNTc5YjI4ZDdjOTQwODVhODY1Yjg1MWM2MTczODciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMxY2ZiYTE0NGE1NGI4NDkzZmMxZWQxODgxZTBiMzAxYjMxZjZlYjcxNDZhMmU4NTkwNjAxZTFiNGQyMjZjOWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRiMzFjYjJlNWQxNzE5NjAzYzc5NGNiNjk0YWJiYWQ0Y2U3YTQxNmEwN2YzYmFhNjI0NGU3ODU5YzU5YTA1OTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBjYTkxNzY4MjQ2ZDg0NDAyZWQ2Y2I3MzMxMTA0N2VkMmNiZTA5NzUzNzA3ZTk4M2RmOWNhMmMwMGVjMTMyMDcifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L789-L830",
+          "version": "repo-lines-v1:sha256:c85c367b35975ba48972750cfaae2ec8745a5aab2f7928f143d307b920fa9f4e:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJlNDExZTNiYjg0MThmNDU0YjI4MGFjMDQ4YzRjNWE2MjQ0YjI3MTE2OTcyMjY5ZmIwMDgzZDcxNzg3MWY0YTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4YTYzMjBjOThiNWIxMjQ5NjczMjU2OGUxOWM3NjZhODEzMWUxYzc1ODU2ODljZGQ3MzM3YThmNzVhYTgxYmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE4NjU5NTViOTJhZTM4ZWJjZDFkM2UxYTJmYzE3YzEwZDdmY2IzYWExYjY3MjMzODlhMzZlNmU2NTFkNjM3YTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg0YWExMDYxODM0ZWJlMmY3MWEyZDk5ZmQ1MDVhNjA2NmE2NGEzNDQ2OTM2M2Q2MzkzYTk1NDAxOTk3MDk4YzkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_8c934421af57412b8affd0840f1c50bd",
+      "statement": "Runtime discovery (local_runtime) prefers the SAILOR_LLAMA_SERVER env var, then the newest managed install under <dataDir>/local-runtime/llama.cpp/<bN> (strict b<1-7 digits> release tags, manifest.json includesSystemOne), then a system llama-server on PATH and common bin dirs; the runtime install is refused when the newest release's compare-API check says it lacks the System One commit a4cb4c61.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L700-L788",
+          "version": "repo-lines-v1:sha256:a079470e4ceb1a8eca8168202acff8de63c4bb33052fc87be3368947383dcf9f:eyJzZWxlY3RlZExpbmVDb3VudCI6ODksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlhOGNkOWRmZmNjZjg4YTEzNGYxNjk5NTRiMjdhZjU2YTczNTI1YzIzZjA1MWU4ZmUzM2U1MzBkZWQyMDk1NDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUyZGQ5YzMyZGM5NjljNWNhYmY4OTRiNzU1ZDljYzVkMjc5YTY0OTI4MzFmNTkzMGU3Y2QwYmQ2NmRmNDJhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYyNmE3MDU2OGQyMDY4MTUxYTk5NzU2ZmI0YmEzZWJhYWEwNzc0ODQ2ZThmODBlYjY1MmI3ZmVhZTZlNzAxMTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFjMGZmNDg2MDdhODlmZjQyODY1Mjg0MzE5ODRkMzY2NTdhNTEyNGIyODY4OWU1MmEzNGUwZTNlMTJiMGYyMDIifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/localruntime.rs#L830-L860",
+          "version": "repo-lines-v1:sha256:908c3bba69484a4f7bbf704f969646c390ee4e285eb6bdc74370dbda3802457d:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4YTYzMjBjOThiNWIxMjQ5NjczMjU2OGUxOWM3NjZhODEzMWUxYzc1ODU2ODljZGQ3MzM3YThmNzVhYTgxYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5YzJkMmZmZDYzNjc2YmU3ODc2NzBlNzMyYWRhMmY0N2E0NWU4MDVjYTdhN2YzMDkyZTFiNTM3ZmMyYWUxODIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk2YWIwOWEwYzIxNjAwZjNmZmYzZTdhY2MwYzk1OTU5Y2FkOTdmY2I4NWRiOTE5Mjg5MzU4MjgwMWNhZjAwMDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJlNGYwZjQyYzg1MDFlNzVhZmNmMzY0ZjYwNWVjMmFiYjIxOTliYTk2NjdiNmQwNTE2OTM0NTBlOWQzMTU5YjkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_daf9f9bc38bd4a7089aacdea4c98a7d2",
+      "statement": "A managed model appears in LlmConfig as provider systemone with managed {catalogId}, baseUrl http://127.0.0.1, noKey; systemOneProfileFor resolves the catalog entry's contextTokens/optionsBudgetTokens unless the user set numbers, ensureLocalModel starts the server before batch runs, and isLocalModel marks such targets so the consent line says nothing leaves the machine.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/LocalSystemOnePanel.tsx#L78-L100",
+          "version": "repo-lines-v1:sha256:f385d14250bdee267f7e1910734ddcbb1b65d553ddce16fdbb9a0b7ca8c9f770:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0MTExMWVlN2FkMDdiNDUyZWRmYzhhMTQ2YTdhN2ExN2RhMTIyNzNjYzRiZDAyYTFjYTg3MmU0OTM5OGE0MGQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0NzVlOTRhOTA0YWM0OWIzMTU0ZDQ2NzJhNjZlODYyOWI4NmRhYzc0ZTNlMjkzN2JlNjkyN2FlM2RhMTFjNTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjczNzlkZDU2NjRhZmNiNzQ2NmQ4ZmYzYWMwOGNkYzVlNTJhNzRiZWFhMDJjMmE4NTRlYTA3NGI0ODNhYjhiOTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdkNTZiODNjZjliZGQyZDZmZDY2MzA3NzhjNjkxMjlmMDI1MTc3NzJjZjM1MGNlYzE3OTRiMGRiNDUwZTVhNjUifQ"
+        },
+        {
+          "resource": "repo://src/llm/modelProfiles.ts#L68-L88",
+          "version": "repo-lines-v1:sha256:02a4f203ed4aabbe33eca3cc64d357cf1611696c2fe16ddd52df43e2e4450495:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI2ZDdlZTVjYTc4NDFkYjE3MzgwZGUxMmM2NTVlNmQ5NjBjMDhiODgwYjdlNDY5MTEyMzc3YThiNTNjZjg4NGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/state/aiStore.ts#L480-L520",
+          "version": "repo-lines-v1:sha256:9c7a60e623c49b9aaef41ee00c04bedac79acc95f9e743b2bebc26491e00375c:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2OWMxYTQ5NGM3MTlmYTg0NTlhN2I3NWMwZWI1ZDQxMTRhMDJjZTBkMGNkNGM2MTJjMzM1MDc1ODJiYTE2ZmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhmMDVkN2E1YzJhNjAwZmI1NzU2MjIyMjRkNzZmMDY2YzIwMTM5OWY1NTFiMWEwZWM3OGJhMTdkMGYwYjFmY2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEzOTgxMmI5NjczNDA2Nzc3YWZhMjNmMTBmYjIzZmU4MzI3N2QyNzFjZTRmZWY3M2UxY2IzOTdjZWQ4OWNiMGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZhNTg1MzhmZTVmN2VjNDU2YzU5MzkwZDUwOGZlOTRiMDU2MDJkMTQxM2FlNzM0MDc4NzkxODllZTQ2OGJiMzcifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_7b99a06bb0524395a82a852a33876cc2",
+      "statement": "Ollama integration lives in src-tauri/src/ollama.rs with parsers in src/llm/ollama.ts: every call validates the renderer-supplied base URL (http/https only, no embedded credentials, reduced to origin, blocked-IP tests decide isLocal) and the model tag; operations cover version/list/show/ps/pull (NDJSON with ollama:pullProgress events, 120s idle stop, resume on re-pull)/delete plus manifest_size from the unofficial registry.ollama.ai manifest (sum of layer sizes, null on 404).",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/ollama.rs#L240-L470",
+          "version": "repo-lines-v1:sha256:237277deb8cfd28131b225915f1363982c031e0f0cc7e7ae3f2fc45e8f85ff5f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiMjJiZWI3YmZiNzdhZDQ4ZTQ1YTcwMDZmNzY5MmEwNjVmZDdhMGY3OWFmNDk4MjY2YmZmMTIzM2U5NjRkZjFlIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwMWJhNDcxOWM4MGI2ZmU5MTFiMDkxYTdjMDUxMjRiNjRlZWVjZTk2NGUwOWMwNThlZjhmOTgwNWRhY2E1NDZiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJiNDQwZWQ4OWMzMjY5OTg1Zjc2OGM2MDkyMTJkODFkMmFjYjcyNjg3ODYzNWI0OTJjOWYxODBkYmRiZmRjMzMxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI2NTJmMjJhOTgwNmYwYjcxNGFlYTJhZDJlNGY4Y2Y5YmQ3MjQxNzUxZTY5NmNlMDAxZDBiMWY0ZjlkMjY2YzQ3In0"
+        },
+        {
+          "resource": "repo://src/llm/ollama.ts#L220-L260",
+          "version": "repo-lines-v1:sha256:1a3f2352dcc9da188853bbe0bed4b91ee6b8cc2af0db0abfcfaf354890e8591b:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE3MjU2NWQxYjhmMzljNzM4ODMwNmRkYjEwMmRlOGEzY2Y3ZTE4MWYxNjMyOTA2NWE4NDQzODU1NzRhNjdhZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZmNjc5OWQyNjg1OTQxYzFkYWE0NDdhYTU1NTQ5MGFkOTkxODUyNDIxMTk5YjVmYzQ5Mjc5NTg5NjhjN2ZhYjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU1NDY3MTU5MWYyZDhiZjA1ZWJlYmQxNmQ0YTAzNjIxMTQxNzA2ZjMxYjU5ZGMyMDFkMWE5MTI3ODY5Y2MyOWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxZmQyZTJjMTJmM2UwNWFmNjA4ZTk0YjE3NGU4MWRmNjBiM2JhOTAxNjcwNmRiNWRkMTEzZGZiMjAwMDBhNDUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_96c9ae892e0348a5bdf1da76e7d4b1de",
+      "statement": "The localserver:discover probe classifies a server as ollama (/api/version), lmstudio (/api/v1/models, embeddings dropped), llamacpp (/props n_ctx), vllm (/v1/models max_model_len), or unknown, and lists its models with context tokens; LocalChatPanel uses it for user-run chat servers.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/ollama.rs#L470-L530",
+          "version": "repo-lines-v1:sha256:cb94438b2107f1a29b8f27e46b05483ef66788034259635a9bfe4b15153e74e1:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlODI3ZTE1YTMwMmY1NDQ3MDY0ZjNmNjU2N2NkOTQ1Njk2NzIyNzdjZThlMzA5OWQzMzhhNGE2YmUwNzQxMjIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhMDYzNjI0ODc4ZWY3Yzg5YjdlNTBiNTc0NzNkN2VmN2ZlNDUyYzk2OTQ5NTllYTBlMzJmY2JjOTg3ZDY4ZGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYwZDg5Yjk1YzhlZTFlMWE2MzVjNGEyYjVkYzBhYzE2NGM1MjNlNGZiMWU1MjgyYzIxZjVjNDUxYjhhM2MyOWIifQ"
+        },
+        {
+          "resource": "repo://src/components/LocalChatPanel.tsx",
+          "version": "repo-file-v1:sha256:3fe8826a570ad523e4ce87fe298f8825f72a123b9fd409192a32fa6fc5d5a06b"
+        }
+      ]
+    },
+    {
+      "id": "claim_77e5c82ecda34c67b19872a8ada0ce2f",
+      "statement": "Ollama chat uses the native /api/chat rather than the OpenAI route because Ollama silently drops the front of an over-long prompt: options.num_ctx is always set (configured contextTokens, else prompt+reserve rounded to 1024 multiples, floor 8192, capped at the model max from /api/show), keep_alive 10m, and prompt_eval_count is checked afterwards for truncation; /api/show also feeds a KV-cache size estimate used for memory warnings.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/ollama.rs#L100-L160",
+          "version": "repo-lines-v1:sha256:b55dff285b9e264bafcfb1d2acbe02e1f94245f86096ab5f8d8656d8680326cf:eyJzZWxlY3RlZExpbmVDb3VudCI6NjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2MjYyMDA1YjMwZmIwYzFjOWE1OTlmOGMwZjFhOTc4ODA2MmRiZDY0NDZhMjdlNzY2OTFmZWJmOTllMjRlNDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmZThkNTU1ZTc1NjQzOWNjY2E0MDBjOWE5MTk1OGE4MjQwNDI3YThlYmJlMzQwNzEzZmRmZjE2OGUyNTdlOGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIyYWVjYWUwN2ZkNDZiMDRiOTdmNTRiYjhmOTdjNjI0NzNkNmE5MTFlZDYxZWY1ZjY1YzAwZWU4ZDQ5MzNjNTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhkNzA5NjU0MTZmOGU5Y2Y1MjdjZWE4YzNmYzI0Njk4YTczNTU4NWQ1MGFjMjJiZTczZDI3NTc5MDIzZDM2ZjAifQ"
+        },
+        {
+          "resource": "repo://src/llm/ollama.ts#L1-L115",
+          "version": "repo-lines-v1:sha256:0c738727050a5c9024769486230541a5aff5e56891f584d6b21b8eceec017377:eyJzZWxlY3RlZExpbmVDb3VudCI6MTE1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI0ZDE5MjU4ODhlY2E1ZTU2YjI4MmYyOTA2NGFkMWFjNGNmNTUxMGZmMTIyNTljNWM1YzgwMTliNTZkMTY5NTk5IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwMWJhNDcxOWM4MGI2ZmU5MTFiMDkxYTdjMDUxMjRiNjRlZWVjZTk2NGUwOWMwNThlZjhmOTgwNWRhY2E1NDZiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0ODEyNmU1NjVmNGMyMWRlN2UyNWZjZjQ3ZDk0Y2ZmYjM4NWZiZTU2MmEyZDY3ZGVjMjYzMmRiOTc0YjUzNzFjIn0"
+        }
+      ]
+    },
+    {
+      "id": "claim_9ac17773bc474e8c9ee561722506e832",
+      "statement": "The guided local panels in LlmSettingsDialog map configs to kinds (kindOf): managed or non-Cloudflare loopback systemone URL → LocalSystemOnePanel, provider ollama → LocalChatPanel, hosted Clef/Jev → HostedSystemOnePanel which clears managed and noKey; both local panels render Unavailable outside the desktop app.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/HostedSystemOnePanel.tsx#L9-L25",
+          "version": "repo-lines-v1:sha256:a1bc8bbfda59bf329f0b7d6d8a7647582156857e53b186dee275391b8e201cee:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmYzFkNjVkZjk5ZDEyYzc0ZDMxNTI0MmFjYzU0YTEyMzAxMjg1MWQ4ZmIyZmRlN2NiZWViZjg5MDU2YzU5M2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdkMmM5YTNhNzFmYzczYjNhZmI3YzMzNjhiMWNhMGEyOWY2NTNkYTFiOGY4M2M2MTNhODRkYzA2ZGYxOWQ0ODYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMwY2Q4YjQ1YWRlZTM1ZjVmZTExMmE2N2YxYmZmNmUxZGYwNzUxNGQyNjE0ZWVlZGMxN2UzNzJjZDJhYjJjNjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRmYWY3ZTdmZTczNDhiOGM3NjJlZmYzNjVjZWQ1ODliNTA5ODczZjEzOTdmMjYzODdiNDM3MzA0MzhlM2UzNmIifQ"
+        },
+        {
+          "resource": "repo://src/components/LlmSettingsDialog.tsx#L50-L75",
+          "version": "repo-lines-v1:sha256:9f499e1caf1ddc5fb4272a187f52afb6851110246174c795f0859adc80e3907a:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYwMzM1ZjcxNWNkNTI0MGMwYzFjMjdiODM1YTkwOThiNjQ3Njg5NDA3MDkwYmEwNzQ3N2QwYWY5M2E1MWJiYzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY0YTQyZWI5NjRkZDVhMDY2MTUwOGU2MzdjNmFmMjg5ZTkzNWY0Yzk1NGIwZTBjODBjYjE4Y2E2ZDFjMmUwNmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY2MTZjMzA1OTY5YzQxZDU2MDRhMDhjM2U4MjdjNDVkM2VlNGNjNjlmOTQxZTIzNWM5ZWU3NzQxNTg5Njg2ODEifQ"
+        },
+        {
+          "resource": "repo://src/components/LocalChatPanel.tsx#L48-L54",
+          "version": "repo-lines-v1:sha256:94967d617bb81d87bbc48d86ccfbe56f317ede77a28248e7036f35b6281f0927:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzBmZWU3Y2ZmY2MyNjhiYmVhOGZmNjZhYjM2ZDNkZjdlOGQxMTRkNDBhNDcwNmJjNGQxZjg4ZTE0OGVjZjg3NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWVkYWM5OTU1YzQ2ZDBjOTJkNDgzYTFmMTk2MWU1NGM3OTlhNDcyNDQwNmQ2NTFmMjJjMzYwMTI2MTIwYTlmMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzk0Njc3YzRlMmZkYWVhZTA2YmUyNDFhYmNiOTg0NjZmMjAyN2ZjMTA5MzFjYmVhNDQxYWU4ZjM4MmYzYTg4MyJ9"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.3",
+    "at": "2026-11-02T08:58:22.323Z"
+  }
+}
