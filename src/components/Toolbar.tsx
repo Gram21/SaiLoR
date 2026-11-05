@@ -571,9 +571,6 @@ export function Toolbar() {
           >
             {t('toolbar.graph.label')}
           </button>
-        </div>
-        {metadataOpen && <MetadataDialog onClose={() => setMetadataOpen(false)} />}
-        {graphOpen && <ExportGraphDialog onClose={() => setGraphOpen(false)} />}
           {project?.pdfFolder && getPlatform().kind !== 'browser' && (
             <button
               type="button"
@@ -587,6 +584,7 @@ export function Toolbar() {
           )}
         </div>
         {metadataOpen && <MetadataDialog onClose={() => setMetadataOpen(false)} />}
+        {graphOpen && <ExportGraphDialog onClose={() => setGraphOpen(false)} />}
         {pdfDialogOpen && !editorOpen && <PdfFolderDialog />}
 
         <div className="toolbar-view">

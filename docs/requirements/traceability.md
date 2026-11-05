@@ -548,13 +548,13 @@ Counts come from `python3 technical-report/trace_stats.py` at the revision that 
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 438 | 100% |
-| With an implementing source link | 412 | 94% |
-| With at least one verifying test | 408 | 93% |
+| Requirements traced | 459 | 100% |
+| With an implementing source link | 433 | 94% |
+| With at least one verifying test | 429 | 93% |
 | Without an automated check (source inspection only) | 30 | 7% |
-| With an introducing/pinning commit | 122 | 28% |
-| With a documentation link | 374 | 85% |
-| Security-related (ISO 25010 Security) | 33 | 8% |
-| Distinct test files linked | 202 | — |
-| Distinct source files linked | 190 | — |
+| With an introducing/pinning commit | 122 | 27% |
+| With a documentation link | 390 | 85% |
+| Security-related (ISO 25010 Security) | 37 | 8% |
+| Distinct test files linked | 209 | — |
+| Distinct source files linked | 195 | — |
 | Linked files missing at this revision | 0 | — |
