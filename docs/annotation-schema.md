@@ -1064,6 +1064,22 @@ The app remembers the choice on this computer, for this project only. The toolba
 - *Finish* marks your seat as finished on all your assigned papers and saves the project. After
   the save, only the Manager can remove the *finished* mark.
 
+*Finish* is green when your assigned papers pass validation and have answers. If you select a
+green *Finish*, the save also locks your work:
+
+- The app writes `finishedAt` into `reviewsLock` of your seat, in
+  `annotations/<id>/reviewer-<k>.json` (or in the paper, in one-file projects).
+- A locked seat shows a *Finished* banner. The form is read-only.
+- The app refuses every edit of a locked seat: values, entries, marks, AI suggestions and
+  metadata corrections.
+- If you edit before the save, the app does not lock. Select *Finish* again.
+- The Manager can select *Reopen* in the banner, or in the project editor. Reopen removes the
+  *finished* mark and writes `reopenedAt` in place of `finishedAt`.
+- A Git merge keeps the lock. If one side finished a seat and the other side did not, the
+  finished side wins.
+
+Projects without strict mode do not have a lock.
+
 Consolidation of a paper opens only when all assigned persons have finished their seat on that
 paper. Until then, the Consolidation seat lists the persons who have not finished. The Manager
 can select *Open anyway* and confirm, to open it earlier. This override lasts until the project
