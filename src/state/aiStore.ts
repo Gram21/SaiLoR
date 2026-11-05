@@ -137,6 +137,7 @@ export interface ReviewRow {
    *  original AI-proposed value stays in `suggestion.value` (shown as "AI
    *  proposed: X"); the edited value lives here instead. */
   edited?: boolean
+  // [impl->req~llm-580~1]
   editedValue?: FieldValue
   /** True when this row started unticked because of low confidence, a
    *  non-accept judge verdict, or a cross-check disagreement — kept even if
@@ -236,12 +237,14 @@ interface AiState {
   /** "Rate-limited, retrying in Ns…", cleared as soon as the retry lands. */
   retryNotice: string | null
 
+  // [impl->req~llm-660~1]
   /** Opt-in (REQ-LLM-660): also have the model double-check values already
    *  in the target seat. Prompt mode only. Deliberately NOT persisted and
    *  reset to false on every dialog open — it must never become a default. */
   recheck: boolean
   /** How many fields of the current paper already hold a value in the target seat. */
   answeredCount: number
+  // [impl->req~llm-670~1]
   /** Agent mode: let the annotator's provider search the web (REQ-LLM-670). Persisted. */
   webSearch: boolean
   /** Save aggregate schema feedback to the project's feedback folder (REQ-LLM-680). Persisted. */
@@ -252,6 +255,7 @@ interface AiState {
   /** Show the reviewer's finished papers to the model as worked examples
    *  (REQ-LLM-450). Off by default, persisted like `mode`. */
   fewShot: boolean
+  // [impl->req~llm-450~1]
   /** How many worked examples to offer at most (1-5). Persisted alongside `fewShot`. */
   fewShotCount: number
   /** How many finished papers are available as examples for the current
@@ -269,6 +273,7 @@ interface AiState {
   /** Seconds the current call has been running, for the progress line. */
   elapsed: number
 
+  // [impl->req~llm-470~1]
   /** The seat this run writes into — the AI's own seat (REQ-LLM-470) when the
    *  project has one, else whichever seat was selected when the dialog opened.
    *  Fixed for the run's whole lifetime, unaffected by the reviewer switching
@@ -287,6 +292,7 @@ interface AiState {
    *  `resumeBatch()` would still have to do. */
   batchDone: number
   batchTotal: number
+  // [impl->req~llm-500~1]
   /** Papers currently in flight — as many as `concurrency` allows at once.
    *  Empty between papers and once the batch is done. Carries the id (not
    *  just the title) so the running view's per-paper Skip button knows which
@@ -310,6 +316,7 @@ interface AiState {
   agentEvents: string[]
   /** Per-paper failures a batch run continues past. */
   errors: PaperRunError[]
+  // [impl->req~llm-420~1]
   /** Token/call accounting, summed across every paper and every model call of the run. */
   usage: { calls: number; inputTokens: number; outputTokens: number }
   /** The target the finished run actually used — what `apply()` discloses as `aiUsage`. */
@@ -325,12 +332,14 @@ interface AiState {
    *  set when at least one was, so `apply()`'s disclosure can tell "not
    *  offered" from "offered zero" the same way `roundsByPaper` does. */
   fewShotByPaper: Record<string, number>
+  // [impl->req~llm-740~1]
   /** Papers that did not fit the annotator's input window, and how much of each was sent (REQ-LLM-740). */
   fitByPaper: Record<string, PaperFit>
 
   rows: ReviewRow[]
   /** Re-check verdicts, every outcome (see `RecheckRow`). */
   recheckRows: RecheckRow[]
+  // [impl->req~llm-600~1]
   /** The model's remarks on unclear field descriptions, for the feedback file. */
   remarks: (SchemaRemark & { paperId: string })[]
   /** Agent mode with web search: searches the provider ran, per paper. */
@@ -786,6 +795,7 @@ export const useAiStore = create<AiState>()(
     // [impl->req~dat-410~1]
     // [impl->req~llm-490~1]
     // [impl->req~llm-500~1]
+    // [impl->req~llm-560~1]
     // [impl->req~llm-590~1]
     // [impl->req~llm-670~1]
     /**
@@ -928,6 +938,7 @@ export const useAiStore = create<AiState>()(
               let fitForPaper: PaperFit | undefined
               let infoNotes: string[] = []
               let recheckReply: Awaited<ReturnType<typeof runOnePaperPrompt>>['recheck']
+              // [impl->req~llm-410~1]
               // [impl->req~llm-580~1]
               let rowChecked: (sug: Suggestion) => boolean
 

@@ -74,6 +74,8 @@ fn os_info() -> serde_json::Value {
     serde_json::json!({ "platform": platform, "arch": arch })
 }
 
+// [impl->req~plt-11~1]
+// [impl->req~plt-230~1]
 fn main() {
     tauri::Builder::default()
         .plugin(tauri_plugin_single_instance::init(|app, _, _| {

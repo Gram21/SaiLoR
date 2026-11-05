@@ -106,6 +106,7 @@ describe('REQ-UI-30: seat switcher in toolbar', () => {
 
 })
 
+// [utest->req~llm-80~1]
 describe('the AI button in the toolbar', () => {
   it('is enabled for a normal, single-reviewer annotation project', () => {
     st().loadFromText(annotationProjectJson(), null, 'test.json')

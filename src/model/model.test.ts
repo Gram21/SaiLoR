@@ -1292,6 +1292,7 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
     expect(loadProject(once).papers[0].aiUsage).toEqual([record])
   })
 
+  // [utest->req~llm-240~1]
   it('loads and round-trips the optional disclosure fields (mode, judge, rounds, verdicts, fewShot, edited, reviewer)', () => {
     const record = {
       provider: 'openai',
