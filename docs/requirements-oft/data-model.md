@@ -1122,7 +1122,7 @@ Tags: Functional, Functional_Suitability
 ### REQ-EDT-170: Reopen finished work
 `req~edt-170~1`
 
-The project editor shall let the user reopen the finished work of a person on a paper. Reopening shall remove the finished flag of that seat on that paper.
+The project editor shall let the user reopen the finished work of a person on a paper. Reopening shall remove the finished flag and `finishedAt` of that seat on that paper, and shall write `reopenedAt` (ISO time) for that seat.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
