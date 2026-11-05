@@ -1807,6 +1807,7 @@
   "ai.verify.empty": "The provider answered, but the reply was empty.",
   "ai.verify.reasoningBudget": "{provider} used its whole reply budget on internal reasoning and never got to an answer. This model reasons more than most before replying — if it keeps happening, try a lower reasoning-effort setting for this model, if the provider offers one.",
   "ai.paper.reasoningBudget": "{provider} used its whole reply budget on internal reasoning and never got to an answer for this paper. If this keeps happening, try a lower reasoning-effort setting for this model, if the provider offers one.",
+  "ai.paper.hiddenByCondition": "Left out: a condition hides this field once the other proposed values apply.",
   "ai.classify.leftToYou": "left to you: {note}",
   "ai.classify.sawAbstract": "{model} saw title + abstract only — its input window is {window} tokens",
   "ai.classify.sawStart": "{model} saw the title, abstract and the start of the paper text only — its input window is {window} tokens",

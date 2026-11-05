@@ -1807,6 +1807,7 @@
   "ai.verify.empty": "O provedor respondeu, mas a resposta veio vazia.",
   "ai.verify.reasoningBudget": "{provider} gastou todo o limite de resposta em raciocínio interno e não chegou a uma resposta. Este modelo raciocina mais do que a maioria antes de responder — se isso continuar acontecendo, tente um nível de esforço de raciocínio menor para este modelo, se o provedor oferecer essa opção.",
   "ai.paper.reasoningBudget": "{provider} gastou todo o limite de resposta em raciocínio interno e não chegou a uma resposta para este artigo. Se isso continuar acontecendo, tente um nível de esforço de raciocínio menor para este modelo, se o provedor oferecer essa opção.",
+  "ai.paper.hiddenByCondition": "Omitido: uma condição oculta este campo quando os outros valores propostos são aplicados.",
   "ai.classify.leftToYou": "fica com você: {note}",
   "ai.classify.sawAbstract": "{model} viu somente título + resumo — a janela de entrada dele tem {window} tokens",
   "ai.classify.sawStart": "{model} viu somente o título, o resumo e o início do texto do artigo — a janela de entrada dele tem {window} tokens",

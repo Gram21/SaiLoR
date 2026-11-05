@@ -1287,3 +1287,18 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Usability
+
+### REQ-LLM-760: Respect field conditions in AI prompts
+`req~llm-760~1`
+
+The system shall build each AI prompt from the fields that are visible for the paper. A field hidden by its `visibleIf` condition is not shown or asked. When an answer makes a hidden field visible, the system shall ask that field in a follow-up request, in dependency order. The system shall drop a proposal for a field that stays hidden after all other proposals apply, and report it as rejected.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/fields.ts`, `src/llm/prompt.ts`, `src/state/aiStore.ts`, `src/state/store.ts`
+- **Status:** Implemented
+- **Tests:** `src/llm/fields.test.ts`, `src/llm/prompt.test.ts`
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability

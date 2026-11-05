@@ -43,6 +43,8 @@ The schema is an array of nodes. Each node describes one thing to record:
   unique       true if no two entries of this repeatable node may hold the same answer.
   uniqueBy     For a unique group: the child names that decide if two entries are the same.
   description  What to record in this field. Read it carefully - it is the instruction.
+  visibleIf    The node applies only when the named field holds the given answer. Nodes whose
+               condition does not hold for this paper are left out of the schema below.
 
 A node whose max is null or greater than 1 is repeatable and may hold several entries.
 A repeatable GROUP means several parallel sub-trees (e.g. several Findings, each with its
@@ -119,10 +121,12 @@ export function fieldLines(targets: FieldTarget[]): string {
 }
 
 // [impl->req~llm-450~1]
+// [impl->req~llm-760~1]
 /**
  * The system prompt. `delivery` matters: when the paper arrives as extracted
  * text, the model must be warned that the extraction is lossy, or it will
- * happily reconstruct a mangled table into confident numbers.
+ * happily reconstruct a mangled table into confident numbers. Callers pass
+ * `visibleSchema` for the paper's tree, so hidden nodes never reach the model.
  */
 export function buildSystemPrompt(
   schema: ResolvedDef[],

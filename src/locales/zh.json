@@ -1807,6 +1807,7 @@
   "ai.verify.empty": "提供商已回复，但回复为空。",
   "ai.verify.reasoningBudget": "{provider} 将整个回复预算都用于内部推理，始终未能给出答案。此模型在回复前的推理比多数模型更多——如果问题反复出现，且提供商支持，请为此模型设置较低的推理强度。",
   "ai.paper.reasoningBudget": "{provider} 将整个回复预算都用于内部推理，对此论文始终未能给出答案。如果问题反复出现，且提供商支持，请为此模型设置较低的推理强度。",
+  "ai.paper.hiddenByCondition": "已略过：应用其他建议值后，条件会隐藏此字段。",
   "ai.classify.leftToYou": "留给您自行判断：{note}",
   "ai.classify.sawAbstract": "{model} 只看到了标题和摘要——其输入窗口为 {window} token",
   "ai.classify.sawStart": "{model} 只看到了标题、摘要以及论文正文的开头——其输入窗口为 {window} token",

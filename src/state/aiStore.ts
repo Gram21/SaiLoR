@@ -3,7 +3,13 @@ import { immer } from 'zustand/middleware/immer'
 import { getPlatform } from '../platform'
 import { t, getLanguage } from '../i18n'
 import { useStore, currentTree, currentFinished, type AiBatchApplyResult } from './store'
-import { unansweredFields, type FieldTarget } from '../llm/fields'
+import {
+  askInDependencyOrder,
+  dropHiddenSuggestions,
+  unansweredFields,
+  visibleSchema,
+  type FieldTarget,
+} from '../llm/fields'
 import { buildSystemPrompt, buildAgentSystemPrompt, buildUserText, buildUserPdfCaption, type Delivery } from '../llm/prompt'
 import { buildRequest, extractText, extractError, wasTruncated, baseOf, PROVIDERS } from '../llm/providers'
 import { buildModelsRequest, parseModelsResponse } from '../llm/models'
@@ -42,6 +48,7 @@ import {
 import { aiSeatId } from '../model/project'
 import { dropDuplicateSuggestions } from '../model/unique'
 import type { Paper, Project } from '../model/project'
+import type { ResolvedDef } from '../model/schema'
 import type { AnnotationValueTree, FieldValue } from '../model/annotations'
 import { extractPdfText, countPdfPages } from '../model/pdfText'
 
@@ -914,6 +921,7 @@ export const useAiStore = create<AiState>()(
                 const result = await runOnePaperAgent(
                   app.project!,
                   paper,
+                  tree ?? undefined,
                   targets,
                   config,
                   judgeCfg,
@@ -953,7 +961,16 @@ export const useAiStore = create<AiState>()(
                 // Web-sourced values whose page we never saw start unticked too.
                 rowChecked = (sug) => sug.judge?.verdict === 'accept' && !sug.webUnverified
               } else if (mode === 'classify') {
-                const result = await runOnePaperClassify(paper, targets, config, callLlm, paperSignal, setPhase)
+                const result = await runOnePaperClassify(
+                  app.project!.schema,
+                  paper,
+                  tree ?? undefined,
+                  targets,
+                  config,
+                  callLlm,
+                  paperSignal,
+                  setPhase,
+                )
                 if (controller !== myController) return
                 answer = result.answer
                 infoNotes = result.info
@@ -965,6 +982,7 @@ export const useAiStore = create<AiState>()(
                 const result = await runOnePaperPrompt(
                   app.project!,
                   paper,
+                  tree ?? undefined,
                   targets,
                   recheckTargets,
                   config,
@@ -985,6 +1003,19 @@ export const useAiStore = create<AiState>()(
                 // confidence stays ticked, one below the threshold starts
                 // unticked for a closer look, same rule classify mode uses.
                 rowChecked = (sug) => sug.confidence === null || sug.confidence >= confidenceThreshold
+              }
+
+              // [impl->req~llm-760~1]
+              const hidden = dropHiddenSuggestions(app.project!.schema, tree ?? undefined, answer.fields)
+              if (hidden.dropped.length > 0) {
+                answer = {
+                  ...answer,
+                  fields: hidden.kept,
+                  rejected: [
+                    ...answer.rejected,
+                    ...hidden.dropped.map((d) => ({ path: d.path, raw: d.value, reason: t('ai.paper.hiddenByCondition') })),
+                  ],
+                }
               }
 
               if (tree) {
@@ -2052,6 +2083,7 @@ export const useAiStore = create<AiState>()(
 async function runOnePaperPrompt(
   project: Project,
   paper: Paper,
+  tree: AnnotationValueTree | undefined,
   targets: FieldTarget[],
   /** Already-answered fields to double-check (empty = no re-check call). */
   recheckTargets: RecheckTarget[],
@@ -2152,9 +2184,12 @@ async function runOnePaperPrompt(
 
   // Nothing to fill is only legitimate for a re-check-only paper.
   if (targets.length > 0 || recheckTargets.length === 0) {
-    const r = await ask(buildSystemPrompt(project.schema, targets, delivery, fewShotBlock || undefined))
-    answer = parseAnswer(project.schema, r.text)
-    add(r.usage)
+    answer = await askInDependencyOrder(project.schema, tree, targets, async (passTargets, passTree) => {
+      const system = buildSystemPrompt(visibleSchema(project.schema, passTree), passTargets, delivery, fewShotBlock || undefined)
+      const r = await ask(system)
+      add(r.usage)
+      return parseAnswer(project.schema, r.text)
+    })
   }
 
   let recheck: Awaited<ReturnType<typeof runOnePaperPrompt>>['recheck']
@@ -2180,6 +2215,7 @@ async function runOnePaperPrompt(
 async function runOnePaperAgent(
   project: Project,
   paper: Paper,
+  tree: AnnotationValueTree | undefined,
   targets: FieldTarget[],
   config: LlmConfig,
   judgeConfig: LlmConfig | undefined,
@@ -2222,7 +2258,7 @@ async function runOnePaperAgent(
   let fit: PaperFit | undefined
   if (delivery === 'text') {
     const windows = [config.contextTokens, judgeConfig?.contextTokens].filter((n): n is number => !!n)
-    const system = buildAgentSystemPrompt(project.schema, targets, delivery, fewShotBlock || undefined, webSearch)
+    const system = buildAgentSystemPrompt(visibleSchema(project.schema, tree), targets, delivery, fewShotBlock || undefined, webSearch)
     const f = fitForChat(
       { ...config, contextTokens: windows.length ? Math.min(...windows) : undefined },
       system + buildUserText(paper, ''),
@@ -2234,32 +2270,46 @@ async function runOnePaperAgent(
   }
 
   setPhase('calling')
-  const result = await runAgent(
-    {
-      config,
-      judgeConfig,
-      schema: project.schema,
-      targets,
-      paper,
-      paperText: agentText,
-      delivery,
-      pdfBase64: delivery === 'pdf' ? toBase64(bytes) : undefined,
-      pdfFilename: delivery === 'pdf' ? (paper.pdf.split('/').pop() ?? 'paper.pdf') : undefined,
-      signal,
-      onEvent: (e) => onEvent(e.message),
-      examples: fewShotBlock || undefined,
-      webSearch,
-    },
-    {
-      callLlm,
-      fetchWeb: (url, sig) => getPlatform().fetchWeb(url, sig),
-    },
-  )
+  const usage = { inputTokens: 0, outputTokens: 0, calls: 0, webSearches: 0 }
+  const judgeUsage = { inputTokens: 0, outputTokens: 0, calls: 0 }
+  let rounds = 0
+  const answer = await askInDependencyOrder(project.schema, tree, targets, async (passTargets, passTree) => {
+    const result = await runAgent(
+      {
+        config,
+        judgeConfig,
+        schema: visibleSchema(project.schema, passTree),
+        targets: passTargets,
+        paper,
+        paperText: agentText,
+        delivery,
+        pdfBase64: delivery === 'pdf' ? toBase64(bytes) : undefined,
+        pdfFilename: delivery === 'pdf' ? (paper.pdf.split('/').pop() ?? 'paper.pdf') : undefined,
+        signal,
+        onEvent: (e) => onEvent(e.message),
+        examples: fewShotBlock || undefined,
+        webSearch,
+      },
+      {
+        callLlm,
+        fetchWeb: (url, sig) => getPlatform().fetchWeb(url, sig),
+      },
+    )
+    usage.inputTokens += result.usage.inputTokens
+    usage.outputTokens += result.usage.outputTokens
+    usage.calls += result.usage.calls
+    usage.webSearches += result.usage.webSearches ?? 0
+    judgeUsage.inputTokens += result.judgeUsage.inputTokens
+    judgeUsage.outputTokens += result.judgeUsage.outputTokens
+    judgeUsage.calls += result.judgeUsage.calls
+    rounds += result.rounds
+    return result.answer
+  })
   return {
-    answer: result.answer,
-    usage: result.usage,
-    judgeUsage: result.judgeUsage,
-    rounds: result.rounds,
+    answer,
+    usage,
+    judgeUsage,
+    rounds,
     paperText: extracted.text,
     fit,
   }
@@ -2305,7 +2355,9 @@ async function askSystemOne(
  * already uses.
  */
 async function runOnePaperClassify(
+  schema: ResolvedDef[],
   paper: Paper,
+  tree: AnnotationValueTree | undefined,
   targets: FieldTarget[],
   config: LlmConfig,
   callLlm: CallLlm,
@@ -2331,31 +2383,34 @@ async function runOnePaperClassify(
   // boolean/choice question can still be meaningfully answered from those alone.
   const paperText = (await extractPdfText(bytes)).text
 
-  const ineligible = targets.filter((t) => !systemOneEligible(t))
-  const { plan, result } = await askSystemOne(config, paper, paperText, targets, callLlm, signal, setPhase)
-
-  const info = plan.notHandled.map((n) => t('ai.classify.leftToYou', { note: `${n.path} — ${n.reason}` }))
-  if (plan.requests.length > 0 && plan.state.mode !== 'full') {
-    const window = systemOneProfileFor(config).contextTokens.toLocaleString(getLanguage())
-    info.push(
-      plan.state.mode === 'abstract-only'
-        ? t('ai.classify.sawAbstract', { model: config.model, window })
-        : t('ai.classify.sawStart', { model: config.model, window }),
-    )
-  }
-  return {
-    answer: {
+  const info = new Set<string>()
+  const usage = { inputTokens: 0, outputTokens: 0 }
+  let calls = 0
+  const answer = await askInDependencyOrder(schema, tree, targets, async (passTargets) => {
+    const ineligible = passTargets.filter((t) => !systemOneEligible(t))
+    const { plan, result } = await askSystemOne(config, paper, paperText, passTargets, callLlm, signal, setPhase)
+    for (const n of plan.notHandled) info.add(t('ai.classify.leftToYou', { note: `${n.path} — ${n.reason}` }))
+    if (plan.requests.length > 0 && plan.state.mode !== 'full') {
+      const window = systemOneProfileFor(config).contextTokens.toLocaleString(getLanguage())
+      info.add(
+        plan.state.mode === 'abstract-only'
+          ? t('ai.classify.sawAbstract', { model: config.model, window })
+          : t('ai.classify.sawStart', { model: config.model, window }),
+      )
+    }
+    usage.inputTokens += result.usage.inputTokens
+    usage.outputTokens += result.usage.outputTokens
+    calls += plan.requests.length
+    return {
       fields: result.suggestions,
       skipped: [
         ...result.skipped,
         ...ineligible.map((target) => ({ path: target.path, reason: t('ai.classify.notHandled') })),
       ],
       rejected: [],
-    },
-    usage: result.usage,
-    calls: plan.requests.length,
-    info,
-  }
+    }
+  })
+  return { answer, usage, calls, info: [...info] }
 }
 
 // [impl->req~llm-520~1]

@@ -1807,6 +1807,7 @@
   "ai.verify.empty": "Der Anbieter hat geantwortet, die Antwort war aber leer.",
   "ai.verify.reasoningBudget": "{provider} hat das gesamte Antwortbudget für interne Überlegungen verbraucht und nie eine Antwort erreicht. Dieses Modell überlegt vor einer Antwort mehr als die meisten — wenn das wieder passiert, stellen Sie für dieses Modell einen niedrigeren Denkaufwand ein, sofern der Anbieter das anbietet.",
   "ai.paper.reasoningBudget": "{provider} hat das gesamte Antwortbudget für interne Überlegungen verbraucht und keine Antwort für dieses Paper erreicht. Wenn das wieder passiert, stellen Sie für dieses Modell einen niedrigeren Denkaufwand ein, sofern der Anbieter das anbietet.",
+  "ai.paper.hiddenByCondition": "Ausgelassen: Eine Bedingung blendet dieses Feld aus, sobald die anderen vorgeschlagenen Werte gelten.",
   "ai.classify.leftToYou": "von Ihnen zu prüfen: {note}",
   "ai.classify.sawAbstract": "{model} sah nur Titel und Abstract — sein Eingabefenster umfasst {window} Token",
   "ai.classify.sawStart": "{model} sah nur Titel, Abstract und den Anfang des Papertexts — sein Eingabefenster umfasst {window} Token",

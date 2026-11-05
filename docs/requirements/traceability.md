@@ -485,6 +485,7 @@ inspection only.
 | REQ-LLM-370 | Per-run token and call accounting | Functional · Functional Suitability | `src/llm/agent.ts` (`AgentResult.usage`) | `src/llm/agent.test.ts` | — | — |
 | REQ-LLM-400 | Restrict agent web access to public hosts | Non-functional · Security | `src-tauri/src/webfetch.rs` (`validate_fetch_url`, `is_blocked_ip`, `is_blocked_hostname`, `resolve_public`, `web_fetch`, `web_abort`) | `src-tauri/src/webfetch.rs` (`blocked_addresses`, `validate_urls`, `redirects_are_rechecked`, `body_is_capped`, `content_types`) | — | — |
 | REQ-LLM-750 | Mark the AI feature as a preview | Functional · Usability | `src/components/AiPreviewNotice.tsx`<br>`src/components/AiDialog.tsx`<br>`src/components/AiScreeningDialog.tsx`<br>`src/components/LlmSettingsDialog.tsx` | `src/components/AiPreviewNotice.test.tsx` | commit `3103a27` | — |
+| REQ-LLM-760 | Respect field conditions in AI prompts | Functional · Functional Suitability | `src/llm/fields.ts`<br>`src/llm/prompt.ts`<br>`src/state/aiStore.ts`<br>`src/state/store.ts` | `src/llm/fields.test.ts`<br>`src/llm/prompt.test.ts` | — | — |
 
 ## Platform & desktop shell ([platform.md](platform.md))
 

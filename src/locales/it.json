@@ -1807,6 +1807,7 @@
   "ai.verify.empty": "Il provider ha risposto, ma la risposta era vuota.",
   "ai.verify.reasoningBudget": "{provider} ha usato l'intero budget di risposta per il ragionamento interno e non è mai arrivato a una risposta. Questo modello ragiona più della maggior parte dei modelli prima di rispondere: se succede ancora, prova un'impostazione di sforzo di ragionamento più bassa per questo modello, se il provider la offre.",
   "ai.paper.reasoningBudget": "{provider} ha usato l'intero budget di risposta per il ragionamento interno e non è mai arrivato a una risposta per questo articolo. Se succede ancora, prova un'impostazione di sforzo di ragionamento più bassa per questo modello, se il provider la offre.",
+  "ai.paper.hiddenByCondition": "Escluso: una condizione nasconde questo campo una volta applicati gli altri valori proposti.",
   "ai.classify.leftToYou": "lasciato a te: {note}",
   "ai.classify.sawAbstract": "{model} ha visto solo titolo e abstract — la sua finestra di input è di {window} token",
   "ai.classify.sawStart": "{model} ha visto solo titolo, abstract e l'inizio del testo dell'articolo — la sua finestra di input è di {window} token",

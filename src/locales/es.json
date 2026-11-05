@@ -1807,6 +1807,7 @@
   "ai.verify.empty": "El proveedor respondió, pero la respuesta estaba vacía.",
   "ai.verify.reasoningBudget": "{provider} usó todo el presupuesto de respuesta en razonamiento interno y nunca llegó a contestar. Este modelo razona más que la mayoría antes de responder. Si vuelve a pasar, prueba un ajuste de esfuerzo de razonamiento más bajo para este modelo, si el proveedor lo ofrece.",
   "ai.paper.reasoningBudget": "{provider} usó todo el presupuesto de respuesta en razonamiento interno y nunca llegó a contestar para este artículo. Si vuelve a pasar, prueba un ajuste de esfuerzo de razonamiento más bajo para este modelo, si el proveedor lo ofrece.",
+  "ai.paper.hiddenByCondition": "Omitido: una condición oculta este campo cuando se aplican los demás valores propuestos.",
   "ai.classify.leftToYou": "lo decides tú: {note}",
   "ai.classify.sawAbstract": "{model} vio solo el título y el resumen. Su ventana de entrada es de {window} tokens",
   "ai.classify.sawStart": "{model} vio solo el título, el resumen y el inicio del texto del artículo. Su ventana de entrada es de {window} tokens",
