@@ -149,3 +149,4 @@ per category so requirements can be inserted without renumbering.
   the preview of the draft schema and the list of schema problems. The coverage counts above were not recounted.
 - **AI evaluation (2026-11-05).** REQ-LLM-820 to REQ-LLM-832 added for the per-field comparison of the
   AI seat with the consolidated answers, the AI evaluation dialog, its CSV export and its empty state. The coverage counts above include them.
+- **AI prompt overrides (2026-11-05).** REQ-LLM-790 to REQ-LLM-795 added for the project-level role, field help and examples of the AI prompt. The coverage counts above include them.
