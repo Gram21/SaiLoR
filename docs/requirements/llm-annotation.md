@@ -583,3 +583,24 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/components/AiPreviewNotice.tsx`, `src/components/AiDialog.tsx`, `src/components/AiScreeningDialog.tsx`, `src/components/LlmSettingsDialog.tsx`
 - **Status:** Implemented
 - **Tests:** `src/components/AiPreviewNotice.test.tsx`
+
+### REQ-LLM-760: Respect field conditions in AI prompts
+- **Description:** The system shall build each AI prompt from the fields that are visible for the paper. A field hidden by its `visibleIf` condition is not shown or asked. When an answer makes a hidden field visible, the system shall ask that field in a follow-up request, in dependency order. The system shall drop a proposal for a field that stays hidden after all other proposals apply, and report it as rejected.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/fields.ts`, `src/llm/prompt.ts`, `src/state/aiStore.ts`, `src/state/store.ts`
+- **Status:** Implemented
+- **Tests:** `src/llm/fields.test.ts`, `src/llm/prompt.test.ts`
+
+### REQ-LLM-770: Check AI evidence quotes against the paper text
+- **Description:** The system shall check each AI evidence quote against the extracted paper text. The check runs offline and gives the same result for the same input. If the answer names a page, the quote must be on that page or run into the next page. The system shall mark a quote that is not in the paper, or not on the named page, in the review table. A row with a quote that is not in the paper starts unticked in prompt mode. The system shall store the count of applied values with an unverified quote in the AI usage record and show it in the AI usage disclosure.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/verify.ts`, `src/llm/parse.ts`, `src/llm/tools.ts`, `src/llm/prompt.ts`, `src/state/aiStore.ts`, `src/model/project.ts`, `src/components/AiDialog.tsx`, `src/components/AiUsageDisclosure.tsx`
+- **Status:** Implemented
+- **Tests:** `src/llm/verify.test.ts`, `src/llm/parse.test.ts`, `src/llm/tools.test.ts`, `src/state/aiStore.recheck.test.ts`, `src/model/model.test.ts`, `src/components/AiUsageDisclosure.test.tsx`
+
+### REQ-LLM-780: Record the prompt version on each AI usage record
+- **Description:** Each AI prompt template shall have a constant version string. The system shall store the versions of the templates that produced the applied values in the AI usage record. The system shall join more than one version with a plus sign, for example "agent-1+judge-1". The version shall survive a save and a load of the project file and of the split annotation files. A record without a version shall load and save without a version.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/prompt.ts`, `src/llm/recheck.ts`, `src/llm/judge.ts`, `src/llm/screeningAi.ts`, `src/llm/systemone.ts`, `src/state/aiStore.ts`, `src/state/aiScreeningStore.ts`, `src/model/project.ts`
+- **Status:** Implemented
+- **Tests:** `src/model/model.test.ts`, `src/model/split.test.ts`, `src/state/aiStore.recheck.test.ts`, `src/state/aiStore.classify.test.ts`, `src/state/aiScreeningStore.test.ts`

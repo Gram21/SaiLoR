@@ -340,6 +340,11 @@ describe('apply: usage disclosure fields', () => {
     ai().apply()
 
     const items = calls[0]
-    expect(items[0].usage).toEqual({ provider: promptCfg.provider, model: promptCfg.model, mode: 'prompt' })
+    expect(items[0].usage).toEqual({
+      provider: promptCfg.provider,
+      model: promptCfg.model,
+      mode: 'prompt',
+      promptVersion: 'extract-1',
+    })
   })
 })

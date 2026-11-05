@@ -3,6 +3,7 @@
 // [impl->req~llm-580~1]
 // [impl->req~llm-660~1]
 // [impl->req~llm-670~1]
+// [impl->req~llm-770~1]
 import type { AiUsageRecord, Project } from '../model/project'
 import { seatLabel } from '../model/project'
 import { PROVIDERS } from '../llm/providers'
@@ -54,6 +55,9 @@ export function AiUsageDisclosure({ project, records }: Props) {
             {typeof r.rechecked === 'number' && r.rechecked > 0 && <> — {t('ai.usageDisclosure.replaced', { count: r.rechecked })}</>}
             {typeof r.webSearches === 'number' && r.webSearches > 0 && (
               <> — {tp('ai.usage.webSearches', r.webSearches)}</>
+            )}
+            {typeof r.unverifiedQuotes === 'number' && r.unverifiedQuotes > 0 && (
+              <> — {t('ai.usageDisclosure.unverifiedQuotes', { count: r.unverifiedQuotes })}</>
             )}
             {r.reviewer && <> — {seatLabel(project, r.reviewer)}</>}
           </li>

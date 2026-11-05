@@ -1305,6 +1305,8 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
       edited: 3,
       rechecked: 2,
       webSearches: 4,
+      unverifiedQuotes: 1,
+      promptVersion: 'agent-1+judge-1',
       reviewer: '2',
     }
     expect(loadProject(withUsage([record])).papers[0].aiUsage).toEqual([record])
@@ -1324,7 +1326,18 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
     expect(loadProject(withUsage([{ ...base, edited: '3' }])).papers[0].aiUsage).toEqual([base])
     expect(loadProject(withUsage([{ ...base, rechecked: '2' }])).papers[0].aiUsage).toEqual([base])
     expect(loadProject(withUsage([{ ...base, webSearches: null }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, unverifiedQuotes: '1' }])).papers[0].aiUsage).toEqual([base])
     expect(loadProject(withUsage([{ ...base, reviewer: 42 }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, promptVersion: 42 }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, promptVersion: '' }])).papers[0].aiUsage).toEqual([base])
+  })
+
+  // [utest->req~llm-780~1]
+  it('keeps a record without a prompt version unchanged on save', () => {
+    const record = { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-07-15T10:00:00.000Z', mode: 'prompt' }
+    const saved = JSON.parse(serializeProject(loadProject(withUsage([record]))))
+    expect(saved.papers[0].aiUsage).toEqual([record])
+    expect('promptVersion' in saved.papers[0].aiUsage[0]).toBe(false)
   })
 })
 

@@ -249,6 +249,13 @@ function toConfidence(raw: unknown): number | null {
   return Math.min(1, Math.max(0, n))
 }
 
+// [impl->req~llm-770~1]
+/** A page number the model gave: a positive whole number, or nothing. */
+function toPage(raw: unknown): number | undefined {
+  const n = typeof raw === 'number' ? raw : typeof raw === 'string' ? Number(raw.trim()) : NaN
+  return Number.isInteger(n) && n > 0 ? n : undefined
+}
+
 // ---------------------------------------------------------------------------
 // Public API
 // ---------------------------------------------------------------------------
@@ -345,11 +352,13 @@ export function validateAnswerObject(schema: ResolvedDef[], root: Record<string,
     }
 
     seen.add(path)
+    const page = toPage(entry.page)
     fields.push({
       path,
       value: result.value,
       evidence: toEvidence(entry.evidence),
       confidence: toConfidence(entry.confidence),
+      ...(page !== undefined ? { page } : {}),
     })
   }
 

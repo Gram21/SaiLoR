@@ -54,6 +54,10 @@ Return exactly this JSON object, one entry per proposed field, no commentary:
 }
 "feedback" must be specific and actionable; it may be empty only for "accept".`
 
+// [impl->req~llm-780~1]
+/** Version of the judge template. Change it whenever `buildJudgeSystemPrompt` changes. */
+export const JUDGE_PROMPT_VERSION = 'judge-1'
+
 export function buildJudgeSystemPrompt(
   schema: ResolvedDef[],
   targets: FieldTarget[],

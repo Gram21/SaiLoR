@@ -173,6 +173,10 @@ export interface Suggestion {
   evidence: string
   /** 0..1, as reported by the model. Null when it gave none or gave nonsense. */
   confidence: number | null
+  /** The page the model says the quote is on, when it named one. */
+  page?: number
+  /** The offline check of `evidence` against the paper text. Absent when there was nothing to check. */
+  evidenceCheck?: EvidenceCheck
   /** Agent mode only: where the value came from — "paper", or the URL of a web source. */
   source?: string
   /** Agent mode only: sourced from a provider web-search result whose page we never saw, so the quote is unchecked. */
@@ -180,6 +184,9 @@ export interface Suggestion {
   /** Agent mode only: the judge's last verdict on this value. */
   judge?: JudgeVerdict
 }
+
+/** Whether a quote was found in the paper text, and on the page the model named. */
+export type EvidenceCheck = 'verified' | 'wrongPage' | 'notFound'
 
 /** The judge's assessment of one proposed value (agent mode). */
 export interface JudgeVerdict {

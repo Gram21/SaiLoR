@@ -206,6 +206,16 @@ describe('classify mode', () => {
     await ai().run()
     expect(ai().rows[0].checked).toBe(false)
   })
+
+  // [utest->req~llm-780~1]
+  it('records the System One prompt version on apply', async () => {
+    const config = s1Cfg()
+    useAiStore.setState({ configs: [config], selectedId: config.id, mode: 'classify', confidenceThreshold: 0.8 })
+    mockPlatform.callLlm.mockResolvedValueOnce(s1Response(0.9))
+    await ai().run()
+    ai().apply()
+    expect(useStore.getState().project!.papers[0].aiUsage[0].promptVersion).toBe('systemone-1')
+  })
 })
 
 describe('cross-check role', () => {
@@ -249,7 +259,7 @@ describe('cross-check role', () => {
     // prompt-mode row on its own.
     mockPlatform.callLlm.mockImplementation(async (req: LlmHttpRequest) => {
       if (req.url.includes('/v1/systemone')) return s1Response(0.95)
-      return chatOk([{ path: 'Relevant', value: true, evidence: 'quote', confidence: 0.9 }])
+      return chatOk([{ path: 'Relevant', value: true, evidence: 'paper text', confidence: 0.9 }])
     })
 
     await ai().run()
@@ -270,7 +280,7 @@ describe('cross-check role', () => {
     // test's note on isolating cross-check behavior from REQ-LLM-580.
     mockPlatform.callLlm.mockImplementation(async (req: LlmHttpRequest) => {
       if (req.url.includes('/v1/systemone')) return { ok: false, status: 400, body: 'boom' }
-      return chatOk([{ path: 'Relevant', value: true, evidence: 'quote', confidence: 0.9 }])
+      return chatOk([{ path: 'Relevant', value: true, evidence: 'paper text', confidence: 0.9 }])
     })
 
     await ai().run()

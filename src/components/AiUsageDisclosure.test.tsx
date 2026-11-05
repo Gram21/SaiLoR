@@ -88,5 +88,13 @@ describe('AiUsageDisclosure', () => {
     render(<AiUsageDisclosure project={project} records={[{ ...base, rechecked: 2, webSearches: 1 }]} />)
     expect(screen.getByText(/2 replaced/)).toBeInTheDocument()
     expect(screen.getByText(/1 web search(?!es)/)).toBeInTheDocument()
+    expect(screen.queryByText(/unverified/)).not.toBeInTheDocument()
+  })
+
+  // [utest->req~llm-770~1]
+  it('shows the count of unverified quotes', () => {
+    const base = { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-01-01T00:00:00.000Z' }
+    render(<AiUsageDisclosure project={project} records={[{ ...base, unverifiedQuotes: 2 }]} />)
+    expect(screen.getByText(/2 unverified quotes/)).toBeInTheDocument()
   })
 })

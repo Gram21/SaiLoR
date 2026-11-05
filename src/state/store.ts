@@ -18,7 +18,6 @@ import {
   normalizeTree,
   type AnnotationValueTree,
   type FieldValue,
-  type InstanceNode,
 } from '../model/annotations'
 import type { ResolvedDef } from '../model/schema'
 import { MARK_COLORS, type MarkRect, type PdfMark, dedupeMarkGroups } from '../model/pdfMarks'
@@ -29,7 +28,7 @@ import { consolidatorHasAnswered, consolidationMark } from '../consolidate/readi
 import { validateProject, type UnannotatedPaper, type ValidationIssue } from '../model/validate'
 import { dropDuplicateSuggestions, duplicateOnWrite } from '../model/unique'
 import { formatPath, displayPath, resolvePath, parsePath, MAX_UNBOUNDED_INDEX, type ResolvedPath } from '../llm/paths'
-import { isUnanswered } from '../llm/fields'
+import { isUnanswered, writeValue } from '../llm/fields'
 import type { Suggestion } from '../llm/types'
 import {
   DECISION_EXCLUDE,
@@ -3169,24 +3168,7 @@ export const useStore = create<AppState>()(
           let paperFilled = 0
           let paperReplaced = 0
           for (const { at, value, replace } of p.accepted) {
-            // The model may address a not-yet-existing entry of a repeatable node
-            // (how it records a further Finding) — create instances along the path.
-            let level: ResolvedDef[] = s.project!.schema
-            let cursor: AnnotationValueTree | null = writeTree
-            for (const seg of at.path) {
-              const step = ensureInstance(level, cursor, seg.name, seg.index)
-              if (!step) {
-                cursor = null
-                break
-              }
-              if (!step.inst.children) step.inst.children = {}
-              cursor = step.inst.children
-              level = step.def.children
-            }
-            if (!cursor) continue
-            const leaf = ensureInstance(level, cursor, at.name, at.index)
-            if (!leaf) continue
-            leaf.inst.value = value
+            if (!writeValue(s.project!.schema, writeTree, at, value)) continue
             // Mark only what was actually written: a skipped suggestion left the
             // field as the reviewer had it, and must not be flagged as the AI's.
             s.aiMarks[aiMarkKey(p.paperId, at.canonical, reviewerScope)] = true
@@ -4229,34 +4211,6 @@ export function peekValue(
     if (!tree) return undefined
   }
   return tree[name]?.[index]?.value
-}
-
-/**
- * Find (or create) instance `index` of `name` in `tree`, padding the list with
- * empty instances as needed. Returns null when the name is unknown at this level
- * or the index would exceed the node's `max`.
- */
-function ensureInstance(
-  defs: ResolvedDef[],
-  tree: AnnotationValueTree,
-  name: string,
-  index: number,
-): { inst: InstanceNode; def: ResolvedDef } | null {
-  const def = defs.find((d) => d.name === name)
-  if (!def) return null
-  // See `MAX_UNBOUNDED_INDEX`: the push loop below materializes every instance
-  // up to `index`, so an unbounded node still needs a ceiling.
-  if (index >= (def.max === null ? MAX_UNBOUNDED_INDEX : def.max)) return null
-
-  // The JSON is hand-editable, so this key may not hold a list at all — replace
-  // rather than crash; a malformed node has no answer worth preserving.
-  let list = tree[name]
-  if (!Array.isArray(list)) {
-    list = []
-    tree[name] = list
-  }
-  while (list.length <= index) list.push(makeInstance(def))
-  return { inst: list[index], def }
 }
 
 /** Push a pre-mutation snapshot onto the undo stack and clear the redo stack. */

@@ -41,6 +41,10 @@ function protocolBlock(protocol: ProjectProtocol | null): string {
   return lines.join('\n').slice(0, MAX_PROTOCOL_CHARS)
 }
 
+// [impl->req~llm-780~1]
+/** Version of the screening template. Change it whenever `buildScreeningSystemPrompt` changes. */
+export const SCREENING_PROMPT_VERSION = 'screening-1'
+
 export function buildScreeningSystemPrompt(reasons: string[], protocol: ProjectProtocol | null): string {
   // Reasons and protocol are reviewer-authored: flattened so a line break in
   // one cannot forge a heading or rule (REQ-LLM-140).
@@ -126,6 +130,10 @@ export function parseScreeningAnswer(raw: string, reasons: string[]): ScreeningO
 // ---------------------------------------------------------------------------
 // System One (Classify)
 // ---------------------------------------------------------------------------
+
+// [impl->req~llm-780~1]
+/** Version of the System One screening questions. Change it whenever they change. */
+export const SCREENING_SYSTEMONE_PROMPT_VERSION = 'screening-systemone-1'
 
 // [impl->req~llm-711~1]
 /**

@@ -98,6 +98,7 @@ export const AGENT_TOOLS: ToolDef[] = [
               path: { type: 'string' },
               value: {},
               evidence: { type: 'string' },
+              page: { type: 'integer', description: 'The page the evidence quote is on, if known.' },
               source: { type: 'string' },
               confidence: { type: 'number' },
             },
@@ -137,6 +138,7 @@ export interface SubmitField {
   path: string
   value: unknown
   evidence: string
+  page?: number
   source?: string
   confidence?: number
 }
@@ -171,6 +173,7 @@ export function parseSubmitArgs(args: unknown): SubmitPayload {
           path: String(f.path),
           value: f.value,
           evidence: typeof f.evidence === 'string' ? f.evidence : '',
+          page: typeof f.page === 'number' ? f.page : undefined,
           source: typeof f.source === 'string' ? f.source : undefined,
           confidence: typeof f.confidence === 'number' ? f.confidence : undefined,
         }))

@@ -240,7 +240,10 @@ describe('apply', () => {
     expect(papers[1].annotations.Decision[0].value).toBe('Exclude')
     expect(papers[1].annotations.Reason[0].value).toBe('Wrong topic')
     expect(papers[2].annotations.Decision[0].value).toBeNull()
-    expect(papers[0].aiUsage).toMatchObject([{ provider: 'anthropic', model: 'claude-x', mode: 'screening' }])
+    // [utest->req~llm-780~1]
+    expect(papers[0].aiUsage).toMatchObject([
+      { provider: 'anthropic', model: 'claude-x', mode: 'screening', promptVersion: 'screening-1' },
+    ])
     expect(st().aiMarks[aiMarkKey('p1', fieldPath([], 'Decision', 0))]).toBe(true)
     expect(st().aiMarks[aiMarkKey('p2', fieldPath([], 'Reason', 0))]).toBe(true)
     expect(st().currentPaperId).toBe('p1')

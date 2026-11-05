@@ -1,8 +1,16 @@
 import { describe, it, expect } from 'vitest'
 import { resolveSchema, type ResolvedDef } from '../model/schema'
-import { initTree, normalizeTree, type AnnotationValueTree } from '../model/annotations'
+import { initTree, normalizeTree, type AnnotationValueTree, type FieldValue } from '../model/annotations'
 import { isEmptyValue } from '../model/validate'
-import { isUnanswered, unansweredFields } from './fields'
+import {
+  askInDependencyOrder,
+  dropHiddenSuggestions,
+  isUnanswered,
+  unansweredFields,
+  visibleSchema,
+  withAnswers,
+} from './fields'
+import type { LlmAnswer } from './types'
 
 // ---------------------------------------------------------------------------
 // Schemas come from resolveSchema and trees from initTree/normalizeTree, so the
@@ -279,5 +287,95 @@ describe('unansweredFields: malformed or partial trees', () => {
 
   it('returns [] for an empty schema', () => {
     expect(unansweredFields([], initTree(schema))).toEqual([])
+  })
+})
+
+describe('fields hidden by visibleIf', () => {
+  // [utest->req~llm-760~1]
+  const gated: ResolvedDef[] = resolveSchema([
+    { name: 'Excluded', type: 'boolean' },
+    { name: 'Reason', type: 'string', visibleIf: 'Excluded' },
+    { name: 'Kind', type: 'string', options: ['RCT', 'Survey'], visibleIf: 'Excluded' },
+    {
+      name: 'Sample Size',
+      type: 'number',
+      visibleIf: { mode: 'all', conditions: [{ field: 'Kind', equals: ['RCT'] }] },
+    },
+  ])
+  const answer = (fields: { path: string; value: FieldValue }[]): LlmAnswer => ({
+    fields: fields.map((f) => ({ ...f, evidence: '', confidence: null })),
+    skipped: [],
+    rejected: [],
+  })
+
+  it('leaves hidden fields out of the targets and the visible schema', () => {
+    const tree = initTree(gated)
+    expect(unansweredFields(gated, tree).map((t) => t.path)).toEqual(['Excluded'])
+    expect(visibleSchema(gated, tree).map((d) => d.name)).toEqual(['Excluded'])
+
+    const open = withAnswers(gated, tree, [{ path: 'Excluded', value: true }])
+    expect(unansweredFields(gated, open).map((t) => t.path)).toEqual(['Reason', 'Kind'])
+    expect(visibleSchema(gated, open).map((d) => d.name)).toEqual(['Excluded', 'Reason', 'Kind'])
+  })
+
+  it('asks each newly visible round after its gate is answered, never twice', async () => {
+    const tree = initTree(gated)
+    const calls: string[][] = []
+    const schemas: string[][] = []
+    const replies = [
+      answer([{ path: 'Excluded', value: true }]),
+      answer([{ path: 'Kind', value: 'RCT' }]),
+      answer([{ path: 'Sample Size', value: 24 }]),
+    ]
+    const result = await askInDependencyOrder(gated, tree, unansweredFields(gated, tree), async (targets, passTree) => {
+      calls.push(targets.map((t) => t.path))
+      schemas.push(visibleSchema(gated, passTree).map((d) => d.name))
+      return replies[calls.length - 1]
+    })
+    expect(calls).toEqual([['Excluded'], ['Reason', 'Kind'], ['Sample Size']])
+    expect(schemas).toEqual([
+      ['Excluded'],
+      ['Excluded', 'Reason', 'Kind'],
+      ['Excluded', 'Reason', 'Kind', 'Sample Size'],
+    ])
+    expect(result.fields.map((f) => f.path)).toEqual(['Excluded', 'Kind', 'Sample Size'])
+  })
+
+  it('stops after one call when the answer opens no gate', async () => {
+    const tree = initTree(gated)
+    let n = 0
+    await askInDependencyOrder(gated, tree, unansweredFields(gated, tree), async () => {
+      n++
+      return answer([])
+    })
+    expect(n).toBe(1)
+  })
+
+  it('does not re-ask a visible field the reviewer left out of the targets', async () => {
+    const tree = withAnswers(gated, initTree(gated), [{ path: 'Excluded', value: true }])
+    const calls: string[][] = []
+    await askInDependencyOrder(gated, tree, [], async (targets) => {
+      calls.push(targets.map((t) => t.path))
+      return answer([{ path: 'Kind', value: 'Survey' }])
+    })
+    expect(calls).toEqual([[]])
+  })
+
+  it('drops proposals that stay hidden, including chains behind a dropped gate', () => {
+    const tree = initTree(gated)
+    const none = dropHiddenSuggestions(gated, tree, [
+      { path: 'Reason', value: 'off-topic' },
+      { path: 'Sample Size', value: 12 },
+    ])
+    expect(none.kept).toEqual([])
+    expect(none.dropped.map((d) => d.path)).toEqual(['Reason', 'Sample Size'])
+
+    const some = dropHiddenSuggestions(gated, tree, [
+      { path: 'Excluded', value: true },
+      { path: 'Kind', value: 'Survey' },
+      { path: 'Sample Size', value: 12 },
+    ])
+    expect(some.kept.map((d) => d.path)).toEqual(['Excluded', 'Kind'])
+    expect(some.dropped.map((d) => d.path)).toEqual(['Sample Size'])
   })
 })

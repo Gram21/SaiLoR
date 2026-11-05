@@ -1,9 +1,9 @@
 // [impl->req~llm-340~1]
 import type { ResolvedDef } from '../model/schema'
-import type { LlmAnswer } from './types'
+import type { EvidenceCheck, LlmAnswer, Suggestion } from './types'
 import { validateAnswerObject } from './parse'
 import { resolvePath, MAX_UNBOUNDED_INDEX } from './paths'
-import type { SubmitField, SubmitPayload } from './tools'
+import { splitPages, type SubmitField, type SubmitPayload } from './tools'
 
 /**
  * The cheap checks that run before the judge ever sees a submission: does
@@ -76,6 +76,30 @@ export function evidenceSupported(evidence: string, paperText: string): boolean 
   return wordMatchRatio(normQuote.split(' '), normText.split(' ')) >= 0.85
 }
 
+// [impl->req~llm-770~1]
+/**
+ * `evidenceSupported`, plus the page the model named: the quote must be on
+ * that page or run on into the next one. Undefined when there is no quote or
+ * no paper text to check it against.
+ */
+export function checkEvidence(evidence: string, paperText: string, page?: number): EvidenceCheck | undefined {
+  if (!evidence.trim() || !paperText.trim()) return undefined
+  if (!evidenceSupported(evidence, paperText)) return 'notFound'
+  const pages = splitPages(paperText)
+  if (page === undefined || pages.length === 0) return 'verified'
+  const near = pages.filter((p) => p.page === page || p.page === page + 1).map((p) => p.text)
+  return evidenceSupported(evidence, near.join('\n')) ? 'verified' : 'wrongPage'
+}
+
+// [impl->req~llm-770~1]
+/** Set `evidenceCheck` on each suggestion that has a quote to check. */
+export function markEvidence(fields: Suggestion[], paperText: string): void {
+  for (const f of fields) {
+    const check = checkEvidence(f.evidence, paperText, f.page)
+    if (check) f.evidenceCheck = check
+  }
+}
+
 function looksLikeUrl(s: string | undefined): s is string {
   return typeof s === 'string' && /^https?:\/\//i.test(s)
 }
@@ -87,6 +111,7 @@ export function normalizeUrl(u: string): string {
 }
 
 // [impl->req~llm-620~1]
+// [impl->req~llm-770~1]
 /**
  * Validate a submitted batch against the schema and, per field, against its
  * evidence. `fetchedUrls` is every URL the agent actually fetched this run —
@@ -107,6 +132,7 @@ export function checkSubmission(
       value: f.value,
       evidence: f.evidence,
       confidence: f.confidence,
+      page: f.page,
     })),
     skipped: payload.skipped,
   }
@@ -142,7 +168,9 @@ export function checkSubmission(
 
     // Paper-sourced (source is 'paper', absent, or anything else non-URL): the
     // quote must actually be in the paper.
-    if (!evidenceSupported(suggestion.evidence, paperText)) {
+    const check = checkEvidence(suggestion.evidence, paperText, suggestion.page)
+    if (check) suggestion.evidenceCheck = check
+    if (check !== 'verified' && check !== 'wrongPage') {
       failures.push({
         path: suggestion.path,
         reason: 'Evidence quote could not be found in the paper text.',
