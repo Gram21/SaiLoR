@@ -140,6 +140,22 @@ describe('the AI button in the toolbar', () => {
   })
 })
 
+// [utest->req~llm-830~1]
+describe('the AI evaluation button in the toolbar', () => {
+  it('opens the AI evaluation dialog when AI is on', async () => {
+    st().loadFromText(annotationProjectJson({ reviewers: 2 }), null, 'test.json')
+    render(<Toolbar />)
+    await userEvent.click(screen.getByRole('button', { name: 'AI evaluation' }))
+    expect(screen.getByRole('dialog', { name: 'AI evaluation' })).toBeInTheDocument()
+  })
+
+  it('is not rendered when the project turns AI off', () => {
+    st().loadFromText(annotationProjectJson({ ai: false }), null, 'test.json')
+    render(<Toolbar />)
+    expect(screen.queryByRole('button', { name: 'AI evaluation' })).not.toBeInTheDocument()
+  })
+})
+
 // [utest->req~plt-62~1]
 describe('unreadable annotation files stay visible for the whole session', () => {
   it('shows a warning that re-opens the list, and none when every file parsed', async () => {

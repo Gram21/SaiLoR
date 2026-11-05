@@ -604,3 +604,45 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/llm/prompt.ts`, `src/llm/recheck.ts`, `src/llm/judge.ts`, `src/llm/screeningAi.ts`, `src/llm/systemone.ts`, `src/state/aiStore.ts`, `src/state/aiScreeningStore.ts`, `src/model/project.ts`
 - **Status:** Implemented
 - **Tests:** `src/model/model.test.ts`, `src/model/split.test.ts`, `src/state/aiStore.recheck.test.ts`, `src/state/aiStore.classify.test.ts`, `src/state/aiScreeningStore.test.ts`
+
+### REQ-LLM-820: Compare the AI seat with the consolidated answers per field
+- **Description:** The system shall compare the values in the AI seat with the consolidated values, per field. The system shall use only papers with an AI usage record for the AI seat. For each field, the system shall count the compared values, the equal values and the different values. A value is compared only if the AI seat and the consolidation both answered. The system shall count an AI value without a consolidated value, and a consolidated value without an AI value, apart from the comparison. The system shall use the consolidation rule for equal values: text ignores case and spacing, and a value the consolidator marked equal counts as equal.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/evaluation.ts`, `src/consolidate/disagreements.ts`, `src/consolidate/unanimous.ts`
+- **Status:** Implemented
+- **Tests:** `src/llm/evaluation.test.ts`
+
+### REQ-LLM-821: Match repeated entries through the recorded alignment
+- **Description:** For a field in a repeated node, the system shall pool the entries of all papers into one row. The system shall match the AI entries to the consolidated entries through the alignment that Consolidation recorded. If no alignment is recorded, the system shall match the entries in their stored order.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/evaluation.ts`, `src/model/alignment.ts`
+- **Status:** Implemented
+- **Tests:** `src/llm/evaluation.test.ts`
+
+### REQ-LLM-822: Report the AI evaluation per field, without model breakdown
+- **Description:** The system shall sort the fields by agreement, with the lowest agreement first. A field with no compared value comes last. The project does not record which model gave each value. Thus the system shall pool all models into one result and shall tell the user so. If the project has no AI seat, the result shall contain no fields.
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/evaluation.ts`, `src/model/project.ts`
+- **Status:** Implemented
+- **Tests:** `src/llm/evaluation.test.ts`
+
+### REQ-LLM-830: Show the AI evaluation in a read-only dialog
+- **Description:** The toolbar shall show an "AI evaluation" button when the project turns AI on. The button shall open a dialog with one table row per field. The table shall show the field path, the number of compared values and the agreement in percent. The dialog shall show no paper text and no values. The dialog shall not change the project.
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability: Operability, Security: Confidentiality)
+- **Evidence:** `src/components/AiEvaluationDialog.tsx`, `src/components/Toolbar.tsx`
+- **Status:** Implemented
+- **Tests:** `src/components/AiEvaluationDialog.test.tsx`, `src/components/Toolbar.test.tsx`
+
+### REQ-LLM-831: Export the AI evaluation as CSV
+- **Description:** The dialog shall export the table as a CSV file. Each row shall contain the field path, the compared, equal and different counts, the AI-only and missed counts, and the agreement in percent. The system shall escape a cell that starts like a spreadsheet formula. The file shall contain no paper text and no values.
+- **Type:** Functional (ISO 25010: Functional Suitability, Security: Integrity)
+- **Evidence:** `src/llm/evaluation.ts`, `src/components/AiEvaluationDialog.tsx`, `src/model/graph.ts`
+- **Status:** Implemented
+- **Tests:** `src/llm/evaluation.test.ts`, `src/components/AiEvaluationDialog.test.tsx`
+
+### REQ-LLM-832: Show an empty state for the AI evaluation
+- **Description:** If the project has no AI seat, the dialog shall tell the user to turn on the AI seat. If no field has an AI value and a consolidated value, the dialog shall tell the user to run the AI and consolidate first. In both cases the dialog shall show no table and no export button.
+- **Type:** Functional (ISO 25010: Usability: Operability)
+- **Evidence:** `src/components/AiEvaluationDialog.tsx`
+- **Status:** Implemented
+- **Tests:** `src/components/AiEvaluationDialog.test.tsx`

@@ -116,6 +116,32 @@ once — aligning repeatable groups first, exactly as opening each paper individ
 you clicking through a hundred papers just to trigger the auto-fill on each one. A paper you've
 already partly consolidated is left alone.
 
+## AI evaluation
+
+Use **AI evaluation** to compare the AI seat with the consolidated answers. The table shows which
+fields need a better prompt.
+
+1. Turn on AI and the AI seat in the project settings.
+2. Run the AI on the papers. The AI writes its answers into the AI seat.
+3. Consolidate the papers.
+4. Click **AI evaluation** in the toolbar.
+
+The dialog shows one row per field:
+
+| Column | Meaning |
+|---|---|
+| Field | The field path. All entries of a repeated field share one row. |
+| Compared | The number of values that the AI seat and the consolidation both answered. |
+| Agree | The share of compared values that are equal, in percent. |
+
+The fields with the lowest agreement come first. Equal values follow the consolidation rule. Text
+ignores case and spacing. A value that you marked equal counts as equal.
+
+Click **Export CSV** to save the table. The file also contains the AI-only and missed counts.
+
+The dialog and the file show no paper text and no values. The dialog does not change the project.
+The project does not record which model gave each value, so the table pools all models.
+
 ## Reviewer-seat identity
 
 A seat is a role on a paper, not a person. A large review often divides its papers among more people
