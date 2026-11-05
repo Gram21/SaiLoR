@@ -2,7 +2,8 @@ import type { ResolvedDef } from '../model/schema'
 import { dehydrateSchema } from '../model/project'
 import type { FieldTarget } from './fields'
 import type { Delivery } from './prompt'
-import { SCHEMA_FORMAT_DOC, PATHS_DOC, fieldLines, oneLine } from './prompt'
+import { SCHEMA_FORMAT_DOC, PATHS_DOC, applyPromptOverrides, fieldLines, oneLine } from './prompt'
+import type { PromptOverrides } from '../model/promptOverrides'
 import type { JudgeVerdict } from './types'
 
 /**
@@ -58,12 +59,15 @@ Return exactly this JSON object, one entry per proposed field, no commentary:
 /** Version of the judge template. Change it whenever `buildJudgeSystemPrompt` changes. */
 export const JUDGE_PROMPT_VERSION = 'judge-1'
 
+// [impl->req~llm-792~1]
 export function buildJudgeSystemPrompt(
   schema: ResolvedDef[],
-  targets: FieldTarget[],
+  baseTargets: FieldTarget[],
   delivery: Delivery,
+  overrides?: PromptOverrides,
 ): string {
-  const schemaJson = JSON.stringify(dehydrateSchema(schema), null, 2)
+  const { schema: helped, targets } = applyPromptOverrides(schema, baseTargets, undefined, { fieldHelp: overrides?.fieldHelp })
+  const schemaJson = JSON.stringify(dehydrateSchema(helped), null, 2)
   const extractionNote =
     delivery === 'text'
       ? '\nThe paper is given to you as extracted text; tables, figures and layout may be garbled.'

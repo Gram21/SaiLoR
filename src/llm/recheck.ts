@@ -3,7 +3,8 @@ import type { ResolvedDef } from '../model/schema'
 import { dehydrateSchema } from '../model/project'
 import type { AnnotationValueTree, FieldValue } from '../model/annotations'
 import { fieldTargets, isUnanswered, type FieldTarget } from './fields'
-import { PATHS_DOC, SCHEMA_FORMAT_DOC, SCHEMA_REMARKS_RULE, fieldLines, oneLine, type Delivery } from './prompt'
+import { PATHS_DOC, SCHEMA_FORMAT_DOC, SCHEMA_REMARKS_RULE, applyPromptOverrides, fieldLines, oneLine, type Delivery } from './prompt'
+import type { PromptOverrides } from '../model/promptOverrides'
 import { coerce, extractObject, parseSchemaRemarks } from './parse'
 import { resolvePath, MAX_UNBOUNDED_INDEX } from './paths'
 import type { RejectedSuggestion, SchemaRemark } from './types'
@@ -42,13 +43,16 @@ export function answeredFields(schema: ResolvedDef[], tree: AnnotationValueTree 
 /** Version of the re-check template. Change it whenever `buildRecheckSystemPrompt` changes. */
 export const RECHECK_PROMPT_VERSION = 'recheck-1'
 
+// [impl->req~llm-792~1]
 export function buildRecheckSystemPrompt(
   schema: ResolvedDef[],
-  targets: RecheckTarget[],
+  baseTargets: RecheckTarget[],
   delivery: Delivery,
-  examples?: string,
+  baseExamples?: string,
+  overrides?: PromptOverrides,
 ): string {
-  const schemaJson = JSON.stringify(dehydrateSchema(schema), null, 2)
+  const { schema: helped, targets, examples, role } = applyPromptOverrides(schema, baseTargets, baseExamples, overrides)
+  const schemaJson = JSON.stringify(dehydrateSchema(helped), null, 2)
   const list = targets
     .map((t) => `${fieldLines([t])}\n    current value: ${oneLine(JSON.stringify(t.current))}`)
     .join('\n')
@@ -57,7 +61,7 @@ export function buildRecheckSystemPrompt(
       ? '\n4. The paper is given to you as text extracted automatically from a PDF; tables, figures and\n   formulas may be garbled or missing. If the relevant content is illegible, answer "unsure".'
       : ''
 
-  return `You are assisting a researcher conducting a Systematic Literature Review. A reviewer has
+  return `${role} A reviewer has
 already entered a value for each field listed below while reading one scientific paper. Your task
 is to check each of those values against the paper.
 

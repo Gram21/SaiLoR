@@ -23,6 +23,7 @@ import { annotationsDirProblem } from './annotationsDir'
 import { parseStrictConfig, strictConfigJson, type StrictConfig } from './strict'
 import { parseMetadataEditMode, parseReviewMetadata, type MetadataEditMode, type SeatMetadata } from './metadata'
 import { parsePdfFolder } from './pdfFolder'
+import { parsePromptOverrides, type PromptOverrides } from './promptOverrides'
 import {
   moveInMarks,
   moveInTree,
@@ -311,6 +312,8 @@ export interface Project {
   metadataEdit?: MetadataEditMode
   pdfFolder?: string
   crossrefLookup?: boolean
+  // [impl->req~llm-790~1]
+  promptOverrides?: PromptOverrides
 }
 
 // [impl->req~llm-470~1]
@@ -783,6 +786,11 @@ export function loadProject(input: string | unknown): Project {
   if (strict.problems.length > 0) {
     throw new ProjectLoadError(t('store.load.strictInvalid'), strict.problems)
   }
+  // [impl->req~llm-791~1]
+  const promptOverrides = parsePromptOverrides((data as { config?: { promptOverrides?: unknown } }).config?.promptOverrides)
+  if (promptOverrides.problems.length > 0) {
+    throw new ProjectLoadError(t('store.load.promptOverridesInvalid'), promptOverrides.problems)
+  }
 
   const schemaVersion = parseSchemaVersion((data as { schemaVersion?: unknown }).schemaVersion)
   const schemaHistory = parseSchemaHistory((data as { schemaHistory?: unknown }).schemaHistory)
@@ -888,6 +896,7 @@ export function loadProject(input: string | unknown): Project {
       parsePdfFolder((data as { config?: { pdfFolder?: unknown } }).config?.pdfFolder),
       (data as { config?: { crossrefLookup?: unknown } }).config?.crossrefLookup === true,
     ),
+    ...(promptOverrides.overrides ? { promptOverrides: promptOverrides.overrides } : {}),
   }
 }
 
@@ -956,6 +965,7 @@ export function serializeProject(project: Project): string {
       ...strictConfigJson(project.strict),
       ...metadataEditField(project.metadataEdit),
       ...pdfFolderFields(project.pdfFolder, project.crossrefLookup),
+      ...(project.promptOverrides ? { promptOverrides: project.promptOverrides } : {}),
     },
     papers: [...project.papers].sort(comparePapers).map((p) => {
       const paper: Record<string, unknown> = {
@@ -1190,6 +1200,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
       ...strictConfigJson(project.strict),
       ...metadataEditField(project.metadataEdit),
       ...pdfFolderFields(project.pdfFolder, project.crossrefLookup),
+      ...(project.promptOverrides ? { promptOverrides: project.promptOverrides } : {}),
     },
     papers: metaPapers,
     ...project.extra,

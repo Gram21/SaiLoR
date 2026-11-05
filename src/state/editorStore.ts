@@ -50,6 +50,7 @@ import {
 } from '../model/schemaVersion'
 import { useStore } from './store'
 import { bulkAssign, parseStrictConfig, strictConfigJson, type StrictConfig } from '../model/strict'
+import { cleanPromptOverrides, parsePromptOverrides, type PromptOverrides } from '../model/promptOverrides'
 
 /**
  * Draft state for the project editor: build or edit a project JSON before/
@@ -148,6 +149,7 @@ interface EditorSnapshot {
   protocol: ProjectProtocol | null
   schemaInfo: string | null
   strict: StrictConfig | null
+  promptOverrides: PromptOverrides
 }
 
 const HISTORY_LIMIT = 100
@@ -741,10 +743,12 @@ export function buildProjectJson(state: {
   annotationsDir?: string
   /** Optional for the same reason. Assignments are keyed by paper `uid`. */
   strict?: StrictConfig | null
+  promptOverrides?: PromptOverrides
   extra: Record<string, unknown>
   nodes: EditorNode[]
   papers: EditorPaper[]
 }): Record<string, unknown> {
+  const promptOverrides = cleanPromptOverrides(state.promptOverrides)
   const title = state.title?.trim()
   const screening = state.screening ?? null
   return {
@@ -773,6 +777,8 @@ export function buildProjectJson(state: {
       ...(state.metadataEdit && state.metadataEdit !== 'off' ? { metadataEdit: state.metadataEdit } : {}),
       ...(state.pdfFolder?.trim() ? { pdfFolder: state.pdfFolder.trim() } : {}),
       ...(state.crossrefLookup ? { crossrefLookup: true } : {}),
+      // [impl->req~llm-790~1]
+      ...(promptOverrides ? { promptOverrides } : {}),
     },
     papers: state.papers.map((p) => {
       const out: Record<string, unknown> = { ...(p.extra ?? {}) }
@@ -881,6 +887,8 @@ export function validateDraft(state: {
     // type is only optional to accommodate other schema-validation failures.
     resolveSchema(raw.config.schema ?? [])
     errors.push(...parseStrictConfig(json.config, new Set(ids)).problems)
+    // [impl->req~llm-791~1]
+    errors.push(...parsePromptOverrides((json.config as { promptOverrides?: unknown }).promptOverrides).problems)
   } catch (err) {
     if (err instanceof z.ZodError) {
       errors.push(...err.issues.map((i) => `${i.path.join('.') || '(root)'}: ${i.message}`))
@@ -1160,6 +1168,8 @@ interface EditorState {
   /** Replace the schema-wide info comment. Pass `null` to clear it. Coalesced
    *  like `setProtocol` so a burst of typing is one undo step. */
   setSchemaInfo: (schemaInfo: string | null) => void
+  promptOverrides: PromptOverrides
+  setPromptOverrides: (patch: PromptOverrides, coalesce?: boolean) => void
 
   addNode: (parentUid: string | null) => void
   updateNode: (uid: string, patch: Partial<EditorNode>) => void
@@ -1235,6 +1245,7 @@ function snapshotOf(s: EditorState): EditorSnapshot {
     protocol: s.protocol,
     schemaInfo: s.schemaInfo,
     strict: s.strict,
+    promptOverrides: s.promptOverrides,
   }
 }
 
@@ -1257,6 +1268,7 @@ function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
   s.protocol = snap.protocol
   s.schemaInfo = snap.schemaInfo
   s.strict = snap.strict
+  s.promptOverrides = snap.promptOverrides
 }
 
 /** Push a pre-mutation snapshot onto the undo stack and drop the redo stack. */
@@ -1287,6 +1299,7 @@ interface OpenedEditorState {
   schemaHistory: SchemaHistoryEntry[]
   annotationsDir: string
   strict: StrictConfig | null
+  promptOverrides: PromptOverrides
   nodes: EditorNode[]
   papers: EditorPaper[]
 }
@@ -1351,6 +1364,11 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
   if (parsedStrict.problems.length > 0) {
     throw new Error(t('editor.store.strictInvalid', { problems: parsedStrict.problems.join(' ') }))
   }
+  // [impl->req~llm-791~1]
+  const parsedOverrides = parsePromptOverrides((data.config as { promptOverrides?: unknown } | undefined)?.promptOverrides)
+  if (parsedOverrides.problems.length > 0) {
+    throw new Error(t('editor.store.promptOverridesInvalid', { problems: parsedOverrides.problems.join(' ') }))
+  }
   const uidOf = new Map(papers.map((p) => [p.id, p.uid]))
   const strict: StrictConfig | null = parsedStrict.strict
     ? {
@@ -1384,6 +1402,7 @@ export function editorStateFromOpened(opened: OpenedProject): OpenedEditorState 
     schemaHistory: parseSchemaHistory(data.schemaHistory),
     annotationsDir: typeof data.annotationsDir === 'string' ? data.annotationsDir : '',
     strict,
+    promptOverrides: parsedOverrides.overrides ?? {},
     // A screening project's schema is derived, not authored, so there is
     // nothing for the schema-builder tree to hold — see `ProjectEditor.tsx`.
     nodes: screening ? [] : fromAnnotationDefs(parsed.config.schema ?? []),
@@ -1425,6 +1444,7 @@ function openEditorSession(s: EditorState, st: OpenedEditorState): void {
   s.protocol = st.protocol
   s.schemaInfo = st.schemaInfo
   s.strict = st.strict
+  s.promptOverrides = st.promptOverrides
   s.schemaVersion = st.schemaVersion
   s.schemaHistory = st.schemaHistory
   s.savedNodes = st.nodes
@@ -1563,6 +1583,7 @@ export const useEditorStore = create<EditorState>()(
     metadataEdit: 'off',
     pdfFolder: '',
     crossrefLookup: false,
+    promptOverrides: {},
     screening: null,
     extra: {},
     provenance: null,
@@ -1609,6 +1630,7 @@ export const useEditorStore = create<EditorState>()(
         s.metadataEdit = 'off'
         s.pdfFolder = ''
         s.crossrefLookup = false
+        s.promptOverrides = {}
         s.screening = null
         s.extra = {}
         s.provenance = null
@@ -1817,6 +1839,19 @@ export const useEditorStore = create<EditorState>()(
       set((s) => {
         if (!coalesce) pushPast(s, snap)
         s.schemaInfo = schemaInfo
+        s.dirty = true
+      })
+    },
+
+    // [impl->req~llm-794~1]
+    setPromptOverrides: (patch, coalesce = true) => {
+      const key = coalesce ? `project:promptOverrides:${Object.keys(patch).join(',')}` : null
+      const merge = key !== null && key === lastEditKey
+      lastEditKey = key
+      const snap = snapshotOf(get())
+      set((s) => {
+        if (!merge) pushPast(s, snap)
+        s.promptOverrides = { ...s.promptOverrides, ...patch }
         s.dirty = true
       })
     },
@@ -2440,6 +2475,7 @@ export const useEditorStore = create<EditorState>()(
           s.metadataEdit = 'off'
           s.pdfFolder = ''
           s.crossrefLookup = false
+          s.promptOverrides = {}
           // Seeded from the source's own reasons, not DEFAULT_SCREENING_REASONS:
           // they're the pre-registered protocol's vocabulary, and PRISMA
           // reports exclusions per reason across both passes — a disjoint

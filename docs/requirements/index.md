@@ -59,9 +59,9 @@ per category so requirements can be inserted without renumbering.
 | Screening (SCR) | 39 |
 | Consolidation (CON) | 61 |
 | Git integration (GIT) | 66 |
-| LLM annotation (LLM) | 97 |
+| LLM annotation (LLM) | 103 |
 | Platform & shell (PLT) | 51 |
-| **Total** | **472** |
+| **Total** | **478** |
 
 ## Method & evidence notes
 

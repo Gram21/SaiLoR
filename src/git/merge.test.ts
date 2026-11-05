@@ -1182,6 +1182,45 @@ describe('mergeProjects — schema info comment', () => {
   })
 })
 
+describe('mergeProjects — prompt overrides', () => {
+  const withOverrides = (promptOverrides: Project['promptOverrides']): Project => ({ ...project(), promptOverrides })
+
+  // [utest->req~llm-795~1]
+  it('merges one-sided changes per key without a conflict', () => {
+    const base = withOverrides({ role: 'R', fieldHelp: { Year: 'Y0' } })
+    const ours = withOverrides({ role: 'R2', fieldHelp: { Year: 'Y0' } })
+    const theirs = withOverrides({ role: 'R', examples: 'E', fieldHelp: { Year: 'Y0', 'Study Type': 'S' } })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    expect(outcome.conflicts).toEqual([])
+    expect(outcome.merged.promptOverrides).toEqual({ role: 'R2', examples: 'E', fieldHelp: { Year: 'Y0', 'Study Type': 'S' } })
+  })
+
+  // [utest->req~llm-795~1]
+  it('surfaces a conflict per key, keeps ours until resolved and writes the chosen value', () => {
+    const base = withOverrides({ role: 'R', fieldHelp: { Year: 'Y0' } })
+    const ours = withOverrides({ role: 'Ours', fieldHelp: { Year: 'Y1' } })
+    const theirs = withOverrides({ role: 'Theirs', fieldHelp: { Year: 'Y2' } })
+    const outcome = mergeProjects(base, ours, theirs)
+    expectMerged(outcome)
+    const role = conflictAt(outcome.conflicts, 'promptOverrides.role')!
+    const help = conflictAt(outcome.conflicts, 'promptOverrides.fieldHelp.Year')!
+    expect(role.tree).toEqual({ kind: 'project' })
+    expect(help).toBeDefined()
+    expect(outcome.merged.promptOverrides).toEqual({ role: 'Ours', fieldHelp: { Year: 'Y1' } })
+    const resolved = applyResolutions(outcome.merged, outcome.conflicts, { [role.id]: role.theirs, [help.id]: '' })
+    expect(resolved.promptOverrides).toEqual({ role: 'Theirs' })
+    expect(applyResolutions(outcome.merged, outcome.conflicts, { [role.id]: '', [help.id]: '' }).promptOverrides).toBeUndefined()
+  })
+
+  // [utest->req~llm-795~1]
+  it('rejects a merge result whose override is over the limit', () => {
+    const long = withOverrides({ role: 'r'.repeat(1001) })
+    expect(mergeResultProblem(long)).not.toBeNull()
+    expect(mergeResultProblem(withOverrides({ role: 'ok' }))).toBeNull()
+  })
+})
+
 describe('applyResolutions', () => {
   it('writes a resolved value into the right tree and path', () => {
     const base = project({ papers: [paper('a', { annotations: { 'Study Type': [{ value: null }] } })] })

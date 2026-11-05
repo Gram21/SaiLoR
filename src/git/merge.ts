@@ -27,6 +27,7 @@ import { t, tp, type MessageKey } from '../i18n'
 import { mergeMarksList, type PdfMark } from '../model/pdfMarks'
 import type { MetadataEditMode, SeatMetadata } from '../model/metadata'
 import { ignoredPdfsOf, pdfHashOf } from '../model/pdfFolder'
+import { cleanPromptOverrides, type PromptOverrides } from '../model/promptOverrides'
 import {
   ancestorsOf,
   mergeHistories,
@@ -1525,6 +1526,31 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
     })
   }
 
+  // [impl->req~llm-795~1]
+  const promptOverrides: PromptOverrides = {}
+  const promptRow = (canonical: string, label: string, pick: (o: PromptOverrides | undefined) => string | undefined, put: (v: string) => void) => {
+    const m = merge3<string | undefined>(pick(base?.promptOverrides), pick(ours.promptOverrides), pick(theirs.promptOverrides), (a, b) => a === b)
+    const value = m ? m.value : pick(ours.promptOverrides)
+    if (value !== undefined) put(value)
+    if (!m) {
+      projectRow(canonical, label, {
+        type: 'string',
+        base: sOrNull(pick(base?.promptOverrides)),
+        ours: sOrNull(pick(ours.promptOverrides)),
+        theirs: sOrNull(pick(theirs.promptOverrides)),
+      })
+    }
+  }
+  promptRow('promptOverrides.role', t('git.merge.row.promptRole'), (o) => o?.role, (v) => { promptOverrides.role = v })
+  promptRow('promptOverrides.examples', t('git.merge.row.promptExamples'), (o) => o?.examples, (v) => { promptOverrides.examples = v })
+  const helpPaths = new Set([base, ours, theirs].flatMap((p) => Object.keys(p?.promptOverrides?.fieldHelp ?? {})))
+  for (const path of [...helpPaths].sort()) {
+    promptRow(`promptOverrides.fieldHelp.${path}`, t('git.merge.row.promptFieldHelp', { path }), (o) => o?.fieldHelp?.[path], (v) => {
+      promptOverrides.fieldHelp = { ...promptOverrides.fieldHelp, [path]: v }
+    })
+  }
+  const mergedOverrides = cleanPromptOverrides(promptOverrides)
+
   const paperRefusals: string[] = []
   const papers = mergePapers(schema, base, ours, theirs, conflicts, notes, paperRefusals)
   if (paperRefusals.length > 0) return refused(paperRefusals)
@@ -1544,6 +1570,7 @@ export function mergeProjects(base: Project | null, oursIn: Project, theirsIn: P
       ...metadataEditField(metadataEditM ? metadataEditM.value : ours.metadataEdit),
       ...(pdfFolder ? { pdfFolder } : {}),
       ...(crossrefM?.value ? { crossrefLookup: true } : {}),
+      ...(mergedOverrides ? { promptOverrides: mergedOverrides } : {}),
       reviewers: reviewersM ? reviewersM.value! : ours.reviewers,
       screening: screeningValue,
       ...(strict ? { strict } : {}),
@@ -1761,6 +1788,16 @@ function applyOne(draft: Project, conflict: FieldConflict, value: FieldValue): v
         else delete next[key]
       }
       draft.protocol = Object.keys(next).length > 0 ? next : null
+    } else if (c.startsWith('promptOverrides.')) {
+      // [impl->req~llm-795~1]
+      const key = c.slice('promptOverrides.'.length)
+      const text = valueToString(value)
+      const next: PromptOverrides = { ...draft.promptOverrides, fieldHelp: { ...draft.promptOverrides?.fieldHelp } }
+      if (key === 'role' || key === 'examples') next[key] = text
+      else if (key.startsWith('fieldHelp.')) next.fieldHelp![key.slice('fieldHelp.'.length)] = text
+      const clean = cleanPromptOverrides(next)
+      if (clean) draft.promptOverrides = clean
+      else delete draft.promptOverrides
     } else if (c.startsWith('extra.')) {
       const key = c.slice('extra.'.length)
       if (chosen === undefined) delete draft.extra[key]

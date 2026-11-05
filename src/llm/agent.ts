@@ -6,6 +6,7 @@ import type { Paper } from '../model/project'
 import type { FieldTarget } from './fields'
 import type { Delivery } from './prompt'
 import { buildAgentSystemPrompt } from './prompt'
+import type { PromptOverrides } from '../model/promptOverrides'
 import type {
   LlmConfig,
   LlmHttpRequest,
@@ -73,6 +74,8 @@ export interface AgentInput {
   // [impl->req~llm-620~1]
   /** Enable the annotator provider's built-in web search (see `supportsWebSearch`); default off. */
   webSearch?: boolean
+  // [impl->req~llm-792~1]
+  promptOverrides?: PromptOverrides
 }
 
 export interface AgentResult {
@@ -169,7 +172,7 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
   }
 
   const textAvailable = delivery === 'text' ? paperText.trim().length > 0 : true
-  const system = buildAgentSystemPrompt(schema, targets, delivery, input.examples, input.webSearch)
+  const system = buildAgentSystemPrompt(schema, targets, delivery, input.examples, input.webSearch, input.promptOverrides)
 
   const authors = paper.authors.length > 0 ? paper.authors.join(', ') : 'unknown authors'
   const caption = `Paper: "${paper.title}" by ${authors}.\n\nExtract the annotations for the fields listed in the schema. Use your tools to search and read the paper, and end each round by calling submit_annotations.`
@@ -365,7 +368,7 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
     let missed: { path: string; feedback: string }[] = lastMissed
     if (toJudge.length > 0 || round === 1) {
       throwIfAborted(signal)
-      const judgeSystem = buildJudgeSystemPrompt(schema, targets, delivery)
+      const judgeSystem = buildJudgeSystemPrompt(schema, targets, delivery, input.promptOverrides)
       const judgeUser = buildJudgeUserMessage(toJudge)
       const jreq = buildChatRequest(judgeConfig, judgeSystem, [{ role: 'user', content: judgeUser }], [], {
         paper: paperPart,

@@ -492,6 +492,12 @@ inspection only.
 | REQ-LLM-760 | Respect field conditions in AI prompts | Functional · Functional Suitability | `src/llm/fields.ts`<br>`src/llm/prompt.ts`<br>`src/state/aiStore.ts`<br>`src/state/store.ts` | `src/llm/fields.test.ts`<br>`src/llm/prompt.test.ts` | — | — |
 | REQ-LLM-770 | Check AI evidence quotes against the paper text | Functional · Functional Suitability | `src/llm/verify.ts`<br>`src/llm/parse.ts`<br>`src/llm/tools.ts`<br>`src/llm/prompt.ts`<br>`src/state/aiStore.ts`<br>`src/model/project.ts`<br>`src/components/AiDialog.tsx`<br>`src/components/AiUsageDisclosure.tsx` | `src/llm/verify.test.ts`<br>`src/llm/parse.test.ts`<br>`src/llm/tools.test.ts`<br>`src/state/aiStore.recheck.test.ts`<br>`src/model/model.test.ts`<br>`src/components/AiUsageDisclosure.test.tsx` | — | — |
 | REQ-LLM-780 | Record the prompt version on each AI usage record | Functional · Functional Suitability | `src/llm/prompt.ts`<br>`src/llm/recheck.ts`<br>`src/llm/judge.ts`<br>`src/llm/screeningAi.ts`<br>`src/llm/systemone.ts`<br>`src/state/aiStore.ts`<br>`src/state/aiScreeningStore.ts`<br>`src/model/project.ts` | `src/model/model.test.ts`<br>`src/model/split.test.ts`<br>`src/state/aiStore.recheck.test.ts`<br>`src/state/aiStore.classify.test.ts`<br>`src/state/aiScreeningStore.test.ts` | — | — |
+| REQ-LLM-790 | Store prompt overrides in the project file | Functional · Functional Suitability | `src/model/promptOverrides.ts`<br>`src/model/project.ts`<br>`src/state/editorStore.ts` | `src/model/promptOverrides.test.ts`<br>`src/components/PromptOverridesEditor.test.tsx` | — | `docs/annotation-schema.md` §2 `config.promptOverrides`<br>`user-guide/project-editor.md` §The AI prompt |
+| REQ-LLM-791 | Validate prompt overrides at load | Non-functional · Security: Integrity | `src/model/promptOverrides.ts`<br>`src/model/project.ts`<br>`src/state/editorStore.ts` | `src/model/promptOverrides.test.ts`<br>`src/components/PromptOverridesEditor.test.tsx` | — | `docs/annotation-schema.md` §2 `config.promptOverrides`<br>`user-guide/project-editor.md` §The AI prompt |
+| REQ-LLM-792 | Apply prompt overrides and keep the fixed rules | Functional · Functional Suitability | `src/llm/prompt.ts`<br>`src/llm/recheck.ts`<br>`src/llm/judge.ts`<br>`src/llm/agent.ts`<br>`src/state/aiStore.ts`<br>`src/model/promptOverrides.ts` | `src/model/promptOverrides.test.ts`<br>`src/state/aiStore.recheck.test.ts` | — | `user-guide/project-editor.md` §The AI prompt |
+| REQ-LLM-793 | Mark overridden prompts in the prompt version | Functional · Functional Suitability | `src/model/promptOverrides.ts`<br>`src/state/aiStore.ts` | `src/model/promptOverrides.test.ts`<br>`src/state/aiStore.recheck.test.ts` | — | `user-guide/project-editor.md` §The AI prompt |
+| REQ-LLM-794 | Edit prompt overrides in the project editor | Functional · Usability | `src/components/PromptOverridesEditor.tsx`<br>`src/components/ProjectEditor.tsx`<br>`src/state/editorStore.ts` | `src/components/PromptOverridesEditor.test.tsx`<br>`src/components/ProjectEditor.test.tsx` | — | `user-guide/project-editor.md` §The AI prompt |
+| REQ-LLM-795 | Merge prompt overrides key by key | Functional · Functional Suitability | `src/git/merge.ts`<br>`src/git/changes.ts` | `src/git/merge.test.ts` | — | — |
 | REQ-LLM-820 | Compare the AI seat with the consolidated answers per field | Functional · Functional Suitability | `src/llm/evaluation.ts` (`evaluateAi`)<br>`src/consolidate/disagreements.ts` (`paperVerdicts`)<br>`src/consolidate/unanimous.ts` (`comparable`) | `src/llm/evaluation.test.ts` | — | `user-guide/multi-reviewer.md` §AI evaluation |
 | REQ-LLM-821 | Match repeated entries through the recorded alignment | Functional · Functional Suitability | `src/llm/evaluation.ts` (`evaluateAi`)<br>`src/model/alignment.ts` (`alignedReviews`) | `src/llm/evaluation.test.ts` | — | `user-guide/multi-reviewer.md` §AI evaluation |
 | REQ-LLM-822 | Report the AI evaluation per field, without model breakdown | Functional · Functional Suitability | `src/llm/evaluation.ts` (`evaluateAi`)<br>`src/model/project.ts` (`aiSeatId`) | `src/llm/evaluation.test.ts` | — | `user-guide/multi-reviewer.md` §AI evaluation |
@@ -557,17 +563,17 @@ inspection only.
 
 ## Coverage statistics
 
-Counts come from `python3 technical-report/trace_stats.py` at the revision that adds the AI evaluation.
+Counts come from `python3 technical-report/trace_stats.py` at the revision that adds the AI evaluation and prompt overrides.
 
 | Metric | Count | Share |
 |---|---|---|
-| Requirements traced | 472 | 100% |
-| With an implementing source link | 446 | 94% |
-| With at least one verifying test | 442 | 94% |
+| Requirements traced | 478 | 100% |
+| With an implementing source link | 452 | 95% |
+| With at least one verifying test | 448 | 94% |
 | Without an automated check (source inspection only) | 30 | 6% |
 | With an introducing/pinning commit | 122 | 26% |
-| With a documentation link | 400 | 85% |
-| Security-related (ISO 25010 Security) | 39 | 8% |
-| Distinct test files linked | 213 | — |
-| Distinct source files linked | 201 | — |
+| With a documentation link | 405 | 85% |
+| Security-related (ISO 25010 Security) | 40 | 8% |
+| Distinct test files linked | 215 | — |
+| Distinct source files linked | 203 | — |
 | Linked files missing at this revision | 0 | — |

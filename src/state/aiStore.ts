@@ -60,6 +60,7 @@ import {
 import { aiSeatId } from '../model/project'
 import { dropDuplicateSuggestions } from '../model/unique'
 import type { Paper, Project } from '../model/project'
+import { promptOverridesTag } from '../model/promptOverrides'
 import type { ResolvedDef } from '../model/schema'
 import type { AnnotationValueTree, FieldValue } from '../model/annotations'
 import { extractPdfText, countPdfPages } from '../model/pdfText'
@@ -313,6 +314,7 @@ interface AiState {
   usage: { calls: number; inputTokens: number; outputTokens: number }
   /** The target the finished run actually used — what `apply()` discloses as `aiUsage`. */
   runUsage: { provider: string; model: string } | null
+  runPromptTag: string
   /** Agent mode only: the judge target actually used this run (falls back to
    *  the agent's own target when no separate judge was picked). */
   runJudge: { provider: string; model: string } | null
@@ -1322,6 +1324,7 @@ export const useAiStore = create<AiState>()(
     errors: [],
     usage: { calls: 0, inputTokens: 0, outputTokens: 0 },
     runUsage: null,
+    runPromptTag: '',
     runJudge: null,
     roundsByPaper: {},
     fewShotByPaper: {},
@@ -1768,6 +1771,7 @@ export const useAiStore = create<AiState>()(
 
       set((s) => {
         s.runUsage = { provider: config.provider, model: config.model }
+        s.runPromptTag = promptOverridesTag(app.project?.promptOverrides)
         s.runJudge = mode === 'agent' ? { provider: (judgeCfg ?? config).provider, model: (judgeCfg ?? config).model } : null
         s.roundsByPaper = {}
         s.fewShotByPaper = {}
@@ -1844,6 +1848,7 @@ export const useAiStore = create<AiState>()(
         s.fewShotByPaper = persisted.fewShotByPaper ?? {}
         s.fitByPaper = persisted.fitByPaper ?? {}
         s.runUsage = { provider: config.provider, model: config.model }
+        s.runPromptTag = promptOverridesTag(app.project?.promptOverrides)
         s.runJudge =
           persisted.mode === 'agent'
             ? { provider: (judgeCfg ?? config).provider, model: (judgeCfg ?? config).model }
@@ -2045,10 +2050,15 @@ export const useAiStore = create<AiState>()(
         agent: runJudge ? [AGENT_PROMPT_VERSION, JUDGE_PROMPT_VERSION] : [AGENT_PROMPT_VERSION],
         classify: [SYSTEMONE_PROMPT_VERSION],
       }
-      const versionsOf = (entry: Entry): string[] => [
-        ...(entry.suggestions.length > 0 ? modeVersions[mode] : []),
-        ...(entry.replacements.length > 0 ? [RECHECK_PROMPT_VERSION] : []),
-      ]
+      // [impl->req~llm-793~1]
+      const overridesTag = mode === 'classify' ? '' : get().runPromptTag
+      const versionsOf = (entry: Entry): string[] => {
+        const versions = [
+          ...(entry.suggestions.length > 0 ? modeVersions[mode] : []),
+          ...(entry.replacements.length > 0 ? [RECHECK_PROMPT_VERSION] : []),
+        ]
+        return overridesTag && versions.length > 0 ? [...versions, overridesTag] : versions
+      }
       const items = [...byPaper.values()].map((entry) => ({
         paperId: entry.paperId,
         reviewer: entry.reviewer,
@@ -2216,7 +2226,7 @@ async function runOnePaperPrompt(
   // Nothing to fill is only legitimate for a re-check-only paper.
   if (targets.length > 0 || recheckTargets.length === 0) {
     answer = await askInDependencyOrder(project.schema, tree, targets, async (passTargets, passTree) => {
-      const system = buildSystemPrompt(visibleSchema(project.schema, passTree), passTargets, delivery, fewShotBlock || undefined)
+      const system = buildSystemPrompt(visibleSchema(project.schema, passTree), passTargets, delivery, fewShotBlock || undefined, project.promptOverrides)
       const r = await ask(system)
       add(r.usage)
       return parseAnswer(project.schema, r.text)
@@ -2228,7 +2238,7 @@ async function runOnePaperPrompt(
   let recheck: Awaited<ReturnType<typeof runOnePaperPrompt>>['recheck']
   if (recheckTargets.length > 0) {
     try {
-      const r = await ask(buildRecheckSystemPrompt(project.schema, recheckTargets, delivery, fewShotBlock || undefined))
+      const r = await ask(buildRecheckSystemPrompt(project.schema, recheckTargets, delivery, fewShotBlock || undefined, project.promptOverrides))
       recheck = parseRecheckReply(project.schema, recheckTargets, r.text)
       add(r.usage)
     } catch (err) {
@@ -2291,7 +2301,7 @@ async function runOnePaperAgent(
   let fit: PaperFit | undefined
   if (delivery === 'text') {
     const windows = [config.contextTokens, judgeConfig?.contextTokens].filter((n): n is number => !!n)
-    const system = buildAgentSystemPrompt(visibleSchema(project.schema, tree), targets, delivery, fewShotBlock || undefined, webSearch)
+    const system = buildAgentSystemPrompt(visibleSchema(project.schema, tree), targets, delivery, fewShotBlock || undefined, webSearch, project.promptOverrides)
     const f = fitForChat(
       { ...config, contextTokens: windows.length ? Math.min(...windows) : undefined },
       system + buildUserText(paper, ''),
@@ -2322,6 +2332,7 @@ async function runOnePaperAgent(
         onEvent: (e) => onEvent(e.message),
         examples: fewShotBlock || undefined,
         webSearch,
+        promptOverrides: project.promptOverrides,
       },
       {
         callLlm,

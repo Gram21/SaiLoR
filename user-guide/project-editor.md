@@ -19,7 +19,7 @@ The editor shows its sections in four tabs below the JSON file location:
 | --- | --- |
 | **Schema** | The schema info and the schema tree, or the exclusion reasons for a screening project. |
 | **Papers** | The paper list. |
-| **Settings** | The annotations folder, title, reviewers, AI options, PDF folder, protocol and strict mode. |
+| **Settings** | The annotations folder, title, reviewers, AI options, PDF folder, protocol, AI prompt and strict mode. |
 | **Preview** | The annotation form for the current draft schema. |
 
 Click a tab to open it. You can also use the arrow keys, **Home** and **End** in the tab row.
@@ -181,6 +181,40 @@ opens on its own the first time a reviewer loads a project that has one — clos
 "Okay" button, or Escape.
 The section starts collapsed unless the project already has a protocol recorded, so an existing one is
 never hidden behind a disclosure you'd have to know to open.
+
+## The AI prompt
+
+The **AI prompt** section in the Settings tab changes the text that the AI receives.
+The section is optional and starts collapsed. It opens on its own if the project has an override.
+Screening projects do not show this section.
+
+You can change three parts of the prompt:
+
+| Part | What it does | Limit |
+| --- | --- | --- |
+| **Role** | Replaces the opening sentence of the prompt. | 1000 characters |
+| **Additional examples** | Adds your examples as a quoted block before the rules. | 8000 characters |
+| **Field help** | Replaces the description of one field in the prompt. | 2000 characters per field |
+
+To change a part of the prompt:
+
+1. Open the **Settings** tab.
+2. Open the **AI prompt** section.
+3. Type your text in the box for that part.
+4. Save the project.
+
+An empty box means the built-in text. The editor shows the built-in role below the role box.
+Each field help box shows the field description as its built-in text.
+To go back to the built-in text, click **Reset to default** next to the box.
+
+If you rename or remove a field, its help stays under the old path.
+The section lists this help as a problem. Click **Remove** to delete it.
+
+Overrides never change the rules, the quote rules, or the output format.
+If a run uses overrides, the AI usage record shows a prompt version that ends in `overrides-` and a short hash.
+The judge prompt uses the field help only.
+
+Caution: A project file with an override over its limit does not open. Shorten the text in the JSON file to open it.
 
 ## Provenance
 
