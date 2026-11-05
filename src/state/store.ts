@@ -49,10 +49,10 @@ import {
   applyProjectEdit,
   applySeatEdit,
   effectiveMetadata,
+  canUpdateProject,
   humanSeats,
-  ignoredFor,
   metadataFingerprint,
-  metadataTarget,
+  metadataSeatKey,
   proposeFromPdf,
   recordIgnored,
   type MetadataValues,
@@ -607,12 +607,12 @@ let diskProject: Project | null = null
  */
 let projectGeneration = 0
 
-/** One confirmed metadata change: corrected values, ignored proposal values, or a settled consolidation. */
+/** One confirmed metadata change: seat values, ignored proposal values, or the agreed values for the project file. */
 export interface MetadataEdit {
   paperId: string
   values?: MetadataValues
   ignore?: MetadataValues
-  settle?: boolean
+  update?: MetadataValues
 }
 
 /** The seat a metadata edit of `paperId` belongs to: the person's assigned seat in strict mode. */
@@ -3733,16 +3733,16 @@ export const useStore = create<AppState>()(
         const original = project.papers.find((p) => p.id === edit.paperId)
         if (!original) continue
         const seat = metadataSeat(prev, edit.paperId)
-        const target = metadataTarget(project, seat)
-        if (!target) continue
-        const seatKey = target === 'seat' ? seat : null
+        const seatKey = metadataSeatKey(project, seat)
         const paper = changed.get(edit.paperId) ?? structuredClone(original)
-        if (edit.values) {
-          if (seatKey) applySeatEdit(paper, seatKey, edit.values)
-          else applyProjectEdit(paper, edit.values)
+        if (seatKey) {
+          if (edit.values) applySeatEdit(paper, seatKey, edit.values)
+          if (edit.ignore && Object.keys(edit.ignore).length > 0) recordIgnored(paper, seatKey, edit.ignore)
         }
-        if (edit.ignore && Object.keys(edit.ignore).length > 0) recordIgnored(paper, seatKey, edit.ignore)
-        if (edit.settle) paper.extra.metadataSync = metadataFingerprint(paper, humanSeats(project))
+        if (edit.update && canUpdateProject(project, seat)) {
+          applyProjectEdit(paper, edit.update)
+          paper.extra.metadataSync = metadataFingerprint(paper, humanSeats(project))
+        }
         changed.set(edit.paperId, paper)
       }
       for (const [id, paper] of changed) {
@@ -3767,9 +3767,8 @@ export const useStore = create<AppState>()(
       const out: { paperId: string; values: MetadataValues }[] = []
       for (const paper of project.papers) {
         if (!paper.pdf) continue
-        const seat = metadataSeat(get(), paper.id)
-        const target = metadataTarget(project, seat)
-        if (!target) continue
+        const seatKey = metadataSeatKey(project, metadataSeat(get(), paper.id))
+        if (!seatKey) continue
         try {
           const src = await getPlatform().getPdfSource(paper.pdf, get().saveHandle ?? { kind: 'download' })
           let bytes: ArrayBuffer
@@ -3781,8 +3780,7 @@ export const useStore = create<AppState>()(
           const meta = await extractPdfMeta(bytes)
           if (projectGeneration !== generation) return []
           const current = get().project?.papers.find((p) => p.id === paper.id) ?? paper
-          const seatKey = target === 'seat' ? seat : null
-          const values = proposeFromPdf(effectiveMetadata(current, seatKey), meta, ignoredFor(current, seatKey))
+          const values = proposeFromPdf(effectiveMetadata(current, seatKey), meta, current.reviewMetadata?.[seatKey]?.ignored)
           if (Object.keys(values).length > 0) out.push({ paperId: paper.id, values })
         } catch {
           continue

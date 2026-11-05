@@ -3,7 +3,7 @@
 import { memo, useEffect, useMemo, useRef, useState, type CSSProperties } from 'react'
 import { useStore, currentTree, currentFinished, activePerson } from '../state/store'
 import { assignedSeat, personPapers } from '../model/strict'
-import { editedFields, effectiveMetadata } from '../model/metadata'
+import { editedFields, effectiveMetadata, metadataSeatKey } from '../model/metadata'
 import { hasAnnotations, annotationText } from '../model/annotations'
 import { completeness, completenessPercent, hasRequiredFields, type Completeness } from '../model/completeness'
 import {
@@ -577,7 +577,7 @@ export function PaperList() {
                   active={active}
                   roving={p.id === rovingId}
                   onSelect={selectPaper}
-                  seat={person ? assignedSeat(project, p.id, person) : currentReviewer}
+                  seat={metadataSeatKey(project, person ? assignedSeat(project, p.id, person) : currentReviewer)}
                   dotClassName={`status-dot screening-${status}`}
                   dotLabel={title}
                   dotFill={null}
@@ -625,7 +625,7 @@ export function PaperList() {
                 active={active}
                 roving={p.id === rovingId}
                 onSelect={selectPaper}
-                seat={person ? assignedSeat(project, p.id, person) : currentReviewer}
+                seat={metadataSeatKey(project, person ? assignedSeat(project, p.id, person) : currentReviewer)}
                 dotClassName={`status-dot ${state}`}
                 dotLabel={dotLabel}
                 // Only the genuinely partial fills carry a percentage; the

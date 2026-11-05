@@ -2,6 +2,7 @@
 // [utest->req~dat-450~1]
 // [utest->req~ann-180~1]
 // [utest->req~con-530~1]
+// [utest->req~dat-460~1]
 import { describe, it, expect } from 'vitest'
 import { useStore } from './store'
 import { serializeProject } from '../model/project'
@@ -33,7 +34,7 @@ describe('applyMetadataEdits', () => {
     expect(st().dirty).toBe(false)
   })
 
-  it('writes a project correction in one undo step and keeps the paper id', () => {
+  it('keeps a single-reviewer correction in the seat 1 file in one undo step', () => {
     open({ metadataEdit: 'project' })
     const applied = st().applyMetadataEdits([
       { paperId: 'p1', values: { title: 'Original Title' } },
@@ -41,16 +42,29 @@ describe('applyMetadataEdits', () => {
     ])
     expect(applied).toBe(true)
     expect(st().project!.papers.map((p) => p.id)).toEqual(['p1', 'p2'])
-    expect(paper().title).toBe('Original Title')
-    expect(st().project!.papers[1].doi).toBe('10.1/x')
+    expect(paper().title).toBe('Orignal Title')
+    expect(paper().reviewMetadata).toEqual({ '1': { overrides: { title: 'Original Title' } } })
+    expect(st().project!.papers[1].doi).toBeUndefined()
+    expect(st().project!.papers[1].reviewMetadata?.['1']?.overrides).toEqual({ doi: '10.1/x' })
     expect(st().dirty).toBe(true)
     st().undo()
-    expect(paper().title).toBe('Orignal Title')
-    expect(st().project!.papers[1].doi).toBeUndefined()
+    expect(paper().reviewMetadata).toBeUndefined()
+    expect(st().project!.papers[1].reviewMetadata).toBeUndefined()
+  })
+
+  it('writes into the project file only through the update step', () => {
+    open({ metadataEdit: 'annotation' })
+    st().applyMetadataEdits([{ paperId: 'p1', values: { title: 'Original Title' } }])
+    expect(consolidationPending(paper(), ['1'])).toBe(true)
+    expect(st().applyMetadataEdits([{ paperId: 'p1', update: { title: 'Original Title' } }])).toBe(true)
+    expect(paper().id).toBe('p1')
+    expect(paper().title).toBe('Original Title')
+    expect(paper().extra.metadataOriginal).toEqual({ title: 'Orignal Title' })
+    expect(consolidationPending(paper(), ['1'])).toBe(false)
   })
 
   it('returns false and adds no undo step when nothing changes', () => {
-    open({ metadataEdit: 'project' })
+    open({ metadataEdit: 'annotation' })
     const before = st().past.length
     expect(st().applyMetadataEdits([{ paperId: 'p1', values: { title: 'Orignal Title' } }])).toBe(false)
     expect(st().past.length).toBe(before)
@@ -59,17 +73,20 @@ describe('applyMetadataEdits', () => {
   it('writes an annotator correction into that seat only', () => {
     open({ metadataEdit: 'annotation', reviewers: 2 })
     expect(st().applyMetadataEdits([{ paperId: 'p1', values: { year: 2021 } }])).toBe(false)
+    expect(st().applyMetadataEdits([{ paperId: 'p1', update: { year: 2021 } }])).toBe(false)
     st().selectReviewer('1')
     expect(st().applyMetadataEdits([{ paperId: 'p1', values: { year: 2021 } }])).toBe(true)
+    expect(st().applyMetadataEdits([{ paperId: 'p1', update: { year: 2021 } }])).toBe(false)
     expect(paper().year).toBe(2020)
     expect(paper().reviewMetadata).toEqual({ '1': { overrides: { year: 2021 } } })
   })
 
-  it('remembers an ignored proposal', () => {
-    open({ metadataEdit: 'project' })
+  it('remembers an ignored proposal in the seat file', () => {
+    open({ metadataEdit: 'annotation' })
     st().applyMetadataEdits([{ paperId: 'p1', ignore: { title: 'Junk' } }])
     expect(paper().title).toBe('Orignal Title')
-    expect(JSON.parse(serializeProject(st().project!)).papers[0].metadataIgnored).toEqual({ title: 'Junk' })
+    expect(JSON.parse(serializeProject(st().project!)).papers[0]).not.toHaveProperty('metadataIgnored')
+    expect(paper().reviewMetadata).toEqual({ '1': { ignored: { title: 'Junk' } } })
   })
 })
 
@@ -81,7 +98,8 @@ describe('metadata consolidation', () => {
     st().selectReviewer('2')
     st().applyMetadataEdits([{ paperId: 'p1', values: { title: 'Original Title' } }])
     st().selectReviewer('consolidation')
-    st().applyMetadataEdits([{ paperId: 'p1', values: { title: 'Original Title' }, settle: true }])
+    expect(st().applyMetadataEdits([{ paperId: 'p1', values: { title: 'Other' } }])).toBe(false)
+    st().applyMetadataEdits([{ paperId: 'p1', update: { title: 'Original Title' } }])
     expect(paper().title).toBe('Original Title')
     expect(paper().extra.metadataOriginal).toEqual({ title: 'Orignal Title' })
     expect(consolidationPending(paper(), ['1', '2'])).toBe(false)
@@ -92,7 +110,7 @@ describe('metadata consolidation', () => {
     st().selectReviewer('1')
     st().applyMetadataEdits([{ paperId: 'p1', values: { doi: '10.1/x' } }])
     st().selectReviewer('consolidation')
-    expect(st().applyMetadataEdits([{ paperId: 'p1', settle: true }])).toBe(true)
+    expect(st().applyMetadataEdits([{ paperId: 'p1', update: {} }])).toBe(true)
     expect(paper().doi).toBeUndefined()
     expect(paper().reviewMetadata?.['1']?.overrides).toEqual({ doi: '10.1/x' })
     expect(consolidationPending(paper(), ['1', '2'])).toBe(false)
