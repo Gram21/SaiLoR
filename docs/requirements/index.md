@@ -54,14 +54,14 @@ per category so requirements can be inserted without renumbering.
 
 | Category | Requirements |
 |---|---|
-| Data model & editor (DAT/EDT) | 89 |
-| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 65 |
+| Data model & editor (DAT/EDT) | 92 |
+| Annotation UI, paper list, PDF (ANN/LST/PDF/UI) | 66 |
 | Screening (SCR) | 39 |
 | Consolidation (CON) | 61 |
 | Git integration (GIT) | 66 |
 | LLM annotation (LLM) | 91 |
 | Platform & shell (PLT) | 51 |
-| **Total** | **462** |
+| **Total** | **466** |
 
 ## Method & evidence notes
 
