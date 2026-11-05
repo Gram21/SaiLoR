@@ -270,6 +270,9 @@ To change the language:
 2. Go to the **Language** section.
 3. Select a language in **User interface language**.
 
+You can also open **Settings** from the **Help** menu.
+In the help window, click **Open settings**.
+
 The window and the native menus change at once. You do not have to restart SaiLoR.
 SaiLoR stores the choice for your user account, not in the project.
 The language does not change project data, schema field names or AI prompts.
