@@ -240,6 +240,7 @@
   "help.mode.start": "はじめに",
   "help.reportBug": "バグを報告",
   "help.reportBugTitle": "GitHub でバグを報告します（ブラウザーで新しい issue が開きます）",
+  "help.openSettingsTitle": "ヘルプを閉じて設定ダイアログを開きます",
   "help.closeTitle": "ヘルプを閉じる",
   "help.tocLabel": "ヘルプの目次",
   "help.tocTitle": "このページの内容",

@@ -240,6 +240,7 @@
   "help.mode.start": "入门",
   "help.reportBug": "报告错误",
   "help.reportBugTitle": "在 GitHub 上报告错误——会在浏览器中新建一个问题",
+  "help.openSettingsTitle": "关闭帮助并打开设置对话框",
   "help.closeTitle": "关闭帮助",
   "help.tocLabel": "帮助目录",
   "help.tocTitle": "本页内容",

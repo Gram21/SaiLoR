@@ -240,6 +240,7 @@
   "help.mode.start": "شروع کار",
   "help.reportBug": "گزارش اشکال",
   "help.reportBugTitle": "گزارش اشکال در GitHub — یک issue جدید در مرورگر شما باز می‌شود",
+  "help.openSettingsTitle": "بستن راهنما و باز کردن پنجرهٔ تنظیمات",
   "help.closeTitle": "بستن راهنما",
   "help.tocLabel": "فهرست مطالب راهنما",
   "help.tocTitle": "در این صفحه",

@@ -211,6 +211,7 @@ inspection only.
 | REQ-UI-120 | Translated user interface | Functional · Usability | `src/i18n.ts` (`t`, `tp`, `rich`, `useT`)<br>`src/locales/en.json`<br>`src/components/` | `src/i18n.test.ts` (`t`, `tp`, `rich`) | — | `docs/translations.md` |
 | REQ-UI-130 | Complete language files | Non-functional · Maintainability: Testability | `src/locales/en.json`<br>`src/i18n.ts` (`MESSAGES`) | `src/i18n.test.ts` (`language files`) | — | `docs/translations.md` |
 | REQ-UI-140 | Right-to-left layout | Functional · Usability | `src/i18n.ts` (`applyToDocument`)<br>`src/components/Splitter.tsx` (`offsetFromStart`)<br>`src/App.tsx`<br>`src/styles/index.css` | `src/i18n.test.ts` (`sets the text direction of the document from the language`)<br>`src/components/Splitter.test.tsx` (`offsetFromStart`) | — | `docs/translations.md` |
+| REQ-UI-150 | Open the Settings dialog from the help | Functional · Usability | `src/components/HelpDialog.tsx` (`HelpDialog`)<br>`src-tauri/src/shell.rs` (`action`, `menu`, `macos_menu`) | `src/components/HelpDialog.test.tsx`<br>`src-tauri/src/shell.rs` (`help_menus_open_settings_without_a_shortcut`) | — | `user-guide/getting-started.md` §Changing the language |
 
 ## Screening ([screening.md](screening.md))
 

@@ -414,3 +414,10 @@ export. See the [index](index.md) for the glossary.
 - **Evidence:** `src/i18n.ts` (`applyToDocument`), `src/components/Splitter.tsx` (`offsetFromStart`), `src/App.tsx`, `src/styles/index.css`
 - **Verified by:** `src/i18n.test.ts` (`sets the text direction of the document from the language`), `src/components/Splitter.test.tsx` (`offsetFromStart`)
 - **Status:** Implemented. The mirrored layout was checked only in jsdom, not in the desktop WebViews.
+
+### REQ-UI-150: Open the Settings dialog from the help
+- **Description:** The Help dialog shall have an "Open settings" button. The button shall close the Help dialog and open the Settings dialog. On Windows and Linux, the Help menu shall have a "Settings…" item. On macOS, the Help menu shall also have a "Settings…" item. These Help menu items shall have no keyboard shortcut. They shall send the `app:settings` event to the page, as in REQ-UI-100.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/HelpDialog.tsx` (`HelpDialog`), `src-tauri/src/shell.rs` (`action`, `menu`, `macos_menu`)
+- **Verified by:** `src/components/HelpDialog.test.tsx`, `src-tauri/src/shell.rs` (`help_menus_open_settings_without_a_shortcut`)
+- **Status:** Implemented

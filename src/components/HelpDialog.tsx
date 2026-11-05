@@ -446,10 +446,12 @@ function sharedSections(): HelpSection[] {
   ]
 }
 
+// [impl->req~ui-150~1]
 /** Modal explaining the current mode and listing its keyboard shortcuts. */
 export function HelpDialog() {
   const open = useStore((s) => s.helpOpen)
   const setHelpOpen = useStore((s) => s.setHelpOpen)
+  const setUserSettingsOpen = useStore((s) => s.setUserSettingsOpen)
   // The help must describe the screen the user is actually looking at: the
   // editor, an open project, or the start screen with neither.
   const editing = useEditorStore((s) => s.open)
@@ -516,6 +518,17 @@ export function HelpDialog() {
             </span>
           </strong>
           <div className="modal-head-actions">
+            <button
+              type="button"
+              className="icon-btn"
+              title={t('help.openSettingsTitle')}
+              onClick={() => {
+                setHelpOpen(false)
+                setUserSettingsOpen(true)
+              }}
+            >
+              {t('help.keys.openSettings')}
+            </button>
             <a
               className="icon-btn help-report-bug"
               href={NEW_ISSUE_URL}

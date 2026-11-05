@@ -143,3 +143,5 @@ per category so requirements can be inserted without renumbering.
   REQ-ANN-200, REQ-ANN-210 and REQ-LST-90 added for the confirmation dialog, the scan triggers and the
   "missing" badge. REQ-GIT-600 added for the merge by PDF hash. REQ-PLT-420 added for the desktop scan.
   The coverage counts above were not recounted.
+- **Settings in the help (2026-11-05).** REQ-UI-150 added for the "Settings…" item in the Help menus and
+  the "Open settings" button in the Help dialog. The coverage counts above were not recounted.
