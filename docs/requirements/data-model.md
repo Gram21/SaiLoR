@@ -512,7 +512,7 @@ the project editor. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-EDT-170: Reopen finished work
-- **Description:** The project editor shall let the user reopen the finished work of a person on a paper. Reopening shall remove the finished flag of that seat on that paper.
+- **Description:** The project editor shall let the user reopen the finished work of a person on a paper. Reopening shall remove the finished flag and `finishedAt` of that seat on that paper, and shall write `reopenedAt` (ISO time) for that seat.
 - **Type:** Functional (ISO 25010: Functional Suitability)
 - **Evidence:** `src/components/StrictModeEditor.tsx` (`StrictModeEditor`), `src/state/editorStore.ts` (`reopenWork`)
 - **Status:** Implemented
