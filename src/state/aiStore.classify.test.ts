@@ -249,7 +249,7 @@ describe('cross-check role', () => {
     // prompt-mode row on its own.
     mockPlatform.callLlm.mockImplementation(async (req: LlmHttpRequest) => {
       if (req.url.includes('/v1/systemone')) return s1Response(0.95)
-      return chatOk([{ path: 'Relevant', value: true, evidence: 'quote', confidence: 0.9 }])
+      return chatOk([{ path: 'Relevant', value: true, evidence: 'paper text', confidence: 0.9 }])
     })
 
     await ai().run()
@@ -270,7 +270,7 @@ describe('cross-check role', () => {
     // test's note on isolating cross-check behavior from REQ-LLM-580.
     mockPlatform.callLlm.mockImplementation(async (req: LlmHttpRequest) => {
       if (req.url.includes('/v1/systemone')) return { ok: false, status: 400, body: 'boom' }
-      return chatOk([{ path: 'Relevant', value: true, evidence: 'quote', confidence: 0.9 }])
+      return chatOk([{ path: 'Relevant', value: true, evidence: 'paper text', confidence: 0.9 }])
     })
 
     await ai().run()

@@ -14,6 +14,7 @@ import { buildSystemPrompt, buildAgentSystemPrompt, buildUserText, buildUserPdfC
 import { buildRequest, extractText, extractError, wasTruncated, baseOf, PROVIDERS } from '../llm/providers'
 import { buildModelsRequest, parseModelsResponse } from '../llm/models'
 import { parseAnswer, coerce } from '../llm/parse'
+import { markEvidence } from '../llm/verify'
 import { resolvePath, MAX_UNBOUNDED_INDEX } from '../llm/paths'
 import { parseChatResponse } from '../llm/chat'
 import { runAgent } from '../llm/agent'
@@ -1002,7 +1003,9 @@ export const useAiStore = create<AiState>()(
                 // Confidence-aware default (REQ-LLM-580): a row with no
                 // confidence stays ticked, one below the threshold starts
                 // unticked for a closer look, same rule classify mode uses.
-                rowChecked = (sug) => sug.confidence === null || sug.confidence >= confidenceThreshold
+                // A quote missing from the paper starts unticked too (REQ-LLM-770).
+                rowChecked = (sug) =>
+                  (sug.confidence === null || sug.confidence >= confidenceThreshold) && sug.evidenceCheck !== 'notFound'
               }
 
               // [impl->req~llm-760~1]
@@ -1986,6 +1989,7 @@ export const useAiStore = create<AiState>()(
         replacements: { suggestion: Suggestion; expectedCurrent: FieldValue }[]
         verdicts: { accept: number; revise: number; reject: number }
         edited: number
+        unverifiedQuotes: number
       }
       const byPaper = new Map<string, Entry>()
       const entryFor = (paperId: string, reviewer: string | null): Entry => {
@@ -1997,6 +2001,7 @@ export const useAiStore = create<AiState>()(
           replacements: [],
           verdicts: { accept: 0, revise: 0, reject: 0 },
           edited: 0,
+          unverifiedQuotes: 0,
         }
         byPaper.set(key, entry)
         return entry
@@ -2017,6 +2022,9 @@ export const useAiStore = create<AiState>()(
           row.edited && row.editedValue !== undefined ? { ...row.suggestion, value: row.editedValue } : row.suggestion
         entry.suggestions.push(suggestion)
         if (row.edited) entry.edited++
+        // [impl->req~llm-770~1]
+        const check = row.suggestion.evidenceCheck
+        if (check === 'notFound' || check === 'wrongPage') entry.unverifiedQuotes++
         const verdict = row.suggestion.judge?.verdict
         if (verdict) entry.verdicts[verdict]++
       }
@@ -2036,6 +2044,7 @@ export const useAiStore = create<AiState>()(
           ...(fewShotByPaper[entry.paperId] !== undefined ? { fewShot: fewShotByPaper[entry.paperId] } : {}),
           ...(webSearchesByPaper[entry.paperId] ? { webSearches: webSearchesByPaper[entry.paperId] } : {}),
           ...(entry.edited > 0 ? { edited: entry.edited } : {}),
+          ...(entry.unverifiedQuotes > 0 ? { unverifiedQuotes: entry.unverifiedQuotes } : {}),
         },
       }))
       const result = useStore.getState().applyAiSuggestionsBatch(items)
@@ -2190,6 +2199,8 @@ async function runOnePaperPrompt(
       add(r.usage)
       return parseAnswer(project.schema, r.text)
     })
+    // [impl->req~llm-770~1]
+    if (answer.fields.length > 0) markEvidence(answer.fields, paperText || (await extractPdfText(bytes)).text)
   }
 
   let recheck: Awaited<ReturnType<typeof runOnePaperPrompt>>['recheck']

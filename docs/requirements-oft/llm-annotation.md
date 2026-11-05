@@ -1302,3 +1302,18 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Functional_Suitability
+
+### REQ-LLM-770: Check AI evidence quotes against the paper text
+`req~llm-770~1`
+
+The system shall check each AI evidence quote against the extracted paper text. The check runs offline and gives the same result for the same input. If the answer names a page, the quote must be on that page or run into the next page. The system shall mark a quote that is not in the paper, or not on the named page, in the review table. A row with a quote that is not in the paper starts unticked in prompt mode. The system shall store the count of applied values with an unverified quote in the AI usage record and show it in the AI usage disclosure.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability)
+- **Evidence:** `src/llm/verify.ts`, `src/llm/parse.ts`, `src/llm/tools.ts`, `src/llm/prompt.ts`, `src/state/aiStore.ts`, `src/model/project.ts`, `src/components/AiDialog.tsx`, `src/components/AiUsageDisclosure.tsx`
+- **Status:** Implemented
+- **Tests:** `src/llm/verify.test.ts`, `src/llm/parse.test.ts`, `src/llm/tools.test.ts`, `src/state/aiStore.recheck.test.ts`, `src/model/model.test.ts`, `src/components/AiUsageDisclosure.test.tsx`
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability

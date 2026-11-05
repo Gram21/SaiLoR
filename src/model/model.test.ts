@@ -1305,6 +1305,7 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
       edited: 3,
       rechecked: 2,
       webSearches: 4,
+      unverifiedQuotes: 1,
       reviewer: '2',
     }
     expect(loadProject(withUsage([record])).papers[0].aiUsage).toEqual([record])
@@ -1324,6 +1325,7 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
     expect(loadProject(withUsage([{ ...base, edited: '3' }])).papers[0].aiUsage).toEqual([base])
     expect(loadProject(withUsage([{ ...base, rechecked: '2' }])).papers[0].aiUsage).toEqual([base])
     expect(loadProject(withUsage([{ ...base, webSearches: null }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, unverifiedQuotes: '1' }])).papers[0].aiUsage).toEqual([base])
     expect(loadProject(withUsage([{ ...base, reviewer: 42 }])).papers[0].aiUsage).toEqual([base])
   })
 })

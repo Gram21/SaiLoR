@@ -26,7 +26,7 @@ if (typeof globalThis.localStorage === 'undefined') {
  */
 
 vi.mock('../model/pdfText', () => ({
-  extractPdfText: vi.fn(async () => ({ text: 'paper text', pages: 1, empty: false })),
+  extractPdfText: vi.fn(async () => ({ text: 'paper text with SECRET QUOTE', pages: 1, empty: false })),
 }))
 
 const runAgentMock = vi.fn<(input: AgentInput, deps: AgentDeps) => Promise<AgentResult>>()
@@ -209,6 +209,25 @@ describe('re-check run and apply', () => {
     expect(st().project!.papers[0].annotations.Summary[0].value).toBe('human edit')
     expect(ai().applied?.replaced).toBeUndefined()
     expect(st().project!.papers[0].aiUsage[0].rechecked).toBeUndefined()
+  })
+
+  // [utest->req~llm-770~1]
+  it('unticks a value whose quote is not in the paper and records it as unverified on apply', async () => {
+    mockLlm({ fields: [{ path: 'Year', value: 2020, evidence: 'an invented sentence', confidence: 0.9 }], skipped: [] })
+    await ai().run()
+    expect(ai().rows[0].suggestion.evidenceCheck).toBe('notFound')
+    expect(ai().rows[0].checked).toBe(false)
+    ai().toggleRow(0, true)
+    ai().apply()
+    expect(st().project!.papers[0].aiUsage[0].unverifiedQuotes).toBe(1)
+  })
+
+  it('records no unverified quotes when every quote is in the paper', async () => {
+    mockLlm()
+    await ai().run()
+    expect(ai().rows[0].suggestion.evidenceCheck).toBe('verified')
+    ai().apply()
+    expect(st().project!.papers[0].aiUsage[0]).not.toHaveProperty('unverifiedQuotes')
   })
 
   it('agree and unsure outcomes are not actionable', async () => {

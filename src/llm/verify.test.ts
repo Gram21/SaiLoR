@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { resolveSchema } from '../model/schema'
-import { checkSubmission, evidenceSupported } from './verify'
+import { checkEvidence, checkSubmission, evidenceSupported, markEvidence } from './verify'
 import type { SubmitPayload } from './tools'
 
 const schema = resolveSchema([
@@ -34,6 +34,50 @@ describe('evidenceSupported', () => {
   })
 })
 
+// [utest->req~llm-770~1]
+describe('checkEvidence', () => {
+  const PAGED = '[page 1]\nWe recruited 24 participants.\n\n[page 2]\nThe study ran in 2021 and\n\n[page 3]\nended in 2022.'
+
+  it('verifies a quote on the page the model named', () => {
+    expect(checkEvidence('recruited 24 participants', PAGED, 1)).toBe('verified')
+  })
+
+  it('verifies a quote without a page wherever it is in the paper', () => {
+    expect(checkEvidence('ended in 2022', PAGED)).toBe('verified')
+  })
+
+  it('verifies a quote that starts on the named page and runs into the next', () => {
+    expect(checkEvidence('The study ran in 2021 and ended in 2022', PAGED, 2)).toBe('verified')
+  })
+
+  it('marks a real quote on another page as wrongPage', () => {
+    expect(checkEvidence('recruited 24 participants', PAGED, 3)).toBe('wrongPage')
+  })
+
+  it('marks a quote missing from the paper as notFound', () => {
+    expect(checkEvidence('the sample size was 5000 people', PAGED, 1)).toBe('notFound')
+  })
+
+  it('checks nothing without a quote or without paper text', () => {
+    expect(checkEvidence('', PAGED, 1)).toBeUndefined()
+    expect(checkEvidence('recruited 24 participants', '')).toBeUndefined()
+  })
+
+  it('ignores the page when the text has no page markers', () => {
+    expect(checkEvidence('in 2021', PAPER_TEXT, 7)).toBe('verified')
+  })
+
+  it('markEvidence sets the check only on suggestions with a quote', () => {
+    const fields = [
+      { path: 'Year', value: 2021, evidence: 'ran in 2021', confidence: null, page: 2 },
+      { path: 'Study Type', value: 'x', evidence: 'invented quote here', confidence: null },
+      { path: 'Summary', value: 'y', evidence: '', confidence: null },
+    ]
+    markEvidence(fields, PAGED)
+    expect(fields.map((f) => (f as { evidenceCheck?: string }).evidenceCheck)).toEqual(['verified', 'notFound', undefined])
+  })
+})
+
 describe('checkSubmission', () => {
   it('accepts a paper-sourced value whose evidence is real', () => {
     const payload: SubmitPayload = {
@@ -42,7 +86,9 @@ describe('checkSubmission', () => {
     }
     const { answer, failures } = checkSubmission(schema, payload, PAPER_TEXT, new Set())
     expect(failures).toEqual([])
-    expect(answer.fields).toEqual([{ path: 'Year', value: 2021, evidence: 'in 2021', confidence: null, source: 'paper' }])
+    expect(answer.fields).toEqual([
+      { path: 'Year', value: 2021, evidence: 'in 2021', confidence: null, source: 'paper', evidenceCheck: 'verified' },
+    ])
   })
 
   it('flags a hallucinated quote deterministically', () => {
@@ -52,6 +98,18 @@ describe('checkSubmission', () => {
     }
     const { failures } = checkSubmission(schema, payload, PAPER_TEXT, new Set())
     expect(failures).toEqual([{ path: 'Year', reason: 'Evidence quote could not be found in the paper text.' }])
+  })
+
+  // [utest->req~llm-770~1]
+  it('marks a wrong page without failing the value', () => {
+    const paged = '[page 1]\nWe recruited 24 participants.\n\n[page 2]\nMethods.\n\n[page 3]\nThe study ran in 2021.'
+    const payload: SubmitPayload = {
+      fields: [{ path: 'Year', value: 2021, evidence: 'ran in 2021', source: 'paper', page: 1 }],
+      skipped: [],
+    }
+    const { answer, failures } = checkSubmission(schema, payload, paged, new Set())
+    expect(failures).toEqual([])
+    expect(answer.fields[0]).toMatchObject({ page: 1, evidenceCheck: 'wrongPage' })
   })
 
   it('flags a web-sourced value whose URL was never fetched this run', () => {

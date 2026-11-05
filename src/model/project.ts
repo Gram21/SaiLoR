@@ -74,6 +74,10 @@ export interface AiUsageRecord {
   // [impl->req~llm-670~1]
   /** Provider web searches the agent ran, when web search was on. */
   webSearches?: number
+  // [impl->req~llm-770~1]
+  /** How many applied values carried a quote the offline check could not
+   *  confirm: not found in the paper text, or not on the page named. */
+  unverifiedQuotes?: number
   /** The seat the values were written into ("1".."N" or "consolidation"). */
   reviewer?: string
 }
@@ -521,6 +525,9 @@ function parseAiUsage(raw: unknown): AiUsageRecord[] {
       if (typeof e.edited === 'number' && Number.isFinite(e.edited)) record.edited = e.edited
       if (typeof e.rechecked === 'number' && Number.isFinite(e.rechecked)) record.rechecked = e.rechecked
       if (typeof e.webSearches === 'number' && Number.isFinite(e.webSearches)) record.webSearches = e.webSearches
+      if (typeof e.unverifiedQuotes === 'number' && Number.isFinite(e.unverifiedQuotes)) {
+        record.unverifiedQuotes = e.unverifiedQuotes
+      }
       if (typeof e.reviewer === 'string') record.reviewer = e.reviewer
       out.push(record)
     }

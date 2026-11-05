@@ -1406,6 +1406,16 @@ function ReviewTable({
                             {row.suggestion.source === 'system-one' ? t('ai.evidence.noQuoteSystemOne') : t('ai.evidence.none')}
                           </span>
                         )}
+                        {row.suggestion.evidenceCheck === 'notFound' && (
+                          <div><span className="ai-judge-verdict ai-judge-revise">{t('ai.evidence.notFound')}</span></div>
+                        )}
+                        {row.suggestion.evidenceCheck === 'wrongPage' && (
+                          <div>
+                            <span className="ai-judge-verdict ai-judge-revise">
+                              {t('ai.evidence.wrongPage', { page: row.suggestion.page ?? '' })}
+                            </span>
+                          </div>
+                        )}
                       </td>
                       {mode === 'agent' && (
                         <td className="ai-source">

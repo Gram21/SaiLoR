@@ -166,6 +166,18 @@ describe('parseSubmitArgs', () => {
     expect(payload.notes).toBe('done')
   })
 
+  // [utest->req~llm-770~1]
+  it('keeps a numeric page and drops any other', () => {
+    const payload = parseSubmitArgs({
+      fields: [
+        { path: 'Year', value: 2021, evidence: 'e', page: 4 },
+        { path: 'Year', value: 2021, evidence: 'e', page: 'four' },
+      ],
+      skipped: [],
+    })
+    expect(payload.fields.map((f) => f.page)).toEqual([4, undefined])
+  })
+
   it('drops malformed entries instead of throwing', () => {
     const payload = parseSubmitArgs({
       fields: [{ path: 'Year' }, 'garbage', { value: 5 }, { path: 'Ok', value: 1, evidence: 'e' }],

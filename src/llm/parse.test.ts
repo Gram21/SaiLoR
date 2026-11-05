@@ -266,6 +266,15 @@ describe('evidence and confidence', () => {
   it('nulls a missing confidence', () => {
     expect(parseAnswer(schema, one('Year', 2021)).fields[0].confidence).toBeNull()
   })
+
+  // [utest->req~llm-770~1]
+  it('keeps a positive whole page number and drops any other page', () => {
+    expect(parseAnswer(schema, one('Year', 2021, { page: 3 })).fields[0].page).toBe(3)
+    expect(parseAnswer(schema, one('Year', 2021, { page: '3' })).fields[0].page).toBe(3)
+    for (const page of [0, -2, 1.5, 'three', null]) {
+      expect(parseAnswer(schema, one('Year', 2021, { page })).fields[0]).not.toHaveProperty('page')
+    }
+  })
 })
 
 describe('duplicates', () => {
