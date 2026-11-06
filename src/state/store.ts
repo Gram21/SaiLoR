@@ -484,6 +484,7 @@ export function finishReady(project: Project | null, person: string | null): boo
 
 /** The project that Finish asked to lock at its next save; any later edit makes it stale. */
 let finishRequest: Project | null = null
+let saveQueue: Promise<void> = Promise.resolve()
 
 // [impl->req~con-540~1]
 function lockFinished(project: Project, person: string | null): Project {
@@ -917,6 +918,7 @@ interface AppState {
    *  would let Ctrl+Z resurrect what the resync just discarded. */
   resyncProjectFromDisk: () => Promise<void>
   save: () => Promise<boolean>
+  saveOnce: () => Promise<boolean>
   /** Answer a `staleSave`: overwrite the clashing files with mine, keep the
    *  disk's version of them, or combine both field by field. */
   resolveStaleSave: (choice: 'overwrite' | 'discard' | 'combine') => Promise<void>
@@ -1865,10 +1867,21 @@ export const useStore = create<AppState>()(
       }
     },
 
+    // One write at a time: autosave, Ctrl+S, the quit prompt and finishing a seat may all fire together.
     save: async () => {
+      if (!get().project) return false
+      if (!get().saveHandle) return get().saveAs()
+      const run = saveQueue.then(() => get().saveOnce())
+      saveQueue = run.then(
+        () => {},
+        () => {},
+      )
+      return run
+    },
+
+    saveOnce: async () => {
       const { project, saveHandle } = get()
-      if (!project) return false
-      if (!saveHandle) return get().saveAs()
+      if (!project || !saveHandle) return false
       // Undecided from an earlier attempt: writing now would skip the question.
       if (get().staleSave) {
         set((s) => {
@@ -1882,10 +1895,11 @@ export const useStore = create<AppState>()(
       })
       // [impl->req~con-540~1]
       const toSave = finishRequest === project ? lockFinished(project, activePerson(get())) : project
-      finishRequest = null
       try {
         const text = serializeProject(toSave)
         const handle = await platform.saveProject(text, saveHandle)
+        // Kept until the write succeeds, so a failed save is retried with the finish lock.
+        if (finishRequest === project) finishRequest = null
         diskProject = toSave
         // Nothing blocks input while the write above is in flight (Field.tsx
         // writes every keystroke straight to the store, and screening's I/E/U

@@ -144,3 +144,22 @@ describe('opening a project never writes to disk by itself', () => {
     expect(useStore.getState().dirty).toBe(false)
   })
 })
+
+describe('save() runs one write at a time', () => {
+  it('does not start a second write before the first resolves', async () => {
+    useStore.getState().loadFromText(PROJECT, { kind: 'electron', path: '/x.json' }, 'x.json')
+    let active = 0
+    let peak = 0
+    const real = mockPlatform.saveProject
+    mockPlatform.saveProject = async (text, handle) => {
+      active++
+      peak = Math.max(peak, active)
+      await new Promise((r) => setTimeout(r, 5))
+      active--
+      return real(text, handle)
+    }
+    await Promise.all([useStore.getState().save(), useStore.getState().save(), useStore.getState().save()])
+    mockPlatform.saveProject = real
+    expect(peak).toBe(1)
+  })
+})
