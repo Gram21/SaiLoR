@@ -24,6 +24,8 @@ dialogs.
 > 📖 For a feature-by-feature walkthrough with screenshots — including warnings worth reading before
 > you rely on this for real review data — see the [user guide](https://github.com/Gram21/SaiLoR/wiki/User-Guide).
 
+Project website with an overview and a first-project walkthrough: https://gram21.github.io/SaiLoR/
+
 ## Quick start
 
 Either [install a release](#installing-a-release) or [clone this repository and run the tool with npm](#run-the-development-variant-with-npm).

@@ -29,6 +29,18 @@ Find installers in `src-tauri/target/release/bundle/`.
 | Windows | NSIS `.exe` |
 | Linux | AppImage, `.deb`, `.rpm` |
 
+## Preview the project website
+
+The project website is the static site in `site/`. It has no build step.
+
+1. Run `python3 -m http.server -d site 8000` in the repository root.
+2. Open `http://localhost:8000` in a browser.
+3. Press `Ctrl+C` to stop the server.
+
+To check the relative links and images of the site pages, run `npm run check:site`.
+
+To build the deployed site, run `make ci-pages`. The output is in `_site/`, and the online demo is in `_site/demo/`. The build needs the demo build script, `npm run build:demo`. The demo link works only in the built site, not in the preview.
+
 ## Build in Docker (Linux only)
 
 Run `make docker-linux`. The command builds the Linux bundles in an Ubuntu 22.04 container.
