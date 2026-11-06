@@ -58,8 +58,21 @@ describe('paperIdProblem', () => {
     expect(paperIdProblem('CON.json')?.reason).toBe('reserved-name')
   })
 
-  it('does not flag a reserved name as a mere prefix', () => {
+  it('does not flag a reserved name as a mere prefix or suffix', () => {
     expect(paperIdProblem('CONference')).toBeNull()
+    expect(paperIdProblem('falCON')).toBeNull()
+  })
+
+  it('rejects the AI feedback folder name, case-insensitively', () => {
+    expect(paperIdProblem('Feedback')?.reason).toBe('reserved-name')
+  })
+
+  it('explains each refusal in its message', () => {
+    expect(paperIdProblem('a\nb')?.detail).toBe('it contains a control character')
+    expect(paperIdProblem('..')?.detail).toBe('".." is not a valid folder name')
+    expect(paperIdProblem('Smith.')?.detail).toContain('trailing dot or space')
+    expect(paperIdProblem('con.json')?.detail).toBe('"CON" is a reserved device name on Windows')
+    expect(paperIdProblem('feedback')?.detail).toContain('"feedback" is the folder for AI feedback files')
   })
 })
 
