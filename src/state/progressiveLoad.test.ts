@@ -18,8 +18,10 @@ const papers = Array.from({ length: N }, (_, i) => ({
   authors: [],
   pdf: `p${i}.pdf`,
   annotations: { Relevant: [{ value: true }] },
+  // The first unfinished paper is in the second batch.
+  finished: i !== 2100,
 }))
-const head = JSON.stringify({ version: 1, config, papers: papers.map((p) => ({ ...p, annotations: {} })) })
+const head = JSON.stringify({ version: 1, config, papers: papers.map((p) => ({ ...p, annotations: {}, finished: undefined })) })
 const only = (ids: string[]) => {
   const wanted = new Set(ids)
   return JSON.stringify({ version: 1, config, papers: papers.filter((p) => wanted.has(p.id)) })
@@ -84,11 +86,14 @@ describe('progressive project loading', () => {
     await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(2000))
     expect(st().project!.papers).toHaveLength(2000)
     expect(st().project!.papers[0].annotations.Relevant).toEqual([{ value: true }])
-    expect(st().currentPaperId).toBe('p0')
+    expect(st().currentPaperId).toBeNull()
 
     await release()
+    await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(4000))
+    expect(st().currentPaperId).toBe('p2100')
     await release()
     await done
+    expect(st().currentPaperId).toBe('p2100')
     expect(readPapers.mock.calls.map((c) => c[0].length)).toEqual([2000, 2000, 500])
     expect(st().loadState).toBe('ready')
     expect(st().loadProgress).toBeNull()
@@ -118,12 +123,14 @@ describe('progressive project loading', () => {
   it('keeps per-paper edits made while loading, and undo keeps the later batches', async () => {
     const done = st().openRecent('/big/project.json')
     await release()
-    await vi.waitFor(() => expect(st().currentPaperId).toBe('p0'))
+    await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(2000))
+    st().selectPaper('p0')
     st().setFieldValue([], 'Relevant', 0, false)
 
     await release()
     await release()
     await done
+    expect(st().currentPaperId).toBe('p0')
     expect(st().project!.papers[0].annotations.Relevant).toEqual([{ value: false }])
     st().undo()
     expect(st().project!.papers).toHaveLength(N)

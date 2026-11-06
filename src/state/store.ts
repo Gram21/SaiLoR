@@ -1353,10 +1353,14 @@ export function currentFinished(
  * seat, which has its own sign-off (`completenessApplies`).
  */
 function firstUnfinishedPaperId(project: Project, currentReviewer: string | null): string | null {
-  const fallback = project.papers[0]?.id ?? null
+  return firstUnfinishedOf(project, project.papers, currentReviewer) ?? project.papers[0]?.id ?? null
+}
+
+/** The first of `papers` (of `project`) not finished yet, or null; the first of them when nothing is tracked. */
+function firstUnfinishedOf(project: Project, papers: Paper[], currentReviewer: string | null): string | null {
   const applies = completenessApplies(project)
-  if (!applies || (project.reviewers > 1 && currentReviewer === null)) return fallback
-  for (const paper of project.papers) {
+  if (!applies || (project.reviewers > 1 && currentReviewer === null)) return papers[0]?.id ?? null
+  for (const paper of papers) {
     const state = annotationStateFor(
       project.schema,
       currentTree(project, currentReviewer, paper),
@@ -1366,8 +1370,15 @@ function firstUnfinishedPaperId(project: Project, currentReviewer: string | null
     )
     if (state !== 'finished') return paper.id
   }
-  return fallback
+  return null
 }
+
+/**
+ * Set by `loadFromText` when the project lands on its first unfinished paper,
+ * which a head without answers cannot tell: a streamed open looks for it in
+ * each batch instead. `reviewer` is the seat `loadFromText` chose.
+ */
+let landOnFirstUnfinished: { seats: RememberedSeats; reviewer: string | null } | null = null
 
 /** Walk from a paper's annotation root to the container tree addressed by `path`. */
 export function containerAt(root: AnnotationValueTree, path: PathSeg[]): AnnotationValueTree {
@@ -1429,6 +1440,7 @@ async function streamPapers(readPapers: NonNullable<OpenedProject['readPapers']>
   const generation = projectGeneration
   const ids = head.papers.map((p) => p.id)
   const landing = useStore.getState().currentPaperId
+  const unfinished = landOnFirstUnfinished
   const loaded: Paper[] = []
   const corrupt: string[] = []
   diskProject = { ...head, papers: loaded }
@@ -1445,14 +1457,25 @@ async function streamPapers(readPapers: NonNullable<OpenedProject['readPapers']>
       const papers = batch.papers
       loaded.push(...papers)
       corrupt.push(...batch.corruptFiles)
-      const landed = landing !== null && papers.some((p) => p.id === landing)
+      const now = useStore.getState()
+      const landed =
+        now.currentPaperId !== null
+          ? null
+          : unfinished
+            ? firstUnfinishedOf(now.project!, papers, unfinished.seats.last)
+            : landing !== null && papers.some((p) => p.id === landing)
+              ? landing
+              : null
       useStore.setState((s) => {
         for (const e of [...s.past, ...s.future]) e.project.papers.push(...papers)
         s.project!.papers.push(...papers)
         s.loadProgress = { loaded: loaded.length, total: ids.length }
-        if (landed && s.currentPaperId === null) s.currentPaperId = landing
+        if (landed === null) return
+        s.currentPaperId = landed
+        if (unfinished && s.project!.reviewers > 1 && s.currentReviewer === unfinished.reviewer)
+          s.currentReviewer = unfinished.seats.perPaper[landed] || unfinished.seats.last
       })
-      if (landed) void useStore.getState().extractScreeningAbstract(landing)
+      if (landed) void useStore.getState().extractScreeningAbstract(landed)
       await new Promise((resolve) => setTimeout(resolve, 0))
       if (generation !== projectGeneration) return null
     }
@@ -1845,6 +1868,7 @@ export const useStore = create<AppState>()(
           : project.reviewers > 1
             ? (landingPaperId && seats.perPaper[landingPaperId]) || seats.last
             : null
+        landOnFirstUnfinished = !ownPapers && !savedPaperStillExists ? { seats, reviewer } : null
         // The title only becomes known once the JSON is parsed, so the recents
         // entry is enriched here rather than in the adapter's open path.
         if (handle) getPlatform().rememberProject(handle, name, project.title)
