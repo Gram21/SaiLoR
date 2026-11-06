@@ -28,7 +28,7 @@ def paths(cell):
 
 
 def main():
-    ids, status, kinds = {}, Counter(), Counter()
+    ids, status, kinds, entries = {}, Counter(), Counter(), {}
     for f in sorted(REQ.glob("*.md")):
         current = None
         for line in f.read_text().splitlines():
@@ -36,16 +36,23 @@ def main():
             if m:
                 current = m.group(1)
                 ids[current] = m.group(2)
+                entries[current] = {}
+            elif current and (f := re.match(r"- \*\*(Type|Evidence|Verified by):\*\*(.*)", line)):
+                entries[current][f.group(1)] = f.group(2).strip()
+                if f.group(1) == "Type":
+                    kinds["functional" if f.group(2).strip().startswith("Functional") else "non-functional"] += 1
             elif current and line.startswith("- **Status:**"):
                 status["implemented" if line.split("**Status:**")[1].strip().startswith("Implemented") else "other"] += 1
-            elif current and line.startswith("- **Type:**"):
-                kinds["functional" if line.split("**Type:**")[1].strip().startswith("Functional") else "non-functional"] += 1
 
     rows = {}
     for line in (REQ / "traceability.md").read_text().splitlines():
         if line.startswith("| REQ-"):
             c = cells(line)
             rows[c[0]] = c
+    unmatrixed = sorted(set(ids) - set(rows))
+    for i in unmatrixed:
+        e = entries[i]
+        rows[i] = [i, "", e.get("Type", ""), e.get("Evidence", ""), e.get("Verified by", ""), "", ""]
 
     groups = {"DAT": "DAT/EDT", "EDT": "DAT/EDT", "ANN": "ANN/LST/PDF/UI", "LST": "ANN/LST/PDF/UI",
               "PDF": "ANN/LST/PDF/UI", "UI": "ANN/LST/PDF/UI"}
@@ -57,7 +64,7 @@ def main():
         tests |= paths(c[4])
         sources |= paths(c[3])
     for p in tests | sources:
-        if not (ROOT / p).exists():
+        if not any(ROOT.glob(p)):
             missing.add(p)
     security = sum(1 for c in rows.values() if "Security" in c[2])
 
@@ -68,7 +75,7 @@ def main():
         print(f"  {g}: {k}")
     print(f"functional / non-functional: {kinds['functional']} / {kinds['non-functional']}")
     print(f"status implemented / other: {status['implemented']} / {status['other']}")
-    print(f"matrix rows: {len(rows)}; ids only in files: {sorted(set(ids) - set(rows))}; only in matrix: {sorted(set(rows) - set(ids))}")
+    print(f"matrix rows: {len(rows) - len(unmatrixed)}; ids only in files (links taken from their entries): {unmatrixed}; only in matrix: {sorted(set(rows) - set(ids))}")
     print(f"with implementing source link: {pct(has(3))}")
     print(f"with verifying test: {pct(has(4))}")
     print(f"without automated check: {pct(n - has(4))}")

@@ -5,6 +5,7 @@
 We think that the tool should meet the same standard for its own behavior.
 Traceability links requirements to the artifacts that realize and verify them~\cite{gotel1994analysis,clelandhuang2014software}.
 In this section, we describe how we documented the requirements of \SaiLoR and how far they are traced.
+We also describe the tests that verify them.
 
 \subsection{Recovery of the Requirements}\label{sec:requirements-method}
 
@@ -35,59 +36,101 @@ A dash in the \emph{Verified by} column means that we confirmed the requirement 
 
 \begin{table}[t]
     \centering
-    \caption{Requirements per category and trace links of all 391 requirements}
+    \caption{Requirements per category and trace links of all 493 requirements}
     \label{tab:trace}
     \begin{tabular}{@{}lrr@{}}
         \toprule
         Category                                 & \multicolumn{2}{r}{Requirements} \\
         \midrule
-        Data model and project editor            & \multicolumn{2}{r}{61}           \\
-        Annotation view, paper list, and \PDF     & \multicolumn{2}{r}{54}           \\
+        Data model and project editor            & \multicolumn{2}{r}{92}           \\
+        Annotation view, paper list, and \PDF     & \multicolumn{2}{r}{76}           \\
         Screening                                & \multicolumn{2}{r}{39}           \\
-        Consolidation                            & \multicolumn{2}{r}{44}           \\
-        Git integration                          & \multicolumn{2}{r}{59}           \\
-        \LLM assistance                          & \multicolumn{2}{r}{88}           \\
-        Platform and desktop shell               & \multicolumn{2}{r}{46}           \\
+        Consolidation                            & \multicolumn{2}{r}{61}           \\
+        Git integration                          & \multicolumn{2}{r}{66}           \\
+        \LLM assistance                          & \multicolumn{2}{r}{103}           \\
+        Platform and desktop shell               & \multicolumn{2}{r}{56}           \\
         \midrule
         Trace link                               & Count & Share                    \\
         \midrule
-        Implementing source code                 & 365   & 93\%                     \\
-        At least one verifying test              & 360   & 92\%                     \\
-        Source inspection only                   & 31    & 8\%                     \\
-        Introducing or pinning commit            & 118   & 30\%                     \\
-        Documentation section                    & 337   & 86\%                     \\
+        Implementing source code                 & 467   & 95\%                     \\
+        At least one verifying test              & 463   & 94\%                     \\
+        Source inspection only                   & 30    & 6\%                      \\
+        Introducing or pinning commit            & 122   & 25\%                     \\
+        Documentation section                    & 406   & 82\%                     \\
         \bottomrule
     \end{tabular}
 \end{table}
 
 % Numbers
-In total, we documented 391 requirements.
+In total, we documented 493 requirements.
 \autoref{tab:trace} shows how they are distributed over the categories and how many of them are linked to each kind of artifact.
-Of the requirements, 344 are functional and 47 are non-functional, and 32 have the type security.
-At the time of writing, 390 requirements are implemented.
-One requirement is implemented in part: the guard against reload shortcuts (cf.~\autoref{sec:discussion}).
-The links point to 177 distinct source files and 185 distinct test files.
-Of all requirements, 93\% link to implementing source code, and 92\% link to at least one verifying test.
-The remaining 31 requirements are confirmed by source inspection only.
-Of these, 16 belong to the platform and desktop shell and 7 to the git integration.
-Only 30\% link to a commit that introduced or pinned the behavior.
+Of the requirements, 438 are functional and 55 are non-functional, and 42 have the type security.
+At the time of writing, all 493 requirements are implemented.
+For three of them, the evidence is weaker than for the rest.
+We have not tried the guard against reload shortcuts by hand on Windows and Linux.
+We checked the right-to-left layout for Persian only in the simulated browser of the unit tests.
+We checked the container image with a remote desktop in the browser only by hand.
+The links point to 219 distinct source files and 224 distinct test files.
+Of all requirements, 95\% link to implementing source code, and 94\% link to at least one verifying test.
+The remaining 30 requirements are confirmed by source inspection only.
+Of these, 15 belong to the platform and desktop shell and 7 to the git integration.
+Only 25\% link to a commit that introduced or pinned the behavior.
 
 % Statistics script
 We count these numbers with a small script in the report folder that parses the requirement files and the matrix.
 The script also checks that every linked file exists.
+At the time of writing, five new requirements on progressive loading and on the keyboard focus in dialogs have no row in the matrix yet.
+For them, the script takes the links from the requirement files.
+
+% OpenFastTrace
+Since November 2026, the \CI also checks the trace links with OpenFastTrace~\cite{openfasttrace}.
+A script converts the requirement files into the input format of OpenFastTrace.
+Source files and tests carry tags that name the requirement that they implement or verify.
+The \CI job fails if a requirement that names source code or tests lacks a matching tag.
+
+% Keeping it current
+To keep the links current, the repository asks every change that affects a requirement to update the matching requirement file in the same change.
+OpenFastTrace checks the tags in the code, but no check compares the matrix with the requirement files.
+Thus, the matrix can still drift, as the five missing rows show.
 
 \subsection{Automated Tests}\label{sec:requirements-tests}
 
 % Test suites
 \SaiLoR has four test suites.
-The unit suite has 2834 tests in 197 files and runs with Vitest in jsdom, a simulated browser environment.
+The unit suite has 3423 tests in 237 files and runs with Vitest in jsdom, a simulated browser environment.
 The integration suite has 56 tests in 11 files.
 These tests render the real components and run scenarios such as annotation, consolidation, and merges against scratch git repositories.
-The Rust backend has 104 tests.
+The Rust backend has 129 tests.
 Finally, a probe build of the desktop application opens the sample project, renders a \PDF, and checks that a path traversal is refused.
-The \CI runs this probe in the system web view on macOS, Windows, and Linux.
-On Linux and Windows, it also drives the probe through WebDriver.
+The \CI runs this probe in the system web view on six runners: two versions of macOS, Windows, two versions of Ubuntu, and Ubuntu on arm64.
+On Linux and Windows, it also drives the application through WebDriver.
 
-% Keeping it current
-To keep the links current, the repository asks every change that affects a requirement to update the matching requirement file in the same change.
-This rule is a convention and not a check, so the links can still drift.
+% CI gates
+Every \CI job runs a script from the repository, so that developers can run the same checks locally.
+The build job fails if the line coverage of the unit tests drops below 82\%.
+Further jobs lint the Rust code, the workflows, and the shell scripts, and they audit the npm and Rust dependencies for known vulnerabilities.
+The \CI pins every action to a commit and runs with a read-only token.
+The release workflow runs in a separate environment, and it publishes \SBOMs, checksums, and build attestations with the installers.
+
+\subsection{Mutation Testing}\label{sec:requirements-mutation}
+
+% Why
+Coverage shows which code the tests run, but not whether the tests would notice a wrong result.
+Mutation testing measures this property~\cite{jia2011mutation}.
+It changes the code in small ways and checks whether a test fails.
+We used StrykerJS~\cite{stryker} on the model code and on the pure modules of the \LLM assistance.
+
+% Method
+A full run over the model code took too long, so we stopped it at about 85\% of the mutants.
+Instead, we ran StrykerJS file by file.
+For each surviving mutant, we either added a test that kills it or recorded why no test can kill it.
+
+% Results
+We finished this process for 34 files.
+In these files, the mutation score rose from between 54\% and 100\% to between 80\% and 100\%.
+We found no bug in the production code.
+All remaining survivors that we inspected are equivalent mutants or lie in code that no input can reach.
+The work added about 330 unit tests.
+At the time of writing, 204 of these tests are on a branch that is not merged yet, and the count of 3423 unit tests above excludes them.
+Mutation testing is not part of the \CI, because a full run takes more than one hour.
+Developers can start it in a manual workflow.

@@ -39,6 +39,14 @@ A probable duplicate has a fuzzy title similarity of at least $0.90$, or the sam
 The reviewer must decide on each probable duplicate.
 If the reviewer merges two records, \SaiLoR only fills fields that are empty in the existing paper.
 
+% PDF folder scan
+A project can also name a \PDF folder inside the project folder.
+\SaiLoR scans this folder when the project opens, when the window gets the focus, and when the reviewer asks for a rescan.
+It compares the files by their SHA-256 hash and not by their names, so a renamed file is not offered again.
+For each new file, \SaiLoR proposes the title, the authors, the year, and the \DOI.
+The proposal comes from the properties and the first page of the \PDF, optionally from Crossref, and otherwise from the file name.
+\SaiLoR does not use an \LLM for this proposal.
+
 % Screening
 In a screening project, each reviewer decides per paper whether to include it, to exclude it with a reason, or to leave it undecided.
 \autoref{fig:screening} shows the screening view of the running example.
@@ -81,12 +89,27 @@ The link popover of a field lists the linked marks, and a click on a mark jumps 
 In this way, the project stores where in the paper an answer comes from.
 Reviewers can export their marks as standard \PDF annotations into a new \PDF file.
 
+% Metadata correction
+Imported metadata can be wrong, for example, a title with broken characters or a missing \DOI.
+If the project enables metadata correction, reviewers can correct the title, the authors, the year, and the \DOI in the annotation view.
+\SaiLoR stores each correction in the annotation file of the reviewer's seat and not in the project file.
+The consolidator compares the corrections of all seats in a metadata dialog and then updates the project metadata.
+
 \subsection{Conducting: Consolidation}\label{sec:tool-consolidation}
 
 % Seats
 In a project with several reviewers, every reviewer must pick a seat before editing.
 A reviewer only sees the answers of their own seat.
 The consolidator works in the additional consolidation seat.
+
+% Strict mode
+For larger teams, a project can enable a strict mode.
+The project then lists persons and assigns papers to them.
+On open, each person picks their name and sees only the assigned papers in a fixed seat.
+Consolidation starts only when all persons have finished their papers, unless a manager overrides this rule.
+At the next save, \SaiLoR locks the finished work, and only a manager can reopen it.
+The strict mode is a workflow aid and not a security control.
+A person who edits the files directly or picks another name can still change any answer, and \SaiLoR states this in the dialog and in the documentation.
 
 % Alignment
 Before \SaiLoR can compare answers, it must find out which entries of a repeatable group belong together.
@@ -135,6 +158,8 @@ The schema is merged node by node, and answers under a removed field are kept.
 Only if both sides changed the same field to different values does the reviewer have to decide.
 \autoref{fig:merge} shows the dialog for these conflicts.
 If a merge leaves conflicts in files that do not belong to the project, \SaiLoR aborts it and restores the previous state.
+Before a pull or merge starts, \SaiLoR shows a summary of the changed files, the changed papers, and the expected conflicts, and it waits for the reviewer to confirm.
+It also saves the current state of the branch, so that the reviewer can undo the last merge.
 
 \begin{figure}[t]
     \centering
@@ -142,6 +167,35 @@ If a merge leaves conflicts in files that do not belong to the project, \SaiLoR 
     \caption{Field-level resolution of merge conflicts after a pull}
     \label{fig:merge}
 \end{figure}
+
+\subsection{Exploring the Review as a Knowledge Graph}\label{sec:tool-graph}
+
+% Graph and export
+\SaiLoR can turn a project into a knowledge graph.
+The nodes are the papers, authors, venues, keywords, and the answers of the reviewers.
+The edges state that a paper has an author, appears in a venue, has a keyword, cites another paper, or has an answer.
+Reviewers can export the graph as \JSON-LD, \RDF Turtle, GraphML, or two \CSV files.
+The export is deterministic, so two exports of the same project give the same files.
+
+% View
+The knowledge graph view draws the graph in a force layout.
+Reviewers pan, zoom, move nodes, and expand the neighbors of a node with a double click.
+Each relation type has its own line style, and a legend lets reviewers hide relation types.
+A side panel lists the nodes as text, so that the graph is also usable without the canvas.
+A short text query filters the graph, for example, by node type or by the answer of a field.
+
+% Cypher
+For other questions, reviewers can write a query in a read-only subset of Cypher~\cite{francis2018cypher}.
+For example, the query \texttt{MATCH (p:Paper)-[:cites]->(q:Paper)} \texttt{RETURN q.year, count(*)} counts the cited papers per year.
+\SaiLoR shows the result as a table and names the position of an error in the query.
+\autoref{sec:architecture-scale} describes how \SaiLoR keeps the view and the queries fast for large graphs.
+
+\subsection{Languages}\label{sec:tool-languages}
+
+% i18n
+The user interface is available in nine languages: English, German, Chinese, Persian, Spanish, French, Italian, Portuguese, and Japanese.
+A change of the language applies at once, also to the native menus, and does not change the project.
+For Persian, \SaiLoR mirrors the layout from right to left, while code, keys, and the \PDF pages stay left to right.
 
 \subsection{\acs{LLM} Assistance}\label{sec:tool-llm}
 
@@ -166,5 +220,8 @@ For each apply, \SaiLoR records the provider, the model, and the time in the pro
 % AI seat and screening
 In a project with several reviewers, the last seat can be dedicated to the model.
 The answers of this seat go through the same consolidation as the answers of the human reviewers, so that the agreement statistics also cover the model.
+After consolidation, an evaluation dialog compares the answers of this seat with the consolidated answers and shows the agreement per field.
+Reviewers can export this table as a \CSV file.
+The project can also store its own texts for the prompts, for example, a role text or help texts per field.
 For screening, the model proposes a decision and a reason per paper.
 \SaiLoR never pre-selects an exclusion, and it pre-selects an inclusion only if the confidence is at least $0.8$.

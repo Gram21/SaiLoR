@@ -12,8 +12,8 @@ The user interface is a React application in TypeScript that runs in the web vie
 It renders \PDFs with pdf.js and keeps the project state in a single store.
 A backend in Rust provides the native capabilities, such as file access, git, the keychain, and network requests.
 The user interface reaches the backend only through commands that the backend registers.
-At the time of writing, the TypeScript code base has about 50,000 lines of code without tests and about 44,000 lines of tests.
-The Rust backend has about 11,800 lines in 18 source files.
+At the time of writing, the TypeScript code base has about 58,000 lines of code without tests and about 52,600 lines of tests.
+The Rust backend has about 14,200 lines in 18 source files.
 
 \subsection{Local Files Instead of a Server}\label{sec:architecture-local}
 
@@ -69,6 +69,7 @@ Rust owns everything that needs authorization: file input and output, process sp
 TypeScript keeps the parsing of files, the merge logic, and the assembly of exported \PDFs, because this code was already tested and does not need native access.
 \SaiLoR does not expose the generic file system and shell plugins of Tauri to the user interface.
 The capability file grants the web view only the default core permissions and the permission to set the window title.
+An application manifest lists the commands of the backend, so that the web view can only call these commands.
 
 % Consequences
 The move has consequences for users and for us.
@@ -76,7 +77,7 @@ The move has consequences for users and for us.
 The \CI probe renders a \PDF in all three web views.
 The minimum macOS version is 15.
 Users of version 1.x have to install version 2.0.0 manually and enter their \API keys again.
-Also, the guard against reload shortcuts is not ported yet (cf.~\autoref{sec:discussion}).
+The guard against reload shortcuts is ported, but we have not tried it by hand on Windows and Linux (cf.~\autoref{sec:discussion}).
 
 \subsection{Security Model}\label{sec:architecture-security}
 
@@ -89,13 +90,59 @@ For a \PDF outside the folder, \SaiLoR asks the user and allows only this exact 
 Exports only write to destinations that the user picked in a save dialog, and \SaiLoR refuses symbolic links as targets.
 Updates are signed, and \SaiLoR downloads and installs them only when the user asks for it.
 
+% Hardening
+We added further safeguards for version 2.0.0.
+A \CSP lets the web view run scripts only from the application itself.
+The backend writes project, annotation, and \PDF files to a temporary file first and then renames it, so that a crash does not leave a half-written file.
+It limits the responses of \LLM providers and the output of git to 32~MiB each.
+
 % LLM security
 For \LLM providers, \SaiLoR stores \API keys in the keychain and sends a key only to the origin of its provider.
 It refuses redirects for requests that carry a key.
+It also refuses to send a key over plain \texttt{http} to a host outside the local network.
 The agent mode can fetch web pages, which opens the door to \SSRF~\cite{owasp_ssrf}.
 \SaiLoR only allows \texttt{http} and \texttt{https} URLs, resolves the host name, and refuses requests to loopback, private, and other non-public addresses.
 It checks every redirect again, follows at most five redirects, stops after 20 seconds, reads at most 2~MB, and only accepts text content.
 The fetched text is marked as untrusted data, and the system prompt tells the model to never follow instructions from it.
+
+\subsection{Large Projects}\label{sec:architecture-scale}
+
+% Context
+A mapping study can start with tens of thousands of candidate papers.
+For such projects, opening the project, drawing the knowledge graph, and running a query can block the user interface.
+Therefore, we moved this work out of the critical path.
+
+% Progressive loading
+\SaiLoR opens a project in the split layout in two steps.
+First, the Rust backend reads only the project file, and the user interface shows the metadata of all papers.
+Then, the user interface loads the annotation files in batches of 2,000 papers and gives control back to the event loop between two batches.
+A progress line shows how many papers are loaded, and reviewers can already annotate the loaded papers.
+Until all papers are loaded, \SaiLoR blocks every save and disables the features that need the whole project, for example, validation, the git view, and the consolidation overview.
+The backend reads a batch only for the opened project and only for the papers that the project file listed when the user opened it.
+If a batch fails, the project stays open, and the user can retry the load.
+A project in the older single-file layout still opens in one step, because the backend must parse the file as a whole.
+In one profile of a project with 50,000 papers, measured on a laptop under load, opening the project took about 6.6~s before and about 2.0~s after this change.
+
+% Graph view
+The knowledge graph view has no limit on the number of nodes.
+It draws the graph on a canvas instead of one page element per node, and it skips nodes outside the visible area.
+It draws labels only when the user zooms in and at most 2,000 nodes are visible.
+A web worker computes the force layout, sends the positions to the view, and stops when the layout is stable.
+For more than 1,000 nodes, the worker uses fewer steps and a coarser approximation.
+Benchmark tests with a generated graph of 50,000 nodes require that the view prepares a frame in less than 1~s and finds the node under the pointer in less than 1~ms on average.
+
+% Cypher
+Queries in Cypher run in a second web worker.
+The worker receives a copy of the graph once and builds an index for it.
+A new query cancels the running query, and a query stops after 20~s.
+We implemented only a read-only subset of Cypher.
+The parser refuses all clauses that write, such as \texttt{CREATE}, \texttt{SET}, and \texttt{DELETE}, and \texttt{count(*)} is the only function.
+A query can have at most 4,000 characters, and a pattern can have at most three hops.
+A result has at most 10,000 rows.
+After 2,000,000 evaluation steps, \SaiLoR stops the query and marks the result as incomplete.
+These limits keep a query from blocking the tool, for example, a query that joins every node with every other node.
+On a generated graph with 150,000 nodes and 600,000 relationships, the tests require less than 1~s for a filter by label, 3~s for a join over one relationship, and 5~s for a count per year.
+In one run on a laptop under load, the copy and the index took about 1.0~s, and the three queries took about 15~ms, 79~ms, and 123~ms.
 
 \subsection{Controlled \acs{LLM} Assistance}\label{sec:architecture-llm}
 

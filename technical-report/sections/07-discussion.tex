@@ -22,9 +22,8 @@ Still, an independent review of the requirements is open.
 
 % Tauri port
 The move to Tauri is recent.
-Six features of the Electron shell are now ported to Tauri: the single application instance, the persisted window state, the migration of the old settings folder, the denial of device permissions, the opening of external links in the system browser, and the undo entry in the application menu.
-The guard against reload shortcuts is not ported yet.
-The renderer registers a guard while changes are unsaved, but the Tauri shell has no reload confirmation dialog of its own, and its View menu has no reload item.
+The guard against reload shortcuts is now ported to Tauri as well.
+However, no automated test shows its dialog in a running application, and we have not tried it by hand on Windows and Linux.
 Furthermore, all figures in this report show the user interface of version 1.x.
 
 % Platform tests
@@ -33,6 +32,22 @@ The probe of the desktop application runs on macOS, Windows, and Linux, but a We
 Most behavior is tested in the unit and integration suites, which run in a simulated browser and not in the web views of the operating systems.
 Differences between WKWebView, WebView2, and WebKitGTK can therefore remain unnoticed.
 The \CI probe renders a \PDF in all three web views, but the probe does not yet cover further workflows.
+Likewise, we checked the right-to-left layout for Persian only in the simulated browser.
+
+% Performance numbers
+The performance numbers in this report come from benchmark tests with generated graphs and from single runs on a laptop under load.
+They show that the limits work, but they do not predict the speed on the computer of a reviewer.
+A real review graph can have a different structure than the generated graphs.
+
+% Mutation testing
+The mutation testing covers only the model code and two modules of the \LLM assistance.
+The user interface components, the store, and the Rust backend are not mutated.
+One file of the model code, the code that reads and writes projects, still lacks a final run.
+
+% Strict mode
+The strict mode helps a team to follow its process, but it does not enforce the process.
+A person with access to the files can change any answer.
+Teams that need this protection have to rely on the access rights of their git hosting.
 
 % Unsigned builds
 The installers are not signed with a certificate from Apple or Microsoft.
@@ -59,14 +74,14 @@ It cannot replace the judgment of the reviewer.
 % Scope
 \SaiLoR does not cover all activities of an \SLR.
 It records the search strings and databases, but it does not run searches.
-It also does not analyze or synthesize the extracted data.
-The extracted data stays in \JSON files, so reviewers need their own scripts or tools for the analysis.
+It also does not synthesize the extracted data.
+The knowledge graph view and its queries help to explore the data, but reviewers still need their own scripts or tools for the analysis.
 
 \subsection{Availability}\label{sec:discussion-availability}
 
 % Release
 \SaiLoR is open source under the GPL-3.0 license.
 The source code is available on GitHub.\footnote{\url{https://github.com/Gram21/SaiLoR}}
-The release workflow builds installers for macOS 15 or later on Apple silicon and Intel, for Windows, and for Linux as AppImage, Debian, and RPM packages.
+The release workflow builds installers for macOS 15 or later on Apple silicon and Intel, for Windows, and for Linux on x86-64 and arm64 as AppImage, Debian, and RPM packages.
 The Zenodo concept \DOI~\cite{sailor2026zenodo} resolves to the latest archived version.
 The repository also contains a sample screening project and a sample extraction project, a user guide, and the requirement files described in \autoref{sec:requirements}.
