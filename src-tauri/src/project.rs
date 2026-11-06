@@ -253,7 +253,7 @@ pub fn read_project(session: &Mutex<Session>, file: &Path) -> Result<Opened, Str
 }
 
 // [impl->req~plt-20~1]
-fn open(session: &Mutex<Session>, file: &Path) -> Result<Opened, String> {
+pub(crate) fn open(session: &Mutex<Session>, file: &Path) -> Result<Opened, String> {
     let opened = read_project(session, file)?;
     lock(session).known_projects.insert(normalize(file));
     Ok(opened)
