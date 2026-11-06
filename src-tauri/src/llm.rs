@@ -139,6 +139,20 @@ pub fn read_configs(path: &Path) -> Vec<Value> {
         .unwrap_or_default()
 }
 
+/// Like `read_configs`, but a file that exists and cannot be parsed is an error,
+/// so a write cannot replace the other targets with just the new one.
+fn read_configs_strict(path: &Path) -> Result<Vec<Value>, String> {
+    let bytes = match std::fs::read(path) {
+        Ok(b) => b,
+        Err(e) if e.kind() == std::io::ErrorKind::NotFound => return Ok(vec![]),
+        Err(e) => return Err(err(e)),
+    };
+    match serde_json::from_slice::<Value>(&bytes) {
+        Ok(Value::Array(a)) => Ok(a),
+        _ => Err("The stored LLM targets file is unreadable; refusing to overwrite it.".into()),
+    }
+}
+
 // [impl->req~llm-50~1]
 fn write_configs(path: &Path, configs: &[Value]) -> Result<(), String> {
     use std::io::Write;
@@ -146,11 +160,14 @@ fn write_configs(path: &Path, configs: &[Value]) -> Result<(), String> {
         std::fs::create_dir_all(dir).map_err(err)?;
     }
     let text = serde_json::to_string_pretty(configs).map_err(err)?;
-    let mut f = std::fs::File::create(path).map_err(err)?;
+    let tmp = path.with_extension("json.tmp");
+    let mut f = std::fs::File::create(&tmp).map_err(err)?;
     #[cfg(unix)]
     f.set_permissions(std::os::unix::fs::PermissionsExt::from_mode(0o600))
         .map_err(err)?;
-    f.write_all(text.as_bytes()).map_err(err)
+    f.write_all(text.as_bytes()).map_err(err)?;
+    drop(f);
+    std::fs::rename(&tmp, path).map_err(err)
 }
 
 fn has_key(c: &Value) -> bool {
@@ -224,7 +241,7 @@ pub fn save_config(
     next.insert("noKey".into(), Value::Bool(no_key));
 
     let _guard = FILE.lock().unwrap_or_else(|e| e.into_inner());
-    let mut configs = read_configs(path);
+    let mut configs = read_configs_strict(path)?;
     let existing = configs.iter().position(|c| id_of(c) == Some(id.as_str()));
     // An edit with a blank key field keeps the stored key: the user cannot read it back to retype it.
     let keep = |field: &str, next: &mut Map<String, Value>| {
@@ -248,7 +265,7 @@ pub fn save_config(
 
 pub fn delete_config(path: &Path, keys: &dyn Keys, id: &str) -> Result<Vec<Value>, String> {
     let _guard = FILE.lock().unwrap_or_else(|e| e.into_inner());
-    let mut configs = read_configs(path);
+    let mut configs = read_configs_strict(path)?;
     if configs.iter().any(|c| id_of(c) == Some(id) && has_key(c)) {
         keys.delete(id)?;
     }
