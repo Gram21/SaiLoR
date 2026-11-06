@@ -998,7 +998,7 @@ Tags: Functional, Usability
 ### REQ-UI-190: Knowledge graph view
 `req~ui-190~1`
 
-The Export menu shall have an "Explore knowledge graph" item. The item shall open the knowledge graph view. The view shall show the papers, authors, venues, keywords and answers of the knowledge graph of REQ-DAT-480 and REQ-DAT-490 as nodes and edges in a force layout. The user shall pan the graph with a drag on the background. The user shall zoom with the mouse wheel and with the "Zoom in", "Zoom out" and "Reset view" buttons. The user shall move a node with a drag. A click on a node shall select it. A double-click on a node shall add its neighbours to the view. The side panel shall show the label, type, DOI, year and values of the selected node and list its neighbours. The "Show neighbours" button shall add the neighbours of the selected node to the view. The side panel shall list every shown node as a button, as an accessible alternative to the canvas. A click on a listed node shall select it and center the view on it. If the project has no consolidated answers and more than one reviewer, the view shall have a seat selector. The view shall have an "Export…" button that opens the export dialog of REQ-DAT-520. Escape shall close the view when the export dialog is not open. A click on the overlay shall not close the view.
+The Export menu shall have an "Explore knowledge graph" item. The item shall open the knowledge graph view. The view shall show the papers, authors, venues, keywords and answers of the knowledge graph of REQ-DAT-480 and REQ-DAT-490 as nodes and edges in a force layout on a canvas. The user shall pan the graph with a drag on the background. The user shall zoom with the mouse wheel and with the "Zoom in", "Zoom out" and "Reset view" buttons. "Reset view" shall fit all placed nodes into the canvas. The user shall move a node with a drag. A click on a node shall select it. When the pointer is on a node, the canvas shall show the type and label of the node as a tooltip. A double-click on a node shall add its neighbours to the view. The side panel shall show the label, type, DOI, year and values of the selected node and list its neighbours. The "Show neighbours" button shall add the neighbours of the selected node to the view. The side panel shall list every shown node as a button, as an accessible alternative to the canvas. The node list and the neighbour list shall show 200 entries at first. A "Show more" button shall add the next 200 entries. A click on a listed node shall select it and center the view on it. If the project has no consolidated answers and more than one reviewer, the view shall have a seat selector. The view shall have an "Export…" button that opens the export dialog of REQ-DAT-520. Escape shall close the view when the export dialog is not open. A click on the overlay shall not close the view.
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability)
@@ -1025,15 +1025,15 @@ Needs: impl, utest
 
 Tags: Functional, Functional_Suitability, Usability
 
-### REQ-UI-210: Knowledge graph sub-graph and limit
+### REQ-UI-210: Knowledge graph sub-graph and performance
 `req~ui-210~1`
 
-The view shall show the nodes that match the query of REQ-UI-200 and their neighbours up to the query depth, in both edge directions. The view shall show only the edges between shown nodes. The view shall mark the matching nodes. The view shall show at most 300 nodes. If more nodes qualify, the view shall keep the matches with the most edges first and shall show "Showing N of M nodes". Neighbours that the user adds with REQ-UI-190 shall stay in the view beyond the limit until the next query. If no node matches, the view shall show "No node matches the query."
+The view shall show the nodes that match the query of REQ-UI-200 and their neighbours up to the query depth, in both edge directions. The view shall show only the edges between shown nodes. The view shall mark the matching nodes. The view shall have no node limit. Neighbours that the user adds with REQ-UI-190 shall stay in the view until the next query. If no node matches, the view shall show "No node matches the query." The view shall draw only the nodes and edges in the visible area of the canvas. The view shall draw node labels only at a zoom of 0.6 or more and only when 2000 or fewer nodes are visible. The view shall calculate the force layout in a background worker. The worker shall send the node positions while the layout runs. The worker shall stop when the layout is stable. For more than 1000 nodes, the layout shall use fewer steps and a coarser force approximation. The view shall draw a new frame only when the positions or the view change. The automated benchmarks shall use generated graphs with 10 000 and 50 000 nodes. For 50 000 nodes, the benchmarks shall prepare one frame in less than 1 second, calculate one layout step in less than 1.5 seconds and find the node at the pointer in less than 1 millisecond on average.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Performance Efficiency)
-- **Evidence:** `src/model/graphQuery.ts` (`selectSubgraph`, `neighbours`), `src/components/GraphView.tsx` (`GraphView`)
-- **Verified by:** `src/model/graphQuery.test.ts`, `src/components/GraphView.test.tsx`
+- **Evidence:** `src/model/graphQuery.ts` (`selectSubgraph`, `neighbours`), `src/model/graphLayout.ts` (`createLayout`, `layoutHost`, `layoutSettings`), `src/model/graphLayout.worker.ts`, `src/components/graphCanvas.ts` (`cull`, `drawScene`, `hitTest`), `src/components/GraphView.tsx` (`GraphView`)
+- **Verified by:** `src/model/graphQuery.test.ts`, `src/model/graphLayout.test.ts`, `src/components/graphCanvas.test.ts`, `src/components/GraphView.test.tsx`
 - **Status:** Implemented
 
 Needs: impl, utest

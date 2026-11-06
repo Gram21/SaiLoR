@@ -155,3 +155,7 @@ per category so requirements can be inserted without renumbering.
 - **CI scripts (2026-11-05).** REQ-PLT-430 added: every CI job runs from a script. The coverage counts above include it.
 - **Knowledge graph view (2026-11-06).** REQ-UI-190 to REQ-UI-210 added for the knowledge graph view in the Export menu,
   its query syntax and the sub-graph limit. The coverage counts above were not recounted.
+- **Knowledge graph performance (2026-11-06).** REQ-UI-210 revised: the 300-node limit is removed. The view
+  draws on a canvas, culls to the visible area, and calculates the layout in a background worker.
+  REQ-UI-190 revised for "Reset view", the node tooltip and the "Show more" button of the lists.
+  The requirement count did not change.
