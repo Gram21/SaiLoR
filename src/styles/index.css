@@ -2846,6 +2846,24 @@ button.validation-search-case:hover {
 .graph-list button[aria-pressed='true'] {
   background: var(--accent-weak);
 }
+.graph-error {
+  color: var(--danger);
+}
+.graph-results {
+  overflow-x: auto;
+  margin-bottom: 8px;
+}
+.graph-results table {
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.graph-results th,
+.graph-results td {
+  border: 1px solid var(--border);
+  padding: 2px 4px;
+  text-align: start;
+  vertical-align: top;
+}
 
 .help-keys {
   border-collapse: collapse;

@@ -131,6 +131,44 @@ describe('GraphView', () => {
     expect(screen.getByRole('status')).toHaveTextContent('No node matches the query.')
   })
 
+  // [utest->req~ui-230~1]
+  // [utest->req~ui-240~1]
+  it('runs a Cypher query, lists its results and shows parse errors', async () => {
+    open()
+    render(<GraphView onClose={() => {}} />)
+    const box = screen.getByRole('searchbox', { name: 'Graph query' })
+    const cypher = (text: string) => {
+      fireEvent.change(box, { target: { value: text } })
+      fireEvent.submit(box.closest('form')!)
+    }
+    cypher("match (p:Paper)-[:authoredBy]->(a:Author {label: 'Alan Turing'}) RETURN p.label AS title, a")
+    const results = within(screen.getByRole('table'))
+    expect(screen.getByRole('heading', { name: 'Results (1 rows)' })).toBeInTheDocument()
+    expect(results.getAllByRole('columnheader').map((c) => c.textContent)).toEqual(['title', 'a'])
+    expect(results.getAllByRole('cell').map((c) => c.textContent)).toEqual(['Testing Things', 'Alan Turing'])
+    expect(listed().sort()).toEqual(['Author Alan Turing', 'Paper Testing Things'])
+    expect(screen.getByRole('status')).toHaveTextContent('2 nodes, 1 edges')
+
+    cypher('MATCH (n) DETACH DELETE n')
+    expect(screen.getByRole('alert')).toHaveTextContent(
+      'Cypher query error: DETACH is not supported. Use a read-only query with MATCH, WHERE, RETURN and LIMIT.',
+    )
+    expect(listed().sort()).toEqual(['Author Alan Turing', 'Paper Testing Things'])
+    cypher("MATCH (n) WHERE n.label = 'x")
+    expect(screen.getByRole('alert')).toHaveTextContent('The quote at position 27 has no closing quote.')
+
+    cypher('MATCH (a), (b), (c), (d), (e), (f) RETURN a, b, c, d, e, f')
+    expect(screen.queryByRole('alert')).toBeNull()
+    expect(screen.getByRole('heading', { name: 'Results (10000 rows)' })).toBeInTheDocument()
+    expect(screen.getByText('The table shows the first 200 rows.')).toBeInTheDocument()
+    expect(screen.getByText(/stopped at the limit of 10000 rows/)).toBeInTheDocument()
+    expect(within(screen.getByRole('table')).getAllByRole('row')).toHaveLength(201)
+
+    await query('author:alan')
+    expect(screen.queryByRole('table')).toBeNull()
+    expect(listed().sort()).toEqual(['Author Alan Turing', 'Paper Testing Things'])
+  })
+
   it('shows details and neighbours of a selected node and expands them', async () => {
     open()
     render(<GraphView onClose={() => {}} />)

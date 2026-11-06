@@ -3,7 +3,8 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { useStore } from '../state/store'
 import { seatLabel } from '../model/project'
 import { buildGraph, graphSource, graphTrees } from '../model/graph'
-import { indexGraph, neighbours, parseQuery, selectSubgraph } from '../model/graphQuery'
+import { indexGraph, neighbours, parseQuery, selectSubgraph, type GraphQuery } from '../model/graphQuery'
+import { CypherError, MAX_ROWS, cypherSubgraph, formatValue, isCypher, parseCypher, runCypher, type CypherQuery } from '../model/graphCypher'
 import { layoutHost, type LayoutFrame, type LayoutMessage } from '../model/graphLayout'
 import { buildScene, drawScene, EDGE_DASH, EDGE_TYPES, edgeAt, fitView, hitTest, selectNode, zoomAt, type Palette, type Scene } from './graphCanvas'
 import { useT } from '../i18n'
@@ -40,7 +41,8 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   const t = useT()
   const [seat, setSeat] = useState('1')
   const [input, setInput] = useState('')
-  const [query, setQuery] = useState(() => parseQuery(''))
+  const [query, setQuery] = useState<GraphQuery | CypherQuery>(() => parseQuery(''))
+  const [error, setError] = useState<CypherError | null>(null)
   const [extra, setExtra] = useState<string[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [hidden, setHidden] = useState(0)
@@ -58,9 +60,13 @@ export function GraphView({ onClose }: { onClose: () => void }) {
     () => indexGraph(project ? buildGraph(project, graphTrees(project, seat)) : { nodes: [], edges: [] }),
     [project, seat],
   )
-  const sub = useMemo(() => selectSubgraph(index, query, extra), [index, query, extra])
+  const cypher = useMemo(() => ('chains' in query ? runCypher(index, query) : null), [index, query])
+  const sub = useMemo(
+    () => (cypher ? cypherSubgraph(index, cypher, extra) : selectSubgraph(index, query as GraphQuery, extra)),
+    [index, query, cypher, extra],
+  )
   const scene = useMemo(
-    () => buildScene(sub, query.terms.length > 0, sceneRef.current, (id) => neighbours(index, id)),
+    () => buildScene(sub, 'chains' in query || query.terms.length > 0, sceneRef.current, (id) => neighbours(index, id)),
     [sub, query, index],
   )
 
@@ -165,7 +171,14 @@ export function GraphView({ onClose }: { onClose: () => void }) {
 
   const run = (e: FormEvent) => {
     e.preventDefault()
-    setQuery(parseQuery(input))
+    try {
+      setQuery(isCypher(input) ? parseCypher(input) : parseQuery(input))
+    } catch (err) {
+      if (!(err instanceof CypherError)) throw err
+      setError(err)
+      return
+    }
+    setError(null)
     setExtra([])
     setSelected(null)
   }
@@ -306,8 +319,13 @@ export function GraphView({ onClose }: { onClose: () => void }) {
           ))}
         </fieldset>
         <p id="graph-query-help" className="graph-hint">
-          {t('graphView.help')}
+          {t('graphView.help')} {t('graphView.cypherHelp')}
         </p>
+        {error && (
+          <p className="graph-hint graph-error" role="alert">
+            {t('graphView.cypher.error', { message: t(error.key, error.params) })}
+          </p>
+        )}
         <p className="graph-hint" role="status">
           {sub.nodes.length === 0 ? t('graphView.empty') : t('graphView.count', { nodes: sub.nodes.length, edges: sub.edges.length })}
         </p>
@@ -327,6 +345,37 @@ export function GraphView({ onClose }: { onClose: () => void }) {
             }}
           />
           <aside className="graph-side">
+            {cypher && (
+              <section aria-labelledby="graph-results-title">
+                <h3 id="graph-results-title">{t('graphView.cypher.results', { count: cypher.rows.length })}</h3>
+                {cypher.truncated && <p className="graph-hint">{t('graphView.cypher.truncated', { max: MAX_ROWS })}</p>}
+                {cypher.rows.length > LIST_PAGE && <p className="graph-hint">{t('graphView.cypher.shown', { shown: LIST_PAGE })}</p>}
+                <div className="graph-results">
+                  <table>
+                    <thead>
+                      <tr>
+                        {cypher.columns.map((c, i) => (
+                          <th key={i} scope="col" dir="auto">
+                            {c}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cypher.rows.slice(0, LIST_PAGE).map((row, r) => (
+                        <tr key={r}>
+                          {row.map((v, c) => (
+                            <td key={c} dir="auto">
+                              {formatValue(v)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
             {node ? (
               <section aria-labelledby="graph-detail-title">
                 <h3 id="graph-detail-title" dir="auto">
