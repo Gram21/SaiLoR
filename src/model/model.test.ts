@@ -20,6 +20,10 @@ import {
   makeInstance,
   annotationText,
   isFieldVisible,
+  isRecordedAnswer,
+  instanceHoldsAnswer,
+  hasAnnotations,
+  orphanedNodePaths,
   type AnnotationValueTree,
 } from './annotations'
 import { loadProject, serializeProject, ProjectLoadError, aiSeatId, seatLabel } from './project'
@@ -733,6 +737,22 @@ describe('annotation tree init', () => {
 })
 
 describe('isFieldVisible', () => {
+  const gatedBy = (conditions: unknown[]) =>
+    ({ ...resolveSchema([{ name: 'X', type: 'string' }])[0], visibleIf: { mode: 'all', conditions } }) as never
+
+  it('treats an empty equals list as the answered test', () => {
+    expect(isFieldVisible(gatedBy([{ field: 'K', equals: [] }]), { K: [{ value: 'a' }] })).toBe(true)
+    expect(isFieldVisible(gatedBy([{ field: 'K', equals: [] }]), { K: [{ value: '' }] })).toBe(false)
+  })
+
+  it('hides behind a gate instance that has no value', () => {
+    expect(isFieldVisible(gatedBy([{ field: 'K' }]), { K: [{}] })).toBe(false)
+  })
+
+  it('fails open when a path segment has no children', () => {
+    expect(isFieldVisible(gatedBy([{ field: 'A/B' }]), {}, {}, { A: [{ value: 1 }] })).toBe(true)
+  })
+
   it('is always true when the def has no visibleIf', () => {
     const [relevant] = resolveSchema([{ name: 'Relevant', type: 'boolean' }])
     expect(isFieldVisible(relevant, {})).toBe(true)
@@ -1050,6 +1070,11 @@ describe('add/remove guards', () => {
     expect(canRemove(resolved[3], 1)).toBe(false)
     expect(canRemove(resolved[3], 2)).toBe(true)
   })
+
+  it('canRemove keeps the floor of 1 when min is 0', () => {
+    const [def] = resolveSchema([{ name: 'X', type: 'string', min: 0 }])
+    expect(canRemove(def, 1)).toBe(false)
+  })
 })
 
 // [utest->req~dat-160~1]
@@ -1072,6 +1097,77 @@ describe('normalize', () => {
     const resolved = resolveSchema(sampleSchema)
     const tree = normalizeTree(resolved, { Bogus: [{ value: 'x' }] } as never)
     expect(tree['Bogus']).toEqual([{ value: 'x' }])
+  })
+
+  it('clamps a list longer than max', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const tree = normalizeTree(resolved, { 'Study Type': [{ value: 'a' }, { value: 'b' }] })
+    expect(tree['Study Type']).toEqual([{ value: 'a' }])
+  })
+
+  it('keeps a removed key when any one of its entries holds an answer', () => {
+    const resolved = resolveSchema(sampleSchema)
+    expect(normalizeTree(resolved, { Gone: [{}, { value: 'x' }] })['Gone']).toEqual([{}, { value: 'x' }])
+    expect(normalizeTree(resolved, { Gone: [{}, null] } as never)).not.toHaveProperty('Gone')
+  })
+})
+
+describe('isRecordedAnswer / instanceHoldsAnswer', () => {
+  it('an object or array is not a recorded answer', () => {
+    expect(isRecordedAnswer({})).toBe(false)
+    expect(isRecordedAnswer([])).toBe(false)
+  })
+
+  it('looks through every child list, tolerating malformed ones', () => {
+    expect(instanceHoldsAnswer(null)).toBe(false)
+    expect(instanceHoldsAnswer({ children: null })).toBe(false)
+    expect(instanceHoldsAnswer({ children: { a: [{}] } })).toBe(false)
+    expect(instanceHoldsAnswer({ children: { a: [{}, { value: 'x' }] } })).toBe(true)
+    expect(instanceHoldsAnswer({ children: { a: 'x', b: [{ value: 1 }] } })).toBe(true)
+  })
+})
+
+describe('hasAnnotations', () => {
+  it('ignores empty values and finds a filled one anywhere in a list', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const tree = initTree(resolved)
+    expect(hasAnnotations(resolved, tree)).toBe(false)
+    tree['Study Type'][0].value = ''
+    expect(hasAnnotations(resolved, tree)).toBe(false)
+    tree['Findings'][0].children!['Claim'] = [{ value: null }, { value: 'x' }]
+    expect(hasAnnotations(resolved, tree)).toBe(true)
+  })
+
+  it('counts a real 0', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const tree = initTree(resolved)
+    tree['Year'][0].value = 0
+    expect(hasAnnotations(resolved, tree)).toBe(true)
+  })
+})
+
+// [utest->req~dat-215~1]
+describe('orphanedNodePaths', () => {
+  it('names every orphan with its full path, at any depth, once', () => {
+    const resolved = resolveSchema([
+      { name: 'Year', type: 'number' },
+      { name: 'Outer', children: [{ name: 'Inner', children: [{ name: 'Leaf', type: 'string' }] }] },
+    ])
+    const tree = {
+      Gone: [{ value: 'x' }],
+      Year: [{ value: 1, children: { Old: [{ value: 'o' }] } }],
+      Outer: [
+        {
+          children: {
+            Stray: [{ value: 's' }],
+            Inner: [{ children: { Leaf: [{ value: null }], Lost: [{ value: 'l' }] } }],
+          },
+        },
+        {},
+        null,
+      ],
+    } as unknown as AnnotationValueTree
+    expect(orphanedNodePaths(resolved, tree)).toEqual(['Gone', 'Year › Old', 'Outer › Stray', 'Outer › Inner › Lost'])
   })
 })
 
@@ -1127,6 +1223,29 @@ describe('prune', () => {
     const pruned = pruneTree(resolved, tree)
     expect(pruned['Findings']).toHaveLength(1)
   })
+
+  it('keeps empty instances up to a min above 1', () => {
+    const resolved = resolveSchema([{ name: 'Pair', type: 'string', min: 2 }])
+    const pruned = pruneTree(resolved, { Pair: [{ value: null }, { value: null }, { value: null }] })
+    expect(pruned['Pair']).toHaveLength(2)
+  })
+
+  it('writes an absent key as an empty list', () => {
+    const resolved = resolveSchema([{ name: 'Year', type: 'number' }])
+    expect(pruneTree(resolved, {})).toEqual({ Year: [] })
+  })
+
+  it('gives a group instance no value of its own', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const pruned = pruneTree(resolved, initTree(resolved))
+    expect(pruned['Findings'][0]).not.toHaveProperty('value')
+  })
+
+  it('keeps orphaned children under a leaf field', () => {
+    const resolved = resolveSchema([{ name: 'Year', type: 'number' }])
+    const pruned = pruneTree(resolved, { Year: [{ value: 1, children: { Gone: [{ value: 'x' }] } }] })
+    expect(pruned['Year']).toEqual([{ value: 1, children: { Gone: [{ value: 'x' }] } }])
+  })
 })
 
 describe('annotationText (annotation-mode search haystack)', () => {
@@ -1177,6 +1296,19 @@ describe('annotationText (annotation-mode search haystack)', () => {
   it('returns an empty string for a paper with no annotations at all', () => {
     const resolved = resolveSchema(sampleSchema)
     expect(annotationText(resolved, {})).toBe('')
+  })
+
+  it('skips an empty string and a stray value on a group instance', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const tree = initTree(resolved)
+    tree['Study Type'][0].value = ''
+    tree['Year'][0].value = 2021
+    tree['Findings'][0].value = 'stray'
+    expect(annotationText(resolved, tree)).toBe('2021')
+  })
+
+  it('returns an empty string for a missing tree', () => {
+    expect(annotationText(resolveSchema(sampleSchema), undefined as unknown as AnnotationValueTree)).toBe('')
   })
 
   it('keeps original case when caseSensitive is true', () => {
