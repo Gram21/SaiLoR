@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-project-read-papers"
+description = "Enables the project_read_papers command without any pre-configured scope."
+commands.allow = ["project_read_papers"]
+
+[[permission]]
+identifier = "deny-project-read-papers"
+description = "Denies the project_read_papers command without any pre-configured scope."
+commands.deny = ["project_read_papers"]

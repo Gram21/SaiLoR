@@ -7,6 +7,7 @@ fn main() {
         "probe_report",
         "project_open",
         "project_open_path",
+        "project_read_papers",
         "project_save",
         "project_set_dir",
         "project_pick_save_path",

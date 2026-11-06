@@ -283,3 +283,22 @@ describe('REQ-LST-25: case-sensitive search toggle', () => {
     expect(screen.queryByText('AI-based Diagnosis')).not.toBeInTheDocument()
   })
 })
+
+// [utest->req~plt-443~1]
+describe('the paper list while a project still loads', () => {
+  it('shows how many papers have loaded, then the usual progress line', () => {
+    st().loadFromText(
+      projectJson([{ id: 'p1', title: 'First Paper', authors: [], pdf: 'a.pdf', annotations: {} }]),
+      null,
+      'test.json',
+    )
+    useStore.setState({ loadState: 'loading', loadProgress: { loaded: 1, total: 12000 } })
+    const { rerender } = render(<PaperList />)
+    expect(screen.getByRole('status')).toHaveTextContent(`Loading papers: 1 / ${(12000).toLocaleString()}`)
+    expect(screen.getByText('First Paper')).toBeInTheDocument()
+
+    useStore.setState({ loadState: 'ready', loadProgress: null })
+    rerender(<PaperList />)
+    expect(screen.queryByText(/Loading papers/)).not.toBeInTheDocument()
+  })
+})

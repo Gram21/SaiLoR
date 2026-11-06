@@ -193,28 +193,19 @@ pub fn projects_using_folder(file: &Path, folder: &str) -> Vec<Sibling> {
 }
 
 // [impl->req~dat-172~1]
-// [impl->req~plt-40~1]
-// [impl->req~plt-50~1]
 // [impl->req~plt-60~1]
-/// `readProjectText` minus the assembly; records stamps for a later save.
-pub fn read_project(session: &Mutex<Session>, file: &Path) -> Result<Opened, String> {
-    let text = read_lossy(file).map_err(err)?;
-    let raw: Value = serde_json::from_str(&text).map_err(err)?;
-    let path = file.display().to_string();
-    if is_legacy_shape(&raw) {
-        return Ok(Opened {
-            path,
-            text,
-            files: vec![],
-            siblings: vec![],
-        });
-    }
-    let dir = annotations_dir_for(file, &raw)?;
-    let ids = paper_ids(&raw);
+/// Every `.json` in each listed paper's folder (`<paperId>/<name>`,
+/// annotations-relative); records their stamps for a later save.
+fn read_paper_files(
+    session: &Mutex<Session>,
+    file: &Path,
+    dir: &Path,
+    ids: &[String],
+) -> Vec<FileText> {
     let mut files = vec![];
-    for id in &ids {
-        let paper_dir = resolve(&dir, Path::new(id));
-        if paper_dir == dir || !within(&paper_dir, &dir) {
+    for id in ids {
+        let paper_dir = resolve(dir, Path::new(id));
+        if paper_dir == dir || !within(&paper_dir, dir) {
             continue;
         }
         let Ok(entries) = fs::read_dir(&paper_dir) else {
@@ -229,34 +220,95 @@ pub fn read_project(session: &Mutex<Session>, file: &Path) -> Result<Opened, Str
         names.sort();
         for name in names {
             let rel_path = format!("{id}/{name}");
-            if let Some(text) = safe_read(&dir, &rel_path) {
+            if let Some(text) = safe_read(dir, &rel_path) {
                 files.push(FileText { rel_path, text });
             }
         }
     }
     let mut s = lock(session);
-    s.stamps.remove(&normalize(file));
-    s.remember(file, file);
-    for id in &ids {
+    for id in ids {
         for e in fs::read_dir(dir.join(id)).into_iter().flatten().flatten() {
             s.remember(file, &e.path());
         }
     }
-    drop(s);
-    let siblings = projects_using_folder(file, &annotations_dir_of(&raw));
-    Ok(Opened {
-        path,
+    files
+}
+
+// [impl->req~plt-40~1]
+// [impl->req~plt-50~1]
+// [impl->req~plt-440~1]
+/// `project.json` and its siblings without any paper's files; the annotations
+/// folder is `None` for the legacy shape. Resets the project's stamps.
+fn read_head(
+    session: &Mutex<Session>,
+    file: &Path,
+) -> Result<(Opened, Option<(Value, PathBuf)>), String> {
+    let text = read_lossy(file).map_err(err)?;
+    let raw: Value = serde_json::from_str(&text).map_err(err)?;
+    let mut opened = Opened {
+        path: file.display().to_string(),
         text,
-        files,
-        siblings,
-    })
+        files: vec![],
+        siblings: vec![],
+    };
+    if is_legacy_shape(&raw) {
+        return Ok((opened, None));
+    }
+    let dir = annotations_dir_for(file, &raw)?;
+    let mut s = lock(session);
+    s.stamps.remove(&normalize(file));
+    s.remember(file, file);
+    drop(s);
+    opened.siblings = projects_using_folder(file, &annotations_dir_of(&raw));
+    Ok((opened, Some((raw, dir))))
+}
+
+/// `readProjectText` minus the assembly; records stamps for a later save.
+pub fn read_project(session: &Mutex<Session>, file: &Path) -> Result<Opened, String> {
+    let (mut opened, split) = read_head(session, file)?;
+    if let Some((raw, dir)) = split {
+        opened.files = read_paper_files(session, file, &dir, &paper_ids(&raw));
+    }
+    Ok(opened)
 }
 
 // [impl->req~plt-20~1]
+// [impl->req~plt-440~1]
+/// Opens only the head; the renderer streams the papers' files in batches.
 pub(crate) fn open(session: &Mutex<Session>, file: &Path) -> Result<Opened, String> {
-    let opened = read_project(session, file)?;
+    let (opened, _) = read_head(session, file)?;
     lock(session).known_projects.insert(normalize(file));
     Ok(opened)
+}
+
+// [impl->req~plt-441~1]
+/// One batch of an opened project's paper files. Only papers `project.json`
+/// lists are read, so a renderer cannot name other folders.
+pub fn read_papers(
+    session: &Mutex<Session>,
+    file: &Path,
+    ids: &[String],
+) -> Result<Vec<FileText>, String> {
+    if !lock(session).is_known(file) {
+        return Err("Refusing to read papers of a project that was not opened.".into());
+    }
+    let raw: Value = serde_json::from_str(&read_lossy(file).map_err(err)?).map_err(err)?;
+    if is_legacy_shape(&raw) {
+        return Ok(vec![]);
+    }
+    let dir = annotations_dir_for(file, &raw)?;
+    let listed: HashSet<String> = paper_ids(&raw).into_iter().collect();
+    let ids: Vec<String> = ids.iter().filter(|id| listed.contains(*id)).cloned().collect();
+    Ok(read_paper_files(session, file, &dir, &ids))
+}
+
+#[tauri::command]
+pub async fn project_read_papers(
+    session: State<'_, Mutex<Session>>,
+    file_path: String,
+    ids: Vec<String>,
+) -> Result<Vec<FileText>, String> {
+    read_papers(&session, Path::new(&file_path), &ids)
 }
 
 // [impl->req~plt-20~1]
@@ -731,8 +783,9 @@ pub mod tests {
         );
 
         let opened = open(&s, &proj).unwrap();
+        assert!(opened.files.is_empty());
         assert_eq!(
-            opened.files,
+            read_papers(&s, &proj, &["p1".into()]).unwrap(),
             [FileText {
                 rel_path: "p1/reviewer-1.json".into(),
                 text: "{}".into()
@@ -747,11 +800,11 @@ pub mod tests {
         assert_eq!(stale, ["annotations/p1/reviewer-1.json"]);
         // A file nobody had seen also counts.
         fs::write(d.join("annotations/p1/reviewer-2.json"), "{}").unwrap();
-        open(&s, &proj).unwrap();
+        read_project(&s, &proj).unwrap();
 
         // Unparseable files survive a delete; parseable ones go, and the emptied folder with them.
         fs::write(d.join("annotations/p1/reviewer-2.json"), "<<<<<<< conflict").unwrap();
-        open(&s, &proj).unwrap();
+        read_project(&s, &proj).unwrap();
         save(
             &s,
             &proj,
@@ -892,6 +945,34 @@ pub mod tests {
             .map(|x| x.name)
             .collect();
         assert_eq!(names, ["b.json", "l.json"]);
+    }
+
+    // [utest->req~plt-440~1]
+    // [utest->req~plt-441~1]
+    #[test]
+    fn open_reads_the_head_and_batches_only_listed_papers() {
+        let d = tmp("batches");
+        let s = Mutex::new(Session::default());
+        let proj = d.join("p.json");
+        fs::write(&proj, r#"{"papers":[{"id":"p1"},{"id":"p2"}]}"#).unwrap();
+        for id in ["p1", "p2", "other"] {
+            fs::create_dir_all(d.join("annotations").join(id)).unwrap();
+            fs::write(d.join(format!("annotations/{id}/consolidated.json")), id).unwrap();
+        }
+        let ids = |v: &[&str]| v.iter().map(|x| x.to_string()).collect::<Vec<_>>();
+        assert!(read_papers(&s, &proj, &ids(&["p1"])).is_err());
+        assert!(open(&s, &proj).unwrap().files.is_empty());
+        let rels = |v: Vec<FileText>| v.into_iter().map(|f| f.rel_path).collect::<Vec<_>>();
+        assert_eq!(
+            rels(read_papers(&s, &proj, &ids(&["p2", "other", "../p.json", ""])).unwrap()),
+            ["p2/consolidated.json"]
+        );
+        assert_eq!(
+            rels(read_project(&s, &proj).unwrap().files),
+            ["p1/consolidated.json", "p2/consolidated.json"]
+        );
+        let stamps = lock(&s).stamps.get(&normalize(&proj)).map_or(0, |m| m.len());
+        assert_eq!(stamps, 3);
     }
 
     #[test]

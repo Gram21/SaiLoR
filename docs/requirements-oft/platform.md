@@ -757,3 +757,63 @@ Comment:
 Needs: utest
 
 Tags: NonFunctional, Maintainability, Portability
+
+### REQ-PLT-440: Open a project in two steps
+`req~plt-440~1`
+
+When the desktop shell opens a project in the split layout, the shell shall read only the project file first. The renderer shall show the project with the metadata of all papers. The renderer shall then read the annotation files of the papers in batches. The renderer shall give control back to the event loop between two batches. A project in the legacy single-file layout shall open in one step, as before. All callers that need the whole project, for example a reload after a stale save, shall read all papers before they continue.
+
+Comment:
+- **Type:** Non-functional (ISO 25010: Performance Efficiency, Usability)
+- **Evidence:** `src-tauri/src/project.rs` (`read_head`, `open`), `src/platform/tauri.ts` (`opened`), `src/platform/desktop.ts` (`opened`), `src/state/store.ts` (`streamPapers`, `openProject`, `openRecent`)
+- **Verified by:** `src-tauri/src/project.rs` (`open_reads_the_head_and_batches_only_listed_papers`), `src/platform/tauri.test.ts` (`opens the head first and assembles papers in batches`), `src/platform/desktop.test.ts` (`streams papers on request and refuses to save the project until every paper was read`), `src/state/progressiveLoad.test.ts`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: NonFunctional, Performance_Efficiency, Usability
+
+### REQ-PLT-441: Read paper batches only for an opened project
+`req~plt-441~1`
+
+The desktop shell shall read a batch of paper files only for a project file that the user opened before. The shell shall read only the folders of papers that the project file lists. The shell shall apply the same path checks as for the first open, so a paper id cannot name a file outside the annotations folder.
+
+Comment:
+- **Type:** Functional (ISO 25010: Security)
+- **Evidence:** `src-tauri/src/project.rs` (`read_papers`, `project_read_papers`)
+- **Verified by:** `src-tauri/src/project.rs` (`open_reads_the_head_and_batches_only_listed_papers`), `src/platform/tauri.test.ts` (`invokes exactly the commands main.rs registers`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Security
+
+### REQ-PLT-442: Do not save a project that is still loading
+`req~plt-442~1`
+
+While the renderer reads the papers of a project, SaiLoR shall not write the project. A save, an automatic save and a save on close shall stop and tell the user why. The desktop adapter shall also refuse to write the project file until it has read every paper, so a partial project can never replace the whole project on disk.
+
+Comment:
+- **Type:** Functional (ISO 25010: Reliability)
+- **Evidence:** `src/platform/desktop.ts` (`streaming`, `saveProject`), `src/state/store.ts` (`stillLoading`, `save`, `saveAs`), `src/hooks/useAutosave.ts`
+- **Verified by:** `src/platform/desktop.test.ts` (`streams papers on request and refuses to save the project until every paper was read`), `src/state/progressiveLoad.test.ts` (`refuses to save until every paper has loaded, then saves the whole project`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Reliability
+
+### REQ-PLT-443: Show the load progress and wait with whole-project features
+`req~plt-443~1`
+
+While the renderer reads the papers of a project, the paper list shall show how many papers have loaded, for example "Loading papers: 12,000 / 50,000". The user shall be able to open and annotate each paper that has loaded. SaiLoR shall disable each feature that reads all papers until the last paper has loaded: save, save as, validation, AI evaluation, the knowledge graph export and view, the PDF folder scan, the Git panel, the consolidation overview, the disagreement lists, the screening summary, the screening agreement and adopt all. Each disabled control shall tell the user why in its tooltip. If the papers of a project cannot be read, SaiLoR shall close the project and show the error. If the user closes the project during the load, SaiLoR shall stop the load.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability, Reliability)
+- **Evidence:** `src/state/store.ts` (`loadState`, `loadProgress`, `streamPapers`, `scanPdfFolder`, `resyncProjectFromDisk`), `src/components/PaperList.tsx`, `src/components/Toolbar.tsx`, `src/components/AnnotationPanel.tsx`, `src/components/ScreeningPanel.tsx`, `src/locales/*.json` (`paperList.loading.progress`, `paperList.loading.wait`)
+- **Verified by:** `src/state/progressiveLoad.test.ts`, `src/components/PaperList.test.tsx` (`shows how many papers have loaded, then the usual progress line`), `src/components/Toolbar.test.tsx` (`disables validation, AI, saving and the exports with the reason`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Usability, Reliability

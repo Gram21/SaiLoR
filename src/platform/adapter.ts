@@ -34,6 +34,11 @@ export interface OpenedProject {
    * the UI can say so rather than let a reviewer assume an empty seat is empty.
    */
   corruptFiles?: string[]
+  /**
+   * Set only when the project was opened streamed: `text` then holds every paper without its
+   * annotations, and this reads the named papers whole. Saving refuses until every paper was read.
+   */
+  readPapers?: (ids: string[]) => Promise<{ text: string; corruptFiles: string[] }>
 }
 
 export interface SaveHandle {
@@ -103,10 +108,10 @@ export interface PlatformAdapter {
   checkRecents(entries: RecentEntry[]): Promise<RecentEntry[]>
 
   /** Reopen a recent project by its opaque id. Returns null if it can't be opened. */
-  openRecent(id: string): Promise<OpenedProject | null>
+  openRecent(id: string, streamed?: boolean): Promise<OpenedProject | null>
 
   /** Show an open dialog / picker and return the chosen project's text + a save handle. */
-  openProject(): Promise<OpenedProject | null>
+  openProject(streamed?: boolean): Promise<OpenedProject | null>
 
   /** Write text back to the handle's location. Returns the (possibly updated) handle.
    *  Throws `StaleSaveError`, writing nothing, when a file it would overwrite

@@ -294,7 +294,7 @@ Modules in `src-tauri/src/`:
 | Module | Content |
 | --- | --- |
 | `authz.rs` | Session state: project directory, allowed escapes, known projects, readable PDFs, export targets, file stamps (REQ-PLT-30). |
-| `project.rs` | `project_open`, `project_open_path`, `project_save`, `project_set_dir`, `project_pick_save_path`, `project_peek`. |
+| `project.rs` | `project_open`, `project_open_path`, `project_read_papers`, `project_save`, `project_set_dir`, `project_pick_save_path`, `project_peek`. |
 | `feedback.rs` | `project_write_feedback`, `project_list_feedback`. |
 | `pdf.rs` | `pdf_pick`, `pdf_pick_folder`, `pdf_read`, `pdf_check_path`, `pdf_allow_path`, `pdf_pick_export_path`, `text_pick_export_path`. |
 | `paths.rs` | `paths_relative`, `paths_rebase`, `paths_absolute`, `paths_sibling`. |
@@ -305,7 +305,7 @@ Command names are the IPC channel names with `:` changed to `_` and camelCase ch
 Open items for the TypeScript side:
 
 - Map each bridge channel to its snake_case command name.
-- `project_open` and `project_open_path` return `{ path, text, files, siblings }`. `text` is the stored `project.json`. Assemble the whole project and compute `corrupt` in TypeScript with `src/model/project.ts`.
+- `project_open` and `project_open_path` return `{ path, text, files, siblings }`. `text` is the stored `project.json`. `files` is empty. Read the paper files in batches with `project_read_papers`. Assemble the whole project and compute `corrupt` in TypeScript with `src/model/project.ts`.
 - `pdf_read` returns an `ArrayBuffer`.
 - Port `text:write` and `pdf:embedMarks`. They are the consumers of the export targets.
 

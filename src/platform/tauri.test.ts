@@ -191,11 +191,35 @@ describe('project assembly', () => {
     expect(p[1].reviewMarks).toBeUndefined()
   })
 
+  // [utest->req~plt-440~1]
+  it('opens the head first and assembles papers in batches', async () => {
+    const legacy = '{"papers":[{"id":"p1","annotations":{}}]}'
+    invokeMock.mockResolvedValueOnce({ path: '/r/l.json', text: legacy, files: [], siblings: [] })
+    expect(await tauriBridge.openPath('/r/l.json')).toEqual({ path: '/r/l.json', text: legacy, corrupt: [] })
+
+    invokeMock.mockResolvedValueOnce({ path: '/r/p.json', text: meta(), files: [], siblings: [{ name: 'bad.json', text: '{' }] })
+    const head = await tauriBridge.openPath('/r/p.json')
+    expect(head!.corrupt).toEqual(['bad.json'])
+    expect(JSON.parse(head!.text).papers.map((p: { id: string; annotations: unknown }) => [p.id, p.annotations])).toEqual([
+      ['p1', {}],
+      ['p2', {}],
+    ])
+    invokeMock.mockResolvedValueOnce([f('p2/consolidated.json', { annotations: { q: 2 } })])
+    const batch = await head!.readPapers!(['p2'])
+    expect(invokeMock).toHaveBeenLastCalledWith('project_read_papers', { filePath: '/r/p.json', ids: ['p2'] })
+    expect(batch.corrupt).toEqual([])
+    expect(JSON.parse(batch.text).papers.map((p: { id: string; annotations: unknown }) => [p.id, p.annotations])).toEqual([['p2', { q: 2 }]])
+  })
+
   it('gives the renderer the whole-project shapes', async () => {
     const raw = { text: meta(), files: [f('p1/consolidated.json', { annotations: { q: 1 } })] }
     const whole = assembleProject(raw)
-    invokeMock.mockResolvedValueOnce({ path: '/r/p.json', ...raw, files: [...raw.files, { relPath: 'p2/consolidated.json', text: 'x' }], siblings: [] })
-    expect(await tauriBridge.openPath('/r/p.json')).toEqual({ path: '/r/p.json', text: whole, corrupt: ['p2/consolidated.json'] })
+    invokeMock.mockResolvedValueOnce({ path: '/r/p.json', text: raw.text, files: [], siblings: [] })
+    const head = await tauriBridge.openPath('/r/p.json')
+    expect(head).toEqual({ path: '/r/p.json', text: assembleProject({ text: raw.text, files: [] }), corrupt: [], readPapers: expect.any(Function) })
+    invokeMock.mockResolvedValueOnce([...raw.files, { relPath: 'p2/consolidated.json', text: 'x' }])
+    expect(await head!.readPapers!()).toEqual({ text: whole, corrupt: ['p2/consolidated.json'] })
+    expect(invokeMock).toHaveBeenLastCalledWith('project_read_papers', { filePath: '/r/p.json', ids: ['p1', 'p2'] })
     invokeMock.mockResolvedValueOnce(null)
     expect(await tauriBridge.openProject()).toBeNull()
     invokeMock.mockResolvedValueOnce(raw)

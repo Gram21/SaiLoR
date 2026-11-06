@@ -273,6 +273,8 @@ export function PaperList() {
   const language = useLanguage()
   const project = useStore((s) => s.project)
   const currentPaperId = useStore((s) => s.currentPaperId)
+  // [impl->req~plt-443~1]
+  const loadProgress = useStore((s) => s.loadProgress)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const missingPdfs = useStore((s) => s.missingPdfs)
   const selectPaper = useStore((s) => s.selectPaper)
@@ -456,7 +458,16 @@ export function PaperList() {
           </span>
           <SidebarToggle />
         </div>
-        {progress && progress.total > 0 && <div className="paper-list-progress">{progress.text}</div>}
+        {loadProgress ? (
+          <div className="paper-list-progress" role="status">
+            {t('paperList.loading.progress', {
+              loaded: loadProgress.loaded.toLocaleString(),
+              total: loadProgress.total.toLocaleString(),
+            })}
+          </div>
+        ) : (
+          progress && progress.total > 0 && <div className="paper-list-progress">{progress.text}</div>
+        )}
         <div className="paper-search">
           <input
             ref={searchInput}
