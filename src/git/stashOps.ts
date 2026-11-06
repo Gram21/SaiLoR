@@ -52,6 +52,9 @@ export async function resolveStashRef(run: RunGit, sha: string): Promise<string 
  * `raw` is the parsed project file, for knowing which papers are this
  * project's.
  */
+/** Match the path as written: `*`, `?` and `[` in a file name must not act as globs. */
+const literalPathspec = (p: string) => `:(literal)${p}`
+
 export async function pushStash(run: RunGit, relPath: string, raw: unknown, message: string): Promise<GitRun> {
   const st = await run(['status', '--porcelain=v1', '-z', '-uall'])
   if (!st.ok) return st
@@ -62,7 +65,7 @@ export async function pushStash(run: RunGit, relPath: string, raw: unknown, mess
   ]
   if (paths.length === 0) return failed(t('git.error.nothingToStash'))
   const note = message.trim() || 'stashed from SaiLoR'
-  return run(['stash', 'push', '-u', '-m', `${MANUAL_STASH_PREFIX}${note}`, '--', ...paths])
+  return run(['stash', 'push', '-u', '-m', `${MANUAL_STASH_PREFIX}${note}`, '--', ...paths.map(literalPathspec)])
 }
 
 // [impl->req~git-450~1]
@@ -137,7 +140,7 @@ async function rollBackFailedApply(run: RunGit, ref: string): Promise<void> {
   const untracked = await run(['ls-tree', '-r', '--name-only', '-z', `${ref}^3`])
   if (!untracked.ok) return // no third parent: the stash had no untracked files
   const paths = untracked.stdout.split('\0').filter(Boolean)
-  if (paths.length > 0) await run(['clean', '-f', '-q', '--', ...paths])
+  if (paths.length > 0) await run(['clean', '-f', '-q', '--', ...paths.map(literalPathspec)])
 }
 
 /** Delete a stash for good. */
