@@ -377,3 +377,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `src/state/store.ts` (`loadState`, `loadProgress`, `loadFailed`, `retryLoad`, `streamPapers`, `stillLoading`, `runValidation`, `adoptAllUnanimousScreening`, `adoptAllUnanimousAnnotations`, `scanPdfFolder`, `resyncProjectFromDisk`), `src/components/PaperList.tsx`, `src/components/Toolbar.tsx`, `src/components/AnnotationPanel.tsx`, `src/components/ScreeningPanel.tsx`, `src/locales/*.json` (`paperList.loading.progress`, `paperList.loading.wait`, `paperList.loading.failed`, `paperList.loading.retry`, `store.loadError.batchFailed`, `store.loadError.stillLoadingRun`)
 - **Verified by:** `src/state/progressiveLoad.test.ts`, `src/components/PaperList.test.tsx` (`shows how many papers have loaded next to the usual progress line`, `says where loading stopped and retries the failed batch`), `src/components/Toolbar.test.tsx` (`disables validation, AI, saving and the exports with the reason`)
 - **Status:** Implemented
+
+### REQ-PLT-444: Publish the project website and the demo with GitHub Pages
+- **Description:** When a commit reaches `main`, the Pages workflow shall build the online demo, copy it under `demo/` next to the files of `site/`, and check every relative link and image of the site pages. The workflow shall deploy the result to GitHub Pages only after the check passes. The site pages shall use relative links, so that the site works under the project path. The site pages shall load no script, style, font or image from another host. The walkthrough on the site shall contain project files that the project loader accepts.
+- **Type:** Non-functional (ISO 25010: Portability, Reliability)
+- **Evidence:** `.github/workflows/pages.yml`, `scripts/ci/pages.sh` (runs the link check), `site/index.html`, `site/create-project.html`, `Makefile` (`ci-pages`)
+- **Verified by:** `src/model/siteExamples.test.ts` (`the minimal example loads as a SaiLoR project`, `the extended example loads as a SaiLoR project`), `src/ci/ciScripts.test.ts` (`every CI script stops on the first error and works from the repository root`)
+- **Status:** Implemented

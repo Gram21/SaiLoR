@@ -13,12 +13,17 @@ const examples = [...page.matchAll(/<pre><code>([\s\S]*?)<\/code><\/pre>/g)].map
     .replace(/&amp;/g, '&'),
 )
 
+// [utest->req~plt-444~1]
 describe('project examples in the project site walkthrough', () => {
   it('contains the minimal and the extended example', () => {
     expect(examples).toHaveLength(2)
   })
 
-  it.each([0, 1])('example %i loads as a SaiLoR project', (index) => {
-    expect(() => loadProject(examples[index])).not.toThrow()
+  it('the minimal example loads as a SaiLoR project', () => {
+    expect(() => loadProject(examples[0])).not.toThrow()
+  })
+
+  it('the extended example loads as a SaiLoR project', () => {
+    expect(() => loadProject(examples[1])).not.toThrow()
   })
 })

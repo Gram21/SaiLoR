@@ -60,8 +60,8 @@ per category so requirements can be inserted without renumbering.
 | Consolidation (CON) | 61 |
 | Git integration (GIT) | 66 |
 | LLM annotation (LLM) | 103 |
-| Platform & shell (PLT) | 52 |
-| **Total** | **481** |
+| Platform & shell (PLT) | 53 |
+| **Total** | **482** |
 
 ## Method & evidence notes
 
@@ -153,6 +153,7 @@ per category so requirements can be inserted without renumbering.
   AI seat with the consolidated answers, the AI evaluation dialog, its CSV export and its empty state. The coverage counts above include them.
 - **AI prompt overrides (2026-11-05).** REQ-LLM-790 to REQ-LLM-795 added for the project-level role, field help and examples of the AI prompt. The coverage counts above include them.
 - **CI scripts (2026-11-05).** REQ-PLT-430 added: every CI job runs from a script. The coverage counts above include it.
+- **Project website (2026-11-07).** REQ-PLT-444 added for the GitHub Pages site and its deployment. The coverage counts above include it.
 - **Knowledge graph view (2026-11-06).** REQ-UI-190 to REQ-UI-210 added for the knowledge graph view in the Export menu,
   its query syntax and the sub-graph limit. The coverage counts above were not recounted.
 - **Knowledge graph performance (2026-11-06).** REQ-UI-210 revised: the 300-node limit is removed. The view

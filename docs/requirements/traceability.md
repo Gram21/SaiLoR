@@ -575,6 +575,7 @@ inspection only.
 | REQ-PLT-441 | Read paper batches only for an opened project | Functional · Security | `src-tauri/src/project.rs` | `src-tauri/src/project.rs` | — | — |
 | REQ-PLT-442 | Do not save a project that is still loading | Functional · Reliability | `src/platform/desktop.ts`<br>`src/state/store.ts` | `src/state/progressiveLoad.test.ts`<br>`src/platform/desktop.test.ts` | — | — |
 | REQ-PLT-443 | Show the load progress and wait with whole-project features | Functional · Usability | `src/state/store.ts`<br>`src/components/Toolbar.tsx`<br>`src/components/PaperList.tsx`<br>`src/components/AnnotationPanel.tsx`<br>`src/components/ScreeningPanel.tsx` | `src/state/progressiveLoad.test.ts`<br>`src/components/PaperList.test.tsx`<br>`src/components/Toolbar.test.tsx` | — | — |
+| REQ-PLT-444 | Publish the project website and the demo with GitHub Pages | Non-functional · Portability, Reliability | `.github/workflows/pages.yml`<br>`scripts/ci/pages.sh`<br>`site/index.html`<br>`site/create-project.html`<br>`Makefile` (`ci-pages`) | `src/model/siteExamples.test.ts`<br>`src/ci/ciScripts.test.ts` | — | `README.md` (project website) |
 
 ## Coverage statistics
 
