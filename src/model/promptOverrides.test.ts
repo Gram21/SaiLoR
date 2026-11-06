@@ -147,3 +147,11 @@ describe('prompt builders with overrides', () => {
     expect(schema[0].description).toBe('Year of publication.')
   })
 })
+
+describe('serializeProject', () => {
+  it('writes cleaned prompt overrides, like the editor serializer', () => {
+    const project = loadProject({ version: 1, config: { schema: [{ name: 'A', type: 'string' }] }, papers: [] })
+    project.promptOverrides = { role: '  be careful  ', fieldHelp: { a: '   ' } }
+    expect(JSON.parse(serializeProject(project)).config.promptOverrides).toEqual({ role: 'be careful' })
+  })
+})

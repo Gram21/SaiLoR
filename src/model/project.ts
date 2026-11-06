@@ -23,7 +23,7 @@ import { annotationsDirProblem } from './annotationsDir'
 import { parseStrictConfig, strictConfigJson, type StrictConfig } from './strict'
 import { parseMetadataEditMode, parseReviewMetadata, type MetadataEditMode, type SeatMetadata } from './metadata'
 import { parsePdfFolder } from './pdfFolder'
-import { parsePromptOverrides, type PromptOverrides } from './promptOverrides'
+import { cleanPromptOverrides, parsePromptOverrides, type PromptOverrides } from './promptOverrides'
 import {
   moveInMarks,
   moveInTree,
@@ -933,6 +933,11 @@ function parseFileVersions(raw: unknown): Record<string, string | null> {
 }
 
 // [impl->req~edt-110~1]
+function promptOverridesField(o: PromptOverrides | undefined): { promptOverrides?: PromptOverrides } {
+  const clean = cleanPromptOverrides(o)
+  return clean ? { promptOverrides: clean } : {}
+}
+
 /**
  * Serialize a Project back to the on-disk JSON shape. `config` is written from
  * the resolved schema, annotations are pruned of trailing empties, and any
@@ -965,7 +970,7 @@ export function serializeProject(project: Project): string {
       ...strictConfigJson(project.strict),
       ...metadataEditField(project.metadataEdit),
       ...pdfFolderFields(project.pdfFolder, project.crossrefLookup),
-      ...(project.promptOverrides ? { promptOverrides: project.promptOverrides } : {}),
+      ...promptOverridesField(project.promptOverrides),
     },
     papers: [...project.papers].sort(comparePapers).map((p) => {
       const paper: Record<string, unknown> = {
@@ -1200,7 +1205,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
       ...strictConfigJson(project.strict),
       ...metadataEditField(project.metadataEdit),
       ...pdfFolderFields(project.pdfFolder, project.crossrefLookup),
-      ...(project.promptOverrides ? { promptOverrides: project.promptOverrides } : {}),
+      ...promptOverridesField(project.promptOverrides),
     },
     papers: metaPapers,
     ...project.extra,
