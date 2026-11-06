@@ -99,7 +99,14 @@ pub fn serve(session: &Mutex<Session>, req: &Request<Vec<u8>>) -> Response<Vec<u
         None => (StatusCode::OK, 0..len),
     };
     let head = req.method() == Method::HEAD;
-    let mut body = vec![0; if head { 0 } else { (range.end - range.start) as usize }];
+    let mut body = vec![
+        0;
+        if head {
+            0
+        } else {
+            (range.end - range.start) as usize
+        }
+    ];
     if !head
         && (file.seek(SeekFrom::Start(range.start)).is_err() || file.read_exact(&mut body).is_err())
     {

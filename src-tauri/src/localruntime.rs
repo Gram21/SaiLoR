@@ -294,12 +294,7 @@ fn parse_version(out: &str) -> Option<String> {
 /// prompt must fit one micro-batch, else the server answers 500 ("input is too large to
 /// process"). One slot: one request at a time. `-lv 4` logs the offload summary that
 /// `parse_server_log` reads.
-fn build_server_args(
-    model: &Path,
-    port: u16,
-    context_tokens: u32,
-    gpu: bool,
-) -> Vec<String> {
+fn build_server_args(model: &Path, port: u16, context_tokens: u32, gpu: bool) -> Vec<String> {
     let c = context_tokens.to_string();
     let mut a: Vec<String> = vec![
         "-m".into(),

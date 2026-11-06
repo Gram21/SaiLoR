@@ -33,7 +33,9 @@ pub fn write_atomic(dest: &Path, bytes: impl AsRef<[u8]>) -> std::io::Result<()>
     if std::fs::metadata(dest).is_ok_and(|m| m.permissions().readonly()) {
         return Err(std::io::Error::from(std::io::ErrorKind::PermissionDenied));
     }
-    let name = dest.file_name().map_or_else(String::new, |n| n.to_string_lossy().into_owned());
+    let name = dest
+        .file_name()
+        .map_or_else(String::new, |n| n.to_string_lossy().into_owned());
     let tmp = dest.with_file_name(format!(".{name}.{}.tmp", std::process::id()));
     std::fs::write(&tmp, bytes)?;
     std::fs::rename(&tmp, dest).inspect_err(|_| {
