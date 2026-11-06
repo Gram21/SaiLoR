@@ -29,6 +29,7 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       id: ${{ steps.draft.outputs.id }}
+      tag: ${{ steps.tag.outputs.tag }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -172,6 +173,25 @@ jobs:
           gh api -H 'Accept: application/octet-stream' "repos/$GH_REPO/releases/assets/$asset" > latest.json
           jq . latest.json
           jq -e '.platforms | has("darwin-aarch64") and has("darwin-x86_64") and has("windows-x86_64") and has("linux-x86_64")' latest.json
+
+  # Checksums for manual installs (.deb, .rpm, first 2.x install). The updater
+  # still verifies its own minisign signatures.
+  checksums:
+    needs: [release, build]
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Upload SHA256SUMS.txt
+        env:
+          TAG: ${{ needs.release.outputs.tag }}
+        run: |
+          mkdir assets
+          gh release download "$TAG" --dir assets --pattern '*' --skip-existing
+          cd assets
+          rm -f SHA256SUMS.txt
+          sha256sum -- * > SHA256SUMS.txt
+          cat SHA256SUMS.txt
+          gh release upload "$TAG" SHA256SUMS.txt --clobber
 
   # Archive the published release on Zenodo as a new version of the existing
   # record (shared concept DOI): source zip plus every release
