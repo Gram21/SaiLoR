@@ -43,6 +43,7 @@ export function normalize(s: string): string {
  *  same passage" that tolerates a few extraction glitches without being a full
  *  fuzzy-matching library. */
 const MATCH_WINDOW = 40
+const MIN_FUZZY_WORDS = 4
 
 function wordMatchRatio(words: string[], haystack: string[]): number {
   if (words.length === 0) return 0
@@ -73,7 +74,10 @@ export function evidenceSupported(evidence: string, paperText: string): boolean 
   if (!normQuote) return false
   const normText = normalize(paperText)
   if (normText.includes(normQuote)) return true
-  return wordMatchRatio(normQuote.split(' '), normText.split(' ')) >= 0.85
+  const words = normQuote.split(' ')
+  // A very short quote may not be matched loosely: its few words occur somewhere in any paper.
+  if (words.length < MIN_FUZZY_WORDS) return false
+  return wordMatchRatio(words, normText.split(' ')) >= 0.85
 }
 
 // [impl->req~llm-770~1]

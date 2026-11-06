@@ -11,6 +11,11 @@ const schema = resolveSchema([
 const PAPER_TEXT = 'We conducted a controlled experiment with 24 partici-\npants in 2021.'
 
 describe('evidenceSupported', () => {
+  it('does not match a short quote whose words are only scattered in the paper', () => {
+    expect(evidenceSupported('controlled 2021 experiment', PAPER_TEXT)).toBe(false)
+    expect(evidenceSupported('controlled experiment', PAPER_TEXT)).toBe(true)
+  })
+
   it('matches a quote that spans a page break', () => {
     const text = '[page 1]\nThe study enrolled 120\n\n[page 2]\nparticipants over two years.'
     expect(evidenceSupported('enrolled 120 participants over two years', text)).toBe(true)
