@@ -266,9 +266,11 @@ fn run_git_capped(
             stderr: format!("git timed out after {}s.", timeout.as_secs()),
         };
     };
+    // A grandchild (ssh, a credential helper) may keep the pipes open after git exits.
+    let grace = Duration::from_secs(10);
     let (stdout, stderr) = (
-        out.recv().unwrap_or_default(),
-        errs.recv().unwrap_or_default(),
+        out.recv_timeout(grace).unwrap_or_default(),
+        errs.recv_timeout(grace).unwrap_or_default(),
     );
     if over.load(Ordering::SeqCst) {
         return overflow();

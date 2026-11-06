@@ -98,8 +98,9 @@ pub fn serve(session: &Mutex<Session>, req: &Request<Vec<u8>>) -> Response<Vec<u
         Some(Ok(r)) => (StatusCode::PARTIAL_CONTENT, r),
         None => (StatusCode::OK, 0..len),
     };
-    let mut body = vec![0; (range.end - range.start) as usize];
-    if req.method() != Method::HEAD
+    let head = req.method() == Method::HEAD;
+    let mut body = vec![0; if head { 0 } else { (range.end - range.start) as usize }];
+    if !head
         && (file.seek(SeekFrom::Start(range.start)).is_err() || file.read_exact(&mut body).is_err())
     {
         return text(StatusCode::NOT_FOUND, "Not found");
@@ -107,15 +108,12 @@ pub fn serve(session: &Mutex<Session>, req: &Request<Vec<u8>>) -> Response<Vec<u
     let mut res = respond(status)
         .header(header::CONTENT_TYPE, content_type)
         .header(header::ACCEPT_RANGES, "bytes")
-        .header(header::CONTENT_LENGTH, body.len());
+        .header(header::CONTENT_LENGTH, range.end - range.start);
     if status == StatusCode::PARTIAL_CONTENT {
         res = res.header(
             header::CONTENT_RANGE,
             format!("bytes {}-{}/{len}", range.start, range.end - 1),
         );
-    }
-    if req.method() == Method::HEAD {
-        body.clear();
     }
     res.body(body).unwrap()
 }
