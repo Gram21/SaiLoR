@@ -177,7 +177,7 @@ jobs:
           jq . latest.json
           jq -e '.platforms | has("darwin-aarch64") and has("darwin-x86_64") and has("windows-x86_64") and has("linux-x86_64") and has("linux-aarch64")' latest.json
 
-  # Checksums for manual installs (.deb, .rpm, first 2.x install). The updater
+  # SBOMs (CycloneDX) and checksums for manual installs (.deb, .rpm, first 2.x install). The updater
   # still verifies its own minisign signatures.
   # Also attests build provenance, so `gh attestation verify <file> --repo <owner>/<repo>` works.
   checksums:
@@ -189,17 +189,28 @@ jobs:
       id-token: write
       attestations: write
     steps:
-      - name: Upload SHA256SUMS.txt
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2
+        with:
+          tool: cargo-cyclonedx@0.5.9
+
+      - name: Upload SBOMs and SHA256SUMS.txt
         env:
           TAG: ${{ needs.release.outputs.tag }}
         run: |
           mkdir assets
           gh release download "$TAG" --dir assets --pattern '*' --skip-existing
+          scripts/ci/sbom.sh assets
           cd assets
           rm -f SHA256SUMS.txt
           sha256sum -- * > SHA256SUMS.txt
           cat SHA256SUMS.txt
-          gh release upload "$TAG" SHA256SUMS.txt --clobber
+          gh release upload "$TAG" SHA256SUMS.txt sbom-npm.cdx.json sbom-rust.cdx.json --clobber
 
       - name: Attest build provenance
         uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2

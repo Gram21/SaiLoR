@@ -98,7 +98,7 @@ jobs:
 
       - run: scripts/ci/audit.sh npm
 
-  # Known advisories in Rust dependencies.
+  # Known advisories in Rust dependencies, plus a dry run of the SBOM script.
   cargo-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 15
@@ -107,11 +107,14 @@ jobs:
 
       - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2
         with:
-          tool: cargo-audit@0.22.2
+          tool: cargo-audit@0.22.2,cargo-cyclonedx@0.5.9
 
       - run: scripts/ci/audit.sh cargo
 
-  # Requirement trace links (OpenFastTrace). Allowed to fail until the trace tags are in the sources.
+      # Same script as the release job, so a broken SBOM step shows up before a release.
+      - run: scripts/ci/sbom.sh "$RUNNER_TEMP/sbom"
+
+  # Requirement trace links (OpenFastTrace).
   trace:
     runs-on: ubuntu-latest
     timeout-minutes: 10
