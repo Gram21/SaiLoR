@@ -1414,6 +1414,7 @@ async function adoptAndSave(result: Project): Promise<void> {
 const PAPER_BATCH = 2000
 
 // [impl->req~plt-440~1]
+// [impl->req~plt-443~1]
 /**
  * Fills the project `loadFromText` just opened from its head (every paper's
  * metadata, no answers) batch by batch. `project.papers` holds only the papers

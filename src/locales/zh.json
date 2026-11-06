@@ -491,6 +491,8 @@
   "paperList.progress.finished": "已完成：{done}/{total}",
   "paperList.progress.issues": "有问题：{done}/{total}",
   "paperList.progress.ready": "{text} · {ready}/{total} 已就绪",
+  "paperList.loading.progress": "正在加载论文：{loaded} / {total}",
+  "paperList.loading.wait": "所有论文加载完成后可用。",
   "paperList.count.ofTotal": "{shown}/{total}",
   "paperList.search.annotationsPlaceholder": "搜索标注…",
   "paperList.search.papersPlaceholder": "搜索论文…",

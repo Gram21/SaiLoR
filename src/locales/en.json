@@ -491,6 +491,8 @@
   "paperList.progress.finished": "finished: {done}/{total}",
   "paperList.progress.issues": "with issues: {done}/{total}",
   "paperList.progress.ready": "{text} · {ready}/{total} ready",
+  "paperList.loading.progress": "Loading papers: {loaded} / {total}",
+  "paperList.loading.wait": "Available once every paper has loaded.",
   "paperList.count.ofTotal": "{shown} of {total}",
   "paperList.search.annotationsPlaceholder": "Search annotations…",
   "paperList.search.papersPlaceholder": "Search papers…",

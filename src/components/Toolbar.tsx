@@ -162,6 +162,10 @@ export function Toolbar() {
   const personMode = useStore((s) => activePerson(s) !== null)
   const project = useStore((s) => s.project)
   const busy = useStore((s) => s.busy)
+  // [impl->req~plt-443~1]
+  // Features over the whole project wait until every paper has loaded.
+  const loading = useStore((s) => s.loadState === 'loading')
+  const loadingHint = t('paperList.loading.wait')
   const theme = useStore((s) => s.theme)
   const toggleTheme = useStore((s) => s.toggleTheme)
   const increaseFont = useStore((s) => s.increaseFont)
@@ -199,7 +203,8 @@ export function Toolbar() {
   const ownStashes = useGitStore((s) => s.stashes.filter((e) => e.origin !== 'other').length)
   const openClone = useGitStore((s) => s.openClone)
   const openGitPanel = useGitStore((s) => s.openPanel)
-  const gitBtn = gitButtonState(!!git, gitProbe, !!project, gitRepo, busy, editorOpen, t(GIT_BROWSER_DISABLED_HINT))
+  const gitState = gitButtonState(!!git, gitProbe, !!project, gitRepo, busy, editorOpen, t(GIT_BROWSER_DISABLED_HINT))
+  const gitBtn = loading ? { disabled: true, title: loadingHint } : gitState
 
   // A transient "Saved" confirmation, shown a few seconds after every
   // successful save (manual or autosaved) and then hidden again — `dirty`
@@ -319,12 +324,20 @@ export function Toolbar() {
   // [impl->req~git-430~1]
   // [impl->req~plt-62~1]
   const saveItems: MenuItem[] = [
-    { type: 'item', label: t('common.save'), shortcut: `${modKey}+S`, disabled: !project, onSelect: () => void save() },
+    {
+      type: 'item',
+      label: t('common.save'),
+      shortcut: `${modKey}+S`,
+      hint: loading ? loadingHint : undefined,
+      disabled: !project || loading,
+      onSelect: () => void save(),
+    },
     {
       type: 'item',
       label: t('toolbar.save.saveAs'),
       shortcut: t('toolbar.save.saveAsShortcut', { mod: modKey }),
-      disabled: !project,
+      hint: loading ? loadingHint : undefined,
+      disabled: !project || loading,
       onSelect: () => void saveAs(),
     },
     { type: 'separator' },
@@ -339,9 +352,21 @@ export function Toolbar() {
   ]
 
   const exportItems: MenuItem[] = [
-    { type: 'item', label: t('toolbar.graph.label'), hint: t('toolbar.graph.title'), onSelect: () => setGraphOpen(true) },
+    {
+      type: 'item',
+      label: t('toolbar.graph.label'),
+      hint: loading ? loadingHint : t('toolbar.graph.title'),
+      disabled: loading,
+      onSelect: () => setGraphOpen(true),
+    },
     // [impl->req~ui-190~1]
-    { type: 'item', label: t('toolbar.graphView.label'), hint: t('toolbar.graphView.title'), onSelect: () => setGraphViewOpen(true) },
+    {
+      type: 'item',
+      label: t('toolbar.graphView.label'),
+      hint: loading ? loadingHint : t('toolbar.graphView.title'),
+      disabled: loading,
+      onSelect: () => setGraphViewOpen(true),
+    },
   ]
 
   return (
@@ -542,14 +567,16 @@ export function Toolbar() {
             type="button"
             className="tb-btn"
             title={
-              reviewerUnset
-                ? t('toolbar.validate.pickReviewer')
-                : t('toolbar.validate.title')
+              loading
+                ? loadingHint
+                : reviewerUnset
+                  ? t('toolbar.validate.pickReviewer')
+                  : t('toolbar.validate.title')
             }
             onClick={runValidation}
             // Validation is about the annotations, so it means nothing while the
             // project editor is open, or before a reviewer has been picked.
-            disabled={!project || busy || editorOpen || reviewerUnset}
+            disabled={!project || busy || editorOpen || reviewerUnset || loading}
           >
             <Icon name="check" />
             {t('toolbar.validate.label')}
@@ -559,9 +586,9 @@ export function Toolbar() {
             <button
               type="button"
               className="tb-btn tb-btn-ai"
-              title={readOnly ? t('toolbar.readOnly.aiHint') : aiBtn.title}
+              title={readOnly ? t('toolbar.readOnly.aiHint') : loading ? loadingHint : aiBtn.title}
               onClick={() => void openAiDialog()}
-              disabled={aiBtn.disabled || readOnly}
+              disabled={aiBtn.disabled || readOnly || loading}
             >
               <Icon name="spark" />
               {t('toolbar.ai.label')}
@@ -582,9 +609,9 @@ export function Toolbar() {
             <button
               type="button"
               className="tb-btn"
-              title={t('toolbar.rescan.title')}
+              title={loading ? loadingHint : t('toolbar.rescan.title')}
               onClick={() => void scanPdfFolder(true)}
-              disabled={busy || editorOpen}
+              disabled={busy || editorOpen || loading}
             >
               {pdfProposalCount > 0 ? t('toolbar.rescan.count', { count: pdfProposalCount }) : t('toolbar.rescan.label')}
             </button>

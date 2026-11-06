@@ -54,6 +54,8 @@ export function AnnotationPanel() {
   // locked state below does — and `applyAiSuggestions` refuses from here too, in
   // case the dialog was opened as a reviewer and the seat then switched.
   const isConsolidation = currentReviewer === 'consolidation'
+  // [impl->req~plt-443~1]
+  const loading = useStore((s) => s.loadState === 'loading')
 
   // Hooks must run in the same order on every render, so this has to sit
   // above the early returns below (no paper selected, no reviewer picked) —
@@ -250,7 +252,8 @@ export function AnnotationPanel() {
             <button
               type="button"
               className="consolidation-tool-btn"
-              title={t('annotation.panel.overviewTitle')}
+              title={loading ? t('paperList.loading.wait') : t('annotation.panel.overviewTitle')}
+              disabled={loading}
               onClick={() => setConsolidationOverviewOpen(true)}
             >
               {t('annotation.panel.overview')}
@@ -258,7 +261,8 @@ export function AnnotationPanel() {
             <button
               type="button"
               className="consolidation-tool-btn"
-              title={t('annotation.panel.disagreementsTitle')}
+              title={loading ? t('paperList.loading.wait') : t('annotation.panel.disagreementsTitle')}
+              disabled={loading}
               onClick={() => setDisagreementsOpen(true)}
             >
               {t('annotation.panel.disagreements')}

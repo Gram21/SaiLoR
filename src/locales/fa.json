@@ -491,6 +491,8 @@
   "paperList.progress.finished": "پایان‌یافته: {done}/{total}",
   "paperList.progress.issues": "دارای مشکل: {done}/{total}",
   "paperList.progress.ready": "{text} · {ready}/{total} آماده",
+  "paperList.loading.progress": "در حال بارگذاری مقاله‌ها: {loaded} / {total}",
+  "paperList.loading.wait": "پس از بارگذاری همهٔ مقاله‌ها در دسترس است.",
   "paperList.count.ofTotal": "{shown} از {total}",
   "paperList.search.annotationsPlaceholder": "جست‌وجوی حاشیه‌نویسی‌ها…",
   "paperList.search.papersPlaceholder": "جست‌وجوی مقاله‌ها…",

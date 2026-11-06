@@ -327,3 +327,38 @@ describe('unpulled work and repository setup are visible in the toolbar', () => 
   })
 
 })
+
+// [utest->req~plt-443~1]
+describe('features over the whole project wait while it loads', () => {
+  const hint = 'Available once every paper has loaded.'
+
+  it('disables validation, AI, saving and the exports with the reason', async () => {
+    st().loadFromText(annotationProjectJson(), null, 'test.json')
+    useStore.setState({ loadState: 'loading', loadProgress: { loaded: 0, total: 1 } })
+    render(<Toolbar />)
+    for (const name of [/Validate/, 'AI']) {
+      const button = screen.getByRole('button', { name })
+      expect(button).toBeDisabled()
+      expect(button).toHaveAttribute('title', hint)
+    }
+    await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
+    for (const name of [/^Save(?! as)/i, /^Save as/i]) {
+      const item = screen.getByRole('menuitem', { name })
+      expect(item).toBeDisabled()
+      expect(item).toHaveAttribute('title', hint)
+    }
+    await userEvent.click(screen.getByRole('button', { name: /^Export/ }))
+    for (const name of [/Explore knowledge graph/, /^Knowledge graph/]) {
+      const item = screen.getByRole('menuitem', { name })
+      expect(item).toBeDisabled()
+      expect(item).toHaveAttribute('title', hint)
+    }
+  })
+
+  it('enables them again once every paper has loaded', () => {
+    st().loadFromText(annotationProjectJson(), null, 'test.json')
+    render(<Toolbar />)
+    expect(screen.getByRole('button', { name: /Validate/ })).not.toBeDisabled()
+    expect(screen.getByRole('button', { name: 'AI' })).not.toBeDisabled()
+  })
+})

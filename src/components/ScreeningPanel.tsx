@@ -51,6 +51,8 @@ export function ScreeningPanel() {
   }
 
   const isConsolidation = currentReviewer === 'consolidation'
+  // [impl->req~plt-443~1]
+  const loading = useStore((s) => s.loadState === 'loading')
   const tree = currentTree(project, currentReviewer, paper)
   const status = screeningStatus(tree)
   const reasons = project.screening?.reasons ?? []
@@ -87,7 +89,8 @@ export function ScreeningPanel() {
           <button
             type="button"
             className="consolidation-tool-btn"
-            title={t('screening.panel.summaryTitle')}
+            title={loading ? t('paperList.loading.wait') : t('screening.panel.summaryTitle')}
+            disabled={loading}
             onClick={() => setScreeningSummaryOpen(true)}
           >
             {t('screening.panel.summary')}
@@ -97,7 +100,8 @@ export function ScreeningPanel() {
               <button
                 type="button"
                 className="consolidation-tool-btn"
-                title={t('screening.panel.agreementTitle')}
+                title={loading ? t('paperList.loading.wait') : t('screening.panel.agreementTitle')}
+                disabled={loading}
                 onClick={() => setAgreementOpen(true)}
               >
                 {t('screening.panel.agreement')}
@@ -105,7 +109,8 @@ export function ScreeningPanel() {
               <button
                 type="button"
                 className="consolidation-tool-btn"
-                title={t('screening.panel.disagreementsTitle')}
+                title={loading ? t('paperList.loading.wait') : t('screening.panel.disagreementsTitle')}
+                disabled={loading}
                 onClick={() => setDisagreementsOpen(true)}
               >
                 {t('screening.panel.disagreements')}
@@ -122,7 +127,8 @@ export function ScreeningPanel() {
             <button
               type="button"
               onClick={() => adoptAllUnanimousScreening()}
-              title={t('screening.panel.adoptAllTitle')}
+              title={loading ? t('paperList.loading.wait') : t('screening.panel.adoptAllTitle')}
+              disabled={loading}
             >
               {t('screening.panel.adoptAll')}
             </button>

@@ -491,6 +491,8 @@
   "paperList.progress.finished": "concluídos: {done}/{total}",
   "paperList.progress.issues": "com problemas: {done}/{total}",
   "paperList.progress.ready": "{text} · {ready}/{total} prontos",
+  "paperList.loading.progress": "Carregando artigos: {loaded} / {total}",
+  "paperList.loading.wait": "Disponível quando todos os artigos forem carregados.",
   "paperList.count.ofTotal": "{shown} de {total}",
   "paperList.search.annotationsPlaceholder": "Pesquisar anotações…",
   "paperList.search.papersPlaceholder": "Pesquisar artigos…",

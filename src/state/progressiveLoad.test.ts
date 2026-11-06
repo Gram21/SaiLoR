@@ -1,5 +1,6 @@
 // [utest->req~plt-440~1]
 // [utest->req~plt-442~1]
+// [utest->req~plt-443~1]
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 
 /**

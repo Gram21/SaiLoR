@@ -491,6 +491,8 @@
   "paperList.progress.finished": "完了：{done}/{total}",
   "paperList.progress.issues": "問題あり：{done}/{total}",
   "paperList.progress.ready": "{text} · {ready}/{total} 準備完了",
+  "paperList.loading.progress": "論文を読み込み中: {loaded} / {total}",
+  "paperList.loading.wait": "すべての論文の読み込み後に使用できます。",
   "paperList.count.ofTotal": "{shown}/{total}",
   "paperList.search.annotationsPlaceholder": "アノテーションを検索…",
   "paperList.search.papersPlaceholder": "論文を検索…",
