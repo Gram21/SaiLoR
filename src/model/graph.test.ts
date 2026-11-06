@@ -120,6 +120,122 @@ describe('buildGraph', () => {
   })
 })
 
+describe('buildGraph — edge cases', () => {
+  const citesOf = (g: ReturnType<typeof buildGraph>, id: string) =>
+    g.edges.filter((e) => e.type === 'cites' && e.source === id).map((e) => e.target)
+
+  // [utest->req~dat-480~1]
+  it('resolves citations by id or by any DOI form, but never to itself or through a blank DOI', () => {
+    const g = buildGraph(
+      {
+        schema: [],
+        papers: [
+          makePaper({ id: 'a', doi: '10.1/a', extra: { cites: ['doi:10.1/b', ' c ', 'HTTP://DX.DOI.ORG/10.1/A', '', 5] } }),
+          makePaper({ id: 'b', doi: '10.1/b', extra: { references: 'http://dx.doi.org/10.1/a' } }),
+          makePaper({ id: 'c', doi: '  ' }),
+        ],
+      },
+      {},
+    )
+    expect(citesOf(g, 'paper:a')).toEqual(['paper:b', 'paper:c'])
+    expect(citesOf(g, 'paper:b')).toEqual(['paper:a'])
+  })
+
+  // [utest->req~dat-480~1]
+  it('splits keywords on commas and semicolons and drops blank venues, names and keywords', () => {
+    const g = buildGraph(
+      { schema: [], papers: [makePaper({ authors: [' ', 'Bo'], venue: '  ', extra: { keywords: ['x,y', 7, ' ; z'] } })] },
+      {},
+    )
+    expect(g.nodes.map((n) => n.id)).toEqual(['author:bo', 'keyword:x', 'keyword:y', 'keyword:z', 'paper:p1'])
+    expect(g.edges.map((e) => e.target)).toEqual(['author:bo', 'keyword:x', 'keyword:y', 'keyword:z'])
+    expect(g.edges[0]).toStrictEqual({ source: 'paper:p1', target: 'author:bo', type: 'authoredBy' })
+  })
+
+  // [utest->req~dat-480~1]
+  it('keeps the smallest label of names that merge', () => {
+    const g = buildGraph({ schema: [], papers: [makePaper({ authors: ['bo', 'BO', 'Bo'] })] }, {})
+    expect(g.nodes.find((n) => n.id === 'author:bo')?.label).toBe('BO')
+  })
+
+  // [utest->req~dat-480~1]
+  it('copies paper year 0 but not a blank DOI or abstract', () => {
+    const g = buildGraph({ schema: [], papers: [makePaper({ year: 0, doi: '', abstract: '' })] }, {})
+    expect(g.nodes[0]).toEqual({ id: 'paper:p1', type: 'Paper', label: 'Paper One', year: 0, values: {} })
+    const noYear = buildGraph({ schema: [], papers: [makePaper()] }, {})
+    expect(noYear.nodes[0]).toStrictEqual({ id: 'paper:p1', type: 'Paper', label: 'Paper One', values: {} })
+  })
+
+  // [utest->req~dat-480~1]
+  it('treats a string with no options as a value, and numbers as text', () => {
+    const schema = resolveSchema([
+      { name: 'S', type: 'string', options: [] },
+      { name: 'N', type: 'number' },
+    ])
+    const g = buildGraph({ schema, papers: [makePaper()] }, { p1: { S: [{ value: 'x' }], N: [{ value: 0 }] } })
+    expect(g.nodes[0].values).toEqual({ S: ['x'], N: ['0'] })
+    expect(g.edges).toEqual([])
+  })
+
+  // [utest->req~dat-480~1]
+  it('skips malformed entries and children and gates a child on its parent answer', () => {
+    const schema = resolveSchema([
+      { name: 'Uses', type: 'boolean', children: [{ name: 'Which', type: 'string', visibleIf: 'Uses' }] },
+      { name: 'Tool', max: null, children: [{ name: 'Name', type: 'string' }] },
+    ])
+    const trees = {
+      p1: {
+        Uses: [{ value: false, children: { Which: [{ value: 'hidden' }] } }],
+        Tool: [null, 'x', { children: 'bad' }, { children: { Name: [{ value: 'Ant' }] } }, {}, { children: null }],
+      },
+    } as unknown as Record<string, AnnotationValueTree>
+    const g = buildGraph({ schema, papers: [makePaper()] }, trees)
+    expect(g.nodes.map((n) => n.id)).toEqual(['answer:p1/Tool#3', 'paper:p1'])
+    expect(g.nodes[0].label).toBe('Tool 4')
+    expect(g.nodes[0].values).toEqual({ 'Tool/Name': ['Ant'] })
+    const shown = buildGraph({ schema, papers: [makePaper()] }, { p1: { Uses: [{ value: true, children: { Which: [{ value: 'w' }] } }] } })
+    expect(shown.nodes.map((n) => [n.id, n.values])).toEqual([
+      ['answer:p1/Uses#0', { 'Uses/Which': ['w'] }],
+      ['choice:Uses=true', {}],
+      ['paper:p1', {}],
+    ])
+  })
+
+  // [utest->req~dat-480~1]
+  it('gates each child on the answer of its own parent entry', () => {
+    const schema = resolveSchema([
+      { name: 'Uses', type: 'boolean', max: null, children: [{ name: 'Which', type: 'string', visibleIf: 'Uses' }] },
+    ])
+    const tree = { Uses: [{ value: true, children: { Which: [{ value: 'w1' }] } }, { value: false, children: { Which: [{ value: 'w2' }] } }] }
+    const g = buildGraph({ schema, papers: [makePaper()] }, { p1: tree })
+    expect(g.nodes.filter((n) => n.type === 'Answer').map((n) => [n.id, n.values])).toEqual([['answer:p1/Uses#0', { 'Uses/Which': ['w1'] }]])
+  })
+
+  // [utest->req~dat-480~1]
+  it('strips a DOI prefix only at the start', () => {
+    const g = buildGraph(
+      { schema: [], papers: [makePaper({ id: 'a', doi: '10.1/x' }), makePaper({ id: 'b', extra: { cites: ['10.1/doi:x'] } })] },
+      {},
+    )
+    expect(g.edges).toEqual([])
+  })
+})
+
+describe('graphSource — edge cases', () => {
+  // [utest->req~dat-490~1]
+  it('uses the consolidated tree with zero reviewers and reads a missing tree as empty', () => {
+    const p = { reviewers: 0, schema: SCHEMA, papers: [makePaper({ annotations: undefined as never })] }
+    expect(graphSource(p)).toBe('consolidated')
+    expect(graphTrees(p, '1')).toEqual({ p1: {} })
+  })
+
+  // [utest->req~dat-490~1]
+  it('uses the consolidated tree when any one of several papers has a consolidated answer', () => {
+    const papers = [makePaper({ id: 'p1', annotations: { Method: [{ value: 'Survey' }] } }), makePaper({ id: 'p2' })]
+    expect(graphSource({ reviewers: 2, schema: SCHEMA, papers })).toBe('consolidated')
+  })
+})
+
 describe('graphSource', () => {
   const seatTrees = { '1': { Method: [{ value: 'Survey' }] }, '2': { Method: [{ value: 'Experiment' }] } }
 
@@ -194,6 +310,318 @@ describe('graph formats', () => {
   })
 })
 
+describe('graph formats — exact text', () => {
+  const tiny = buildGraph(
+    {
+      schema: resolveSchema([
+        { name: 'Method', type: 'string', options: ['Survey'] },
+        { name: 'Note', type: 'string' },
+      ]),
+      papers: [
+        makePaper({ id: 'a(1)', title: 'T', authors: ['Ann'], year: 99, abstract: 'Abs', doi: '10.1/x' }),
+        makePaper({ id: 'b', title: 'U', year: 2001 }),
+      ],
+    },
+    { 'a(1)': { Method: [{ value: 'Survey' }], Note: [{ value: 'n1' }, { value: 'n2' }] } },
+  )
+
+  // [utest->req~dat-500~1]
+  it('writes Turtle', () => {
+    expect(toTurtle(tiny)).toMatchInlineSnapshot(`
+      "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+      @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+      @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+      @prefix schema: <https://schema.org/> .
+      @prefix dcterms: <http://purl.org/dc/terms/> .
+      @prefix sailor: <https://github.com/Gram21/SaiLoR/ns#> .
+
+      <https://github.com/Gram21/SaiLoR/ns#field/Method> a rdf:Property ;
+          rdfs:subPropertyOf sailor:hasAnswer ;
+          rdfs:label "Method" .
+
+      <https://github.com/Gram21/SaiLoR/ns#field/Note> a rdf:Property ;
+          rdfs:subPropertyOf sailor:hasAnswer ;
+          rdfs:label "Note" .
+
+      <urn:sailor:author:ann> a schema:Person ;
+          schema:name "Ann" .
+
+      <urn:sailor:choice:Method%3DSurvey> a sailor:Choice ;
+          rdfs:label "Survey" ;
+          sailor:field "Method" .
+
+      <urn:sailor:paper:a%281%29> a schema:ScholarlyArticle ;
+          dcterms:title "T" ;
+          dcterms:issued "99" ;
+          dcterms:identifier "10.1/x" ;
+          dcterms:abstract "Abs" ;
+          <https://github.com/Gram21/SaiLoR/ns#field/Note> "n1" ;
+          <https://github.com/Gram21/SaiLoR/ns#field/Note> "n2" ;
+          dcterms:creator <urn:sailor:author:ann> ;
+          <https://github.com/Gram21/SaiLoR/ns#field/Method> <urn:sailor:choice:Method%3DSurvey> .
+
+      <urn:sailor:paper:b> a schema:ScholarlyArticle ;
+          dcterms:title "U" ;
+          dcterms:issued "2001"^^xsd:gYear .
+      "
+    `)
+  })
+
+  // [utest->req~dat-500~1]
+  it('writes Turtle for venues, keywords, citations, entries, sorted values and a year that is not four digits', () => {
+    const g = buildGraph(
+      {
+        schema: resolveSchema([
+          { name: 'B', type: 'string' },
+          { name: 'A', type: 'string' },
+          { name: 'G', children: [{ name: 'X', type: 'string' }] },
+        ]),
+        papers: [makePaper({ id: 'a', title: 'T', venue: 'V', year: 20201, extra: { keywords: 'k', cites: ['b'] } }), makePaper({ id: 'b', title: 'U' })],
+      },
+      { a: { B: [{ value: 'b' }], A: [{ value: 'a' }], G: [{ children: { X: [{ value: 'x' }] } }] } },
+    )
+    expect(toTurtle(g).split('\n\n').slice(1).join('\n\n')).toMatchInlineSnapshot(`
+      "<https://github.com/Gram21/SaiLoR/ns#field/A> a rdf:Property ;
+          rdfs:subPropertyOf sailor:hasAnswer ;
+          rdfs:label "A" .
+
+      <https://github.com/Gram21/SaiLoR/ns#field/B> a rdf:Property ;
+          rdfs:subPropertyOf sailor:hasAnswer ;
+          rdfs:label "B" .
+
+      <https://github.com/Gram21/SaiLoR/ns#field/G> a rdf:Property ;
+          rdfs:subPropertyOf sailor:hasAnswer ;
+          rdfs:label "G" .
+
+      <https://github.com/Gram21/SaiLoR/ns#field/G%2FX> a rdf:Property ;
+          rdfs:subPropertyOf sailor:hasAnswer ;
+          rdfs:label "G/X" .
+
+      <urn:sailor:answer:a%2FG%230> a sailor:Answer ;
+          rdfs:label "G 1" ;
+          sailor:field "G" ;
+          <https://github.com/Gram21/SaiLoR/ns#field/G%2FX> "x" .
+
+      <urn:sailor:keyword:k> a sailor:Keyword ;
+          rdfs:label "k" .
+
+      <urn:sailor:paper:a> a schema:ScholarlyArticle ;
+          dcterms:title "T" ;
+          dcterms:issued "20201" ;
+          <https://github.com/Gram21/SaiLoR/ns#field/A> "a" ;
+          <https://github.com/Gram21/SaiLoR/ns#field/B> "b" ;
+          dcterms:references <urn:sailor:paper:b> ;
+          <https://github.com/Gram21/SaiLoR/ns#field/G> <urn:sailor:answer:a%2FG%230> ;
+          dcterms:subject <urn:sailor:keyword:k> ;
+          dcterms:isPartOf <urn:sailor:venue:v> .
+
+      <urn:sailor:paper:b> a schema:ScholarlyArticle ;
+          dcterms:title "U" .
+
+      <urn:sailor:venue:v> a sailor:Venue ;
+          rdfs:label "V" .
+      "
+    `)
+  })
+
+  // [utest->req~dat-500~1]
+  it('writes JSON-LD', () => {
+    expect(toJsonLd(tiny)).toMatchInlineSnapshot(`
+      "{
+        "@context": {
+          "rdf": "http://www.w3.org/1999/02/22-rdf-syntax-ns#",
+          "rdfs": "http://www.w3.org/2000/01/rdf-schema#",
+          "xsd": "http://www.w3.org/2001/XMLSchema#",
+          "schema": "https://schema.org/",
+          "dcterms": "http://purl.org/dc/terms/",
+          "sailor": "https://github.com/Gram21/SaiLoR/ns#"
+        },
+        "@graph": [
+          {
+            "@id": "https://github.com/Gram21/SaiLoR/ns#field/Method",
+            "@type": [
+              "rdf:Property"
+            ],
+            "rdfs:subPropertyOf": [
+              {
+                "@id": "sailor:hasAnswer"
+              }
+            ],
+            "rdfs:label": [
+              "Method"
+            ]
+          },
+          {
+            "@id": "https://github.com/Gram21/SaiLoR/ns#field/Note",
+            "@type": [
+              "rdf:Property"
+            ],
+            "rdfs:subPropertyOf": [
+              {
+                "@id": "sailor:hasAnswer"
+              }
+            ],
+            "rdfs:label": [
+              "Note"
+            ]
+          },
+          {
+            "@id": "urn:sailor:author:ann",
+            "@type": [
+              "schema:Person"
+            ],
+            "schema:name": [
+              "Ann"
+            ]
+          },
+          {
+            "@id": "urn:sailor:choice:Method%3DSurvey",
+            "@type": [
+              "sailor:Choice"
+            ],
+            "rdfs:label": [
+              "Survey"
+            ],
+            "sailor:field": [
+              "Method"
+            ]
+          },
+          {
+            "@id": "urn:sailor:paper:a%281%29",
+            "@type": [
+              "schema:ScholarlyArticle"
+            ],
+            "dcterms:title": [
+              "T"
+            ],
+            "dcterms:issued": [
+              "99"
+            ],
+            "dcterms:identifier": [
+              "10.1/x"
+            ],
+            "dcterms:abstract": [
+              "Abs"
+            ],
+            "https://github.com/Gram21/SaiLoR/ns#field/Note": [
+              "n1",
+              "n2"
+            ],
+            "dcterms:creator": [
+              {
+                "@id": "urn:sailor:author:ann"
+              }
+            ],
+            "https://github.com/Gram21/SaiLoR/ns#field/Method": [
+              {
+                "@id": "urn:sailor:choice:Method%3DSurvey"
+              }
+            ]
+          },
+          {
+            "@id": "urn:sailor:paper:b",
+            "@type": [
+              "schema:ScholarlyArticle"
+            ],
+            "dcterms:title": [
+              "U"
+            ],
+            "dcterms:issued": [
+              {
+                "@value": "2001",
+                "@type": "xsd:gYear"
+              }
+            ]
+          }
+        ]
+      }
+      "
+    `)
+  })
+
+  // [utest->req~dat-500~1]
+  it('writes GraphML', () => {
+    expect(toGraphMl(tiny)).toMatchInlineSnapshot(`
+      "<?xml version="1.0" encoding="UTF-8"?>
+      <graphml xmlns="http://graphml.graphdrawing.org/xmlns">
+        <key id="type" for="node" attr.name="type" attr.type="string"/>
+        <key id="label" for="node" attr.name="label" attr.type="string"/>
+        <key id="field" for="node" attr.name="field" attr.type="string"/>
+        <key id="doi" for="node" attr.name="doi" attr.type="string"/>
+        <key id="year" for="node" attr.name="year" attr.type="string"/>
+        <key id="abstract" for="node" attr.name="abstract" attr.type="string"/>
+        <key id="v0" for="node" attr.name="Note" attr.type="string"/>
+        <key id="etype" for="edge" attr.name="type" attr.type="string"/>
+        <key id="efield" for="edge" attr.name="field" attr.type="string"/>
+        <graph id="G" edgedefault="directed">
+          <node id="author:ann">
+            <data key="type">Author</data>
+            <data key="label">Ann</data>
+          </node>
+          <node id="choice:Method=Survey">
+            <data key="type">Choice</data>
+            <data key="label">Survey</data>
+            <data key="field">Method</data>
+          </node>
+          <node id="paper:a(1)">
+            <data key="type">Paper</data>
+            <data key="label">T</data>
+            <data key="doi">10.1/x</data>
+            <data key="year">99</data>
+            <data key="abstract">Abs</data>
+            <data key="v0">n1; n2</data>
+          </node>
+          <node id="paper:b">
+            <data key="type">Paper</data>
+            <data key="label">U</data>
+            <data key="year">2001</data>
+          </node>
+          <edge source="paper:a(1)" target="author:ann">
+            <data key="etype">authoredBy</data>
+          </edge>
+          <edge source="paper:a(1)" target="choice:Method=Survey">
+            <data key="etype">hasAnswer</data>
+            <data key="efield">Method</data>
+          </edge>
+        </graph>
+      </graphml>
+      "
+    `)
+  })
+
+  // [utest->req~dat-500~1]
+  it('writes CSV', () => {
+    expect(toCsvNodes(tiny)).toMatchInlineSnapshot(`
+      ""id","type","label","field","doi","year","abstract","Note"
+      "author:ann","Author","Ann","","","","",""
+      "choice:Method=Survey","Choice","Survey","Method","","","",""
+      "paper:a(1)","Paper","T","","10.1/x","99","Abs","n1; n2"
+      "paper:b","Paper","U","","","2001","",""
+      "
+    `)
+    expect(toCsvEdges(tiny)).toMatchInlineSnapshot(`
+      ""source","target","type","field"
+      "paper:a(1)","author:ann","authoredBy",""
+      "paper:a(1)","choice:Method=Survey","hasAnswer","Method"
+      "
+    `)
+  })
+
+  // [utest->req~dat-500~1]
+  it('writes only the prefixes for an empty graph', () => {
+    expect(toTurtle({ nodes: [], edges: [] })).toMatchInlineSnapshot(`
+      "@prefix rdf: <http://www.w3.org/1999/02/22-rdf-syntax-ns#> .
+      @prefix rdfs: <http://www.w3.org/2000/01/rdf-schema#> .
+      @prefix xsd: <http://www.w3.org/2001/XMLSchema#> .
+      @prefix schema: <https://schema.org/> .
+      @prefix dcterms: <http://purl.org/dc/terms/> .
+      @prefix sailor: <https://github.com/Gram21/SaiLoR/ns#> .
+      "
+    `)
+    expect(toJsonLd({ nodes: [], edges: [] })).toContain('"@graph": []')
+  })
+})
+
 describe('graph escaping', () => {
   const nasty = 'a"b\\c\nd\re\tf\u0001<&>\'\uFFFE'
 
@@ -210,6 +638,18 @@ describe('graph escaping', () => {
   it('escapes XML and removes characters XML does not allow', () => {
     expect(xmlText(nasty)).toBe('a&quot;b\\c\nd\re\tf&lt;&amp;&gt;&apos;')
     expect(xmlText('ok \u{1F600} \uD800')).toBe('ok \u{1F600} ')
+    expect(xmlText('\u001f \uD7FF\uE000\uFFFD\uFFFF\u0000')).toBe(' \uD7FF\uE000\uFFFD')
+  })
+
+  // [utest->req~dat-510~1]
+  it('escapes DEL and the other control characters as \\u escapes', () => {
+    expect(turtleString('\u007f\u001f\u0000 ~')).toBe('"\\u007F\\u001F\\u0000 ~"')
+  })
+
+  // [utest->req~dat-510~1]
+  it('percent-encodes every reserved character in node and field IRIs', () => {
+    const g = buildGraph({ schema: [], papers: [makePaper({ id: "!'()*" })] }, {})
+    expect(toTurtle(g)).toContain('<urn:sailor:paper:%21%27%28%29%2A>')
   })
 
   // [utest->req~dat-510~1]
