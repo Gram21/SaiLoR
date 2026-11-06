@@ -106,6 +106,7 @@ import {
   saveAutosaveEnabled,
 } from './settings'
 import { HISTORY_LIMIT, pushPast } from './history'
+import { seatTree } from '../model/seatTree'
 
 /** Injected from package.json by vite.config.ts; falls back for non-Vite runners (tests). */
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.0.0'
@@ -1286,11 +1287,8 @@ export function currentTree(
   paper: Paper,
   create = false,
 ): AnnotationValueTree | null {
-  if (project.reviewers <= 1) return paper.annotations
-  if (currentReviewer === 'consolidation') return paper.annotations
-  if (currentReviewer === null) return null
-  const existing = paper.reviews[currentReviewer]
-  if (existing) return existing
+  const existing = seatTree(project, currentReviewer, paper)
+  if (existing || currentReviewer === null) return existing
   if (!create) return normalizeTree(project.schema, undefined)
   paper.reviews[currentReviewer] = normalizeTree(project.schema, undefined)
   return paper.reviews[currentReviewer]

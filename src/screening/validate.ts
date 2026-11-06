@@ -1,24 +1,9 @@
-import type { AnnotationValueTree } from '../model/annotations'
 import type { Paper, Project } from '../model/project'
+import { seatTree } from '../model/seatTree'
 import type { ValidationIssue } from '../model/validate'
 import { SCREENING_REASON } from './schema'
 import { screeningReason, screeningStatus } from './status'
 import { t } from '../i18n'
-
-// [impl->req~scr-230~1]
-// [impl->req~scr-240~1]
-/** Mirrors `currentTree`'s seat routing — see `screening/counts.ts`'s `seatTree`
- *  for why this is reimplemented rather than imported. */
-function seatTree(
-  project: Project,
-  currentReviewer: string | null,
-  paper: Paper,
-): AnnotationValueTree | null {
-  if (project.reviewers <= 1) return paper.annotations
-  if (currentReviewer === 'consolidation') return paper.annotations
-  if (currentReviewer === null) return null
-  return paper.reviews[currentReviewer] ?? null
-}
 
 // [impl->req~scr-230~1]
 // [impl->req~scr-240~1]

@@ -1,28 +1,10 @@
 // [impl->req~scr-180~1]
 import type { AnnotationValueTree } from '../model/annotations'
 import type { Paper, Project } from '../model/project'
+import { seatTree } from '../model/seatTree'
 import { unanimousFills } from '../consolidate/unanimous'
 import { SCREENING_DECISION } from './schema'
 import { screeningReason, screeningStatus } from './status'
-
-/**
- * The tree a given seat reads for `paper` — the same routing `currentTree`
- * (`state/store.ts`) applies, reimplemented here rather than imported so this
- * module stays store-free and independently testable, matching the precedent
- * `consolidate/disagreements.ts` and `consolidate/readiness.ts` already set.
- * Read-only: unlike the store's own `currentTree(..., create=true)`, this
- * never creates a reviewer's tree, only reads whatever is already there.
- */
-function seatTree(
-  project: Project,
-  currentReviewer: string | null,
-  paper: Paper,
-): AnnotationValueTree | null {
-  if (project.reviewers <= 1) return paper.annotations
-  if (currentReviewer === 'consolidation') return paper.annotations
-  if (currentReviewer === null) return null
-  return paper.reviews[currentReviewer] ?? null
-}
 
 // [impl->req~scr-190~1]
 // [impl->req~scr-200~1]
