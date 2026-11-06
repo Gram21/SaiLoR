@@ -2037,6 +2037,7 @@ pub fn branches(session: &Mutex<Session>, root: &str) -> Result<Vec<Value>, Stri
 // [impl->req~git-340~1]
 pub fn branch_create(session: &Mutex<Session>, root: &str, name: &str) -> Result<GitRun, String> {
     let root = assert_root(session, root)?;
+    assert_ref(name)?;
     Ok(git(&root, &["branch", "--", name]))
 }
 
