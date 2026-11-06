@@ -44,5 +44,13 @@ export default defineConfig({
       '**/.{idea,git,cache,output,temp}/**',
       '**/*.integration.test.{ts,tsx}',
     ],
+    // Applies only with `--coverage` (`npm run test:coverage`). Floors sit just
+    // under the measured baseline, so a drop fails and a rise can raise them.
+    coverage: {
+      include: ['src/**'],
+      exclude: ['**/*.test.{ts,tsx}', 'src/test/**'],
+      reporter: ['text-summary', 'json-summary'],
+      thresholds: { lines: 82, statements: 82, functions: 76, branches: 84 },
+    },
   },
 })

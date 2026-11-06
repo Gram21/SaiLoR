@@ -42,7 +42,7 @@ step "Checking wiki links (openwiki/, user-guide/)"
 npm run check:wiki
 
 step "Running tests (vitest)"
-npm test
+npm run test:coverage
 
 step "Running integration tests (src/test/integration/)"
 npm run test:integration
