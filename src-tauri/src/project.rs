@@ -283,7 +283,24 @@ pub async fn project_open_path(
     session: State<'_, Mutex<Session>>,
     file_path: String,
 ) -> Result<Option<Opened>, String> {
-    Ok(open(&session, Path::new(&file_path)).ok())
+    Ok(open_recent(&session, Path::new(&file_path)).ok())
+}
+
+/// A path the renderer names (from its recents list) is opened only when it
+/// is a `.json` file shaped like a project, so a compromised renderer cannot
+/// register an arbitrary JSON file as a project and then overwrite it.
+fn open_recent(session: &Mutex<Session>, file: &Path) -> Result<Opened, String> {
+    let is_json = file
+        .extension()
+        .is_some_and(|e| e.eq_ignore_ascii_case("json"));
+    let is_project = read_lossy(file)
+        .ok()
+        .and_then(|t| serde_json::from_str::<Value>(&t).ok())
+        .is_some_and(|v| v.get("papers").is_some_and(Value::is_array));
+    if !is_json || !is_project {
+        return Err("Not a project file.".into());
+    }
+    open(session, file)
 }
 
 #[derive(Deserialize, Debug)]
@@ -798,6 +815,20 @@ pub mod tests {
             .unwrap_err()
             .contains("symbolic link"));
         assert!(!outside.join("rc").exists());
+    }
+
+    #[test]
+    fn open_recent_refuses_files_that_are_not_projects() {
+        let d = tmp("recent");
+        let s = Mutex::new(Session::default());
+        fs::write(d.join("settings.json"), r#"{"hooks":{}}"#).unwrap();
+        fs::write(d.join("p.txt"), r#"{"papers":[]}"#).unwrap();
+        fs::write(d.join("p.json"), r#"{"papers":[]}"#).unwrap();
+        assert!(open_recent(&s, &d.join("settings.json")).is_err());
+        assert!(open_recent(&s, &d.join("p.txt")).is_err());
+        assert!(lock(&s).known_projects.is_empty());
+        assert!(open_recent(&s, &d.join("p.json")).is_ok());
+        assert!(lock(&s).is_known(&d.join("p.json")));
     }
 
     #[test]
