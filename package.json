@@ -12,6 +12,7 @@
     "test": "vitest run",
     "test:watch": "vitest",
     "test:coverage": "vitest run --coverage",
+    "test:mutation": "stryker run",
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "typecheck": "tsc -b --noEmit",
     "check:wiki": "node scripts/check-wiki-links.js",
@@ -27,6 +28,8 @@
     "zustand": "^5.0.3"
   },
   "devDependencies": {
+    "@stryker-mutator/core": "10.1.1",
+    "@stryker-mutator/vitest-runner": "10.1.1",
     "@tauri-apps/cli": "^2.12.4",
     "@testing-library/jest-dom": "^6.6.3",
     "@testing-library/react": "^16.1.0",
