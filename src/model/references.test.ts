@@ -811,6 +811,9 @@ describe('parseReferences: BibTeX merged-author-name repair limits', () => {
 
   it('does not split an allowlisted prefix even when both sides have two tokens', () => {
     expect(authors('Carla McDonald Smith')).toEqual(['Carla McDonald Smith'])
+    for (const name of ['MacLeod', 'DeSilva', 'DiCaprio', 'LaSalle', 'VanDyke', 'DuBois']) {
+      expect(authors(`Carla ${name} Smith`)).toEqual([`Carla ${name} Smith`])
+    }
   })
 
   it('does not split a seam when one side would be a single token', () => {
@@ -942,5 +945,35 @@ describe('parseReferences: CSL-JSON details', () => {
     expect(csl({ title: 'T', publisher: 'Pub' })[0].venue).toBe('Pub')
     expect(csl({ title: 'T', 'container-title': '  ', publisher: 'Pub' })[0].venue).toBe('Pub')
     expect(csl({ title: 'T' })[0].venue).toBeUndefined()
+  })
+})
+
+describe('parseReferences: LaTeX accent and letter tables', () => {
+  const risTitle = (title: string) => parseReferences(`TY  - JOUR\nT1  - ${title}\nER  - `, 'refs.ris')[0].title
+
+  const accents: Array<[string, string, string]> = [
+    ['"', 'aeiouyAEIOUY', 'äëïöüÿÄËÏÖÜŸ'],
+    ["'", 'aeiouyAEIOUY', 'áéíóúýÁÉÍÓÚÝ'],
+    ['`', 'aeiouAEIOU', 'àèìòùÀÈÌÒÙ'],
+    ['^', 'aeiouAEIOU', 'âêîôûÂÊÎÔÛ'],
+    ['~', 'anoANO', 'ãñõÃÑÕ'],
+    ['=', 'aeiouAEIOU', 'āēīōūĀĒĪŌŪ'],
+    ['.', 'cegzCEGZ', 'ċėġżĊĖĠŻ'],
+    ['c', 'csCS', 'çşÇŞ'],
+    ['v', 'cerszCERSZ', 'čěřšžČĚŘŠŽ'],
+    ['u', 'agAG', 'ăğĂĞ'],
+    ['H', 'ouOU', 'őűŐŰ'],
+    ['r', 'auAU', 'åůÅŮ'],
+    ['k', 'aeAE', 'ąęĄĘ'],
+  ]
+
+  it.each(accents)('maps every letter of the \\%s accent', (marker, bases, accented) => {
+    const input = [...bases].map((b) => `\\${marker}{${b}}`).join(' ')
+    expect(risTitle(input)).toBe([...accented].join(' '))
+  })
+
+  it('maps every standalone letter command', () => {
+    const input = ['ss', 'o', 'O', 'l', 'L', 'ae', 'AE', 'oe', 'OE', 'aa', 'AA', 'i', 'j'].map((c) => `\\${c}{}`).join(' ')
+    expect(risTitle(input)).toBe('ß ø Ø ł Ł æ Æ œ Œ å Å ı ȷ')
   })
 })
