@@ -329,7 +329,8 @@ fn is_feedback_path(rel: &str) -> bool {
 fn meta_of(file: &Path, meta_text: Option<&str>) -> Result<Value, String> {
     match meta_text {
         Some(t) => serde_json::from_str(t).map_err(err),
-        None => Ok(read_meta(file)),
+        None if file.exists() => serde_json::from_str(&read_lossy(file).map_err(err)?).map_err(err),
+        None => Ok(Value::Null),
     }
 }
 
@@ -829,6 +830,16 @@ pub mod tests {
         assert!(lock(&s).known_projects.is_empty());
         assert!(open_recent(&s, &d.join("p.json")).is_ok());
         assert!(lock(&s).is_known(&d.join("p.json")));
+    }
+
+    #[test]
+    fn write_without_meta_refuses_a_corrupt_project_file() {
+        let d = tmp("corrupt-meta");
+        let f = d.join("p.json");
+        fs::write(&f, "{broken").unwrap();
+        let s = Mutex::new(Session::default());
+        assert!(write_project_files(&s, &f, None, &[]).is_err());
+        assert!(!d.join("annotations").exists());
     }
 
     #[test]
