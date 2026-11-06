@@ -157,6 +157,13 @@ interface EditorSnapshot {
  *  one undo step instead of one per keystroke. Mirrors the annotation store. */
 let lastEditKey: string | null = null
 
+/** True when `key` repeats the previous edit (one undo step); records `key` as the latest edit either way. */
+function coalescesWithLast(key: string): boolean {
+  const same = key === lastEditKey
+  lastEditKey = key
+  return same
+}
+
 let uidCounter = 0
 const nextUid = () => `n${uidCounter++}`
 
@@ -1795,8 +1802,7 @@ export const useEditorStore = create<EditorState>()(
 
     setTitle: (title) => {
       const key = 'project:title'
-      const coalesce = key === lastEditKey
-      lastEditKey = key
+      const coalesce = coalescesWithLast(key)
       const snap = snapshotOf(get())
       set((s) => {
         if (!coalesce) pushPast(s, snap)
@@ -1818,8 +1824,7 @@ export const useEditorStore = create<EditorState>()(
 
     setProtocol: (protocol) => {
       const key = 'project:protocol'
-      const coalesce = key === lastEditKey
-      lastEditKey = key
+      const coalesce = coalescesWithLast(key)
       const snap = snapshotOf(get())
       set((s) => {
         if (!coalesce) pushPast(s, snap)
@@ -1830,8 +1835,7 @@ export const useEditorStore = create<EditorState>()(
 
     setSchemaInfo: (schemaInfo) => {
       const key = 'project:schemaInfo'
-      const coalesce = key === lastEditKey
-      lastEditKey = key
+      const coalesce = coalescesWithLast(key)
       const snap = snapshotOf(get())
       set((s) => {
         if (!coalesce) pushPast(s, snap)
@@ -1905,8 +1909,7 @@ export const useEditorStore = create<EditorState>()(
     // [impl->req~edt-200~1]
     setPdfFolder: (folder) => {
       const key = 'project:pdfFolder'
-      const coalesce = key === lastEditKey
-      lastEditKey = key
+      const coalesce = coalescesWithLast(key)
       const snap = snapshotOf(get())
       set((s) => {
         if (!coalesce) pushPast(s, snap)
@@ -1959,8 +1962,7 @@ export const useEditorStore = create<EditorState>()(
     // [impl->req~edt-130~1]
     renamePerson: (id, name) => {
       const key = `person:${id}`
-      const coalesce = key === lastEditKey
-      lastEditKey = key
+      const coalesce = coalescesWithLast(key)
       const snap = snapshotOf(get())
       set((s) => {
         const person = s.strict?.persons.find((p) => p.id === id)
@@ -2132,8 +2134,7 @@ export const useEditorStore = create<EditorState>()(
     updateNode: (uid, patch) => {
       // Typing into one input is a single undo step, not one per keystroke.
       const key = `node:${uid}:${Object.keys(patch).sort().join(',')}`
-      const coalesce = key === lastEditKey
-      lastEditKey = key
+      const coalesce = coalescesWithLast(key)
       const snap = snapshotOf(get())
       set((s) => {
         const node = findNode(s.nodes, uid)
@@ -2232,8 +2233,7 @@ export const useEditorStore = create<EditorState>()(
 
     updatePaper: (uid, patch) => {
       const key = `paper:${uid}:${Object.keys(patch).sort().join(',')}`
-      const coalesce = key === lastEditKey
-      lastEditKey = key
+      const coalesce = coalescesWithLast(key)
       const snap = snapshotOf(get())
       set((s) => {
         const paper = s.papers.find((p) => p.uid === uid)
