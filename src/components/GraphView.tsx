@@ -2,9 +2,20 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent, type ReactNode } from 'react'
 import { useStore } from '../state/store'
 import { seatLabel } from '../model/project'
-import { buildGraph, graphSource, graphTrees } from '../model/graph'
-import { indexGraph, neighbours, parseQuery, selectSubgraph, type GraphQuery } from '../model/graphQuery'
-import { CypherError, MAX_ROWS, cypherSubgraph, formatValue, isCypher, parseCypher, runCypher, type CypherQuery } from '../model/graphCypher'
+import { buildGraph, graphSource, graphTrees, type Graph } from '../model/graph'
+import { indexGraph, neighbours, parseQuery, selectSubgraph, type GraphQuery, type SubGraph } from '../model/graphQuery'
+import {
+  CypherError,
+  MAX_ROWS,
+  cypherHost,
+  cypherSubgraph,
+  isCypher,
+  parseCypher,
+  type CypherOutput,
+  type CypherQuery,
+  type CypherReply,
+  type CypherRequest,
+} from '../model/graphCypher'
 import { layoutHost, type LayoutFrame, type LayoutMessage } from '../model/graphLayout'
 import { buildScene, drawScene, EDGE_DASH, EDGE_TYPES, edgeAt, fitView, hitTest, selectNode, zoomAt, type Palette, type Scene } from './graphCanvas'
 import { useT } from '../i18n'
@@ -12,12 +23,42 @@ import { Modal } from './Modal'
 import { ExportGraphDialog } from './ExportGraphDialog'
 
 const LIST_PAGE = 200
+export const CYPHER_TIMEOUT_MS = 20_000
+const NOTHING: SubGraph = { nodes: [], edges: [], seeds: new Set() }
 const EDGE_VARS = ['--graph-answer', '--graph-authored', '--graph-venue', '--graph-keyword', '--graph-cites']
 
 function readPalette(el: Element): Palette {
   const css = getComputedStyle(el)
   const v = (name: string) => css.getPropertyValue(name).trim()
   return { edges: EDGE_VARS.map(v), text: v('--text'), selected: v('--danger'), groups: [v('--accent'), v('--ok'), v('--progress'), v('--ai-mark')] }
+}
+
+interface CypherWorker {
+  post: (m: CypherRequest) => void
+  stop: () => void
+  /** The graph the worker has indexed. */
+  graph?: Graph
+}
+
+// [impl->req~ui-250~1]
+function startCypherWorker(onReply: (r: CypherReply) => void): CypherWorker {
+  // jsdom has no Worker; there the query runs inline with the same code.
+  if (typeof Worker === 'undefined') return { post: cypherHost(onReply), stop: () => {} }
+  const worker = new Worker(new URL('../model/graphCypher.worker.ts', import.meta.url), { type: 'module' })
+  let live = true
+  worker.onmessage = (e: MessageEvent<CypherReply>) => {
+    if (live) onReply(e.data)
+  }
+  worker.onerror = (e) => {
+    if (live) onReply({ error: e.message })
+  }
+  return {
+    post: (m) => worker.postMessage(m),
+    stop: () => {
+      live = false
+      worker.terminate()
+    },
+  }
 }
 
 /** Renders LIST_PAGE items at a time, so the accessible lists stay fast for huge graphs. */
@@ -44,6 +85,9 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   const [input, setInput] = useState('')
   const [query, setQuery] = useState<GraphQuery | CypherQuery>(() => parseQuery(''))
   const [error, setError] = useState<CypherError | null>(null)
+  const [pending, setPending] = useState<CypherQuery | null>(null)
+  const [cypher, setCypher] = useState<{ graph: Graph; out: CypherOutput } | null>(null)
+  const [running, setRunning] = useState(false)
   const [extra, setExtra] = useState<string[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [hidden, setHidden] = useState(0)
@@ -56,15 +100,19 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   const frame = useRef(0)
   const palette = useRef<Palette | null>(null)
   const drag = useRef<{ i: number; x: number; y: number; moved: boolean } | null>(null)
+  const cypherWorker = useRef<CypherWorker | null>(null)
+  const onReply = useRef<(r: CypherReply) => void>(() => {})
 
   const index = useMemo(
     () => indexGraph(project ? buildGraph(project, graphTrees(project, seat)) : { nodes: [], edges: [] }),
     [project, seat],
   )
-  const cypher = useMemo(() => ('chains' in query ? runCypher(index, query) : null), [index, query])
+  const result = 'chains' in query && cypher?.graph === index.graph ? cypher.out : null
+  /** The Cypher query to run: a new one, or the shown one again after the graph changed. */
+  const job = pending ?? ('chains' in query && !result ? query : null)
   const sub = useMemo(
-    () => (cypher ? cypherSubgraph(index, cypher, extra) : selectSubgraph(index, query as GraphQuery, extra)),
-    [index, query, cypher, extra],
+    () => (result ? cypherSubgraph(index, result, extra) : 'chains' in query ? NOTHING : selectSubgraph(index, query, extra)),
+    [index, query, result, extra],
   )
   const scene = useMemo(
     () => buildScene(sub, 'chains' in query || query.terms.length > 0, sceneRef.current, (id) => neighbours(index, id)),
@@ -114,6 +162,58 @@ export function GraphView({ onClose }: { onClose: () => void }) {
       frame.current = 0
     }
   }, [requestDraw])
+
+  // [impl->req~ui-250~1]
+  useEffect(() => {
+    if (!job) return
+    const graph = index.graph
+    let live = true
+    const end = () => {
+      live = false
+      clearTimeout(timer)
+      onReply.current = () => {}
+      setRunning(false)
+    }
+    const stop = () => {
+      cypherWorker.current?.stop()
+      cypherWorker.current = null
+    }
+    const fail = (e: CypherError) => {
+      end()
+      stop()
+      setPending(null)
+      setError(e)
+    }
+    onReply.current = (r) => {
+      if ('error' in r) return fail(new CypherError('graphView.cypher.failed', { message: r.error }))
+      end()
+      setPending(null)
+      setQuery(job)
+      setCypher({ graph, out: r.out })
+      setError(null)
+    }
+    const timer = setTimeout(() => fail(new CypherError('graphView.cypher.timeout', { seconds: CYPHER_TIMEOUT_MS / 1000 })), CYPHER_TIMEOUT_MS)
+    setRunning(true)
+    const w = (cypherWorker.current ??= startCypherWorker((r) => onReply.current(r)))
+    if (w.graph !== graph) {
+      w.post({ type: 'graph', graph })
+      w.graph = graph
+    }
+    w.post({ type: 'query', query: job })
+    return () => {
+      if (!live) return
+      end()
+      stop()
+    }
+  }, [index, job])
+
+  useEffect(
+    () => () => {
+      cypherWorker.current?.stop()
+      cypherWorker.current = null
+    },
+    [],
+  )
 
   // [impl->req~ui-220~1]
   useEffect(() => {
@@ -179,7 +279,11 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   const run = (e: FormEvent) => {
     e.preventDefault()
     try {
-      setQuery(isCypher(input) ? parseCypher(input) : parseQuery(input))
+      if (isCypher(input)) setPending(parseCypher(input))
+      else {
+        setPending(null)
+        setQuery(parseQuery(input))
+      }
     } catch (err) {
       if (!(err instanceof CypherError)) throw err
       setError(err)
@@ -334,7 +438,11 @@ export function GraphView({ onClose }: { onClose: () => void }) {
           </p>
         )}
         <p className="graph-hint" role="status">
-          {sub.nodes.length === 0 ? t('graphView.empty') : t('graphView.count', { nodes: sub.nodes.length, edges: sub.edges.length })}
+          {running
+            ? t('graphView.cypher.running')
+            : sub.nodes.length === 0
+              ? t('graphView.empty')
+              : t('graphView.count', { nodes: sub.nodes.length, edges: sub.edges.length })}
         </p>
         <div className="graph-body">
           <canvas
@@ -352,16 +460,16 @@ export function GraphView({ onClose }: { onClose: () => void }) {
             }}
           />
           <aside className="graph-side">
-            {cypher && (
+            {result && (
               <section aria-labelledby="graph-results-title">
-                <h3 id="graph-results-title">{t('graphView.cypher.results', { count: cypher.rows.length })}</h3>
-                {cypher.truncated && <p className="graph-hint">{t('graphView.cypher.truncated', { max: MAX_ROWS })}</p>}
-                {cypher.rows.length > LIST_PAGE && <p className="graph-hint">{t('graphView.cypher.shown', { shown: LIST_PAGE })}</p>}
+                <h3 id="graph-results-title">{t('graphView.cypher.results', { count: result.rows.length })}</h3>
+                {result.truncated && <p className="graph-hint">{t('graphView.cypher.truncated', { max: MAX_ROWS })}</p>}
+                {result.rows.length > LIST_PAGE && <p className="graph-hint">{t('graphView.cypher.shown', { shown: LIST_PAGE })}</p>}
                 <div className="graph-results">
                   <table>
                     <thead>
                       <tr>
-                        {cypher.columns.map((c, i) => (
+                        {result.columns.map((c, i) => (
                           <th key={i} scope="col" dir="auto">
                             {c}
                           </th>
@@ -369,11 +477,11 @@ export function GraphView({ onClose }: { onClose: () => void }) {
                       </tr>
                     </thead>
                     <tbody>
-                      {cypher.rows.slice(0, LIST_PAGE).map((row, r) => (
+                      {result.rows.slice(0, LIST_PAGE).map((row, r) => (
                         <tr key={r}>
                           {row.map((v, c) => (
                             <td key={c} dir="auto">
-                              {formatValue(v)}
+                              {v}
                             </td>
                           ))}
                         </tr>

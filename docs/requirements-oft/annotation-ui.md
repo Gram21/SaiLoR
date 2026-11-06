@@ -1084,3 +1084,18 @@ Comment:
 Needs: impl, utest
 
 Tags: NonFunctional, Security, Performance_Efficiency
+
+### REQ-UI-250: Knowledge graph Cypher query in a background worker
+`req~ui-250~1`
+
+A Cypher query of REQ-UI-230 shall run in a background worker and not on the main thread. If the platform has no worker, the query shall run in the same code on the main thread. The view shall copy the graph to the worker and index it there only once per graph, not once per query. The worker shall apply the row and work limits of REQ-UI-240. While a query runs, the status line shall show "Running the query…" and the view shall stay usable. A new query, a text query or closing the view shall stop the running query, and the view shall ignore its result. If a query runs longer than 20 seconds, the view shall stop the worker and show an error with the time limit. If the worker fails, the view shall show the reason as an error. After a stop or an error, the next query shall start a new worker. The automated benchmarks shall copy and index the graph of REQ-UI-240 in the worker code in less than 20 seconds.
+
+Comment:
+- **Type:** Non-functional (ISO 25010: Performance Efficiency, Usability)
+- **Evidence:** `src/model/graphCypher.ts` (`cypherHost`), `src/model/graphCypher.worker.ts`, `src/components/GraphView.tsx` (`startCypherWorker`, `GraphView`, `CYPHER_TIMEOUT_MS`)
+- **Verified by:** `src/model/graphCypher.test.ts`, `src/components/GraphView.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: NonFunctional, Performance_Efficiency, Usability

@@ -7,11 +7,15 @@ import {
   CypherError,
   MAX_INPUT,
   MAX_ROWS,
+  cypherHost,
   cypherSubgraph,
   formatValue,
   isCypher,
   parseCypher,
   runCypher,
+  type CypherOutput,
+  type CypherQuery,
+  type CypherReply,
 } from './graphCypher'
 
 const node = (id: string, type: GraphNode['type'], label: string, extra: Partial<GraphNode> = {}): GraphNode => ({
@@ -236,9 +240,53 @@ describe('formatValue', () => {
   })
 })
 
+/** Runs a query through the worker host, on structured clones as a worker gets them. */
+function hosted(q: string) {
+  const replies: CypherReply[] = []
+  const host = cypherHost((r) => replies.push(r))
+  host(structuredClone({ type: 'graph', graph: GRAPH }))
+  host(structuredClone({ type: 'query', query: parseCypher(q) }))
+  return replies
+}
+const output = (q: string) => (hosted(q)[0] as { out: CypherOutput }).out
+
+// [utest->req~ui-250~1]
+describe('cypherHost', () => {
+  it('indexes the graph once and answers each query with display rows and edge positions', () => {
+    const replies: CypherReply[] = []
+    const host = cypherHost((r) => replies.push(r))
+    host({ type: 'query', query: parseCypher('MATCH (n) RETURN n') })
+    expect(replies).toEqual([{ error: 'Error: no graph' }])
+    host(structuredClone({ type: 'graph', graph: GRAPH }))
+    host(structuredClone({ type: 'query', query: parseCypher("MATCH (p:Paper)-[r:cites]->(q) RETURN p, r, q.year, [1, 'a']") }))
+    host(structuredClone({ type: 'query', query: parseCypher('MATCH (a:Author) RETURN count(*)') }))
+    expect(replies.slice(1)).toEqual([
+      {
+        out: {
+          columns: ['p', 'r', 'q.year', "[1, 'a']"],
+          rows: [['Testing Things', 'cites', '2020', '[1, a]']],
+          nodes: new Set(['paper:p2', 'paper:p1']),
+          seeds: new Set(['paper:p2']),
+          edges: new Set([8]),
+          truncated: false,
+        },
+      },
+      { out: expect.objectContaining({ rows: [['2']] }) },
+    ])
+  })
+
+  it('reports a failed query instead of throwing', () => {
+    const replies: CypherReply[] = []
+    const host = cypherHost((r) => replies.push(r))
+    host({ type: 'graph', graph: GRAPH })
+    host({ type: 'query', query: { ...parseCypher('MATCH (n) RETURN n'), chains: null } as unknown as CypherQuery })
+    expect(replies).toEqual([{ error: expect.stringContaining('TypeError') }])
+  })
+})
+
 describe('cypherSubgraph', () => {
   it('shows the matched paths, seeds the returned nodes and adds revealed nodes', () => {
-    const r = run('MATCH (p:Paper)-[:authoredBy]->(a:Author) RETURN p')
+    const r = output('MATCH (p:Paper)-[:authoredBy]->(a:Author) RETURN p')
     expect([...r.nodes].sort()).toEqual(['author:ada', 'author:alan', 'paper:p1', 'paper:p2'])
     expect([...r.seeds].sort()).toEqual(['paper:p1', 'paper:p2'])
     const sub = cypherSubgraph(INDEX, r, ['venue:icse', 'missing'])
@@ -250,7 +298,7 @@ describe('cypherSubgraph', () => {
       'paper:p2>author:alan',
     ])
     expect(sub.seeds).toBe(r.seeds)
-    expect(cypherSubgraph(INDEX, run("MATCH (p {id: 'paper:p2'})-[r*2]->(x:Venue) RETURN x")).edges).toHaveLength(2)
+    expect(cypherSubgraph(INDEX, output("MATCH (p {id: 'paper:p2'})-[r*2]->(x:Venue) RETURN x")).edges).toHaveLength(2)
   })
 })
 
@@ -432,6 +480,24 @@ describe('performance on 150k nodes and 600k relationships', () => {
     expect(graph.nodes).toHaveLength(150_000)
     expect(graph.edges).toHaveLength(600_000)
     expect(indexMs).toBeLessThan(20_000)
+  })
+
+  // [utest->req~ui-250~1]
+  it('copies the graph to the query worker once and answers there', { timeout: 60_000 }, () => {
+    let t = performance.now()
+    const copy = structuredClone(graph)
+    const cloneMs = performance.now() - t
+    const replies: CypherReply[] = []
+    const host = cypherHost((r) => replies.push(r))
+    t = performance.now()
+    host({ type: 'graph', graph: copy })
+    const hostIndexMs = performance.now() - t
+    t = performance.now()
+    host({ type: 'query', query: parseCypher('MATCH (a)-[*3]-(b) RETURN count(*)') })
+    const workCapMs = performance.now() - t
+    console.info('cypher worker (ms)', JSON.stringify({ cloneMs, hostIndexMs, workCapMs }))
+    expect((replies[0] as { out: CypherOutput }).out.truncated).toBe(true)
+    expect(cloneMs + hostIndexMs).toBeLessThan(20_000)
   })
 
   it('answers typical queries within budget', { timeout: 60_000 }, () => {

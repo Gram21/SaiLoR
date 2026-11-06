@@ -223,6 +223,7 @@ inspection only.
 | REQ-UI-220 | Knowledge graph relations | Functional · Usability, Performance Efficiency | `src/components/graphCanvas.ts` (`buildScene`, `drawScene`, `selectNode`, `edgeAt`)<br>`src/components/GraphView.tsx` (`GraphView`)<br>`src/styles/index.css` (`.graph-legend`) | `src/components/graphCanvas.test.ts`<br>`src/components/GraphView.test.tsx` | — | — |
 | REQ-UI-230 | Knowledge graph Cypher query | Functional · Functional Suitability, Usability | `src/model/graphCypher.ts` (`isCypher`, `parseCypher`, `runCypher`, `cypherSubgraph`, `formatValue`)<br>`src/components/GraphView.tsx` (`GraphView`)<br>`src/styles/index.css` (`.graph-results`, `.graph-error`)<br>`src/locales/en.json` (`graphView.cypherHelp`) | `src/model/graphCypher.test.ts`<br>`src/components/GraphView.test.tsx` | — | — |
 | REQ-UI-240 | Knowledge graph Cypher limits and safety | Non-functional · Security, Performance Efficiency | `src/model/graphCypher.ts` (`parseCypher`, `runCypher`, `MAX_INPUT`, `MAX_NESTING`, `MAX_HOPS`, `MAX_ROWS`, `MAX_WORK`) | `src/model/graphCypher.test.ts`<br>`src/components/GraphView.test.tsx` | — | — |
+| REQ-UI-250 | Knowledge graph Cypher query in a background worker | Non-functional · Performance Efficiency, Usability | `src/model/graphCypher.ts` (`cypherHost`)<br>`src/model/graphCypher.worker.ts`<br>`src/components/GraphView.tsx` (`startCypherWorker`, `GraphView`, `CYPHER_TIMEOUT_MS`) | `src/model/graphCypher.test.ts`<br>`src/components/GraphView.test.tsx` | — | — |
 
 ## Screening ([screening.md](screening.md))
 

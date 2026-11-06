@@ -1,7 +1,7 @@
 // [impl->req~ui-230~1]
 // [impl->req~ui-240~1]
-import type { GraphEdge, GraphEdgeType, GraphNode, GraphNodeType } from './graph'
-import type { GraphIndex, SubGraph } from './graphQuery'
+import type { Graph, GraphEdge, GraphEdgeType, GraphNode, GraphNodeType } from './graph'
+import { indexGraph, type GraphIndex, type SubGraph } from './graphQuery'
 import type { MessageKey, Params } from '../i18n'
 
 export const MAX_INPUT = 4000
@@ -636,14 +636,49 @@ export function runCypher(index: GraphIndex, q: CypherQuery): CypherResult {
   return { columns: q.items.map((it) => it.name), rows: out, nodes, seeds, edges, truncated }
 }
 
+/** A result as sent from the query worker: display rows, node ids and positions in `graph.edges`. */
+export interface CypherOutput {
+  columns: string[]
+  rows: string[][]
+  nodes: Set<string>
+  seeds: Set<string>
+  edges: Set<number>
+  truncated: boolean
+}
+export type CypherRequest = { type: 'graph'; graph: Graph } | { type: 'query'; query: CypherQuery }
+export type CypherReply = { out: CypherOutput } | { error: string }
+
+// [impl->req~ui-250~1]
+/** Runs queries message by message, in a worker or inline. Indexes each graph once; a query names no graph. */
+export function cypherHost(post: (reply: CypherReply) => void) {
+  let index: GraphIndex | undefined
+  let position = new Map<GraphEdge, number>()
+  return (m: CypherRequest) => {
+    if (m.type === 'graph') {
+      index = indexGraph(m.graph)
+      position = new Map(m.graph.edges.map((e, i) => [e, i]))
+      return
+    }
+    try {
+      if (!index) throw new Error('no graph')
+      const r = runCypher(index, m.query)
+      const rows = r.rows.map((row) => row.map(formatValue))
+      const edges = new Set([...r.edges].map((e) => position.get(e)!))
+      post({ out: { columns: r.columns, rows, nodes: r.nodes, seeds: r.seeds, edges, truncated: r.truncated } })
+    } catch (e) {
+      post({ error: String(e) })
+    }
+  }
+}
+
 /** The matched paths as a sub-graph, plus the nodes the user revealed. */
-export function cypherSubgraph(index: GraphIndex, result: CypherResult, extra: Iterable<string> = []): SubGraph {
+export function cypherSubgraph(index: GraphIndex, result: CypherOutput, extra: Iterable<string> = []): SubGraph {
   const added = new Set([...extra].filter((id) => index.byId.has(id)))
   const keep = new Set([...result.nodes, ...added])
   return {
     nodes: index.graph.nodes.filter((n) => keep.has(n.id)),
     edges: index.graph.edges.filter(
-      (e) => result.edges.has(e) || (keep.has(e.source) && keep.has(e.target) && (added.has(e.source) || added.has(e.target))),
+      (e, i) => result.edges.has(i) || (keep.has(e.source) && keep.has(e.target) && (added.has(e.source) || added.has(e.target))),
     ),
     seeds: result.seeds,
   }

@@ -163,3 +163,7 @@ per category so requirements can be inserted without renumbering.
   the arrowheads, the edge tooltip, the selection highlight and the edge-type legend. The coverage counts above were not recounted.
 - **Knowledge graph Cypher query (2026-11-06).** REQ-UI-230 and REQ-UI-240 added for the read-only Cypher subset
   in the knowledge graph query box and its limits. The coverage counts above were not recounted.
+- **Knowledge graph Cypher worker (2026-11-06).** REQ-UI-250 added: Cypher queries run in a background worker
+  with cancellation and a 20 second timeout. REQ-UI-230 revised: one `MATCH` clause uses each relationship at most once,
+  text comparisons are case-sensitive, and the help text states both. REQ-UI-220 revised: the edge colours follow
+  theme changes. The coverage counts above were not recounted.

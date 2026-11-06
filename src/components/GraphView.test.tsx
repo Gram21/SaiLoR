@@ -22,8 +22,35 @@ if (typeof window.PointerEvent === 'undefined') {
 }
 
 const { useStore } = await import('../state/store')
-const { GraphView } = await import('./GraphView')
+const { GraphView, CYPHER_TIMEOUT_MS } = await import('./GraphView')
 const { layoutHost } = await import('../model/graphLayout')
+const { cypherHost } = await import('../model/graphCypher')
+
+/** Worker stand-in: the layout runs inline; Cypher replies wait until `flush`, like a real worker thread. */
+class FakeWorker {
+  static cypher: FakeWorker[] = []
+  onmessage: ((e: { data: unknown }) => void) | null = null
+  onerror: ((e: { message: string }) => void) | null = null
+  sent: { type: string }[] = []
+  replies: unknown[] = []
+  terminate = vi.fn()
+  postMessage: (m: never) => void
+  constructor(url: URL) {
+    if (String(url).includes('graphLayout')) {
+      this.postMessage = layoutHost((data) => this.onmessage?.({ data }))
+      return
+    }
+    FakeWorker.cypher.push(this)
+    const host = cypherHost((r) => this.replies.push(r))
+    this.postMessage = (m: { type: string }) => {
+      this.sent.push(m)
+      host(m as never)
+    }
+  }
+  flush() {
+    act(() => this.replies.splice(0).forEach((data) => this.onmessage?.({ data })))
+  }
+}
 
 function open(reviewers = 1) {
   useStore.getState().loadFromText(
@@ -81,6 +108,13 @@ function drawn(label: string) {
   return { clientX: (call[1] as number) * k + x, clientY: ((call[2] as number) + 12) * k + y }
 }
 const waitForLabel = (label: string) => waitFor(() => expect(ctx.fillText.mock.calls.some((c) => c[0] === label)).toBe(true))
+
+/** Submits a query without userEvent, which treats `{` and `[` as key names. */
+function submit(text: string) {
+  const box = screen.getByRole('searchbox', { name: 'Graph query' })
+  fireEvent.change(box, { target: { value: text } })
+  fireEvent.submit(box.closest('form')!)
+}
 
 async function query(text: string) {
   const box = screen.getByRole('searchbox', { name: 'Graph query' })
@@ -167,6 +201,81 @@ describe('GraphView', () => {
     await query('author:alan')
     expect(screen.queryByRole('table')).toBeNull()
     expect(listed().sort()).toEqual(['Author Alan Turing', 'Paper Testing Things'])
+  })
+
+  // [utest->req~ui-250~1]
+  it('runs Cypher queries in a worker, sends the graph once and ends superseded queries', () => {
+    FakeWorker.cypher = []
+    vi.stubGlobal('Worker', FakeWorker)
+    open()
+    const { unmount } = render(<GraphView onClose={() => {}} />)
+    const running = () => expect(screen.getByRole('status')).toHaveTextContent('Running the query…')
+    submit('MATCH (a:Author) RETURN a.label')
+    running()
+    expect(screen.queryByRole('table')).toBeNull()
+    const [first] = FakeWorker.cypher
+    expect(first.sent.map((m) => m.type)).toEqual(['graph', 'query'])
+
+    // A new query ends the running one; the view stays usable meanwhile.
+    submit('MATCH (a)-[*3]-(b) RETURN count(*)')
+    expect(first.terminate).toHaveBeenCalled()
+    const second = FakeWorker.cypher[1]
+    expect(second.sent.map((m) => m.type)).toEqual(['graph', 'query'])
+    first.flush()
+    running()
+    expect(screen.queryByRole('table')).toBeNull()
+    second.flush()
+    expect(screen.getByRole('heading', { name: 'Results (1 rows)' })).toBeInTheDocument()
+
+    submit('MATCH (p:Paper) RETURN p.label')
+    second.flush()
+    expect(screen.getByRole('heading', { name: 'Results (2 rows)' })).toBeInTheDocument()
+    expect(second.sent.map((m) => m.type)).toEqual(['graph', 'query', 'query'])
+    expect(FakeWorker.cypher).toHaveLength(2)
+
+    // A text query cancels a running Cypher query.
+    submit('MATCH (a:Author) RETURN a')
+    submit('author:alan')
+    expect(second.terminate).toHaveBeenCalled()
+    expect(screen.queryByRole('table')).toBeNull()
+    expect(listed().sort()).toEqual(['Author Alan Turing', 'Paper Testing Things'])
+
+    submit('MATCH (n) RETURN n')
+    unmount()
+    expect(FakeWorker.cypher[2].terminate).toHaveBeenCalled()
+  })
+
+  // [utest->req~ui-250~1]
+  it('stops a hung or failed Cypher worker and shows an error', () => {
+    vi.useFakeTimers({ toFake: ['setTimeout', 'clearTimeout'] })
+    try {
+      FakeWorker.cypher = []
+      vi.stubGlobal('Worker', FakeWorker)
+      open()
+      render(<GraphView onClose={() => {}} />)
+      submit('MATCH (n) RETURN n')
+      act(() => vi.advanceTimersByTime(CYPHER_TIMEOUT_MS - 1))
+      expect(screen.getByRole('status')).toHaveTextContent('Running the query…')
+      expect(screen.queryByRole('alert')).toBeNull()
+      act(() => vi.advanceTimersByTime(1))
+      expect(screen.getByRole('alert')).toHaveTextContent(
+        `Cypher query error: The query took longer than ${CYPHER_TIMEOUT_MS / 1000} seconds and was stopped.`,
+      )
+      expect(FakeWorker.cypher[0].terminate).toHaveBeenCalled()
+      expect(screen.getByRole('status')).not.toHaveTextContent('Running')
+      FakeWorker.cypher[0].flush()
+      expect(screen.queryByRole('table')).toBeNull()
+
+      submit('MATCH (n) RETURN n')
+      expect(screen.queryByRole('alert')).toBeNull()
+      act(() => FakeWorker.cypher[1].onerror!({ message: 'boom' }))
+      expect(screen.getByRole('alert')).toHaveTextContent('Cypher query error: The query could not run: boom')
+      expect(FakeWorker.cypher[1].terminate).toHaveBeenCalled()
+      act(() => vi.advanceTimersByTime(CYPHER_TIMEOUT_MS))
+      expect(screen.getByRole('alert')).toHaveTextContent('boom')
+    } finally {
+      vi.useRealTimers()
+    }
   })
 
   // [utest->req~ui-220~1]
