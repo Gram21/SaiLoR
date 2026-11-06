@@ -53,6 +53,7 @@ case "$OS" in
     have brew && PM=brew
     if [ -z "$PM" ]; then
       say "Homebrew not found. It is optional. Node and Rust can use other methods."
+      # shellcheck disable=SC2016  # the command string expands when `choose` runs it
       choose "Install Homebrew?" \
         "Official installer (https://brew.sh)" \
         '/bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"'
@@ -61,7 +62,7 @@ case "$OS" in
     ;;
   Linux)
     for p in apt-get dnf pacman zypper; do have "$p" && PM="$p" && break; done
-    [ -n "$PM" ] && say "Package manager: $PM" || say "No supported package manager found (apt-get, dnf, pacman, zypper)."
+    if [ -n "$PM" ]; then say "Package manager: $PM"; else say "No supported package manager found (apt-get, dnf, pacman, zypper)."; fi
     SUDO=""; [ "$(id -u)" -ne 0 ] && SUDO="sudo"
     case "$PM" in
       apt-get)
