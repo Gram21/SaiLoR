@@ -34,6 +34,7 @@ import { Spinner } from './Spinner'
 import { AiPreviewNotice } from './AiPreviewNotice'
 import { useT, t, tp, rich, getLanguage, type MessageKey } from '../i18n'
 import '../styles/ai.css'
+import { Modal } from './Modal'
 
 /**
  * The AI-assisted annotation dialog: a view over `useAiStore`, which owns the
@@ -502,699 +503,692 @@ export function AiDialog() {
   }
 
   return (
-    <div className="modal-overlay" onClick={() => closeDialog()}>
-      <div
-        className="modal ai-dialog"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('ai.dialog.title')}
-      >
-        <div className="modal-head">
-          <strong>{t('ai.dialog.title')}</strong>
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={() => closeDialog()}
-            title={t('common.close')}
-            aria-label={t('common.close')}
-          >
-            ×
-          </button>
-        </div>
+    <Modal onClose={() => closeDialog()} className="ai-dialog" aria-label={t('ai.dialog.title')}>
+      <div className="modal-head">
+        <strong>{t('ai.dialog.title')}</strong>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={() => closeDialog()}
+          title={t('common.close')}
+          aria-label={t('common.close')}
+        >
+          ×
+        </button>
+      </div>
 
-        <div className="modal-body">
-          <AiPreviewNotice />
-          {phase === 'setup' && (
-            <>
-              {resumeAvailable && (
-                <div className="ai-confirm">
-                  <p className="ai-note">
-                    {t('ai.resume.stopped', { done: resumeAvailable.doneIds.length, total: resumeAvailable.allPaperIds.length, date: new Date(resumeAvailable.startedAt).toLocaleString(getLanguage()) })}
-                  </p>
-                  <div className="ai-foot">
-                    <button
-                      type="button"
-                      onClick={() => dismissResume()}
-                      title={t('ai.resume.discardTitle')}
-                    >
-                      {t('ai.action.discard')}
-                    </button>
-                    <button
-                      type="button"
-                      className="primary"
-                      onClick={() => void resumeBatch()}
-                      title={t('ai.resume.resumeTitle')}
-                    >
-                      {t('ai.action.resume')}
-                    </button>
-                  </div>
-                </div>
-              )}
-
-              {configs.length === 0 && (
-                <div className="ai-empty-configs">
-                  <p>{t('ai.empty.noModel')}</p>
+      <div className="modal-body">
+        <AiPreviewNotice />
+        {phase === 'setup' && (
+          <>
+            {resumeAvailable && (
+              <div className="ai-confirm">
+                <p className="ai-note">
+                  {t('ai.resume.stopped', { done: resumeAvailable.doneIds.length, total: resumeAvailable.allPaperIds.length, date: new Date(resumeAvailable.startedAt).toLocaleString(getLanguage()) })}
+                </p>
+                <div className="ai-foot">
+                  <button
+                    type="button"
+                    onClick={() => dismissResume()}
+                    title={t('ai.resume.discardTitle')}
+                  >
+                    {t('ai.action.discard')}
+                  </button>
                   <button
                     type="button"
                     className="primary"
-                    onClick={() => setSettingsOpen(true)}
-                    title={t('ai.empty.setUpTitle')}
+                    onClick={() => void resumeBatch()}
+                    title={t('ai.resume.resumeTitle')}
                   >
-                    {t('ai.action.setUp')}
+                    {t('ai.action.resume')}
                   </button>
                 </div>
-              )}
-
-              {/* What: scope (current paper vs. all papers) and which fields will be asked. */}
-              <div className="ai-label" id="ai-what-label">
-                {t('ai.section.what')}
               </div>
-              <p className="ai-scope">
-                {allPapers
-                  ? rich('ai.scope.all', { papers: tp('ai.papers.count', candidates.length) })
-                  : rich('ai.scope.current', { title: currentPaper?.title ?? '—' })}
+            )}
+
+            {configs.length === 0 && (
+              <div className="ai-empty-configs">
+                <p>{t('ai.empty.noModel')}</p>
+                <button
+                  type="button"
+                  className="primary"
+                  onClick={() => setSettingsOpen(true)}
+                  title={t('ai.empty.setUpTitle')}
+                >
+                  {t('ai.action.setUp')}
+                </button>
+              </div>
+            )}
+
+            {/* What: scope (current paper vs. all papers) and which fields will be asked. */}
+            <div className="ai-label" id="ai-what-label">
+              {t('ai.section.what')}
+            </div>
+            <p className="ai-scope">
+              {allPapers
+                ? rich('ai.scope.all', { papers: tp('ai.papers.count', candidates.length) })
+                : rich('ai.scope.current', { title: currentPaper?.title ?? '—' })}
+            </p>
+            {!allPapers && currentPaper && !currentPaperHasPdf && (
+              <p className="ai-note">{t('ai.scope.noPdf')}</p>
+            )}
+
+            <label className="ai-toggle-row">
+              <input
+                type="checkbox"
+                checked={allPapers}
+                onChange={(e) => onToggleAllPapers(e.target.checked)}
+              />
+              {t('ai.toggle.allPapers')}
+            </label>
+
+            {pendingAllPapers && !allPapers && (
+              <div className="ai-confirm">
+                <p className="ai-note">{allPapersWarning(mode, candidates.length, recheck, !!selected && isLocalModel(selected))}</p>
+                <div className="ai-foot">
+                  <button type="button" onClick={() => setPendingAllPapers(false)} title={t('ai.allPapers.keepCurrentTitle')}>
+                    {t('ai.action.currentOnly')}
+                  </button>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={() => {
+                      setAllPapers(true)
+                      setPendingAllPapers(false)
+                    }}
+                    disabled={candidates.length === 0}
+                    title={t('ai.allPapers.enableTitle')}
+                  >
+                    {t('ai.allPapers.annotateAll', { count: candidates.length })}
+                  </button>
+                </div>
+              </div>
+            )}
+            {allPapers && <p className="ai-note">{allPapersWarning(mode, candidates.length, recheck, !!selected && isLocalModel(selected))}</p>}
+
+            <p className="ai-targets">
+              {targets.length === 0
+                ? recheck && answeredCount > 0
+                  ? t('ai.targets.onlyRecheck')
+                  : t('ai.targets.none')
+                : tp('ai.targets.count', targets.length)}
+            </p>
+
+            {targets.length > 0 && (
+              <details className="ai-prompt">
+                <summary>{t('ai.targets.summary', { count: targets.length })}</summary>
+                <p className="ai-note">
+                  {t('ai.targets.note')}
+                  {allPapers && ` ${t('ai.targets.allPapersNote')}`}
+                </p>
+                <ul className="ai-field-list">
+                  {targets.map((target) => (
+                    <li key={target.path}>
+                      <span className="ai-field-path">{pathLabel(target.path)}</span>
+                      <span className="ai-field-type">{target.def.type}</span>
+                      {target.def.options && target.def.options.length > 0 && (
+                        <span className="ai-field-options">
+                          {t('ai.targets.oneOf', { options: target.def.options.join(' · ') })}
+                        </span>
+                      )}
+                      {mode === 'classify' && !systemOneEligible(target) && (
+                        <span className="ai-note-reason">{t('ai.classify.notHandled')}</span>
+                      )}
+                      {notHandled.has(target.path) && (
+                        <span className="ai-note-reason">
+                          {t('ai.targets.notHandledBy', { model: selected?.model ?? '', reason: notHandled.get(target.path) ?? '' })}
+                        </span>
+                      )}
+                    </li>
+                  ))}
+                </ul>
+              </details>
+            )}
+
+            {/* How: prompt / agent / classify. */}
+            <div className="ai-label" id="ai-mode-label">
+              {t('ai.section.how')}
+            </div>
+            <div className="ai-mode-row" role="radiogroup" aria-labelledby="ai-mode-label">
+              <label>
+                <input
+                  type="radio"
+                  name="ai-mode"
+                  checked={mode === 'prompt'}
+                  onChange={() => setMode('prompt')}
+                />
+                {t('ai.mode.prompt')}
+              </label>
+              <label title={agentReason ?? undefined}>
+                <input
+                  type="radio"
+                  name="ai-mode"
+                  checked={mode === 'agent'}
+                  disabled={!!agentReason}
+                  onChange={() => setMode('agent')}
+                />
+                {t('ai.mode.agent')}
+              </label>
+              <label
+                title={
+                  systemOneConfigs.length === 0
+                    ? t('ai.mode.classifyHint')
+                    : undefined
+                }
+              >
+                <input
+                  type="radio"
+                  name="ai-mode"
+                  checked={mode === 'classify'}
+                  disabled={systemOneConfigs.length === 0}
+                  onChange={() => setMode('classify')}
+                />
+                {t('ai.mode.classify')}
+              </label>
+            </div>
+            <p className="ai-note">{t(MODE_INFO[mode])}</p>
+
+            {/* Models: assign a library model to each role. */}
+            <div className="ai-label" id="ai-models-label">
+              {t('ai.section.models')}
+            </div>
+
+            <div className="ai-label" id="ai-annotator-label">
+              {t('ai.section.annotator')}
+            </div>
+            <div className="ai-target-row" role="group" aria-labelledby="ai-annotator-label">
+              <ComboBox
+                value={selectedId}
+                options={annotatorConfigs.map(modelOption)}
+                onChange={(id) => {
+                  if (id) selectConfig(id)
+                }}
+              />
+              {gearButton}
+            </div>
+            {priceHint(selected) && <p className="ai-note">{t('ai.price.none')}</p>}
+
+            {mode === 'agent' && (
+              <>
+                <div className="ai-label" id="ai-judge-label">
+                  {t('ai.section.judge')}
+                </div>
+                <div className="ai-target-row" role="group" aria-labelledby="ai-judge-label">
+                  <ComboBox
+                    value={judgeSelectedId ?? ''}
+                    options={[
+                      {
+                        id: '',
+                        label: selected ? t('ai.judge.sameAsNamed', { name: selected.name }) : t('ai.judge.sameAs'),
+                      },
+                      ...chatConfigs.map(modelOption),
+                    ]}
+                    onChange={(id) => selectJudge(id || null)}
+                  />
+                </div>
+                <p className="ai-note">{t('ai.judge.note')}</p>
+                {priceHint(judgeCfg) && <p className="ai-note">{t('ai.price.none')}</p>}
+              </>
+            )}
+
+            {mode !== 'classify' && systemOneConfigs.length > 0 && (
+              <>
+                <div className="ai-label" id="ai-crosscheck-label">
+                  {t('ai.section.crossCheck')}
+                </div>
+                <div className="ai-target-row" role="group" aria-labelledby="ai-crosscheck-label">
+                  <ComboBox
+                    value={crossCheckId ?? ''}
+                    options={[{ id: '', label: t('ai.crossCheck.none') }, ...systemOneConfigs.map(modelOption)]}
+                    onChange={(id) => selectCrossCheck(id || null)}
+                  />
+                </div>
+                <p className="ai-note">{t('ai.crossCheck.note')}</p>
+                {priceHint(crossCheckCfg) && <p className="ai-note">{t('ai.price.none')}</p>}
+              </>
+            )}
+
+            {aiSeat && project && (
+              <p className="ai-note">
+                {rich('ai.seat.note', { seat: seatLabel(project, aiSeat) })}
               </p>
-              {!allPapers && currentPaper && !currentPaperHasPdf && (
-                <p className="ai-note">{t('ai.scope.noPdf')}</p>
+            )}
+
+            <p className="ai-consent">
+              {selected ? (
+                <>
+                  {rich(
+                    mode === 'classify'
+                      ? 'ai.consent.classify'
+                      : deliveryOf(selected) === 'pdf'
+                        ? allPapers
+                          ? 'ai.consent.pdfEach'
+                          : 'ai.consent.pdfThis'
+                        : 'ai.consent.text',
+                    {
+                      scope: t(allPapers ? 'ai.consent.scopeEach' : 'ai.consent.scopeThis'),
+                      provider: PROVIDERS[selected.provider].label,
+                      model: selected.model,
+                      destination: destinationNote(selected),
+                    },
+                  )}
+                  {mode === 'agent' && ` ${t('ai.consent.agentSearch')}`}
+                  {mode === 'agent' &&
+                    judgeCfg &&
+                    judgeCfg.provider !== selected.provider &&
+                    ` ${t('ai.consent.judge', { provider: PROVIDERS[judgeCfg.provider].label, model: judgeCfg.model })}`}
+                  {webSearchOn &&
+                    ` ${t('ai.consent.webSearch', { provider: PROVIDERS[selected.provider].label })}`}
+                  {mode !== 'classify' &&
+                    crossCheckCfg &&
+                    ` ${t('ai.consent.crossCheck', { provider: PROVIDERS[crossCheckCfg.provider].label, model: crossCheckCfg.model })}`}
+                  {mode !== 'classify' &&
+                    fewShot &&
+                    fewShotAvailable > 0 &&
+                    ` ${t('ai.consent.fewShot', { count: Math.min(fewShotCount, fewShotAvailable) })}`}
+                </>
+              ) : (
+                t('ai.consent.nothingSent')
+              )}
+            </p>
+
+            {estimateText && <p className="ai-note ai-estimate">{estimateText}</p>}
+            {trimText && <p className="ai-note">{trimText}</p>}
+            {blocker && <p className="ai-note ai-error">{blocker}</p>}
+
+            {/* Options: everything a run doesn't strictly need to choose. */}
+            <details className="ai-prompt">
+              <summary>{t('ai.options.summary')}</summary>
+
+              {mode !== 'classify' && (
+                <>
+                  <label className="ai-toggle-row">
+                    <input
+                      type="checkbox"
+                      checked={fewShot}
+                      disabled={fewShotAvailable === 0}
+                      onChange={(e) => setFewShot(e.target.checked)}
+                    />
+                    {t('ai.fewShot.toggle')}
+                  </label>
+                  <p className="ai-note">
+                    {fewShotAvailable === 0 ? t('ai.fewShot.none') : tp('ai.fewShot.available', fewShotAvailable)}
+                  </p>
+                  {fewShot && fewShotAvailable > 0 && (
+                    <div className="ai-target-row">
+                      <label htmlFor="ai-fewshot-count">{t('ai.fewShot.showUpTo')}</label>
+                      <select
+                        id="ai-fewshot-count"
+                        value={fewShotCount}
+                        onChange={(e) => setFewShotCount(Number(e.target.value))}
+                      >
+                        {[1, 2, 3, 4, 5].map((n) => (
+                          <option key={n} value={n}>
+                            {n}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
+                </>
               )}
 
               <label className="ai-toggle-row">
                 <input
                   type="checkbox"
-                  checked={allPapers}
-                  onChange={(e) => onToggleAllPapers(e.target.checked)}
+                  checked={recheck}
+                  disabled={mode !== 'prompt'}
+                  onChange={(e) => setRecheck(e.target.checked)}
                 />
-                {t('ai.toggle.allPapers')}
+                {t('ai.recheck.toggle')}
               </label>
-
-              {pendingAllPapers && !allPapers && (
-                <div className="ai-confirm">
-                  <p className="ai-note">{allPapersWarning(mode, candidates.length, recheck, !!selected && isLocalModel(selected))}</p>
-                  <div className="ai-foot">
-                    <button type="button" onClick={() => setPendingAllPapers(false)} title={t('ai.allPapers.keepCurrentTitle')}>
-                      {t('ai.action.currentOnly')}
-                    </button>
-                    <button
-                      type="button"
-                      className="primary"
-                      onClick={() => {
-                        setAllPapers(true)
-                        setPendingAllPapers(false)
-                      }}
-                      disabled={candidates.length === 0}
-                      title={t('ai.allPapers.enableTitle')}
-                    >
-                      {t('ai.allPapers.annotateAll', { count: candidates.length })}
-                    </button>
-                  </div>
-                </div>
-              )}
-              {allPapers && <p className="ai-note">{allPapersWarning(mode, candidates.length, recheck, !!selected && isLocalModel(selected))}</p>}
-
-              <p className="ai-targets">
-                {targets.length === 0
-                  ? recheck && answeredCount > 0
-                    ? t('ai.targets.onlyRecheck')
-                    : t('ai.targets.none')
-                  : tp('ai.targets.count', targets.length)}
+              <p className="ai-note">
+                {t('ai.recheck.note')}
+                {mode !== 'prompt' && ` ${t('ai.recheck.promptOnly')}`}
               </p>
-
-              {targets.length > 0 && (
-                <details className="ai-prompt">
-                  <summary>{t('ai.targets.summary', { count: targets.length })}</summary>
-                  <p className="ai-note">
-                    {t('ai.targets.note')}
-                    {allPapers && ` ${t('ai.targets.allPapersNote')}`}
-                  </p>
-                  <ul className="ai-field-list">
-                    {targets.map((target) => (
-                      <li key={target.path}>
-                        <span className="ai-field-path">{pathLabel(target.path)}</span>
-                        <span className="ai-field-type">{target.def.type}</span>
-                        {target.def.options && target.def.options.length > 0 && (
-                          <span className="ai-field-options">
-                            {t('ai.targets.oneOf', { options: target.def.options.join(' · ') })}
-                          </span>
-                        )}
-                        {mode === 'classify' && !systemOneEligible(target) && (
-                          <span className="ai-note-reason">{t('ai.classify.notHandled')}</span>
-                        )}
-                        {notHandled.has(target.path) && (
-                          <span className="ai-note-reason">
-                            {t('ai.targets.notHandledBy', { model: selected?.model ?? '', reason: notHandled.get(target.path) ?? '' })}
-                          </span>
-                        )}
-                      </li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-
-              {/* How: prompt / agent / classify. */}
-              <div className="ai-label" id="ai-mode-label">
-                {t('ai.section.how')}
-              </div>
-              <div className="ai-mode-row" role="radiogroup" aria-labelledby="ai-mode-label">
-                <label>
-                  <input
-                    type="radio"
-                    name="ai-mode"
-                    checked={mode === 'prompt'}
-                    onChange={() => setMode('prompt')}
-                  />
-                  {t('ai.mode.prompt')}
-                </label>
-                <label title={agentReason ?? undefined}>
-                  <input
-                    type="radio"
-                    name="ai-mode"
-                    checked={mode === 'agent'}
-                    disabled={!!agentReason}
-                    onChange={() => setMode('agent')}
-                  />
-                  {t('ai.mode.agent')}
-                </label>
-                <label
-                  title={
-                    systemOneConfigs.length === 0
-                      ? t('ai.mode.classifyHint')
-                      : undefined
-                  }
-                >
-                  <input
-                    type="radio"
-                    name="ai-mode"
-                    checked={mode === 'classify'}
-                    disabled={systemOneConfigs.length === 0}
-                    onChange={() => setMode('classify')}
-                  />
-                  {t('ai.mode.classify')}
-                </label>
-              </div>
-              <p className="ai-note">{t(MODE_INFO[mode])}</p>
-
-              {/* Models: assign a library model to each role. */}
-              <div className="ai-label" id="ai-models-label">
-                {t('ai.section.models')}
-              </div>
-
-              <div className="ai-label" id="ai-annotator-label">
-                {t('ai.section.annotator')}
-              </div>
-              <div className="ai-target-row" role="group" aria-labelledby="ai-annotator-label">
-                <ComboBox
-                  value={selectedId}
-                  options={annotatorConfigs.map(modelOption)}
-                  onChange={(id) => {
-                    if (id) selectConfig(id)
-                  }}
-                />
-                {gearButton}
-              </div>
-              {priceHint(selected) && <p className="ai-note">{t('ai.price.none')}</p>}
 
               {mode === 'agent' && (
                 <>
-                  <div className="ai-label" id="ai-judge-label">
-                    {t('ai.section.judge')}
-                  </div>
-                  <div className="ai-target-row" role="group" aria-labelledby="ai-judge-label">
-                    <ComboBox
-                      value={judgeSelectedId ?? ''}
-                      options={[
-                        {
-                          id: '',
-                          label: selected ? t('ai.judge.sameAsNamed', { name: selected.name }) : t('ai.judge.sameAs'),
-                        },
-                        ...chatConfigs.map(modelOption),
-                      ]}
-                      onChange={(id) => selectJudge(id || null)}
+                  <label className="ai-toggle-row">
+                    <input
+                      type="checkbox"
+                      checked={webSearchOn}
+                      disabled={!webSearchSupported}
+                      onChange={(e) => setWebSearch(e.target.checked)}
                     />
-                  </div>
-                  <p className="ai-note">{t('ai.judge.note')}</p>
-                  {priceHint(judgeCfg) && <p className="ai-note">{t('ai.price.none')}</p>}
+                    {t('ai.webSearch.toggle')}
+                  </label>
+                  <p className="ai-note">
+                    {webSearchSupported
+                      ? WEB_SEARCH_NOTE
+                      : t('ai.webSearch.unsupported')}
+                  </p>
                 </>
               )}
 
-              {mode !== 'classify' && systemOneConfigs.length > 0 && (
-                <>
-                  <div className="ai-label" id="ai-crosscheck-label">
-                    {t('ai.section.crossCheck')}
-                  </div>
-                  <div className="ai-target-row" role="group" aria-labelledby="ai-crosscheck-label">
-                    <ComboBox
-                      value={crossCheckId ?? ''}
-                      options={[{ id: '', label: t('ai.crossCheck.none') }, ...systemOneConfigs.map(modelOption)]}
-                      onChange={(id) => selectCrossCheck(id || null)}
-                    />
-                  </div>
-                  <p className="ai-note">{t('ai.crossCheck.note')}</p>
-                  {priceHint(crossCheckCfg) && <p className="ai-note">{t('ai.price.none')}</p>}
-                </>
-              )}
-
-              {aiSeat && project && (
-                <p className="ai-note">
-                  {rich('ai.seat.note', { seat: seatLabel(project, aiSeat) })}
-                </p>
-              )}
-
-              <p className="ai-consent">
-                {selected ? (
-                  <>
-                    {rich(
-                      mode === 'classify'
-                        ? 'ai.consent.classify'
-                        : deliveryOf(selected) === 'pdf'
-                          ? allPapers
-                            ? 'ai.consent.pdfEach'
-                            : 'ai.consent.pdfThis'
-                          : 'ai.consent.text',
-                      {
-                        scope: t(allPapers ? 'ai.consent.scopeEach' : 'ai.consent.scopeThis'),
-                        provider: PROVIDERS[selected.provider].label,
-                        model: selected.model,
-                        destination: destinationNote(selected),
-                      },
-                    )}
-                    {mode === 'agent' && ` ${t('ai.consent.agentSearch')}`}
-                    {mode === 'agent' &&
-                      judgeCfg &&
-                      judgeCfg.provider !== selected.provider &&
-                      ` ${t('ai.consent.judge', { provider: PROVIDERS[judgeCfg.provider].label, model: judgeCfg.model })}`}
-                    {webSearchOn &&
-                      ` ${t('ai.consent.webSearch', { provider: PROVIDERS[selected.provider].label })}`}
-                    {mode !== 'classify' &&
-                      crossCheckCfg &&
-                      ` ${t('ai.consent.crossCheck', { provider: PROVIDERS[crossCheckCfg.provider].label, model: crossCheckCfg.model })}`}
-                    {mode !== 'classify' &&
-                      fewShot &&
-                      fewShotAvailable > 0 &&
-                      ` ${t('ai.consent.fewShot', { count: Math.min(fewShotCount, fewShotAvailable) })}`}
-                  </>
-                ) : (
-                  t('ai.consent.nothingSent')
-                )}
+              <label className="ai-toggle-row">
+                <input
+                  type="checkbox"
+                  checked={saveFeedback && feedbackPossible}
+                  disabled={!feedbackPossible}
+                  onChange={(e) => setSaveFeedback(e.target.checked)}
+                />
+                {t('ai.feedback.toggle')}
+              </label>
+              <p className="ai-note">
+                {t('ai.feedback.note')}
+                {!feedbackPossible &&
+                  ` ${getPlatform().kind !== 'browser' ? t('ai.feedback.saveFirst') : t('ai.feedback.desktopOnly')}`}
               </p>
 
-              {estimateText && <p className="ai-note ai-estimate">{estimateText}</p>}
-              {trimText && <p className="ai-note">{trimText}</p>}
-              {blocker && <p className="ai-note ai-error">{blocker}</p>}
+              {allPapers && (
+                <div className="ai-target-row">
+                  <label htmlFor="ai-concurrency">{t('ai.concurrency.label')}</label>
+                  <select
+                    id="ai-concurrency"
+                    value={concurrency}
+                    onChange={(e) => setConcurrency(Number(e.target.value))}
+                    title={t('ai.concurrency.title')}
+                  >
+                    {[1, 2, 3, 4].map((n) => (
+                      <option key={n} value={n}>
+                        {n}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              )}
 
-              {/* Options: everything a run doesn't strictly need to choose. */}
-              <details className="ai-prompt">
-                <summary>{t('ai.options.summary')}</summary>
+              {allPapers && (
+                <div className="ai-target-row">
+                  <label htmlFor="ai-spend-cap">{t('ai.spendCap.label')}</label>
+                  <input
+                    id="ai-spend-cap"
+                    type="number"
+                    min="0"
+                    step="0.01"
+                    disabled={!capKnown}
+                    value={spendCap ?? ''}
+                    onChange={(e) => setSpendCap(e.target.value === '' ? null : Number(e.target.value))}
+                    placeholder={capKnown ? t('ai.spendCap.noLimit') : t('ai.spendCap.setPrices')}
+                    title={
+                      capKnown
+                        ? t('ai.spendCap.titleOn')
+                        : t('ai.spendCap.titleOff')
+                    }
+                  />
+                </div>
+              )}
 
-                {mode !== 'classify' && (
-                  <>
-                    <label className="ai-toggle-row">
-                      <input
-                        type="checkbox"
-                        checked={fewShot}
-                        disabled={fewShotAvailable === 0}
-                        onChange={(e) => setFewShot(e.target.checked)}
-                      />
-                      {t('ai.fewShot.toggle')}
-                    </label>
-                    <p className="ai-note">
-                      {fewShotAvailable === 0 ? t('ai.fewShot.none') : tp('ai.fewShot.available', fewShotAvailable)}
-                    </p>
-                    {fewShot && fewShotAvailable > 0 && (
-                      <div className="ai-target-row">
-                        <label htmlFor="ai-fewshot-count">{t('ai.fewShot.showUpTo')}</label>
-                        <select
-                          id="ai-fewshot-count"
-                          value={fewShotCount}
-                          onChange={(e) => setFewShotCount(Number(e.target.value))}
+              {(mode === 'classify' || crossCheckCfg) && (
+                <div className="ai-target-row">
+                  <label htmlFor="ai-threshold">{t('ai.threshold.label')}</label>
+                  <input
+                    id="ai-threshold"
+                    type="number"
+                    min="0"
+                    max="1"
+                    step="0.05"
+                    value={confidenceThreshold}
+                    onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
+                    title={
+                      mode === 'classify'
+                        ? t('ai.threshold.titleClassify')
+                        : t('ai.threshold.titleCross')
+                    }
+                  />
+                </div>
+              )}
+            </details>
+
+            <div className="ai-foot">
+              <button type="button" onClick={() => closeDialog()} title={t('ai.setup.cancelTitle')}>
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                className="primary"
+                onClick={() => void run()}
+                disabled={!selected || !canStart}
+                title={blocker ?? t('ai.start.title')}
+              >
+                {t('ai.action.start')}
+              </button>
+            </div>
+          </>
+        )}
+
+        {running && (
+          <>
+            <div className="ai-running" role="status">
+              <Spinner />
+              <span className="ai-phase">
+                {phase === 'calling'
+                  ? t('ai.phase.calling', { model: selected?.model ?? t('ai.phase.theModel') })
+                  : t(PHASE_LINE[phase])}
+              </span>
+              <span className="ai-elapsed">{elapsed}s</span>
+            </div>
+            {batchTotal > 1 && (
+              <>
+                <p className="ai-note">
+                  {t('ai.batch.progress', { done: batchDone, total: batchTotal })}
+                  {capKnown && ` · ${t('ai.batch.spent', { amount: `$${spentSoFar.toFixed(2)}` })}`}
+                </p>
+                {inFlightPapers.length > 0 && (
+                  <ul className="ai-note-list ai-inflight-list">
+                    {inFlightPapers.map((p) => (
+                      <li key={p.id}>
+                        {p.title}
+                        <button
+                          type="button"
+                          onClick={() => skipPaper(p.id)}
+                          title={t('ai.inflight.skipTitle')}
                         >
-                          {[1, 2, 3, 4, 5].map((n) => (
-                            <option key={n} value={n}>
-                              {n}
-                            </option>
-                          ))}
-                        </select>
-                      </div>
-                    )}
-                  </>
+                          {t('ai.action.skip')}
+                        </button>
+                      </li>
+                    ))}
+                  </ul>
                 )}
+              </>
+            )}
+            {retryNotice && <p className="ai-note ai-retry">{retryNotice}</p>}
+            {mode === 'agent' && agentEvents.length > 0 && (
+              <ul className="ai-note-list ai-agent-events">
+                {agentEvents.map((m, i) => (
+                  <li key={i}>{m}</li>
+                ))}
+              </ul>
+            )}
+            <p className="ai-note">{t('ai.running.hint')}</p>
+            <div className="ai-foot">
+              <button type="button" onClick={() => cancel()} title={t('ai.running.cancelTitle')}>
+                {t('common.cancel')}
+              </button>
+            </div>
+          </>
+        )}
 
-                <label className="ai-toggle-row">
-                  <input
-                    type="checkbox"
-                    checked={recheck}
-                    disabled={mode !== 'prompt'}
-                    onChange={(e) => setRecheck(e.target.checked)}
-                  />
-                  {t('ai.recheck.toggle')}
-                </label>
-                <p className="ai-note">
-                  {t('ai.recheck.note')}
-                  {mode !== 'prompt' && ` ${t('ai.recheck.promptOnly')}`}
-                </p>
+        {phase === 'review' && (
+          <>
+            {allPapers && batchTotal > 0 && batchDone < batchTotal && (
+              <p className="ai-note">
+                <button
+                  type="button"
+                  onClick={() => void resumeBatch()}
+                  title={t('ai.review.continueTitle')}
+                >
+                  {tp('ai.review.continueRemaining', batchTotal - batchDone)}
+                </button>
+              </p>
+            )}
 
-                {mode === 'agent' && (
+            <SkippedPapers papers={skippedPapers} />
+
+            {rows.length === 0 && recheckRows.length === 0 ? (
+              <>
+                <p>{t('ai.review.noValues')}</p>
+                <RunErrors errors={runErrors} />
+                {notes.map((n) => (
+                  <ReviewNotes key={n.paperId} notes={n} />
+                ))}
+                <div className="ai-foot">
+                  <button type="button" className="primary" onClick={() => closeDialog()} title={t('ai.dialog.closeTitle')}>
+                    Close
+                  </button>
+                </div>
+              </>
+            ) : (
+              <>
+                {rows.length > 0 && (
                   <>
+                    <div className="ai-review-head">
+                      <div className="ai-select-all">
+                        <button type="button" onClick={() => setAllRows(true)} title={t('ai.review.selectAllTitle')}>
+                          {t('ai.action.selectAll')}
+                        </button>
+                        <button type="button" onClick={() => setAllRows(false)} title={t('ai.review.selectNoneTitle')}>
+                          {t('ai.action.selectNone')}
+                        </button>
+                      </div>
+                      <span className="ai-count">
+                        {t('ai.review.selected', { checked: checkedCount, total: rows.length })}
+                      </span>
+                    </div>
+
+                    <RunErrors errors={runErrors} />
+
+                    {spendCapHit && (
+                      <p className="ai-note ai-cap-hit">
+                        {t('ai.spendCap.hit', { amount: `$${spentSoFar.toFixed(2)}` })}
+                      </p>
+                    )}
+
+                    {attentionRows.length > 0 && (
+                      <p className="ai-note">{tp('ai.review.attention', attentionRows.length)}</p>
+                    )}
                     <label className="ai-toggle-row">
                       <input
                         type="checkbox"
-                        checked={webSearchOn}
-                        disabled={!webSearchSupported}
-                        onChange={(e) => setWebSearch(e.target.checked)}
+                        checked={attentionOnly}
+                        disabled={attentionRows.length === 0}
+                        onChange={(e) => setAttentionOnly(e.target.checked)}
                       />
-                      {t('ai.webSearch.toggle')}
+                      {t('ai.review.attentionOnly')}
                     </label>
-                    <p className="ai-note">
-                      {webSearchSupported
-                        ? WEB_SEARCH_NOTE
-                        : t('ai.webSearch.unsupported')}
-                    </p>
+
+                    <ReviewTable
+                      rows={rows}
+                      grouped={grouped}
+                      mode={mode}
+                      schema={project?.schema ?? []}
+                      attentionOnly={attentionOnly}
+                      onToggle={toggleRow}
+                      onEvidenceClick={(row) => jumpToEvidence(row.paperId, row.suggestion.evidence)}
+                      onEdit={editRow}
+                    />
                   </>
                 )}
 
-                <label className="ai-toggle-row">
-                  <input
-                    type="checkbox"
-                    checked={saveFeedback && feedbackPossible}
-                    disabled={!feedbackPossible}
-                    onChange={(e) => setSaveFeedback(e.target.checked)}
-                  />
-                  {t('ai.feedback.toggle')}
-                </label>
-                <p className="ai-note">
-                  {t('ai.feedback.note')}
-                  {!feedbackPossible &&
-                    ` ${getPlatform().kind !== 'browser' ? t('ai.feedback.saveFirst') : t('ai.feedback.desktopOnly')}`}
-                </p>
+                <RunErrors errors={rows.length === 0 ? runErrors : []} />
+                <RecheckSection
+                  rows={recheckRows}
+                  onToggle={toggleRecheckRow}
+                  onEvidenceClick={(row) => jumpToEvidence(row.paperId, row.outcome.evidence)}
+                />
 
-                {allPapers && (
-                  <div className="ai-target-row">
-                    <label htmlFor="ai-concurrency">{t('ai.concurrency.label')}</label>
-                    <select
-                      id="ai-concurrency"
-                      value={concurrency}
-                      onChange={(e) => setConcurrency(Number(e.target.value))}
-                      title={t('ai.concurrency.title')}
-                    >
-                      {[1, 2, 3, 4].map((n) => (
-                        <option key={n} value={n}>
-                          {n}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                {notes.map((n) => (
+                  <ReviewNotes key={n.paperId} notes={n} />
+                ))}
+
+                {(usage.calls > 0 || usage.inputTokens > 0 || usage.outputTokens > 0) && (
+                  <p className="ai-note ai-usage">
+                    {tp('ai.usage.requests', usage.calls)} · {t('ai.usage.tokens', { input: usage.inputTokens, output: usage.outputTokens })}
+                    {totalWebSearches > 0 && ` · ${tp('ai.usage.webSearches', totalWebSearches)}`}
+                    {capKnown && ` · ≈ $${spentSoFar.toFixed(2)}`}
+                  </p>
                 )}
 
-                {allPapers && (
-                  <div className="ai-target-row">
-                    <label htmlFor="ai-spend-cap">{t('ai.spendCap.label')}</label>
-                    <input
-                      id="ai-spend-cap"
-                      type="number"
-                      min="0"
-                      step="0.01"
-                      disabled={!capKnown}
-                      value={spendCap ?? ''}
-                      onChange={(e) => setSpendCap(e.target.value === '' ? null : Number(e.target.value))}
-                      placeholder={capKnown ? t('ai.spendCap.noLimit') : t('ai.spendCap.setPrices')}
-                      title={
-                        capKnown
-                          ? t('ai.spendCap.titleOn')
-                          : t('ai.spendCap.titleOff')
-                      }
-                    />
-                  </div>
-                )}
+                <div className="ai-foot">
+                  <button type="button" onClick={() => discardBatch()} title={t('ai.review.discardTitle')}>
+                    {t('ai.action.discard')}
+                  </button>
+                  <button
+                    type="button"
+                    className="primary"
+                    onClick={() => apply()}
+                    disabled={applyCount === 0}
+                    title={
+                      applyCount === 0
+                        ? t('ai.review.applyNone')
+                        : tp('ai.review.applyCount', applyCount)
+                    }
+                  >
+                    {t('ai.review.applyButton', { count: applyCount })}
+                  </button>
+                </div>
+              </>
+            )}
+          </>
+        )}
 
-                {(mode === 'classify' || crossCheckCfg) && (
-                  <div className="ai-target-row">
-                    <label htmlFor="ai-threshold">{t('ai.threshold.label')}</label>
-                    <input
-                      id="ai-threshold"
-                      type="number"
-                      min="0"
-                      max="1"
-                      step="0.05"
-                      value={confidenceThreshold}
-                      onChange={(e) => setConfidenceThreshold(Number(e.target.value))}
-                      title={
-                        mode === 'classify'
-                          ? t('ai.threshold.titleClassify')
-                          : t('ai.threshold.titleCross')
-                      }
-                    />
-                  </div>
-                )}
-              </details>
+        {phase === 'applied' && applied && (
+          <>
+            <p>
+              {t('ai.applied.summary', {
+                fields: tp('ai.applied.fields', applied.filled - (applied.replaced ?? 0)),
+                replaced: applied.replaced ? `, ${tp('ai.applied.replaced', applied.replaced)}` : '',
+                papers: tp('ai.papers.count', applied.papers),
+              })}
+              {applied.skipped > 0 && ` ${t('ai.applied.skipped', { count: applied.skipped })}`}
+            </p>
+            {applied.skipped > 0 && (
+              <p className="ai-note">{t('ai.applied.skipNote')}</p>
+            )}
+            <p className="ai-note">{rich('ai.applied.undo')}</p>
+            {feedbackResult && (
+              <p className="ai-note">
+                {'path' in feedbackResult
+                  ? t('ai.feedback.saved', { path: feedbackResult.path })
+                  : t('ai.feedback.failed', { error: feedbackResult.error })}
+              </p>
+            )}
+            <div className="ai-foot">
+              <button type="button" className="primary" onClick={() => closeDialog()} title={t('ai.dialog.closeTitle')}>
+                Close
+              </button>
+            </div>
+          </>
+        )}
 
-              <div className="ai-foot">
-                <button type="button" onClick={() => closeDialog()} title={t('ai.setup.cancelTitle')}>
-                  {t('common.cancel')}
-                </button>
+        {phase === 'error' && (
+          <>
+            <p className="ai-error">{error ?? t('ai.error.generic')}</p>
+            <p className="ai-note">{t('ai.error.nothingWritten')}</p>
+            <div className="ai-foot">
+              {gearButton}
+              <span className="ai-foot-gap" />
+              <button type="button" onClick={() => closeDialog()} title={t('ai.dialog.closeTitle')}>
+                Close
+              </button>
+              {!scanned && (
                 <button
                   type="button"
                   className="primary"
                   onClick={() => void run()}
                   disabled={!selected || !canStart}
-                  title={blocker ?? t('ai.start.title')}
+                  title={t('ai.error.retryTitle')}
                 >
-                  {t('ai.action.start')}
+                  {t('ai.action.tryAgain')}
                 </button>
-              </div>
-            </>
-          )}
-
-          {running && (
-            <>
-              <div className="ai-running" role="status">
-                <Spinner />
-                <span className="ai-phase">
-                  {phase === 'calling'
-                    ? t('ai.phase.calling', { model: selected?.model ?? t('ai.phase.theModel') })
-                    : t(PHASE_LINE[phase])}
-                </span>
-                <span className="ai-elapsed">{elapsed}s</span>
-              </div>
-              {batchTotal > 1 && (
-                <>
-                  <p className="ai-note">
-                    {t('ai.batch.progress', { done: batchDone, total: batchTotal })}
-                    {capKnown && ` · ${t('ai.batch.spent', { amount: `$${spentSoFar.toFixed(2)}` })}`}
-                  </p>
-                  {inFlightPapers.length > 0 && (
-                    <ul className="ai-note-list ai-inflight-list">
-                      {inFlightPapers.map((p) => (
-                        <li key={p.id}>
-                          {p.title}
-                          <button
-                            type="button"
-                            onClick={() => skipPaper(p.id)}
-                            title={t('ai.inflight.skipTitle')}
-                          >
-                            {t('ai.action.skip')}
-                          </button>
-                        </li>
-                      ))}
-                    </ul>
-                  )}
-                </>
               )}
-              {retryNotice && <p className="ai-note ai-retry">{retryNotice}</p>}
-              {mode === 'agent' && agentEvents.length > 0 && (
-                <ul className="ai-note-list ai-agent-events">
-                  {agentEvents.map((m, i) => (
-                    <li key={i}>{m}</li>
-                  ))}
-                </ul>
-              )}
-              <p className="ai-note">{t('ai.running.hint')}</p>
-              <div className="ai-foot">
-                <button type="button" onClick={() => cancel()} title={t('ai.running.cancelTitle')}>
-                  {t('common.cancel')}
-                </button>
-              </div>
-            </>
-          )}
-
-          {phase === 'review' && (
-            <>
-              {allPapers && batchTotal > 0 && batchDone < batchTotal && (
-                <p className="ai-note">
-                  <button
-                    type="button"
-                    onClick={() => void resumeBatch()}
-                    title={t('ai.review.continueTitle')}
-                  >
-                    {tp('ai.review.continueRemaining', batchTotal - batchDone)}
-                  </button>
-                </p>
-              )}
-
-              <SkippedPapers papers={skippedPapers} />
-
-              {rows.length === 0 && recheckRows.length === 0 ? (
-                <>
-                  <p>{t('ai.review.noValues')}</p>
-                  <RunErrors errors={runErrors} />
-                  {notes.map((n) => (
-                    <ReviewNotes key={n.paperId} notes={n} />
-                  ))}
-                  <div className="ai-foot">
-                    <button type="button" className="primary" onClick={() => closeDialog()} title={t('ai.dialog.closeTitle')}>
-                      Close
-                    </button>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {rows.length > 0 && (
-                    <>
-                      <div className="ai-review-head">
-                        <div className="ai-select-all">
-                          <button type="button" onClick={() => setAllRows(true)} title={t('ai.review.selectAllTitle')}>
-                            {t('ai.action.selectAll')}
-                          </button>
-                          <button type="button" onClick={() => setAllRows(false)} title={t('ai.review.selectNoneTitle')}>
-                            {t('ai.action.selectNone')}
-                          </button>
-                        </div>
-                        <span className="ai-count">
-                          {t('ai.review.selected', { checked: checkedCount, total: rows.length })}
-                        </span>
-                      </div>
-
-                      <RunErrors errors={runErrors} />
-
-                      {spendCapHit && (
-                        <p className="ai-note ai-cap-hit">
-                          {t('ai.spendCap.hit', { amount: `$${spentSoFar.toFixed(2)}` })}
-                        </p>
-                      )}
-
-                      {attentionRows.length > 0 && (
-                        <p className="ai-note">{tp('ai.review.attention', attentionRows.length)}</p>
-                      )}
-                      <label className="ai-toggle-row">
-                        <input
-                          type="checkbox"
-                          checked={attentionOnly}
-                          disabled={attentionRows.length === 0}
-                          onChange={(e) => setAttentionOnly(e.target.checked)}
-                        />
-                        {t('ai.review.attentionOnly')}
-                      </label>
-
-                      <ReviewTable
-                        rows={rows}
-                        grouped={grouped}
-                        mode={mode}
-                        schema={project?.schema ?? []}
-                        attentionOnly={attentionOnly}
-                        onToggle={toggleRow}
-                        onEvidenceClick={(row) => jumpToEvidence(row.paperId, row.suggestion.evidence)}
-                        onEdit={editRow}
-                      />
-                    </>
-                  )}
-
-                  <RunErrors errors={rows.length === 0 ? runErrors : []} />
-                  <RecheckSection
-                    rows={recheckRows}
-                    onToggle={toggleRecheckRow}
-                    onEvidenceClick={(row) => jumpToEvidence(row.paperId, row.outcome.evidence)}
-                  />
-
-                  {notes.map((n) => (
-                    <ReviewNotes key={n.paperId} notes={n} />
-                  ))}
-
-                  {(usage.calls > 0 || usage.inputTokens > 0 || usage.outputTokens > 0) && (
-                    <p className="ai-note ai-usage">
-                      {tp('ai.usage.requests', usage.calls)} · {t('ai.usage.tokens', { input: usage.inputTokens, output: usage.outputTokens })}
-                      {totalWebSearches > 0 && ` · ${tp('ai.usage.webSearches', totalWebSearches)}`}
-                      {capKnown && ` · ≈ $${spentSoFar.toFixed(2)}`}
-                    </p>
-                  )}
-
-                  <div className="ai-foot">
-                    <button type="button" onClick={() => discardBatch()} title={t('ai.review.discardTitle')}>
-                      {t('ai.action.discard')}
-                    </button>
-                    <button
-                      type="button"
-                      className="primary"
-                      onClick={() => apply()}
-                      disabled={applyCount === 0}
-                      title={
-                        applyCount === 0
-                          ? t('ai.review.applyNone')
-                          : tp('ai.review.applyCount', applyCount)
-                      }
-                    >
-                      {t('ai.review.applyButton', { count: applyCount })}
-                    </button>
-                  </div>
-                </>
-              )}
-            </>
-          )}
-
-          {phase === 'applied' && applied && (
-            <>
-              <p>
-                {t('ai.applied.summary', {
-                  fields: tp('ai.applied.fields', applied.filled - (applied.replaced ?? 0)),
-                  replaced: applied.replaced ? `, ${tp('ai.applied.replaced', applied.replaced)}` : '',
-                  papers: tp('ai.papers.count', applied.papers),
-                })}
-                {applied.skipped > 0 && ` ${t('ai.applied.skipped', { count: applied.skipped })}`}
-              </p>
-              {applied.skipped > 0 && (
-                <p className="ai-note">{t('ai.applied.skipNote')}</p>
-              )}
-              <p className="ai-note">{rich('ai.applied.undo')}</p>
-              {feedbackResult && (
-                <p className="ai-note">
-                  {'path' in feedbackResult
-                    ? t('ai.feedback.saved', { path: feedbackResult.path })
-                    : t('ai.feedback.failed', { error: feedbackResult.error })}
-                </p>
-              )}
-              <div className="ai-foot">
-                <button type="button" className="primary" onClick={() => closeDialog()} title={t('ai.dialog.closeTitle')}>
-                  Close
-                </button>
-              </div>
-            </>
-          )}
-
-          {phase === 'error' && (
-            <>
-              <p className="ai-error">{error ?? t('ai.error.generic')}</p>
-              <p className="ai-note">{t('ai.error.nothingWritten')}</p>
-              <div className="ai-foot">
-                {gearButton}
-                <span className="ai-foot-gap" />
-                <button type="button" onClick={() => closeDialog()} title={t('ai.dialog.closeTitle')}>
-                  Close
-                </button>
-                {!scanned && (
-                  <button
-                    type="button"
-                    className="primary"
-                    onClick={() => void run()}
-                    disabled={!selected || !canStart}
-                    title={t('ai.error.retryTitle')}
-                  >
-                    {t('ai.action.tryAgain')}
-                  </button>
-                )}
-              </div>
-            </>
-          )}
-        </div>
+            </div>
+          </>
+        )}
       </div>
-    </div>
+      
+    </Modal>
   )
 }
 

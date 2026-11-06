@@ -5,6 +5,7 @@ import { annotatedFileName } from '../model/pdfExport'
 import { useT, tp } from '../i18n'
 // For `.ai-error`, reused here for the same "inline error callout" look.
 import '../styles/ai.css'
+import { Modal } from './Modal'
 
 type Target = 'new' | 'original'
 
@@ -102,71 +103,70 @@ export function ExportPdfDialog() {
   }
 
   return (
-    <div className="modal-overlay" onClick={close}>
-      <div className="modal" onClick={(e) => e.stopPropagation()} role="dialog" aria-modal="true">
-        <div className="modal-head">
-          <strong>{t('exportPdf.title')}</strong>
-          <button type="button" className="icon-btn" title={t('common.close')} onClick={close} aria-label={t('common.close')}>
-            ×
-          </button>
-        </div>
-        <div className="modal-body">
-          {successPath ? (
-            <p>{t('exportPdf.exported', { path: successPath })}</p>
-          ) : (
-            <>
-              <p>{tp('exportPdf.writes', marks.length)}</p>
-              {resolving && <p>{t('exportPdf.locating')}</p>}
-              {resolveError && <p className="ai-error">{resolveError}</p>}
-              {!resolving && !resolveError && (
-                <fieldset>
-                  <legend>{t('exportPdf.where')}</legend>
-                  <label>
-                    <input
-                      type="radio"
-                      name="export-pdf-target"
-                      checked={target === 'new'}
-                      onChange={() => setTarget('new')}
-                      disabled={busy}
-                    />
-                    <span>{t('exportPdf.targetNew')}</span>
-                  </label>
-                  <label>
-                    <input
-                      type="radio"
-                      name="export-pdf-target"
-                      checked={target === 'original'}
-                      onChange={() => setTarget('original')}
-                      disabled={busy}
-                    />
-                    <span>{t('exportPdf.targetOriginal')}</span>
-                  </label>
-                  {target === 'original' && (
-                    <div className="consolidation-warning">
-                      <p>{t('exportPdf.overwriteWarning')}</p>
-                    </div>
-                  )}
-                </fieldset>
-              )}
-              {exportError && <p className="ai-error">{exportError}</p>}
-              <div className="screening-import-actions">
-                <button type="button" title={t('exportPdf.cancelTitle')} disabled={busy} onClick={close}>
-                  {t('common.cancel')}
-                </button>
-                <button
-                  type="button"
-                  className="primary"
-                  title={t('exportPdf.exportTitle')}
-                  disabled={busy || resolving || !absPath}
-                  onClick={() => void runExport()}
-                >
-                  {busy ? t('exportPdf.exporting') : t('exportPdf.export')}
-                </button>
-              </div>
-            </>
-          )}
-        </div>
+    <Modal onClose={close}>
+      <div className="modal-head">
+        <strong>{t('exportPdf.title')}</strong>
+        <button type="button" className="icon-btn" title={t('common.close')} onClick={close} aria-label={t('common.close')}>
+          ×
+        </button>
       </div>
-    </div>
+      <div className="modal-body">
+        {successPath ? (
+          <p>{t('exportPdf.exported', { path: successPath })}</p>
+        ) : (
+          <>
+            <p>{tp('exportPdf.writes', marks.length)}</p>
+            {resolving && <p>{t('exportPdf.locating')}</p>}
+            {resolveError && <p className="ai-error">{resolveError}</p>}
+            {!resolving && !resolveError && (
+              <fieldset>
+                <legend>{t('exportPdf.where')}</legend>
+                <label>
+                  <input
+                    type="radio"
+                    name="export-pdf-target"
+                    checked={target === 'new'}
+                    onChange={() => setTarget('new')}
+                    disabled={busy}
+                  />
+                  <span>{t('exportPdf.targetNew')}</span>
+                </label>
+                <label>
+                  <input
+                    type="radio"
+                    name="export-pdf-target"
+                    checked={target === 'original'}
+                    onChange={() => setTarget('original')}
+                    disabled={busy}
+                  />
+                  <span>{t('exportPdf.targetOriginal')}</span>
+                </label>
+                {target === 'original' && (
+                  <div className="consolidation-warning">
+                    <p>{t('exportPdf.overwriteWarning')}</p>
+                  </div>
+                )}
+              </fieldset>
+            )}
+            {exportError && <p className="ai-error">{exportError}</p>}
+            <div className="screening-import-actions">
+              <button type="button" title={t('exportPdf.cancelTitle')} disabled={busy} onClick={close}>
+                {t('common.cancel')}
+              </button>
+              <button
+                type="button"
+                className="primary"
+                title={t('exportPdf.exportTitle')}
+                disabled={busy || resolving || !absPath}
+                onClick={() => void runExport()}
+              >
+                {busy ? t('exportPdf.exporting') : t('exportPdf.export')}
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+      
+    </Modal>
   )
 }

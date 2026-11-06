@@ -6,6 +6,7 @@ import { seatLabel } from '../model/project'
 import { buildGraph, graphSource, graphTrees, toCsvEdges, toCsvNodes, toGraphMl, toJsonLd, toTurtle } from '../model/graph'
 import { useT } from '../i18n'
 import '../styles/ai.css'
+import { Modal } from './Modal'
 
 type Format = 'jsonld' | 'ttl' | 'graphml' | 'csv'
 
@@ -65,68 +66,61 @@ export function ExportGraphDialog({ onClose }: { onClose: () => void }) {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('exportGraph.title')}
-      >
-        <div className="modal-head">
-          <strong>{t('exportGraph.title')}</strong>
-          <button type="button" className="icon-btn" title={t('common.close')} onClick={onClose} aria-label={t('common.close')}>
-            ×
+    <Modal onClose={onClose} aria-label={t('exportGraph.title')}>
+      <div className="modal-head">
+        <strong>{t('exportGraph.title')}</strong>
+        <button type="button" className="icon-btn" title={t('common.close')} onClick={onClose} aria-label={t('common.close')}>
+          ×
+        </button>
+      </div>
+      <div className="modal-body">
+        <fieldset>
+          <legend>{t('exportGraph.format')}</legend>
+          {FORMATS.map((f) => (
+            <label key={f}>
+              <input
+                type="radio"
+                name="export-graph-format"
+                checked={format === f}
+                onChange={() => setFormat(f)}
+                disabled={busy}
+              />
+              <span>{t(`exportGraph.${f}` as const)}</span>
+            </label>
+          ))}
+        </fieldset>
+        {format === 'csv' && <p>{t('exportGraph.csvHint')}</p>}
+        {project.reviewers > 1 && source === 'consolidated' && <p>{t('exportGraph.consolidated')}</p>}
+        {source === 'seat' && (
+          <>
+            <p>{t('exportGraph.pickSeat')}</p>
+            <label>
+              <span>{t('exportGraph.seat')} </span>
+              <select value={seat} onChange={(e) => setSeat(e.target.value)} disabled={busy}>
+                {seats.map((s) => (
+                  <option key={s} value={s}>
+                    {seatLabel(project, s)}
+                  </option>
+                ))}
+              </select>
+            </label>
+          </>
+        )}
+        {messages.map((m, i) => (
+          <p key={i} className={m.ok ? undefined : 'ai-error'}>
+            {m.text}
+          </p>
+        ))}
+        <div className="screening-import-actions">
+          <button type="button" disabled={busy} onClick={onClose}>
+            {t('common.close')}
+          </button>
+          <button type="button" className="primary" disabled={busy} onClick={() => void runExport()}>
+            {busy ? t('exportGraph.exporting') : t('exportGraph.export')}
           </button>
         </div>
-        <div className="modal-body">
-          <fieldset>
-            <legend>{t('exportGraph.format')}</legend>
-            {FORMATS.map((f) => (
-              <label key={f}>
-                <input
-                  type="radio"
-                  name="export-graph-format"
-                  checked={format === f}
-                  onChange={() => setFormat(f)}
-                  disabled={busy}
-                />
-                <span>{t(`exportGraph.${f}` as const)}</span>
-              </label>
-            ))}
-          </fieldset>
-          {format === 'csv' && <p>{t('exportGraph.csvHint')}</p>}
-          {project.reviewers > 1 && source === 'consolidated' && <p>{t('exportGraph.consolidated')}</p>}
-          {source === 'seat' && (
-            <>
-              <p>{t('exportGraph.pickSeat')}</p>
-              <label>
-                <span>{t('exportGraph.seat')} </span>
-                <select value={seat} onChange={(e) => setSeat(e.target.value)} disabled={busy}>
-                  {seats.map((s) => (
-                    <option key={s} value={s}>
-                      {seatLabel(project, s)}
-                    </option>
-                  ))}
-                </select>
-              </label>
-            </>
-          )}
-          {messages.map((m, i) => (
-            <p key={i} className={m.ok ? undefined : 'ai-error'}>
-              {m.text}
-            </p>
-          ))}
-          <div className="screening-import-actions">
-            <button type="button" disabled={busy} onClick={onClose}>
-              {t('common.close')}
-            </button>
-            <button type="button" className="primary" disabled={busy} onClick={() => void runExport()}>
-              {busy ? t('exportGraph.exporting') : t('exportGraph.export')}
-            </button>
-          </div>
-        </div>
       </div>
-    </div>
+      
+    </Modal>
   )
 }

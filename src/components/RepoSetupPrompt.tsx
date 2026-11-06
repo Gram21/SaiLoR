@@ -1,6 +1,7 @@
 // [impl->req~git-411~1]
 import { useT } from '../i18n'
 import { useGitStore } from '../state/gitStore'
+import { Modal } from './Modal'
 
 /**
  * Asks before rewriting a `.gitattributes`/`.gitignore` the team already has.
@@ -24,32 +25,31 @@ export function RepoSetupPrompt() {
   if (!prompt) return null
 
   return (
-    <div className="modal-overlay">
-      <div className="modal repo-setup-prompt" role="dialog" aria-modal="true">
-        <div className="modal-head">
-          <strong>{t('git.repoSetup.title')}</strong>
-        </div>
-        <div className="modal-body">
-          <p>{t('git.repoSetup.reason')}</p>
-          <p>{t('git.repoSetup.willUpdate')}</p>
-          <ul className="repo-setup-paths">
-            {prompt.paths.map((p) => (
-              <li key={p}>
-                <code>{p}</code>
-              </li>
-            ))}
-          </ul>
-          <p className="repo-setup-note">{t('git.repoSetup.note')}</p>
-          <div className="modal-actions">
-            <button type="button" onClick={() => void resolve(false)}>
-              {t('git.repoSetup.decline')}
-            </button>
-            <button type="button" className="primary" onClick={() => void resolve(true)}>
-              {t('git.repoSetup.accept')}
-            </button>
-          </div>
+    <Modal className="repo-setup-prompt">
+      <div className="modal-head">
+        <strong>{t('git.repoSetup.title')}</strong>
+      </div>
+      <div className="modal-body">
+        <p>{t('git.repoSetup.reason')}</p>
+        <p>{t('git.repoSetup.willUpdate')}</p>
+        <ul className="repo-setup-paths">
+          {prompt.paths.map((p) => (
+            <li key={p}>
+              <code>{p}</code>
+            </li>
+          ))}
+        </ul>
+        <p className="repo-setup-note">{t('git.repoSetup.note')}</p>
+        <div className="modal-actions">
+          <button type="button" onClick={() => void resolve(false)}>
+            {t('git.repoSetup.decline')}
+          </button>
+          <button type="button" className="primary" onClick={() => void resolve(true)}>
+            {t('git.repoSetup.accept')}
+          </button>
         </div>
       </div>
-    </div>
+      
+    </Modal>
   )
 }

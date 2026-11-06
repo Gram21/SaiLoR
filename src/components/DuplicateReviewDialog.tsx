@@ -3,6 +3,7 @@ import { useEditorStore, type DuplicateDecision, type DuplicateReviewDraft, type
 import type { DupReason, DupVerdict } from '../model/duplicates'
 import { rich, t, tp, useT } from '../i18n'
 import '../styles/duplicates.css'
+import { Modal } from './Modal'
 
 /**
  * Reviewing *probable* duplicates `importReferences` found — a paper the fuzzy
@@ -48,90 +49,83 @@ export function DuplicateReviewDialog() {
   const allDecided = decidedCount >= rows.length
 
   return (
-    <div className="modal-overlay" onClick={() => resolveDuplicateReview('cancel')}>
-      <div
-        className="modal dup-review-dialog"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('editor.duplicates.dialogLabel')}
-      >
-        <div className="modal-head">
-          <strong>
-            {t('editor.duplicates.heading', { source: draft.sourceName })}
-            <span className="dup-review-progress">
-              {t('editor.duplicates.progress', { decided: decidedCount, total: rows.length })}
-            </span>
-          </strong>
-          <button
-            type="button"
-            className="icon-btn"
-            title={t('editor.duplicates.cancelImportTitle')}
-            onClick={() => resolveDuplicateReview('cancel')}
-            aria-label={t('common.close')}
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="modal-body">
-          <p>
-            {rich(draft.entries.length === 1 ? 'editor.duplicates.intro_one' : 'editor.duplicates.intro_other', {
-              rows: rows.length,
-              count: draft.entries.length,
-            })}
-          </p>
-          <div className="dup-review-bulk">
-            <button
-              type="button"
-              title={t('editor.duplicates.markAllMergeTitle')}
-              onClick={() => setAllDuplicateDecisions('merge')}
-            >
-              {t('editor.duplicates.markAllMerge')}
-            </button>
-            <button
-              type="button"
-              title={t('editor.duplicates.markAllSeparateTitle')}
-              onClick={() => setAllDuplicateDecisions('separate')}
-            >
-              {t('editor.duplicates.markAllSeparate')}
-            </button>
-          </div>
-
-          <ul className="dup-review-rows">
-            {rows.map(({ verdict, index }) => (
-              <DuplicateRow
-                key={index}
-                entry={draft.entries[index]}
-                verdict={verdict}
-                target={targetOf(verdict, draft, papers)}
-                decision={draft.decisions[index]}
-                onSet={(d) => setDuplicateDecision(index, d)}
-              />
-            ))}
-          </ul>
-        </div>
-
-        <div className="dup-review-footer">
-          <button
-            type="button"
-            title={t('editor.duplicates.discardTitle')}
-            onClick={() => resolveDuplicateReview('cancel')}
-          >
-            {t('editor.duplicates.cancelImport')}
-          </button>
-          <button
-            type="button"
-            className="primary"
-            disabled={!allDecided}
-            title={allDecided ? t('editor.duplicates.importTitle') : t('editor.duplicates.importBlockedTitle')}
-            onClick={() => resolveDuplicateReview('apply')}
-          >
-            {tp('editor.duplicates.importButton', draft.entries.length)}
-          </button>
-        </div>
+    <Modal onClose={() => resolveDuplicateReview('cancel')} className="dup-review-dialog" aria-label={t('editor.duplicates.dialogLabel')}>
+      <div className="modal-head">
+        <strong>
+          {t('editor.duplicates.heading', { source: draft.sourceName })}
+          <span className="dup-review-progress">
+            {t('editor.duplicates.progress', { decided: decidedCount, total: rows.length })}
+          </span>
+        </strong>
+        <button
+          type="button"
+          className="icon-btn"
+          title={t('editor.duplicates.cancelImportTitle')}
+          onClick={() => resolveDuplicateReview('cancel')}
+          aria-label={t('common.close')}
+        >
+          ×
+        </button>
       </div>
-    </div>
+
+      <div className="modal-body">
+        <p>
+          {rich(draft.entries.length === 1 ? 'editor.duplicates.intro_one' : 'editor.duplicates.intro_other', {
+            rows: rows.length,
+            count: draft.entries.length,
+          })}
+        </p>
+        <div className="dup-review-bulk">
+          <button
+            type="button"
+            title={t('editor.duplicates.markAllMergeTitle')}
+            onClick={() => setAllDuplicateDecisions('merge')}
+          >
+            {t('editor.duplicates.markAllMerge')}
+          </button>
+          <button
+            type="button"
+            title={t('editor.duplicates.markAllSeparateTitle')}
+            onClick={() => setAllDuplicateDecisions('separate')}
+          >
+            {t('editor.duplicates.markAllSeparate')}
+          </button>
+        </div>
+
+        <ul className="dup-review-rows">
+          {rows.map(({ verdict, index }) => (
+            <DuplicateRow
+              key={index}
+              entry={draft.entries[index]}
+              verdict={verdict}
+              target={targetOf(verdict, draft, papers)}
+              decision={draft.decisions[index]}
+              onSet={(d) => setDuplicateDecision(index, d)}
+            />
+          ))}
+        </ul>
+      </div>
+
+      <div className="dup-review-footer">
+        <button
+          type="button"
+          title={t('editor.duplicates.discardTitle')}
+          onClick={() => resolveDuplicateReview('cancel')}
+        >
+          {t('editor.duplicates.cancelImport')}
+        </button>
+        <button
+          type="button"
+          className="primary"
+          disabled={!allDecided}
+          title={allDecided ? t('editor.duplicates.importTitle') : t('editor.duplicates.importBlockedTitle')}
+          onClick={() => resolveDuplicateReview('apply')}
+        >
+          {tp('editor.duplicates.importButton', draft.entries.length)}
+        </button>
+      </div>
+      
+    </Modal>
   )
 }
 

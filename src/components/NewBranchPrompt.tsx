@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react'
 import { useT } from '../i18n'
 import { useGitStore } from '../state/gitStore'
+import { Modal } from './Modal'
 
 /**
  * The branch switcher's "New branch…" entry: a name, created at the current
@@ -35,46 +36,39 @@ export function NewBranchPrompt() {
   }
 
   return (
-    <div className="modal-overlay" onClick={close}>
-      <div
-        className="modal close-prompt"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('git.newBranch.title')}
-      >
-        <div className="modal-body">
-          <h3>{t('git.newBranch.title')}</h3>
-          <p>{t('git.newBranch.body')}</p>
-          <input
-            ref={inputRef}
-            className="field-input"
-            type="text"
-            value={prompt.name}
-            placeholder="branch-name"
-            onChange={(e) => setName(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === 'Enter') submit()
-            }}
-          />
-          {prompt.error && <p className="git-message-text git-message-error">{prompt.error}</p>}
-        </div>
-        <div className="close-prompt-actions">
-          <button type="button" onClick={close} disabled={busy} title={t('git.newBranch.cancelTitle')}>
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            className="primary"
-            onClick={submit}
-            disabled={busy || !prompt.name.trim()}
-            autoFocus
-            title={t('git.newBranch.createTitle')}
-          >
-            {busy ? t('git.newBranch.creating') : t('git.newBranch.create')}
-          </button>
-        </div>
+    <Modal onClose={close} className="close-prompt" aria-label={t('git.newBranch.title')}>
+      <div className="modal-body">
+        <h3>{t('git.newBranch.title')}</h3>
+        <p>{t('git.newBranch.body')}</p>
+        <input
+          ref={inputRef}
+          className="field-input"
+          type="text"
+          value={prompt.name}
+          placeholder="branch-name"
+          onChange={(e) => setName(e.target.value)}
+          onKeyDown={(e) => {
+            if (e.key === 'Enter') submit()
+          }}
+        />
+        {prompt.error && <p className="git-message-text git-message-error">{prompt.error}</p>}
       </div>
-    </div>
+      <div className="close-prompt-actions">
+        <button type="button" onClick={close} disabled={busy} title={t('git.newBranch.cancelTitle')}>
+          {t('common.cancel')}
+        </button>
+        <button
+          type="button"
+          className="primary"
+          onClick={submit}
+          disabled={busy || !prompt.name.trim()}
+          autoFocus
+          title={t('git.newBranch.createTitle')}
+        >
+          {busy ? t('git.newBranch.creating') : t('git.newBranch.create')}
+        </button>
+      </div>
+      
+    </Modal>
   )
 }

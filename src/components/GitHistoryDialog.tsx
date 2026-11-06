@@ -3,6 +3,7 @@ import { useT, getLanguage } from '../i18n'
 import { useGitStore, type LogDiffResult } from '../state/gitStore'
 import { formatValue } from './GitDialog'
 import '../styles/git.css'
+import { Modal } from './Modal'
 
 /**
  * The "History…" button's dialog — `git log` scoped to the open project's own
@@ -34,57 +35,50 @@ export function GitHistoryDialog() {
   }
 
   return (
-    <div className="modal-overlay" onClick={closeHistory}>
-      <div
-        className="modal git-merge-dialog"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('git.history.label')}
-      >
-        <div className="modal-head">
-          <strong>{t('git.dialog.history')}</strong>
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={closeHistory}
-            aria-label={t('common.close')}
-            title={t('common.close')}
-          >
-            ×
-          </button>
-        </div>
-
-        <div className="modal-body">
-          {history.error && <p className="git-message-text git-message-error">{history.error}</p>}
-          {!history.error && history.commits.length === 0 && (
-            <p className="git-muted">{t('git.history.empty')}</p>
-          )}
-          <ul className="git-history-rows">
-            {history.commits.map((c) => (
-              <li key={c.hash} className="git-history-row">
-                <button
-                  type="button"
-                  className="git-history-row-head"
-                  aria-expanded={!!expanded[c.hash]}
-                  onClick={() => toggle(c.hash)}
-                  title={expanded[c.hash] ? t('git.history.hideDiff') : t('git.history.showDiff')}
-                >
-                  <span className={`git-merge-group-chevron${expanded[c.hash] ? '' : ' is-collapsed'}`} aria-hidden="true">
-                    ▾
-                  </span>
-                  <span className="git-history-date">{formatCommitDate(c.date)}</span>
-                  <span className="git-history-subject">{c.subject}</span>
-                  <span className="git-history-hash">{c.hash.slice(0, 7)}</span>
-                </button>
-                {expanded[c.hash] && <CommitDiff result={history.diffs[c.hash]} />}
-              </li>
-            ))}
-          </ul>
-          {history.truncated && <p className="git-muted">{t('git.history.truncated', { count: history.commits.length })}</p>}
-        </div>
+    <Modal onClose={closeHistory} className="git-merge-dialog" aria-label={t('git.history.label')}>
+      <div className="modal-head">
+        <strong>{t('git.dialog.history')}</strong>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={closeHistory}
+          aria-label={t('common.close')}
+          title={t('common.close')}
+        >
+          ×
+        </button>
       </div>
-    </div>
+
+      <div className="modal-body">
+        {history.error && <p className="git-message-text git-message-error">{history.error}</p>}
+        {!history.error && history.commits.length === 0 && (
+          <p className="git-muted">{t('git.history.empty')}</p>
+        )}
+        <ul className="git-history-rows">
+          {history.commits.map((c) => (
+            <li key={c.hash} className="git-history-row">
+              <button
+                type="button"
+                className="git-history-row-head"
+                aria-expanded={!!expanded[c.hash]}
+                onClick={() => toggle(c.hash)}
+                title={expanded[c.hash] ? t('git.history.hideDiff') : t('git.history.showDiff')}
+              >
+                <span className={`git-merge-group-chevron${expanded[c.hash] ? '' : ' is-collapsed'}`} aria-hidden="true">
+                  ▾
+                </span>
+                <span className="git-history-date">{formatCommitDate(c.date)}</span>
+                <span className="git-history-subject">{c.subject}</span>
+                <span className="git-history-hash">{c.hash.slice(0, 7)}</span>
+              </button>
+              {expanded[c.hash] && <CommitDiff result={history.diffs[c.hash]} />}
+            </li>
+          ))}
+        </ul>
+        {history.truncated && <p className="git-muted">{t('git.history.truncated', { count: history.commits.length })}</p>}
+      </div>
+      
+    </Modal>
   )
 }
 

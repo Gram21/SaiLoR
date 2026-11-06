@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { linkifyText } from '../model/linkify'
 import { useT } from '../i18n'
+import { Modal } from './Modal'
 
 /**
  * The schema-wide comment authored via `Project.schemaInfo`. Auto-opened once
@@ -31,45 +32,38 @@ export function SchemaInfoDialog() {
   if (!open || !text) return null
 
   return (
-    <div className="modal-overlay schema-info-overlay" onClick={() => setOpen(false)}>
-      <div
-        className="modal schema-info-dialog"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('app.schemaInfo.title')}
-      >
-        <div className="modal-head">
-          <strong>{t('app.schemaInfo.title')}</strong>
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={() => setOpen(false)}
-            aria-label={t('common.close')}
-            title={t('common.close')}
-          >
-            ×
-          </button>
-        </div>
-        <div className="modal-body">
-          <p className="schema-info-text">
-            {linkifyText(text).map((seg, i) =>
-              seg.href ? (
-                <a key={i} href={seg.href} target="_blank" rel="noreferrer">
-                  {seg.text}
-                </a>
-              ) : (
-                seg.text
-              ),
-            )}
-          </p>
-        </div>
-        <div className="schema-info-actions">
-          <button type="button" className="primary" onClick={() => setOpen(false)} title={t('app.schemaInfo.closeTitle')}>
-            {t('app.schemaInfo.ok')}
-          </button>
-        </div>
+    <Modal overlayClassName="schema-info-overlay" onClose={() => setOpen(false)} className="schema-info-dialog" aria-label={t('app.schemaInfo.title')}>
+      <div className="modal-head">
+        <strong>{t('app.schemaInfo.title')}</strong>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={() => setOpen(false)}
+          aria-label={t('common.close')}
+          title={t('common.close')}
+        >
+          ×
+        </button>
       </div>
-    </div>
+      <div className="modal-body">
+        <p className="schema-info-text">
+          {linkifyText(text).map((seg, i) =>
+            seg.href ? (
+              <a key={i} href={seg.href} target="_blank" rel="noreferrer">
+                {seg.text}
+              </a>
+            ) : (
+              seg.text
+            ),
+          )}
+        </p>
+      </div>
+      <div className="schema-info-actions">
+        <button type="button" className="primary" onClick={() => setOpen(false)} title={t('app.schemaInfo.closeTitle')}>
+          {t('app.schemaInfo.ok')}
+        </button>
+      </div>
+      
+    </Modal>
   )
 }

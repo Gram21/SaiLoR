@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useT } from '../i18n'
 import { useGitStore } from '../state/gitStore'
+import { Modal } from './Modal'
 
 /**
  * Asked whenever the reviewer picks a different branch from the switcher
@@ -29,46 +30,40 @@ export function BranchSwitchPrompt() {
   if (!prompt) return null
 
   return (
-    <div className="modal-overlay" onClick={() => void resolve('cancel')}>
-      <div
-        className="modal close-prompt"
-        onClick={(e) => e.stopPropagation()}
-        role="alertdialog"
-        aria-modal="true"
-      >
-        <div className="modal-body">
-          <h3>{t('git.branchSwitch.title', { branch: prompt.branch })}</h3>
-          <p>{t('git.branchSwitch.body', { branch: prompt.branch })}</p>
-        </div>
-        <div className="close-prompt-actions">
-          <button
-            type="button"
-            title={t('git.branchSwitch.cancelTitle')}
-            onClick={() => void resolve('cancel')}
-            disabled={busy}
-          >
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            title={t('git.branchSwitch.commitFirstTitle')}
-            onClick={() => void resolve('commitFirst')}
-            disabled={busy}
-          >
-            {t('git.branchSwitch.commitFirst')}
-          </button>
-          <button
-            type="button"
-            className="primary"
-            title={t('git.branchSwitch.carryOverTitle', { branch: prompt.branch })}
-            onClick={() => void resolve('carryOver')}
-            disabled={busy}
-            autoFocus
-          >
-            {busy ? t('git.branchSwitch.switching') : t('git.branchSwitch.carryOver')}
-          </button>
-        </div>
+    <Modal onClose={() => void resolve('cancel')} className="close-prompt" role="alertdialog">
+      <div className="modal-body">
+        <h3>{t('git.branchSwitch.title', { branch: prompt.branch })}</h3>
+        <p>{t('git.branchSwitch.body', { branch: prompt.branch })}</p>
       </div>
-    </div>
+      <div className="close-prompt-actions">
+        <button
+          type="button"
+          title={t('git.branchSwitch.cancelTitle')}
+          onClick={() => void resolve('cancel')}
+          disabled={busy}
+        >
+          {t('common.cancel')}
+        </button>
+        <button
+          type="button"
+          title={t('git.branchSwitch.commitFirstTitle')}
+          onClick={() => void resolve('commitFirst')}
+          disabled={busy}
+        >
+          {t('git.branchSwitch.commitFirst')}
+        </button>
+        <button
+          type="button"
+          className="primary"
+          title={t('git.branchSwitch.carryOverTitle', { branch: prompt.branch })}
+          onClick={() => void resolve('carryOver')}
+          disabled={busy}
+          autoFocus
+        >
+          {busy ? t('git.branchSwitch.switching') : t('git.branchSwitch.carryOver')}
+        </button>
+      </div>
+      
+    </Modal>
   )
 }

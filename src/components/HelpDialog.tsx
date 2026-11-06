@@ -5,6 +5,7 @@ import { useEditorStore } from '../state/editorStore'
 import { getPlatform } from '../platform'
 import { NEW_ISSUE_URL } from '../model/version'
 import { getLanguage, rich, t, useT, type MessageKey } from '../i18n'
+import { Modal } from './Modal'
 
 const isMac = typeof navigator !== 'undefined' && /Mac/i.test(navigator.platform)
 const MAC_APP = getPlatform().kind !== 'browser' && isMac
@@ -497,100 +498,94 @@ export function HelpDialog() {
   }
 
   return (
-    <div className="modal-overlay" onClick={() => setHelpOpen(false)}>
-      <div
-        className="modal help-dialog"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="modal-head">
-          <strong>
-            {t('help.title')}{' '}
-            <span className="help-mode">
-              {mode === 'editor'
-                ? t('help.mode.editor')
-                : mode === 'screening'
-                  ? t('help.mode.screening')
-                  : mode === 'annotate'
-                    ? t('help.mode.annotate')
-                    : t('help.mode.start')}
-            </span>
-          </strong>
-          <div className="modal-head-actions">
-            <button
-              type="button"
-              className="icon-btn"
-              title={t('help.openSettingsTitle')}
-              onClick={() => {
-                setHelpOpen(false)
-                setUserSettingsOpen(true)
-              }}
-            >
-              {t('help.keys.openSettings')}
-            </button>
-            <a
-              className="icon-btn help-report-bug"
-              href={NEW_ISSUE_URL}
-              target="_blank"
-              rel="noreferrer"
-              title={t('help.reportBugTitle')}
-            >
-              {t('help.reportBug')}
-            </a>
-            <button
-              type="button"
-              className="icon-btn"
-              title={t('help.closeTitle')}
-              onClick={() => setHelpOpen(false)}
-              aria-label={t('common.close')}
-            >
-              ×
-            </button>
-          </div>
-        </div>
-
-        <div className="modal-body" ref={bodyRef}>
-          <div className="help-lead">{lead}</div>
-
-          <nav className="help-toc" aria-label={t('help.tocLabel')}>
-            <span className="help-toc-title">{t('help.tocTitle')}</span>
-            <ul>
-              {sections.map((s) => (
-                <li key={s.id}>
-                  <button
-                    type="button"
-                    className="help-toc-link"
-                    title={t('help.tocJump', { title: s.title })}
-                    onClick={() => jumpTo(s.id)}
-                  >
-                    {s.title}
-                  </button>
-                </li>
-              ))}
-            </ul>
-          </nav>
-
-          {sections.map((s) => (
-            <section key={s.id}>
-              <h3 id={`help-${s.id}`}>{s.title}</h3>
-              {s.body}
-              {/* Every section is a plausible place to have finished reading,
-                  and the contents are only at the top. */}
-              <div className="help-top-row">
-                <button
-                  type="button"
-                  className="help-top-link"
-                  title={t('help.backToTopTitle')}
-                  onClick={jumpToTop}
-                >
-                  {t('help.backToTop')}
-                </button>
-              </div>
-            </section>
-          ))}
+    <Modal onClose={() => setHelpOpen(false)} className="help-dialog">
+      <div className="modal-head">
+        <strong>
+          {t('help.title')}{' '}
+          <span className="help-mode">
+            {mode === 'editor'
+              ? t('help.mode.editor')
+              : mode === 'screening'
+                ? t('help.mode.screening')
+                : mode === 'annotate'
+                  ? t('help.mode.annotate')
+                  : t('help.mode.start')}
+          </span>
+        </strong>
+        <div className="modal-head-actions">
+          <button
+            type="button"
+            className="icon-btn"
+            title={t('help.openSettingsTitle')}
+            onClick={() => {
+              setHelpOpen(false)
+              setUserSettingsOpen(true)
+            }}
+          >
+            {t('help.keys.openSettings')}
+          </button>
+          <a
+            className="icon-btn help-report-bug"
+            href={NEW_ISSUE_URL}
+            target="_blank"
+            rel="noreferrer"
+            title={t('help.reportBugTitle')}
+          >
+            {t('help.reportBug')}
+          </a>
+          <button
+            type="button"
+            className="icon-btn"
+            title={t('help.closeTitle')}
+            onClick={() => setHelpOpen(false)}
+            aria-label={t('common.close')}
+          >
+            ×
+          </button>
         </div>
       </div>
-    </div>
+
+      <div className="modal-body" ref={bodyRef}>
+        <div className="help-lead">{lead}</div>
+
+        <nav className="help-toc" aria-label={t('help.tocLabel')}>
+          <span className="help-toc-title">{t('help.tocTitle')}</span>
+          <ul>
+            {sections.map((s) => (
+              <li key={s.id}>
+                <button
+                  type="button"
+                  className="help-toc-link"
+                  title={t('help.tocJump', { title: s.title })}
+                  onClick={() => jumpTo(s.id)}
+                >
+                  {s.title}
+                </button>
+              </li>
+            ))}
+          </ul>
+        </nav>
+
+        {sections.map((s) => (
+          <section key={s.id}>
+            <h3 id={`help-${s.id}`}>{s.title}</h3>
+            {s.body}
+            {/* Every section is a plausible place to have finished reading,
+                and the contents are only at the top. */}
+            <div className="help-top-row">
+              <button
+                type="button"
+                className="help-top-link"
+                title={t('help.backToTopTitle')}
+                onClick={jumpToTop}
+              >
+                {t('help.backToTop')}
+              </button>
+            </div>
+          </section>
+        ))}
+      </div>
+      
+    </Modal>
   )
 }

@@ -3,6 +3,7 @@ import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { screeningCounts } from '../screening/counts'
 import { useT } from '../i18n'
+import { Modal } from './Modal'
 
 /**
  * Progress and PRISMA-style counts for a screening project — the include /
@@ -40,69 +41,63 @@ export function ScreeningSummary() {
           : t('screening.summary.seatNone')
 
   return (
-    <div className="modal-overlay" onClick={() => setOpen(false)}>
-      <div
-        className="modal screening-summary"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="modal-head">
-          <strong>{t('screening.summary.title')}</strong>
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={() => setOpen(false)}
-            aria-label={t('common.close')}
-            title={t('common.close')}
-          >
-            ×
-          </button>
-        </div>
-        <div className="modal-body">
-          <p className="screening-summary-seat">{t('screening.summary.counting', { seat: seatLabel })}</p>
-          <div className="screening-summary-headline">
-            <div>
-              <strong>{counts.total}</strong>
-              <span>{t('screening.summary.total')}</span>
-            </div>
-            <div>
-              <strong>{counts.included}</strong>
-              <span>{t('screening.summary.included')}</span>
-            </div>
-            <div>
-              <strong>{counts.excluded}</strong>
-              <span>{t('screening.summary.excluded')}</span>
-            </div>
-            <div>
-              <strong>{counts.undecided}</strong>
-              <span>{t('screening.summary.undecided')}</span>
-            </div>
-          </div>
-          <table className="screening-summary-table">
-            <thead>
-              <tr>
-                <th>{t('screening.summary.reason')}</th>
-                <th>{t('screening.summary.papers')}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {reasons.map((reason) => (
-                <tr key={reason}>
-                  <td>{reason}</td>
-                  <td>{counts.byReason[reason] ?? 0}</td>
-                </tr>
-              ))}
-              {counts.excludedWithoutReason > 0 && (
-                <tr className="screening-summary-unknown">
-                  <td>{t('screening.summary.noReason')}</td>
-                  <td>{counts.excludedWithoutReason}</td>
-                </tr>
-              )}
-            </tbody>
-          </table>
-        </div>
+    <Modal onClose={() => setOpen(false)} className="screening-summary">
+      <div className="modal-head">
+        <strong>{t('screening.summary.title')}</strong>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={() => setOpen(false)}
+          aria-label={t('common.close')}
+          title={t('common.close')}
+        >
+          ×
+        </button>
       </div>
-    </div>
+      <div className="modal-body">
+        <p className="screening-summary-seat">{t('screening.summary.counting', { seat: seatLabel })}</p>
+        <div className="screening-summary-headline">
+          <div>
+            <strong>{counts.total}</strong>
+            <span>{t('screening.summary.total')}</span>
+          </div>
+          <div>
+            <strong>{counts.included}</strong>
+            <span>{t('screening.summary.included')}</span>
+          </div>
+          <div>
+            <strong>{counts.excluded}</strong>
+            <span>{t('screening.summary.excluded')}</span>
+          </div>
+          <div>
+            <strong>{counts.undecided}</strong>
+            <span>{t('screening.summary.undecided')}</span>
+          </div>
+        </div>
+        <table className="screening-summary-table">
+          <thead>
+            <tr>
+              <th>{t('screening.summary.reason')}</th>
+              <th>{t('screening.summary.papers')}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {reasons.map((reason) => (
+              <tr key={reason}>
+                <td>{reason}</td>
+                <td>{counts.byReason[reason] ?? 0}</td>
+              </tr>
+            ))}
+            {counts.excludedWithoutReason > 0 && (
+              <tr className="screening-summary-unknown">
+                <td>{t('screening.summary.noReason')}</td>
+                <td>{counts.excludedWithoutReason}</td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+      
+    </Modal>
   )
 }

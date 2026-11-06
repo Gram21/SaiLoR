@@ -979,3 +979,18 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Usability
+
+### REQ-UI-180: Keep focus inside open dialogs
+`req~ui-180~1`
+
+The system shall build every dialog and prompt from one shared frame. The frame shall mark the dialog as modal. When the user presses Tab on the last control, focus shall move to the first control. When the user presses Shift+Tab on the first control, focus shall move to the last control. A click on the overlay shall call the close handler of the dialog. A click inside the dialog shall not close it.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/Modal.tsx` (`Modal`)
+- **Verified by:** `src/components/Modal.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Usability

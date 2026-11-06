@@ -7,6 +7,7 @@ import {
   type VisibleIfSpec,
 } from '../model/schema'
 import { t, tp, useT } from '../i18n'
+import { Modal } from './Modal'
 
 /** One condition's gate text, e.g. `"Relevant" = Yes` or `"Study type" has
  *  any answer`. No schema lookup needed: `equals` already carries the real
@@ -894,77 +895,70 @@ export function VisibleIfDialog({
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal visible-if-dialog"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('editor.visibleIf.dialogLabel')}
-      >
-        <div className="modal-head">
-          <strong>{t('editor.visibleIf.heading', { name: node.name || t('editor.visibleIf.thisField') })}</strong>
+    <Modal onClose={onClose} className="visible-if-dialog" aria-label={t('editor.visibleIf.dialogLabel')}>
+      <div className="modal-head">
+        <strong>{t('editor.visibleIf.heading', { name: node.name || t('editor.visibleIf.thisField') })}</strong>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={onClose}
+          aria-label={t('common.close')}
+          title={t('editor.visibleIf.closeTitle')}
+        >
+          ×
+        </button>
+      </div>
+      <div className="modal-body">
+        <p className="visible-if-context">
+          {nodePath.join(' / ') || node.name}
+          <span className="visible-if-kind">{kindLabel(node)}</span>
+        </p>
+
+        {targets.length === 0 ? (
+          <p className="schema-hint">{t('editor.visibleIf.nothingToGate')}</p>
+        ) : (
+          <>
+            <ConditionGroup
+              group={root}
+              path={[]}
+              siblingCount={0}
+              targets={targets}
+              actions={actions}
+              drag={drag}
+            />
+
+            {usesElsewhere(root, targets) && (
+              <p className="schema-hint visible-if-elsewhere-note">{t('editor.visibleIf.elsewhereNote')}</p>
+            )}
+
+            <p className="visible-if-summary">{describeVisibleIfFull(pruneEmptyGroups(draft))}</p>
+          </>
+        )}
+      </div>
+      <div className="visible-if-actions">
+        {/* Left of Cancel/Save: a separate outcome, not a step towards one —
+            and it throws work away, so it states what it removes. */}
+        <div className="visible-if-clear">
           <button
             type="button"
-            className="icon-btn"
-            onClick={onClose}
-            aria-label={t('common.close')}
-            title={t('editor.visibleIf.closeTitle')}
+            onClick={() => setDraft(null)}
+            disabled={draft === null}
+            title={t('editor.visibleIf.clearTitle')}
           >
-            ×
+            {t('editor.visibleIf.always')}
           </button>
+          <span className="schema-hint">
+            {draft === null ? t('editor.visibleIf.clearHintNone') : t('editor.visibleIf.clearHint')}
+          </span>
         </div>
-        <div className="modal-body">
-          <p className="visible-if-context">
-            {nodePath.join(' / ') || node.name}
-            <span className="visible-if-kind">{kindLabel(node)}</span>
-          </p>
-
-          {targets.length === 0 ? (
-            <p className="schema-hint">{t('editor.visibleIf.nothingToGate')}</p>
-          ) : (
-            <>
-              <ConditionGroup
-                group={root}
-                path={[]}
-                siblingCount={0}
-                targets={targets}
-                actions={actions}
-                drag={drag}
-              />
-
-              {usesElsewhere(root, targets) && (
-                <p className="schema-hint visible-if-elsewhere-note">{t('editor.visibleIf.elsewhereNote')}</p>
-              )}
-
-              <p className="visible-if-summary">{describeVisibleIfFull(pruneEmptyGroups(draft))}</p>
-            </>
-          )}
-        </div>
-        <div className="visible-if-actions">
-          {/* Left of Cancel/Save: a separate outcome, not a step towards one —
-              and it throws work away, so it states what it removes. */}
-          <div className="visible-if-clear">
-            <button
-              type="button"
-              onClick={() => setDraft(null)}
-              disabled={draft === null}
-              title={t('editor.visibleIf.clearTitle')}
-            >
-              {t('editor.visibleIf.always')}
-            </button>
-            <span className="schema-hint">
-              {draft === null ? t('editor.visibleIf.clearHintNone') : t('editor.visibleIf.clearHint')}
-            </span>
-          </div>
-          <button type="button" onClick={onClose} title={t('editor.visibleIf.cancelTitle')}>
-            {t('common.cancel')}
-          </button>
-          <button type="button" className="primary" onClick={save} title={t('editor.visibleIf.saveTitle')}>
-            {t('common.save')}
-          </button>
-        </div>
+        <button type="button" onClick={onClose} title={t('editor.visibleIf.cancelTitle')}>
+          {t('common.cancel')}
+        </button>
+        <button type="button" className="primary" onClick={save} title={t('editor.visibleIf.saveTitle')}>
+          {t('common.save')}
+        </button>
       </div>
-    </div>
+      
+    </Modal>
   )
 }

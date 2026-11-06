@@ -15,6 +15,7 @@ import { SCREENING_DECISION } from '../screening/schema'
 import { seatLabel } from '../model/project'
 import type { ResolvedDef } from '../model/schema'
 import { rich, useT } from '../i18n'
+import { Modal } from './Modal'
 
 /**
  * Whether leaving now would strand the field: declared equivalent, but with no
@@ -219,152 +220,146 @@ export function ConsolidationDialog() {
   }
 
   return (
-    <div className="modal-overlay" onClick={requestClose}>
-      <div
-        className="modal consolidation-dialog"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="modal-head">
-          <strong>
-            {t('consolidation.dialog.title')} <span className="consolidation-field-path">{label}</span>
-            {agreement && (
-              <span className={`help-mode ${agreement === 'agree' ? 'ok' : 'bad'}`}>
-                {agreement === 'agree' ? t('consolidation.dialog.agree') : t('consolidation.dialog.disagree')}
-              </span>
-            )}
-            {onlyIn.length > 0 && (
-              <span className="help-mode">
-                {t('consolidation.onlyIn', { reviewers: onlyIn.map((r) => seatLabel(project, r)).join(', ') })}
-              </span>
-            )}
-          </strong>
-          <button type="button" className="icon-btn" title={t('common.close')} onClick={requestClose} aria-label={t('common.close')}>
-            ×
-          </button>
-        </div>
-        <div className="modal-body">
-          <p className="consolidation-current">
-            {t('consolidation.dialog.current')}{' '}
-            <strong>{formatValue(def, consolidatedValue)}</strong>
-          </p>
-          <ul className="consolidation-rows">
-            {rows.map((r) => {
-              const isCurrent =
-                !isEmptyValue(def.type, r.value ?? emptyValue(def.type)) &&
-                JSON.stringify(r.value ?? emptyValue(def.type)) ===
-                  JSON.stringify(consolidatedValue ?? emptyValue(def.type))
-              return (
-                <li key={r.reviewer}>
-                  <button
-                    type="button"
-                    className={`consolidation-row${isCurrent ? ' is-current' : ''}`}
-                    onClick={() => take(r.value)}
-                    title={t('consolidation.dialog.takeTitle', {
-                      reviewer: project ? seatLabel(project, r.reviewer) : t('consolidation.reviewerName', { id: r.reviewer }),
-                    })}
-                  >
-                    <span className="consolidation-reviewer">
-                      {project ? seatLabel(project, r.reviewer) : t('consolidation.reviewerName', { id: r.reviewer })}
-                    </span>
-                    <span className="consolidation-value">{formatValue(def, r.value)}</span>
-                  </button>
-                </li>
-              )
-            })}
-          </ul>
-          <button
-            type="button"
-            className="consolidation-defer"
-            title={t('consolidation.dialog.deferTitle')}
-            onClick={defer}
-          >
-            {t('consolidation.dialog.defer')}
-          </button>
-          {entrySeg && entrySlot && (
-            <div className="consolidation-mapping">
-              <p>{t('consolidation.dialog.comparedEntries', { name: entrySeg.name })}</p>
-              {reviewerIds.map((reviewer) => (
-                <label key={reviewer}>
-                  {seatLabel(project, reviewer)}
-                  <select
-                    aria-label={t('consolidation.dialog.entryLabel', { reviewer: seatLabel(project, reviewer) })}
-                    value={entrySlot.members[reviewer] ?? ''}
-                    onChange={(e) =>
-                      remapConsolidationEntry(
-                        paper.id,
-                        entryPath,
-                        entrySeg.name,
-                        entrySeg.index,
-                        reviewer,
-                        e.target.value === '' ? null : Number(e.target.value),
-                      )
-                    }
-                  >
-                    <option value="">{t('consolidation.dialog.noEntry')}</option>
-                    {reviewerEntriesAt(paper.alignment, paper.reviews[reviewer], entryPath, entrySeg.name, reviewer).map(
-                      (inst, i) => (
-                        <option key={i} value={i}>
-                          {t('consolidation.dialog.entryOption', { n: i + 1, preview: preview(inst) })}
-                        </option>
-                      ),
-                    )}
-                  </select>
-                </label>
-              ))}
-            </div>
+    <Modal onClose={requestClose} className="consolidation-dialog">
+      <div className="modal-head">
+        <strong>
+          {t('consolidation.dialog.title')} <span className="consolidation-field-path">{label}</span>
+          {agreement && (
+            <span className={`help-mode ${agreement === 'agree' ? 'ok' : 'bad'}`}>
+              {agreement === 'agree' ? t('consolidation.dialog.agree') : t('consolidation.dialog.disagree')}
+            </span>
           )}
-          {canDeclareEqual && (
-            <>
-              <label className="consolidation-equal">
-                <input
-                  type="checkbox"
-                  checked={markedEqual}
-                  onChange={() => toggleFieldEquality(paper.id, canonical)}
-                />
-                {t('consolidation.dialog.equal')}
-              </label>
-              {/* The distinction the whole feature turns on, and the one people
-                  get wrong: the tick settles *that* the reviewers agreed, not
-                  *what* they agreed on. Said plainly and up front, because the
-                  alternative is finding out via the warning below. */}
-              <p className={`consolidation-hint${stranded ? ' needed' : ''}`}>
-                {stranded ? t('consolidation.dialog.hintNeeded') : t('consolidation.dialog.hintDefault')}
-              </p>
-            </>
+          {onlyIn.length > 0 && (
+            <span className="help-mode">
+              {t('consolidation.onlyIn', { reviewers: onlyIn.map((r) => seatLabel(project, r)).join(', ') })}
+            </span>
           )}
-
-          {duplicateHint && (
-            <p className="field-dup-hint" role="alert">
-              {duplicateHint}
-            </p>
-          )}
-
-          {confirmingClose && (
-            <div className="consolidation-warning" role="alert">
-              <p>{rich('consolidation.dialog.strandedWarning')}</p>
-              <div className="consolidation-warning-actions">
-                <button
-                  type="button"
-                  className="primary"
-                  title={t('consolidation.dialog.pickValueTitle')}
-                  onClick={() => setConfirmingClose(false)}
-                >
-                  {t('consolidation.dialog.pickValue')}
-                </button>
-                <button
-                  type="button"
-                  title={t('consolidation.dialog.closeUnmarkTitle')}
-                  onClick={discardAndClose}
-                >
-                  {t('consolidation.dialog.closeUnmark')}
-                </button>
-              </div>
-            </div>
-          )}
-        </div>
+        </strong>
+        <button type="button" className="icon-btn" title={t('common.close')} onClick={requestClose} aria-label={t('common.close')}>
+          ×
+        </button>
       </div>
-    </div>
+      <div className="modal-body">
+        <p className="consolidation-current">
+          {t('consolidation.dialog.current')}{' '}
+          <strong>{formatValue(def, consolidatedValue)}</strong>
+        </p>
+        <ul className="consolidation-rows">
+          {rows.map((r) => {
+            const isCurrent =
+              !isEmptyValue(def.type, r.value ?? emptyValue(def.type)) &&
+              JSON.stringify(r.value ?? emptyValue(def.type)) ===
+                JSON.stringify(consolidatedValue ?? emptyValue(def.type))
+            return (
+              <li key={r.reviewer}>
+                <button
+                  type="button"
+                  className={`consolidation-row${isCurrent ? ' is-current' : ''}`}
+                  onClick={() => take(r.value)}
+                  title={t('consolidation.dialog.takeTitle', {
+                    reviewer: project ? seatLabel(project, r.reviewer) : t('consolidation.reviewerName', { id: r.reviewer }),
+                  })}
+                >
+                  <span className="consolidation-reviewer">
+                    {project ? seatLabel(project, r.reviewer) : t('consolidation.reviewerName', { id: r.reviewer })}
+                  </span>
+                  <span className="consolidation-value">{formatValue(def, r.value)}</span>
+                </button>
+              </li>
+            )
+          })}
+        </ul>
+        <button
+          type="button"
+          className="consolidation-defer"
+          title={t('consolidation.dialog.deferTitle')}
+          onClick={defer}
+        >
+          {t('consolidation.dialog.defer')}
+        </button>
+        {entrySeg && entrySlot && (
+          <div className="consolidation-mapping">
+            <p>{t('consolidation.dialog.comparedEntries', { name: entrySeg.name })}</p>
+            {reviewerIds.map((reviewer) => (
+              <label key={reviewer}>
+                {seatLabel(project, reviewer)}
+                <select
+                  aria-label={t('consolidation.dialog.entryLabel', { reviewer: seatLabel(project, reviewer) })}
+                  value={entrySlot.members[reviewer] ?? ''}
+                  onChange={(e) =>
+                    remapConsolidationEntry(
+                      paper.id,
+                      entryPath,
+                      entrySeg.name,
+                      entrySeg.index,
+                      reviewer,
+                      e.target.value === '' ? null : Number(e.target.value),
+                    )
+                  }
+                >
+                  <option value="">{t('consolidation.dialog.noEntry')}</option>
+                  {reviewerEntriesAt(paper.alignment, paper.reviews[reviewer], entryPath, entrySeg.name, reviewer).map(
+                    (inst, i) => (
+                      <option key={i} value={i}>
+                        {t('consolidation.dialog.entryOption', { n: i + 1, preview: preview(inst) })}
+                      </option>
+                    ),
+                  )}
+                </select>
+              </label>
+            ))}
+          </div>
+        )}
+        {canDeclareEqual && (
+          <>
+            <label className="consolidation-equal">
+              <input
+                type="checkbox"
+                checked={markedEqual}
+                onChange={() => toggleFieldEquality(paper.id, canonical)}
+              />
+              {t('consolidation.dialog.equal')}
+            </label>
+            {/* The distinction the whole feature turns on, and the one people
+                get wrong: the tick settles *that* the reviewers agreed, not
+                *what* they agreed on. Said plainly and up front, because the
+                alternative is finding out via the warning below. */}
+            <p className={`consolidation-hint${stranded ? ' needed' : ''}`}>
+              {stranded ? t('consolidation.dialog.hintNeeded') : t('consolidation.dialog.hintDefault')}
+            </p>
+          </>
+        )}
+
+        {duplicateHint && (
+          <p className="field-dup-hint" role="alert">
+            {duplicateHint}
+          </p>
+        )}
+
+        {confirmingClose && (
+          <div className="consolidation-warning" role="alert">
+            <p>{rich('consolidation.dialog.strandedWarning')}</p>
+            <div className="consolidation-warning-actions">
+              <button
+                type="button"
+                className="primary"
+                title={t('consolidation.dialog.pickValueTitle')}
+                onClick={() => setConfirmingClose(false)}
+              >
+                {t('consolidation.dialog.pickValue')}
+              </button>
+              <button
+                type="button"
+                title={t('consolidation.dialog.closeUnmarkTitle')}
+                onClick={discardAndClose}
+              >
+                {t('consolidation.dialog.closeUnmark')}
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+      
+    </Modal>
   )
 }

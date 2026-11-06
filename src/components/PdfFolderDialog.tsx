@@ -5,6 +5,7 @@ import { METADATA_FIELDS, type MetadataField, type MetadataValues } from '../mod
 import type { MetadataSources, PdfProposal } from '../model/pdfFolder'
 import { parseYear } from '../model/year'
 import { useT } from '../i18n'
+import { Modal } from './Modal'
 
 type Draft = Record<MetadataField, string>
 
@@ -70,92 +71,85 @@ export function PdfFolderDialog() {
   }
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal metadata-dialog"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('pdfFolder.title')}
-      >
-        <div className="modal-head">
-          <strong>{t('pdfFolder.title')}</strong>
-          <button type="button" className="icon-btn" title={t('common.close')} onClick={onClose} aria-label={t('common.close')}>
-            ×
+    <Modal onClose={onClose} className="metadata-dialog" aria-label={t('pdfFolder.title')}>
+      <div className="modal-head">
+        <strong>{t('pdfFolder.title')}</strong>
+        <button type="button" className="icon-btn" title={t('common.close')} onClick={onClose} aria-label={t('common.close')}>
+          ×
+        </button>
+      </div>
+      <div className="modal-body">
+        <div className="screening-import-actions">
+          <button type="button" title={t('pdfFolder.rescanTitle')} disabled={scanning} onClick={rescan}>
+            {scanning ? t('pdfFolder.scanning') : t('pdfFolder.rescan')}
+          </button>
+          <button
+            type="button"
+            className="primary"
+            title={t('pdfFolder.addAllTitle')}
+            disabled={readOnly || addable.length === 0}
+            onClick={() => add(addable)}
+          >
+            {t('pdfFolder.addAll', { count: addable.length })}
           </button>
         </div>
-        <div className="modal-body">
-          <div className="screening-import-actions">
-            <button type="button" title={t('pdfFolder.rescanTitle')} disabled={scanning} onClick={rescan}>
-              {scanning ? t('pdfFolder.scanning') : t('pdfFolder.rescan')}
-            </button>
-            <button
-              type="button"
-              className="primary"
-              title={t('pdfFolder.addAllTitle')}
-              disabled={readOnly || addable.length === 0}
-              onClick={() => add(addable)}
-            >
-              {t('pdfFolder.addAll', { count: addable.length })}
-            </button>
-          </div>
-          {error && <p className="ai-error">{error}</p>}
-          {!scanning && !error && proposals.length === 0 && <p>{t('pdfFolder.none')}</p>}
-          {proposals.map((p) => {
-            const key = p.file.sha256
-            if (skipped.has(key)) {
-              return (
-                <section key={key} className="metadata-entry" aria-label={p.file.path}>
-                  <h4>{p.file.path}</h4>
-                  <p>{t('pdfFolder.skipped')}</p>
-                </section>
-              )
-            }
-            const draft = draftOf(p)
-            const start = toDraft(p.values)
+        {error && <p className="ai-error">{error}</p>}
+        {!scanning && !error && proposals.length === 0 && <p>{t('pdfFolder.none')}</p>}
+        {proposals.map((p) => {
+          const key = p.file.sha256
+          if (skipped.has(key)) {
             return (
               <section key={key} className="metadata-entry" aria-label={p.file.path}>
                 <h4>{p.file.path}</h4>
-                {p.sources.title === 'filename' && <p className="metadata-disagreement">{t('pdfFolder.metadataMissing')}</p>}
-                {METADATA_FIELDS.map((f) => {
-                  const source = draft[f] !== start[f] ? 'manual' : p.sources[f]
-                  return (
-                    <div key={f} className="metadata-field">
-                      <label>
-                        <span>{t(`metadata.field.${f}`)}</span>
-                        <input
-                          type="text"
-                          value={draft[f]}
-                          onChange={(ev) => setDrafts((prev) => ({ ...prev, [key]: { ...draft, [f]: ev.target.value } }))}
-                        />
-                      </label>
-                      {source && <small>{t('pdfFolder.source', { source: t(`pdfFolder.source.${source}`) })}</small>}
-                    </div>
-                  )
-                })}
-                {badYear(draft) && <p className="ai-error">{t('metadata.badYear')}</p>}
-                <div className="screening-import-actions">
-                  <button type="button" title={t('pdfFolder.skipTitle')} onClick={() => setSkipped((prev) => new Set([...prev, key]))}>
-                    {t('pdfFolder.skip')}
-                  </button>
-                  <button type="button" title={t('pdfFolder.ignoreTitle')} disabled={readOnly} onClick={() => ignorePdfs([key])}>
-                    {t('pdfFolder.ignore')}
-                  </button>
-                  <button
-                    type="button"
-                    className="primary"
-                    title={t('pdfFolder.addTitle')}
-                    disabled={readOnly || badYear(draft)}
-                    onClick={() => add([p])}
-                  >
-                    {t('pdfFolder.add')}
-                  </button>
-                </div>
+                <p>{t('pdfFolder.skipped')}</p>
               </section>
             )
-          })}
-        </div>
+          }
+          const draft = draftOf(p)
+          const start = toDraft(p.values)
+          return (
+            <section key={key} className="metadata-entry" aria-label={p.file.path}>
+              <h4>{p.file.path}</h4>
+              {p.sources.title === 'filename' && <p className="metadata-disagreement">{t('pdfFolder.metadataMissing')}</p>}
+              {METADATA_FIELDS.map((f) => {
+                const source = draft[f] !== start[f] ? 'manual' : p.sources[f]
+                return (
+                  <div key={f} className="metadata-field">
+                    <label>
+                      <span>{t(`metadata.field.${f}`)}</span>
+                      <input
+                        type="text"
+                        value={draft[f]}
+                        onChange={(ev) => setDrafts((prev) => ({ ...prev, [key]: { ...draft, [f]: ev.target.value } }))}
+                      />
+                    </label>
+                    {source && <small>{t('pdfFolder.source', { source: t(`pdfFolder.source.${source}`) })}</small>}
+                  </div>
+                )
+              })}
+              {badYear(draft) && <p className="ai-error">{t('metadata.badYear')}</p>}
+              <div className="screening-import-actions">
+                <button type="button" title={t('pdfFolder.skipTitle')} onClick={() => setSkipped((prev) => new Set([...prev, key]))}>
+                  {t('pdfFolder.skip')}
+                </button>
+                <button type="button" title={t('pdfFolder.ignoreTitle')} disabled={readOnly} onClick={() => ignorePdfs([key])}>
+                  {t('pdfFolder.ignore')}
+                </button>
+                <button
+                  type="button"
+                  className="primary"
+                  title={t('pdfFolder.addTitle')}
+                  disabled={readOnly || badYear(draft)}
+                  onClick={() => add([p])}
+                >
+                  {t('pdfFolder.add')}
+                </button>
+              </div>
+            </section>
+          )
+        })}
       </div>
-    </div>
+      
+    </Modal>
   )
 }

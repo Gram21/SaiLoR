@@ -18,6 +18,7 @@ import {
 import { seatLabel, type Paper } from '../model/project'
 import { parseYear } from '../model/year'
 import { useT } from '../i18n'
+import { Modal } from './Modal'
 
 type Draft = Record<MetadataField, string>
 type Kind = 'current' | 'proposal' | 'consolidation'
@@ -167,113 +168,106 @@ export function MetadataDialog({ onClose }: { onClose: () => void }) {
   const none = t('metadata.none')
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal metadata-dialog"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('metadata.title')}
-      >
-        <div className="modal-head">
-          <strong>{t('metadata.title')}</strong>
-          <button type="button" className="icon-btn" title={t('common.close')} onClick={onClose} aria-label={t('common.close')}>
-            ×
-          </button>
-        </div>
-        <div className="modal-body">
-          <div className="screening-import-actions">
-            {annotator && (
-              <>
-                <button type="button" title={t('metadata.checkTitle')} disabled={scanning} onClick={() => void check()}>
-                  {scanning ? t('metadata.checking') : t('metadata.check')}
-                </button>
-                <button
-                  type="button"
-                  title={t('metadata.saveAllTitle')}
-                  disabled={scanning || saveable.length === 0}
-                  onClick={() => confirmAll(saveable)}
-                >
-                  {t('metadata.saveAll', { count: saveable.length })}
-                </button>
-              </>
-            )}
-            {updater && (
+    <Modal onClose={onClose} className="metadata-dialog" aria-label={t('metadata.title')}>
+      <div className="modal-head">
+        <strong>{t('metadata.title')}</strong>
+        <button type="button" className="icon-btn" title={t('common.close')} onClick={onClose} aria-label={t('common.close')}>
+          ×
+        </button>
+      </div>
+      <div className="modal-body">
+        <div className="screening-import-actions">
+          {annotator && (
+            <>
+              <button type="button" title={t('metadata.checkTitle')} disabled={scanning} onClick={() => void check()}>
+                {scanning ? t('metadata.checking') : t('metadata.check')}
+              </button>
               <button
                 type="button"
-                className="primary"
-                title={t('metadata.acceptAllTitle')}
-                disabled={acceptable.length === 0}
-                onClick={() => confirmAll(acceptable)}
+                title={t('metadata.saveAllTitle')}
+                disabled={scanning || saveable.length === 0}
+                onClick={() => confirmAll(saveable)}
               >
-                {t('metadata.acceptAll', { count: acceptable.length })}
+                {t('metadata.saveAll', { count: saveable.length })}
               </button>
-            )}
-          </div>
-          {proposals !== null && proposals.length === 0 && <p>{t('metadata.noProposals')}</p>}
-          {entries.length === 0 && <p>{t('metadata.empty')}</p>}
-          {entries.map((e) => {
-            const draft = draftOf(e)
-            return (
-              <section key={e.key} className="metadata-entry" aria-label={e.paper.id}>
-                <h4>
-                  {t(`metadata.kind.${e.kind}`)}: {e.paper.id}
-                </h4>
-                {METADATA_FIELDS.map((f) => {
-                  const m = e.merge?.find((x) => x.field === f)
-                  return (
-                    <div key={f} className="metadata-field">
-                      <label>
-                        <span>{t(`metadata.field.${f}`)}</span>
-                        <input
-                          type="text"
-                          value={draft[f]}
-                          onChange={(ev) => setDrafts((prev) => ({ ...prev, [e.key]: { ...draft, [f]: ev.target.value } }))}
-                        />
-                      </label>
-                      {e.kind === 'proposal' && draft[f] !== e.base[f] && (
-                        <small>{t('metadata.current', { value: e.base[f] || none })}</small>
-                      )}
-                      {m && (
-                        <small className={m.agreed ? undefined : 'metadata-disagreement'}>
-                          {m.agreed ? '' : `${t('metadata.disagreement')} `}
-                          {Object.entries(m.seats)
-                            .map(([seat, v]) => t('metadata.seatValue', { seat: seatLabel(project, seat), value: shown(v, none) }))
-                            .join('; ')}
-                        </small>
-                      )}
-                    </div>
-                  )
-                })}
-                {badYear(draft) && <p className="ai-error">{t('metadata.badYear')}</p>}
-                <div className="screening-import-actions">
-                  <button type="button" title={t('metadata.skipTitle')} onClick={() => hide([e.key])}>
-                    {t('metadata.skip')}
-                  </button>
-                  {e.kind !== 'current' && (
-                    <button
-                      type="button"
-                      title={e.kind === 'proposal' ? t('metadata.ignoreTitle') : t('metadata.ignoreConsolidationTitle')}
-                      onClick={() => ignore(e)}
-                    >
-                      {t('metadata.ignore')}
-                    </button>
-                  )}
+            </>
+          )}
+          {updater && (
+            <button
+              type="button"
+              className="primary"
+              title={t('metadata.acceptAllTitle')}
+              disabled={acceptable.length === 0}
+              onClick={() => confirmAll(acceptable)}
+            >
+              {t('metadata.acceptAll', { count: acceptable.length })}
+            </button>
+          )}
+        </div>
+        {proposals !== null && proposals.length === 0 && <p>{t('metadata.noProposals')}</p>}
+        {entries.length === 0 && <p>{t('metadata.empty')}</p>}
+        {entries.map((e) => {
+          const draft = draftOf(e)
+          return (
+            <section key={e.key} className="metadata-entry" aria-label={e.paper.id}>
+              <h4>
+                {t(`metadata.kind.${e.kind}`)}: {e.paper.id}
+              </h4>
+              {METADATA_FIELDS.map((f) => {
+                const m = e.merge?.find((x) => x.field === f)
+                return (
+                  <div key={f} className="metadata-field">
+                    <label>
+                      <span>{t(`metadata.field.${f}`)}</span>
+                      <input
+                        type="text"
+                        value={draft[f]}
+                        onChange={(ev) => setDrafts((prev) => ({ ...prev, [e.key]: { ...draft, [f]: ev.target.value } }))}
+                      />
+                    </label>
+                    {e.kind === 'proposal' && draft[f] !== e.base[f] && (
+                      <small>{t('metadata.current', { value: e.base[f] || none })}</small>
+                    )}
+                    {m && (
+                      <small className={m.agreed ? undefined : 'metadata-disagreement'}>
+                        {m.agreed ? '' : `${t('metadata.disagreement')} `}
+                        {Object.entries(m.seats)
+                          .map(([seat, v]) => t('metadata.seatValue', { seat: seatLabel(project, seat), value: shown(v, none) }))
+                          .join('; ')}
+                      </small>
+                    )}
+                  </div>
+                )
+              })}
+              {badYear(draft) && <p className="ai-error">{t('metadata.badYear')}</p>}
+              <div className="screening-import-actions">
+                <button type="button" title={t('metadata.skipTitle')} onClick={() => hide([e.key])}>
+                  {t('metadata.skip')}
+                </button>
+                {e.kind !== 'current' && (
                   <button
                     type="button"
-                    className="primary"
-                    title={e.kind === 'consolidation' ? t('metadata.acceptTitle') : t('metadata.saveTitle')}
-                    disabled={badYear(draft)}
-                    onClick={() => submit(e)}
+                    title={e.kind === 'proposal' ? t('metadata.ignoreTitle') : t('metadata.ignoreConsolidationTitle')}
+                    onClick={() => ignore(e)}
                   >
-                    {e.kind === 'consolidation' ? t('metadata.accept') : t('metadata.save')}
+                    {t('metadata.ignore')}
                   </button>
-                </div>
-              </section>
-            )
-          })}
-        </div>
+                )}
+                <button
+                  type="button"
+                  className="primary"
+                  title={e.kind === 'consolidation' ? t('metadata.acceptTitle') : t('metadata.saveTitle')}
+                  disabled={badYear(draft)}
+                  onClick={() => submit(e)}
+                >
+                  {e.kind === 'consolidation' ? t('metadata.accept') : t('metadata.save')}
+                </button>
+              </div>
+            </section>
+          )
+        })}
       </div>
-    </div>
+      
+    </Modal>
   )
 }

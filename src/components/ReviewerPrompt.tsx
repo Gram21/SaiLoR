@@ -4,6 +4,7 @@ import { strictActive } from '../model/strict'
 import { readyCount } from '../consolidate/readiness'
 import { CONSOLIDATION_SEAT } from '../git/seatOwner'
 import { rich, useT } from '../i18n'
+import { Modal } from './Modal'
 
 /**
  * Shown when a multi-reviewer project is opened and nobody has picked a seat —
@@ -54,58 +55,57 @@ export function ReviewerPrompt() {
     // so F1 still opens Help while this prompt is up (see that file's F1
     // branch for why the exclusion lives there and not in a keydown handler
     // here).
-    <div className="modal-overlay" data-yields-to-help>
-      <div className="modal reviewer-prompt" role="dialog" aria-modal="true">
-        <div className="modal-head">
-          <strong>{t('prompt.reviewer.title', { count: project.reviewers })}</strong>
-        </div>
-        <div className="modal-body">
-          <p>{rich('prompt.reviewer.intro', { count: project.reviewers })}</p>
-          <p>{t('prompt.reviewer.pick')}</p>
-          <p>{rich('prompt.reviewer.consolidation')}</p>
-          <p className="reviewer-prompt-ask">{t('prompt.reviewer.ask')}</p>
-          <div className="reviewer-prompt-choices">
-            {reviewerIds.map((id) => {
-              return (
-                <button
-                  key={id}
-                  type="button"
-                  className="reviewer-prompt-choice"
-                  onClick={() => selectReviewer(id)}
-                  title={t('prompt.reviewer.choiceTitle', { id })}
-                >
-                  {t('toolbar.reviewer.name', { n: id })}
-                </button>
-              )
-            })}
-            <button
-              type="button"
-              className="reviewer-prompt-choice is-consolidation"
-              onClick={() => selectReviewer(CONSOLIDATION_SEAT)}
-              title={
-                total > 0 && ready === total
-                  ? t('prompt.reviewer.readyTitle')
-                  : t('prompt.reviewer.notReadyTitle')
-              }
-            >
-              {t('toolbar.reviewer.consolidation')}
-              {/* Says how much there is to do rather than blocking the seat: a
-                  consolidator may legitimately want to start on the papers that
-                  are ready while the rest are still being reviewed. The ones
-                  that are not ready say so in the list and keep their compare
-                  popups shut. */}
-              <span className="reviewer-prompt-ready">
-                {total === 0
-                  ? t('prompt.reviewer.noPapers')
-                  : ready === 0
-                    ? t('prompt.reviewer.noneReady')
-                    : t('prompt.reviewer.progress', { ready, total })}
-              </span>
-            </button>
-          </div>
-          <p className="reviewer-prompt-note">{t('prompt.reviewer.note')}</p>
-        </div>
+    <Modal yieldsToHelp className="reviewer-prompt">
+      <div className="modal-head">
+        <strong>{t('prompt.reviewer.title', { count: project.reviewers })}</strong>
       </div>
-    </div>
+      <div className="modal-body">
+        <p>{rich('prompt.reviewer.intro', { count: project.reviewers })}</p>
+        <p>{t('prompt.reviewer.pick')}</p>
+        <p>{rich('prompt.reviewer.consolidation')}</p>
+        <p className="reviewer-prompt-ask">{t('prompt.reviewer.ask')}</p>
+        <div className="reviewer-prompt-choices">
+          {reviewerIds.map((id) => {
+            return (
+              <button
+                key={id}
+                type="button"
+                className="reviewer-prompt-choice"
+                onClick={() => selectReviewer(id)}
+                title={t('prompt.reviewer.choiceTitle', { id })}
+              >
+                {t('toolbar.reviewer.name', { n: id })}
+              </button>
+            )
+          })}
+          <button
+            type="button"
+            className="reviewer-prompt-choice is-consolidation"
+            onClick={() => selectReviewer(CONSOLIDATION_SEAT)}
+            title={
+              total > 0 && ready === total
+                ? t('prompt.reviewer.readyTitle')
+                : t('prompt.reviewer.notReadyTitle')
+            }
+          >
+            {t('toolbar.reviewer.consolidation')}
+            {/* Says how much there is to do rather than blocking the seat: a
+                consolidator may legitimately want to start on the papers that
+                are ready while the rest are still being reviewed. The ones
+                that are not ready say so in the list and keep their compare
+                popups shut. */}
+            <span className="reviewer-prompt-ready">
+              {total === 0
+                ? t('prompt.reviewer.noPapers')
+                : ready === 0
+                  ? t('prompt.reviewer.noneReady')
+                  : t('prompt.reviewer.progress', { ready, total })}
+            </span>
+          </button>
+        </div>
+        <p className="reviewer-prompt-note">{t('prompt.reviewer.note')}</p>
+      </div>
+      
+    </Modal>
   )
 }

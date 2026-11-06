@@ -16,6 +16,7 @@ import { isCloudflareAccountId } from '../llm/localUi'
 import { AiPreviewNotice } from './AiPreviewNotice'
 import { rich, tp, useT, type MessageKey } from '../i18n'
 import '../styles/ai.css'
+import { Modal } from './Modal'
 
 const NO_MODELS: ModelInfo[] = []
 
@@ -370,449 +371,442 @@ export function LlmSettingsDialog() {
   }
 
   return (
-    <div className="modal-overlay llm-settings-overlay" onClick={close}>
-      <div
-        className="modal llm-settings"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="llm-settings-title"
-      >
-        <div className="modal-head">
-          <strong id="llm-settings-title">
-            {t('llm.settings.title')}
-            {draft ? (configs.some((c) => c.id === draft.id) ? t('llm.settings.titleEdit') : t('llm.settings.titleAdd')) : ''}
-          </strong>
-          <button
-            type="button"
-            className="icon-btn"
-            onClick={close}
-            title={t('common.close')}
-            aria-label={t('common.close')}
-          >
-            ×
-          </button>
-        </div>
+    <Modal overlayClassName="llm-settings-overlay" onClose={close} className="llm-settings" aria-labelledby="llm-settings-title">
+      <div className="modal-head">
+        <strong id="llm-settings-title">
+          {t('llm.settings.title')}
+          {draft ? (configs.some((c) => c.id === draft.id) ? t('llm.settings.titleEdit') : t('llm.settings.titleAdd')) : ''}
+        </strong>
+        <button
+          type="button"
+          className="icon-btn"
+          onClick={close}
+          title={t('common.close')}
+          aria-label={t('common.close')}
+        >
+          ×
+        </button>
+      </div>
 
-        <div className="modal-body">
-          <AiPreviewNotice />
-          {/* Where the key ends up is the user's business, and the honest answer
-              differs per runtime. Never hide this behind a "learn more". */}
-          {browser ? (
-            <div className="llm-warning" role="note">
-              <strong>{t('llm.settings.browserWarnTitle')}</strong>
-              <p>{rich('llm.settings.browserKeyBody')}</p>
-            </div>
-          ) : (
-            <div className="llm-notice" role="note">
-              {rich('llm.settings.keyNotice')}
-            </div>
-          )}
+      <div className="modal-body">
+        <AiPreviewNotice />
+        {/* Where the key ends up is the user's business, and the honest answer
+            differs per runtime. Never hide this behind a "learn more". */}
+        {browser ? (
+          <div className="llm-warning" role="note">
+            <strong>{t('llm.settings.browserWarnTitle')}</strong>
+            <p>{rich('llm.settings.browserKeyBody')}</p>
+          </div>
+        ) : (
+          <div className="llm-notice" role="note">
+            {rich('llm.settings.keyNotice')}
+          </div>
+        )}
 
-          {!draft ? (
-            <>
-              {configs.length === 0 ? (
-                <p className="llm-empty">{t('llm.settings.empty')}</p>
-              ) : (
-                <ul className="llm-list">
-                  {configs.map((config) => (
-                    <li key={config.id} className="llm-item">
-                      <div className="llm-item-main">
-                        <div className="llm-item-name">{config.name}</div>
-                        <div className="llm-item-meta">
-                          {PROVIDERS[config.provider].label} · {config.model} ·{' '}
-                          {config.attach === 'pdf' ? t('llm.settings.sendsPdf') : t('llm.settings.sendsText')}
-                        </div>
-                        {!config.hasKey && !config.noKey && (
-                          <div className="llm-nokey">{t('llm.settings.noKeyStored')}</div>
-                        )}
+        {!draft ? (
+          <>
+            {configs.length === 0 ? (
+              <p className="llm-empty">{t('llm.settings.empty')}</p>
+            ) : (
+              <ul className="llm-list">
+                {configs.map((config) => (
+                  <li key={config.id} className="llm-item">
+                    <div className="llm-item-main">
+                      <div className="llm-item-name">{config.name}</div>
+                      <div className="llm-item-meta">
+                        {PROVIDERS[config.provider].label} · {config.model} ·{' '}
+                        {config.attach === 'pdf' ? t('llm.settings.sendsPdf') : t('llm.settings.sendsText')}
                       </div>
-                      <button
-                        type="button"
-                        onClick={() => startEdit(config)}
-                        disabled={busy}
-                        title={t('llm.settings.editTitle', { name: config.name })}
-                      >
-                        {t('common.edit')}
-                      </button>
-                      <button
-                        type="button"
-                        onClick={() => void onDelete(config.id)}
-                        disabled={busy}
-                        title={
-                          confirmId === config.id
-                            ? t('llm.settings.deleteConfirmTitle', { name: config.name })
-                            : t('llm.settings.deleteTitle', { name: config.name })
-                        }
-                        className={confirmId === config.id ? 'llm-danger' : undefined}
-                      >
-                        {confirmId === config.id ? t('llm.settings.sure') : t('common.delete')}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
+                      {!config.hasKey && !config.noKey && (
+                        <div className="llm-nokey">{t('llm.settings.noKeyStored')}</div>
+                      )}
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => startEdit(config)}
+                      disabled={busy}
+                      title={t('llm.settings.editTitle', { name: config.name })}
+                    >
+                      {t('common.edit')}
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => void onDelete(config.id)}
+                      disabled={busy}
+                      title={
+                        confirmId === config.id
+                          ? t('llm.settings.deleteConfirmTitle', { name: config.name })
+                          : t('llm.settings.deleteTitle', { name: config.name })
+                      }
+                      className={confirmId === config.id ? 'llm-danger' : undefined}
+                    >
+                      {confirmId === config.id ? t('llm.settings.sure') : t('common.delete')}
+                    </button>
+                  </li>
+                ))}
+              </ul>
+            )}
 
-              <div className="llm-add">
-                <button
-                  type="button"
-                  className="primary"
-                  onClick={startAdd}
-                  disabled={busy}
-                  title={t('llm.settings.addModelTitle')}
-                >
-                  {t('llm.settings.addModel')}
-                </button>
-              </div>
-            </>
-          ) : (
-            <form
-              className="llm-form"
-              onSubmit={(e) => {
-                e.preventDefault()
-                void onSave()
-              }}
-            >
+            <div className="llm-add">
+              <button
+                type="button"
+                className="primary"
+                onClick={startAdd}
+                disabled={busy}
+                title={t('llm.settings.addModelTitle')}
+              >
+                {t('llm.settings.addModel')}
+              </button>
+            </div>
+          </>
+        ) : (
+          <form
+            className="llm-form"
+            onSubmit={(e) => {
+              e.preventDefault()
+              void onSave()
+            }}
+          >
+            <div className="llm-row">
+              <label htmlFor="llm-name" className="llm-label">
+                {t('llm.settings.name')}
+              </label>
+              <input
+                id="llm-name"
+                type="text"
+                value={draft.name}
+                onChange={(e) => patch({ name: e.target.value })}
+                placeholder={t('llm.settings.namePlaceholder')}
+                required
+              />
+            </div>
+            <p className="llm-hint">{t('llm.settings.nameHint')}</p>
+
+            <div className="llm-row">
+              <label htmlFor="llm-provider" className="llm-label">
+                {t('llm.settings.provider')}
+              </label>
+              <select
+                id="llm-provider"
+                value={kind ?? draft.provider}
+                onChange={(e) => changeKind(e.target.value as Kind)}
+              >
+                {CLOUD_PROVIDERS.map((p) => (
+                  <option key={p.id} value={p.id}>
+                    {p.label}
+                  </option>
+                ))}
+                {GUIDED.map((g) => (
+                  <option key={g.id} value={g.id}>
+                    {t(g.label)}
+                  </option>
+                ))}
+              </select>
+            </div>
+
+            {kind === 'local-chat' && <LocalChatPanel draft={draft} patch={patch} />}
+            {kind === 'local-s1' && <LocalSystemOnePanel draft={draft} patch={patch} />}
+            {kind === 'hosted-s1' && <HostedSystemOnePanel draft={draft} replace={(c) => setDraft(c)} />}
+
+            {!ownsEndpoint && (
+              <>
               <div className="llm-row">
-                <label htmlFor="llm-name" className="llm-label">
-                  {t('llm.settings.name')}
+                <label htmlFor="llm-url" className="llm-label">
+                  {t('llm.settings.baseUrl')}
                 </label>
                 <input
-                  id="llm-name"
+                  id="llm-url"
                   type="text"
-                  value={draft.name}
-                  onChange={(e) => patch({ name: e.target.value })}
-                  placeholder={t('llm.settings.namePlaceholder')}
-                  required
-                />
-              </div>
-              <p className="llm-hint">{t('llm.settings.nameHint')}</p>
-
-              <div className="llm-row">
-                <label htmlFor="llm-provider" className="llm-label">
-                  {t('llm.settings.provider')}
-                </label>
-                <select
-                  id="llm-provider"
-                  value={kind ?? draft.provider}
-                  onChange={(e) => changeKind(e.target.value as Kind)}
-                >
-                  {CLOUD_PROVIDERS.map((p) => (
-                    <option key={p.id} value={p.id}>
-                      {p.label}
-                    </option>
-                  ))}
-                  {GUIDED.map((g) => (
-                    <option key={g.id} value={g.id}>
-                      {t(g.label)}
-                    </option>
-                  ))}
-                </select>
-              </div>
-
-              {kind === 'local-chat' && <LocalChatPanel draft={draft} patch={patch} />}
-              {kind === 'local-s1' && <LocalSystemOnePanel draft={draft} patch={patch} />}
-              {kind === 'hosted-s1' && <HostedSystemOnePanel draft={draft} replace={(c) => setDraft(c)} />}
-
-              {!ownsEndpoint && (
-                <>
-                <div className="llm-row">
-                  <label htmlFor="llm-url" className="llm-label">
-                    {t('llm.settings.baseUrl')}
-                  </label>
-                  <input
-                    id="llm-url"
-                    type="text"
-                    value={draft.baseUrl}
-                    onChange={(e) => patch({ baseUrl: e.target.value })}
-                    readOnly={!urlEditable}
-                    required={urlEditable}
-                    placeholder={urlEditable ? 'http://localhost:1234' : ''}
-                    title={
-                      urlEditable
-                        ? t('llm.settings.baseUrlTitle')
-                        : t('llm.settings.fixedFor', { provider: info?.label ?? t('llm.settings.thisProvider') })
-                    }
-                  />
-                </div>
-                <p className="llm-hint">
-                  {urlEditable ? t('llm.settings.urlHint') : t('llm.settings.urlFixedHint')}
-                </p>
-
-                <div className="llm-row">
-                  <label htmlFor="llm-model" className="llm-label">
-                    {t('llm.settings.model')}
-                  </label>
-                  <div className="llm-model-field">
-                    <ModelPicker
-                      id="llm-model"
-                      value={draft.model}
-                      onChange={(v) => patch({ model: v })}
-                      models={modelListingSupported ? providerModels : NO_MODELS}
-                      loading={modelListingSupported && modelsLoading}
-                      providerLabel={info?.label ?? t('llm.settings.thisProvider')}
-                      placeholder={t('llm.settings.modelPlaceholder')}
-                    />
-                    {modelListingSupported && (
-                      <button
-                        type="button"
-                        onClick={() => void fetchModels(draft, apiKey.trim() || undefined, { force: true })}
-                        disabled={modelsLoading || (!draft.hasKey && !apiKey.trim())}
-                        title={
-                          !draft.hasKey && !apiKey.trim()
-                            ? t('llm.settings.fetchNeedsKey')
-                            : t('llm.settings.fetchTitle', { provider: info?.label ?? t('llm.settings.theProvider') })
-                        }
-                      >
-                        {modelsLoading
-                          ? t('common.loading')
-                          : providerModels.length > 0
-                            ? t('llm.settings.refresh')
-                            : t('llm.settings.loadModels')}
-                      </button>
-                    )}
-                  </div>
-                </div>
-                <p className="llm-hint">
-                  {!modelListingSupported
-                    ? t('llm.settings.compatibleHint')
-                    : providerModels.length > 0
-                      ? tp('llm.settings.modelsLoaded', providerModels.length, {
-                          provider: info?.label ?? t('llm.settings.theProvider'),
-                        })
-                      : t('llm.settings.typeNameHint')}
-                </p>
-                {modelListingSupported && modelsError && (
-                  <p role="alert" className="llm-problem">
-                    {t('llm.settings.modelsError', { error: modelsError })}
-                  </p>
-                )}
-                </>
-              )}
-
-              {selectedModel?.reasoning && (
-                <div className="llm-row">
-                  <label htmlFor="llm-effort" className="llm-label">
-                    {t('llm.settings.effort')}
-                  </label>
-                  <select
-                    id="llm-effort"
-                    value={draft.reasoningEffort ?? selectedModel.reasoning.defaultLevel}
-                    onChange={(e) => patch({ reasoningEffort: e.target.value })}
-                  >
-                    {selectedModel.reasoning.levels.map((lvl) => (
-                      <option key={lvl} value={lvl}>
-                        {lvl}
-                      </option>
-                    ))}
-                  </select>
-                </div>
-              )}
-              {selectedModel?.reasoning && (
-                <p className="llm-hint">
-                  {t('llm.settings.effortHint')}
-                </p>
-              )}
-
-              <div className="llm-row">
-                <label htmlFor="llm-input-price" className="llm-label">
-                  {t('llm.settings.inputPrice')}
-                </label>
-                <input
-                  id="llm-input-price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={draft.inputPrice ?? ''}
-                  onChange={(e) =>
-                    patch({ inputPrice: e.target.value === '' ? undefined : Number(e.target.value) })
-                  }
-                />
-              </div>
-              <div className="llm-row">
-                <label htmlFor="llm-output-price" className="llm-label">
-                  {t('llm.settings.outputPrice')}
-                </label>
-                <input
-                  id="llm-output-price"
-                  type="number"
-                  min="0"
-                  step="0.01"
-                  value={draft.outputPrice ?? ''}
-                  onChange={(e) =>
-                    patch({ outputPrice: e.target.value === '' ? undefined : Number(e.target.value) })
+                  value={draft.baseUrl}
+                  onChange={(e) => patch({ baseUrl: e.target.value })}
+                  readOnly={!urlEditable}
+                  required={urlEditable}
+                  placeholder={urlEditable ? 'http://localhost:1234' : ''}
+                  title={
+                    urlEditable
+                      ? t('llm.settings.baseUrlTitle')
+                      : t('llm.settings.fixedFor', { provider: info?.label ?? t('llm.settings.thisProvider') })
                   }
                 />
               </div>
               <p className="llm-hint">
-                {t('llm.settings.priceHint')}
+                {urlEditable ? t('llm.settings.urlHint') : t('llm.settings.urlFixedHint')}
               </p>
 
-              {kind !== 'local-chat' &&
-                (draft.provider === 'systemone' || draft.provider === 'openai-compatible' || draft.contextTokens !== undefined) && (
-                  <ContextFields draft={draft} patch={patch} />
-                )}
-
-              {/* Older System One targets stored only this budget; new ones use the context window above. */}
-              {draft.provider === 'systemone' && draft.contextTokens === undefined && (
-                <>
-                  <div className="llm-row">
-                    <label htmlFor="llm-max-state-tokens" className="llm-label">
-                      {t('llm.settings.maxStateTokens')}
-                    </label>
-                    <input
-                      id="llm-max-state-tokens"
-                      type="number"
-                      min="1"
-                      step="1"
-                      value={draft.maxStateTokens ?? DEFAULT_MAX_STATE_TOKENS}
-                      onChange={(e) =>
-                        patch({
-                          maxStateTokens: e.target.value === '' ? undefined : Number(e.target.value),
-                        })
+              <div className="llm-row">
+                <label htmlFor="llm-model" className="llm-label">
+                  {t('llm.settings.model')}
+                </label>
+                <div className="llm-model-field">
+                  <ModelPicker
+                    id="llm-model"
+                    value={draft.model}
+                    onChange={(v) => patch({ model: v })}
+                    models={modelListingSupported ? providerModels : NO_MODELS}
+                    loading={modelListingSupported && modelsLoading}
+                    providerLabel={info?.label ?? t('llm.settings.thisProvider')}
+                    placeholder={t('llm.settings.modelPlaceholder')}
+                  />
+                  {modelListingSupported && (
+                    <button
+                      type="button"
+                      onClick={() => void fetchModels(draft, apiKey.trim() || undefined, { force: true })}
+                      disabled={modelsLoading || (!draft.hasKey && !apiKey.trim())}
+                      title={
+                        !draft.hasKey && !apiKey.trim()
+                          ? t('llm.settings.fetchNeedsKey')
+                          : t('llm.settings.fetchTitle', { provider: info?.label ?? t('llm.settings.theProvider') })
                       }
-                    />
-                  </div>
-                  <p className="llm-hint">
-                    {t('llm.settings.stateBudgetHint')}
-                  </p>
-                </>
-              )}
-
-              {urlEditable && !draft.managed && !cloudflare && (
-                <div className="llm-row">
-                  <label htmlFor="llm-nokey" className="llm-label">
-                    {t('llm.settings.noKey')}
-                  </label>
-                  <input
-                    id="llm-nokey"
-                    type="checkbox"
-                    checked={draft.noKey ?? false}
-                    onChange={(e) => patch({ noKey: e.target.checked })}
-                  />
-                </div>
-              )}
-              {urlEditable && !draft.managed && !cloudflare && (
-                <p className="llm-hint">{t('llm.settings.noKeyHint')}</p>
-              )}
-
-              {!draft.managed && (
-                <>
-                <div className="llm-row">
-                  <label htmlFor="llm-key" className="llm-label">
-                    {cloudflare ? t('llm.settings.apiToken') : t('llm.settings.apiKey')}
-                  </label>
-                  <input
-                    id="llm-key"
-                    type="password"
-                    autoComplete="off"
-                    value={apiKey}
-                    onChange={(e) => setApiKey(e.target.value)}
-                    placeholder={
-                      draft.hasKey
-                        ? t('llm.settings.keyStored')
-                        : draft.noKey
-                          ? t('llm.settings.keyNotNeeded')
-                          : t('llm.settings.keyPaste')
-                    }
-                    disabled={draft.noKey && !draft.hasKey}
-                    required={!draft.hasKey && !draft.noKey}
-                  />
-                </div>
-                <p className="llm-hint">{rich('llm.settings.keyHint')}</p>
-                </>
-              )}
-
-              {draft.provider !== 'systemone' && (
-                <>
-                  <div className="llm-row">
-                    <label htmlFor="llm-attach" className="llm-label">
-                      {t('llm.settings.sendAs')}
-                    </label>
-                    <select
-                      id="llm-attach"
-                      value={draft.attach}
-                      onChange={(e) => patch({ attach: e.target.value as Attach })}
                     >
-                      <option value="text">{t('llm.settings.attachText')}</option>
-                      <option
-                        value="pdf"
-                        disabled={!info?.supportsPdf}
-                        title={
-                          info?.supportsPdf
-                            ? t('llm.settings.attachPdfTitle')
-                            : t('llm.settings.attachPdfNoTitle')
-                        }
-                      >
-                        {t('llm.settings.attachPdf')}{info?.supportsPdf ? '' : t('llm.settings.attachPdfUnsupported')}
-                      </option>
-                    </select>
-                  </div>
-                  <p className="llm-hint">
-                    {info?.supportsPdf
-                      ? t('llm.settings.attachHintPdf')
-                      : t('llm.settings.pdfUnsupportedHint', { providers: pdfCapableProviders(t('llm.settings.and')) })}
-                  </p>
-                </>
-              )}
-
-              {problem && (
+                      {modelsLoading
+                        ? t('common.loading')
+                        : providerModels.length > 0
+                          ? t('llm.settings.refresh')
+                          : t('llm.settings.loadModels')}
+                    </button>
+                  )}
+                </div>
+              </div>
+              <p className="llm-hint">
+                {!modelListingSupported
+                  ? t('llm.settings.compatibleHint')
+                  : providerModels.length > 0
+                    ? tp('llm.settings.modelsLoaded', providerModels.length, {
+                        provider: info?.label ?? t('llm.settings.theProvider'),
+                      })
+                    : t('llm.settings.typeNameHint')}
+              </p>
+              {modelListingSupported && modelsError && (
                 <p role="alert" className="llm-problem">
-                  {problem}
+                  {t('llm.settings.modelsError', { error: modelsError })}
                 </p>
               )}
+              </>
+            )}
 
-              <div className="llm-verify">
-                <div className="llm-verify-row">
-                  <button
-                    type="button"
-                    onClick={() => void onVerify()}
-                    disabled={verifying || busy}
-                    title={t('llm.settings.verifyTitle')}
-                  >
-                    {verifying ? t('llm.common.checking') : t('llm.settings.verify')}
-                  </button>
-                  <span className="llm-verify-hint">{rich('llm.settings.verifyHint')}</span>
-                </div>
-                {verifying && (
-                  <p role="status" className="llm-status">
-                    {t('llm.settings.verifyWaiting', { provider: info?.label ?? t('llm.settings.theProvider') })}
-                  </p>
-                )}
-                {reply !== null && !verifying && (
-                  <p role="status" className="llm-status-ok">
-                    {t('llm.settings.verifyOk', { provider: info?.label ?? t('llm.settings.providerDefault'), reply })}
-                  </p>
-                )}
-                {verifyError && !verifying && (
-                  <p role="alert" className="llm-status-error">
-                    {verifyError}
-                  </p>
-                )}
+            {selectedModel?.reasoning && (
+              <div className="llm-row">
+                <label htmlFor="llm-effort" className="llm-label">
+                  {t('llm.settings.effort')}
+                </label>
+                <select
+                  id="llm-effort"
+                  value={draft.reasoningEffort ?? selectedModel.reasoning.defaultLevel}
+                  onChange={(e) => patch({ reasoningEffort: e.target.value })}
+                >
+                  {selectedModel.reasoning.levels.map((lvl) => (
+                    <option key={lvl} value={lvl}>
+                      {lvl}
+                    </option>
+                  ))}
+                </select>
               </div>
+            )}
+            {selectedModel?.reasoning && (
+              <p className="llm-hint">
+                {t('llm.settings.effortHint')}
+              </p>
+            )}
 
-              <div className="llm-actions">
+            <div className="llm-row">
+              <label htmlFor="llm-input-price" className="llm-label">
+                {t('llm.settings.inputPrice')}
+              </label>
+              <input
+                id="llm-input-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={draft.inputPrice ?? ''}
+                onChange={(e) =>
+                  patch({ inputPrice: e.target.value === '' ? undefined : Number(e.target.value) })
+                }
+              />
+            </div>
+            <div className="llm-row">
+              <label htmlFor="llm-output-price" className="llm-label">
+                {t('llm.settings.outputPrice')}
+              </label>
+              <input
+                id="llm-output-price"
+                type="number"
+                min="0"
+                step="0.01"
+                value={draft.outputPrice ?? ''}
+                onChange={(e) =>
+                  patch({ outputPrice: e.target.value === '' ? undefined : Number(e.target.value) })
+                }
+              />
+            </div>
+            <p className="llm-hint">
+              {t('llm.settings.priceHint')}
+            </p>
+
+            {kind !== 'local-chat' &&
+              (draft.provider === 'systemone' || draft.provider === 'openai-compatible' || draft.contextTokens !== undefined) && (
+                <ContextFields draft={draft} patch={patch} />
+              )}
+
+            {/* Older System One targets stored only this budget; new ones use the context window above. */}
+            {draft.provider === 'systemone' && draft.contextTokens === undefined && (
+              <>
+                <div className="llm-row">
+                  <label htmlFor="llm-max-state-tokens" className="llm-label">
+                    {t('llm.settings.maxStateTokens')}
+                  </label>
+                  <input
+                    id="llm-max-state-tokens"
+                    type="number"
+                    min="1"
+                    step="1"
+                    value={draft.maxStateTokens ?? DEFAULT_MAX_STATE_TOKENS}
+                    onChange={(e) =>
+                      patch({
+                        maxStateTokens: e.target.value === '' ? undefined : Number(e.target.value),
+                      })
+                    }
+                  />
+                </div>
+                <p className="llm-hint">
+                  {t('llm.settings.stateBudgetHint')}
+                </p>
+              </>
+            )}
+
+            {urlEditable && !draft.managed && !cloudflare && (
+              <div className="llm-row">
+                <label htmlFor="llm-nokey" className="llm-label">
+                  {t('llm.settings.noKey')}
+                </label>
+                <input
+                  id="llm-nokey"
+                  type="checkbox"
+                  checked={draft.noKey ?? false}
+                  onChange={(e) => patch({ noKey: e.target.checked })}
+                />
+              </div>
+            )}
+            {urlEditable && !draft.managed && !cloudflare && (
+              <p className="llm-hint">{t('llm.settings.noKeyHint')}</p>
+            )}
+
+            {!draft.managed && (
+              <>
+              <div className="llm-row">
+                <label htmlFor="llm-key" className="llm-label">
+                  {cloudflare ? t('llm.settings.apiToken') : t('llm.settings.apiKey')}
+                </label>
+                <input
+                  id="llm-key"
+                  type="password"
+                  autoComplete="off"
+                  value={apiKey}
+                  onChange={(e) => setApiKey(e.target.value)}
+                  placeholder={
+                    draft.hasKey
+                      ? t('llm.settings.keyStored')
+                      : draft.noKey
+                        ? t('llm.settings.keyNotNeeded')
+                        : t('llm.settings.keyPaste')
+                  }
+                  disabled={draft.noKey && !draft.hasKey}
+                  required={!draft.hasKey && !draft.noKey}
+                />
+              </div>
+              <p className="llm-hint">{rich('llm.settings.keyHint')}</p>
+              </>
+            )}
+
+            {draft.provider !== 'systemone' && (
+              <>
+                <div className="llm-row">
+                  <label htmlFor="llm-attach" className="llm-label">
+                    {t('llm.settings.sendAs')}
+                  </label>
+                  <select
+                    id="llm-attach"
+                    value={draft.attach}
+                    onChange={(e) => patch({ attach: e.target.value as Attach })}
+                  >
+                    <option value="text">{t('llm.settings.attachText')}</option>
+                    <option
+                      value="pdf"
+                      disabled={!info?.supportsPdf}
+                      title={
+                        info?.supportsPdf
+                          ? t('llm.settings.attachPdfTitle')
+                          : t('llm.settings.attachPdfNoTitle')
+                      }
+                    >
+                      {t('llm.settings.attachPdf')}{info?.supportsPdf ? '' : t('llm.settings.attachPdfUnsupported')}
+                    </option>
+                  </select>
+                </div>
+                <p className="llm-hint">
+                  {info?.supportsPdf
+                    ? t('llm.settings.attachHintPdf')
+                    : t('llm.settings.pdfUnsupportedHint', { providers: pdfCapableProviders(t('llm.settings.and')) })}
+                </p>
+              </>
+            )}
+
+            {problem && (
+              <p role="alert" className="llm-problem">
+                {problem}
+              </p>
+            )}
+
+            <div className="llm-verify">
+              <div className="llm-verify-row">
                 <button
                   type="button"
-                  onClick={backToList}
-                  disabled={busy || verifying}
-                  title={t('llm.settings.cancelTitle')}
+                  onClick={() => void onVerify()}
+                  disabled={verifying || busy}
+                  title={t('llm.settings.verifyTitle')}
                 >
-                  {t('common.cancel')}
+                  {verifying ? t('llm.common.checking') : t('llm.settings.verify')}
                 </button>
-                <button
-                  type="submit"
-                  className="primary"
-                  disabled={busy || verifying}
-                  title={t('llm.settings.saveTitle')}
-                >
-                  {busy ? t('llm.settings.saving') : t('common.save')}
-                </button>
+                <span className="llm-verify-hint">{rich('llm.settings.verifyHint')}</span>
               </div>
-            </form>
-          )}
-        </div>
+              {verifying && (
+                <p role="status" className="llm-status">
+                  {t('llm.settings.verifyWaiting', { provider: info?.label ?? t('llm.settings.theProvider') })}
+                </p>
+              )}
+              {reply !== null && !verifying && (
+                <p role="status" className="llm-status-ok">
+                  {t('llm.settings.verifyOk', { provider: info?.label ?? t('llm.settings.providerDefault'), reply })}
+                </p>
+              )}
+              {verifyError && !verifying && (
+                <p role="alert" className="llm-status-error">
+                  {verifyError}
+                </p>
+              )}
+            </div>
+
+            <div className="llm-actions">
+              <button
+                type="button"
+                onClick={backToList}
+                disabled={busy || verifying}
+                title={t('llm.settings.cancelTitle')}
+              >
+                {t('common.cancel')}
+              </button>
+              <button
+                type="submit"
+                className="primary"
+                disabled={busy || verifying}
+                title={t('llm.settings.saveTitle')}
+              >
+                {busy ? t('llm.settings.saving') : t('common.save')}
+              </button>
+            </div>
+          </form>
+        )}
       </div>
-    </div>
+      
+    </Modal>
   )
 }

@@ -1,6 +1,7 @@
 import { useEffect } from 'react'
 import { useT, rich } from '../i18n'
 import { useGitStore } from '../state/gitStore'
+import { Modal } from './Modal'
 
 /**
  * The "- Delete branch…" entry's own dialog — mirrors `NewBranchPrompt`'s
@@ -36,47 +37,40 @@ export function DeleteBranchPrompt() {
   const options = branches.filter((b) => !b.current && !b.remote)
 
   return (
-    <div className="modal-overlay" onClick={close}>
-      <div
-        className="modal close-prompt"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('git.deleteBranch.title')}
-      >
-        <div className="modal-body">
-          <h3>{t('git.deleteBranch.title')}</h3>
-          <select
-            className="git-merge-select"
-            aria-label={t('git.deleteBranch.selectLabel')}
-            value={prompt.branch}
-            disabled={busy}
-            onChange={(e) => setBranch(e.target.value)}
-            autoFocus
-          >
-            {options.map((b) => (
-              <option key={b.name} value={b.name}>
-                {b.name}
-              </option>
-            ))}
-          </select>
-          <p>{rich('git.deleteBranch.confirm', { branch: prompt.branch })}</p>
-        </div>
-        <div className="close-prompt-actions">
-          <button type="button" onClick={close} disabled={busy} title={t('git.deleteBranch.cancelTitle')}>
-            {t('common.cancel')}
-          </button>
-          <button
-            type="button"
-            className="primary danger"
-            onClick={() => void confirm()}
-            disabled={busy}
-            title={t('git.deleteBranch.deleteTitle')}
-          >
-            {busy ? t('git.deleteBranch.deleting') : t('common.delete')}
-          </button>
-        </div>
+    <Modal onClose={close} className="close-prompt" aria-label={t('git.deleteBranch.title')}>
+      <div className="modal-body">
+        <h3>{t('git.deleteBranch.title')}</h3>
+        <select
+          className="git-merge-select"
+          aria-label={t('git.deleteBranch.selectLabel')}
+          value={prompt.branch}
+          disabled={busy}
+          onChange={(e) => setBranch(e.target.value)}
+          autoFocus
+        >
+          {options.map((b) => (
+            <option key={b.name} value={b.name}>
+              {b.name}
+            </option>
+          ))}
+        </select>
+        <p>{rich('git.deleteBranch.confirm', { branch: prompt.branch })}</p>
       </div>
-    </div>
+      <div className="close-prompt-actions">
+        <button type="button" onClick={close} disabled={busy} title={t('git.deleteBranch.cancelTitle')}>
+          {t('common.cancel')}
+        </button>
+        <button
+          type="button"
+          className="primary danger"
+          onClick={() => void confirm()}
+          disabled={busy}
+          title={t('git.deleteBranch.deleteTitle')}
+        >
+          {busy ? t('git.deleteBranch.deleting') : t('common.delete')}
+        </button>
+      </div>
+      
+    </Modal>
   )
 }

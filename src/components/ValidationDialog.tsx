@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { useStore } from '../state/store'
 import type { IssueKind, ValidationIssue } from '../model/validate'
 import { tp, rich, useT, type MessageKey } from '../i18n'
+import { Modal } from './Modal'
 
 // [impl->req~ann-140~1]
 // [impl->req~dat-215~1]
@@ -287,170 +288,164 @@ export function ValidationDialog() {
   const forwardTitle = canGoForward ? titleOf(paperHistory.list[paperHistory.index + 1]) : undefined
 
   return (
-    <div className="modal-overlay" onClick={() => setOpen(false)}>
-      <div
-        className="modal validation-dialog"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="modal-head">
-          <strong>
-            {t('validation.title')}{' '}
-            <span className={issues.length === 0 ? 'help-mode ok' : 'help-mode bad'}>
-              {issues.length === 0 ? t('validation.noProblems') : tp('validation.problems', issues.length)}
-            </span>
-          </strong>
-          <div className="modal-head-actions">
-            <button
-              type="button"
-              className={`icon-btn validation-nav${canGoBack ? '' : ' disabled'}`}
-              // A native `disabled` button fires no mouseover in most browsers, so its
-              // `title` tooltip never shows — `aria-disabled` keeps the button hoverable
-              // (the click is still a no-op via `goBack`'s own guard) so the "why" is
-              // visible right when a reviewer wonders why nothing happens.
-              aria-disabled={!canGoBack}
-              title={backTitle ? t('validation.nav.backTitle', { title: backTitle }) : t('validation.nav.noBack')}
-              aria-label={backTitle ? t('validation.nav.backLabel', { title: backTitle }) : t('validation.nav.noBack')}
-              onClick={goBack}
-            >
-              <BackIcon />
-            </button>
-            <button
-              type="button"
-              className={`icon-btn validation-nav${canGoForward ? '' : ' disabled'}`}
-              aria-disabled={!canGoForward}
-              title={forwardTitle ? t('validation.nav.forwardTitle', { title: forwardTitle }) : t('validation.nav.noForward')}
-              aria-label={
-                forwardTitle ? t('validation.nav.forwardLabel', { title: forwardTitle }) : t('validation.nav.noForward')
-              }
-              onClick={goForward}
-            >
-              <ForwardIcon />
-            </button>
-            <button
-              type="button"
-              className="icon-btn"
-              onClick={() => setOpen(false)}
-              aria-label={t('common.close')}
-              title={t('common.close')}
-            >
-              ×
-            </button>
-          </div>
-        </div>
-
-        <div className="modal-body">
-          <p className="validation-intro">{rich('validation.intro')}</p>
-
-          <section className="validation-group validation-current">
-            <h3 className="validation-section-title-plain">{t('validation.section.current')}</h3>
-            {!currentPaperId ? (
-              <p className="validation-empty">{t('validation.empty.noPaper')}</p>
-            ) : currentIssues.length === 0 ? (
-              <p className="validation-empty">{t('validation.empty.noProblems')}</p>
-            ) : (
-              <IssueList issues={currentIssues} onIssueClick={goToIssue} />
-            )}
-          </section>
-
-          <section className="validation-group validation-section">
-            <button
-              type="button"
-              className="validation-section-header"
-              title={otherOpen ? t('validation.section.collapse') : t('validation.section.expand')}
-              onClick={() => setOtherOpen((o) => !o)}
-              aria-expanded={otherOpen}
-            >
-              <span className="validation-caret">{otherOpen ? '▾' : '▸'}</span>
-              {t('validation.section.other')}
-              <span className="count">{tp('validation.problems', otherIssueCount)}</span>
-            </button>
-            {otherOpen && (
-              <div className="validation-section-body">
-                <PaperFilter
-                  query={otherQuery}
-                  onQueryChange={setOtherQuery}
-                  caseSensitive={otherCaseSensitive}
-                  onCaseSensitiveChange={setOtherCaseSensitive}
-                  label={t('validation.filter.other')}
-                />
-                {filteredOtherGroups.length === 0 ? (
-                  <p className="validation-empty">{t('validation.empty.noMatch')}</p>
-                ) : (
-                  filteredOtherGroups.map(([paperId, group]) => (
-                    <div key={paperId} className="validation-group">
-                      <div
-                        className="validation-paper clickable"
-                        role="button"
-                        tabIndex={0}
-                        title={expandedPapers.has(paperId) ? t('validation.section.collapse') : t('validation.paper.expand')}
-                        onClick={() => toggleExpanded(paperId)}
-                        onKeyDown={(e) => {
-                          if (e.key === 'Enter' || e.key === ' ') {
-                            e.preventDefault()
-                            toggleExpanded(paperId)
-                          }
-                        }}
-                        aria-expanded={expandedPapers.has(paperId)}
-                      >
-                        <span className="validation-caret">
-                          {expandedPapers.has(paperId) ? '▾' : '▸'}
-                        </span>
-                        <span className="validation-paper-title">{group.title}</span>
-                        <span className="count">{tp('validation.problems', group.issues.length)}</span>
-                        <JumpButton title={t('validation.jump.paper', { title: group.title })} onClick={() => goToPaper(paperId)} />
-                      </div>
-                      {expandedPapers.has(paperId) && (
-                        <IssueList issues={group.issues} onIssueClick={goToIssue} />
-                      )}
-                    </div>
-                  ))
-                )}
-              </div>
-            )}
-          </section>
-
-          <section className="validation-group validation-section validation-unannotated">
-            <button
-              type="button"
-              className="validation-section-header"
-              title={notStartedOpen ? t('validation.section.collapse') : t('validation.section.expand')}
-              onClick={() => setNotStartedOpen((o) => !o)}
-              aria-expanded={notStartedOpen}
-            >
-              <span className="validation-caret">{notStartedOpen ? '▾' : '▸'}</span>
-              {t('validation.section.notStarted')}
-              <span className="count">{tp('validation.papers', unannotated.length)}</span>
-            </button>
-            {notStartedOpen && (
-              <div className="validation-section-body">
-                <PaperFilter
-                  query={notStartedQuery}
-                  onQueryChange={setNotStartedQuery}
-                  caseSensitive={notStartedCaseSensitive}
-                  onCaseSensitiveChange={setNotStartedCaseSensitive}
-                  label={t('validation.filter.notStarted')}
-                />
-                {filteredUnannotated.length === 0 ? (
-                  <p className="validation-empty">{t('validation.empty.noMatch')}</p>
-                ) : (
-                  <ul className="validation-unannotated-list">
-                    {filteredUnannotated.map((p) => (
-                      <li key={p.paperId}>
-                        <div className="validation-paper">
-                          <span className="validation-paper-title">{p.paperTitle}</span>
-                          <JumpButton title={t('validation.jump.paper', { title: p.paperTitle })} onClick={() => goToPaper(p.paperId)} />
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
-                )}
-              </div>
-            )}
-          </section>
+    <Modal onClose={() => setOpen(false)} className="validation-dialog">
+      <div className="modal-head">
+        <strong>
+          {t('validation.title')}{' '}
+          <span className={issues.length === 0 ? 'help-mode ok' : 'help-mode bad'}>
+            {issues.length === 0 ? t('validation.noProblems') : tp('validation.problems', issues.length)}
+          </span>
+        </strong>
+        <div className="modal-head-actions">
+          <button
+            type="button"
+            className={`icon-btn validation-nav${canGoBack ? '' : ' disabled'}`}
+            // A native `disabled` button fires no mouseover in most browsers, so its
+            // `title` tooltip never shows — `aria-disabled` keeps the button hoverable
+            // (the click is still a no-op via `goBack`'s own guard) so the "why" is
+            // visible right when a reviewer wonders why nothing happens.
+            aria-disabled={!canGoBack}
+            title={backTitle ? t('validation.nav.backTitle', { title: backTitle }) : t('validation.nav.noBack')}
+            aria-label={backTitle ? t('validation.nav.backLabel', { title: backTitle }) : t('validation.nav.noBack')}
+            onClick={goBack}
+          >
+            <BackIcon />
+          </button>
+          <button
+            type="button"
+            className={`icon-btn validation-nav${canGoForward ? '' : ' disabled'}`}
+            aria-disabled={!canGoForward}
+            title={forwardTitle ? t('validation.nav.forwardTitle', { title: forwardTitle }) : t('validation.nav.noForward')}
+            aria-label={
+              forwardTitle ? t('validation.nav.forwardLabel', { title: forwardTitle }) : t('validation.nav.noForward')
+            }
+            onClick={goForward}
+          >
+            <ForwardIcon />
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={() => setOpen(false)}
+            aria-label={t('common.close')}
+            title={t('common.close')}
+          >
+            ×
+          </button>
         </div>
       </div>
-    </div>
+
+      <div className="modal-body">
+        <p className="validation-intro">{rich('validation.intro')}</p>
+
+        <section className="validation-group validation-current">
+          <h3 className="validation-section-title-plain">{t('validation.section.current')}</h3>
+          {!currentPaperId ? (
+            <p className="validation-empty">{t('validation.empty.noPaper')}</p>
+          ) : currentIssues.length === 0 ? (
+            <p className="validation-empty">{t('validation.empty.noProblems')}</p>
+          ) : (
+            <IssueList issues={currentIssues} onIssueClick={goToIssue} />
+          )}
+        </section>
+
+        <section className="validation-group validation-section">
+          <button
+            type="button"
+            className="validation-section-header"
+            title={otherOpen ? t('validation.section.collapse') : t('validation.section.expand')}
+            onClick={() => setOtherOpen((o) => !o)}
+            aria-expanded={otherOpen}
+          >
+            <span className="validation-caret">{otherOpen ? '▾' : '▸'}</span>
+            {t('validation.section.other')}
+            <span className="count">{tp('validation.problems', otherIssueCount)}</span>
+          </button>
+          {otherOpen && (
+            <div className="validation-section-body">
+              <PaperFilter
+                query={otherQuery}
+                onQueryChange={setOtherQuery}
+                caseSensitive={otherCaseSensitive}
+                onCaseSensitiveChange={setOtherCaseSensitive}
+                label={t('validation.filter.other')}
+              />
+              {filteredOtherGroups.length === 0 ? (
+                <p className="validation-empty">{t('validation.empty.noMatch')}</p>
+              ) : (
+                filteredOtherGroups.map(([paperId, group]) => (
+                  <div key={paperId} className="validation-group">
+                    <div
+                      className="validation-paper clickable"
+                      role="button"
+                      tabIndex={0}
+                      title={expandedPapers.has(paperId) ? t('validation.section.collapse') : t('validation.paper.expand')}
+                      onClick={() => toggleExpanded(paperId)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter' || e.key === ' ') {
+                          e.preventDefault()
+                          toggleExpanded(paperId)
+                        }
+                      }}
+                      aria-expanded={expandedPapers.has(paperId)}
+                    >
+                      <span className="validation-caret">
+                        {expandedPapers.has(paperId) ? '▾' : '▸'}
+                      </span>
+                      <span className="validation-paper-title">{group.title}</span>
+                      <span className="count">{tp('validation.problems', group.issues.length)}</span>
+                      <JumpButton title={t('validation.jump.paper', { title: group.title })} onClick={() => goToPaper(paperId)} />
+                    </div>
+                    {expandedPapers.has(paperId) && (
+                      <IssueList issues={group.issues} onIssueClick={goToIssue} />
+                    )}
+                  </div>
+                ))
+              )}
+            </div>
+          )}
+        </section>
+
+        <section className="validation-group validation-section validation-unannotated">
+          <button
+            type="button"
+            className="validation-section-header"
+            title={notStartedOpen ? t('validation.section.collapse') : t('validation.section.expand')}
+            onClick={() => setNotStartedOpen((o) => !o)}
+            aria-expanded={notStartedOpen}
+          >
+            <span className="validation-caret">{notStartedOpen ? '▾' : '▸'}</span>
+            {t('validation.section.notStarted')}
+            <span className="count">{tp('validation.papers', unannotated.length)}</span>
+          </button>
+          {notStartedOpen && (
+            <div className="validation-section-body">
+              <PaperFilter
+                query={notStartedQuery}
+                onQueryChange={setNotStartedQuery}
+                caseSensitive={notStartedCaseSensitive}
+                onCaseSensitiveChange={setNotStartedCaseSensitive}
+                label={t('validation.filter.notStarted')}
+              />
+              {filteredUnannotated.length === 0 ? (
+                <p className="validation-empty">{t('validation.empty.noMatch')}</p>
+              ) : (
+                <ul className="validation-unannotated-list">
+                  {filteredUnannotated.map((p) => (
+                    <li key={p.paperId}>
+                      <div className="validation-paper">
+                        <span className="validation-paper-title">{p.paperTitle}</span>
+                        <JumpButton title={t('validation.jump.paper', { title: p.paperTitle })} onClick={() => goToPaper(p.paperId)} />
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          )}
+        </section>
+      </div>
+      
+    </Modal>
   )
 }

@@ -3,6 +3,7 @@ import { seatLabel, type Project } from '../model/project'
 import { DEFAULT_ANNOTATIONS_DIR } from '../model/annotationsDir'
 import { ConflictResolutionDialog } from './ConflictResolutionDialog'
 import { t, useT } from '../i18n'
+import { Modal } from './Modal'
 
 // [impl->req~plt-135~1]
 /** How many clashing files the dialog names before it stops counting. */
@@ -77,57 +78,56 @@ export function StaleSaveDialog() {
   const rest = staleSave.paths.length - listed.length
 
   return (
-    <div className="modal-overlay">
-      <div className="modal stale-save-dialog" role="dialog" aria-modal="true" aria-label={t('app.staleSave.aria')}>
-        <div className="modal-head">
-          <strong>{t('app.staleSave.title')}</strong>
+    <Modal className="stale-save-dialog" aria-label={t('app.staleSave.aria')}>
+      <div className="modal-head">
+        <strong>{t('app.staleSave.title')}</strong>
+      </div>
+      <div className="modal-body">
+        <p>{t('app.staleSave.body')}</p>
+        <ul className="stale-save-files">
+          {listed.map((p) => (
+            <li key={p} title={p}>
+              {describeClash(p, project)}
+            </li>
+          ))}
+          {rest > 0 && <li>{t('app.staleSave.more', { count: rest })}</li>}
+        </ul>
+        <div className="stale-save-choices">
+          <button type="button" disabled={busy} onClick={() => void resolveStaleSave('overwrite')}>
+            <strong>{t('app.staleSave.overwrite')}</strong>
+            <span>{t('app.staleSave.overwriteHint')}</span>
+          </button>
+          <button type="button" disabled={busy} onClick={() => void resolveStaleSave('discard')}>
+            <strong>{t('app.staleSave.discard')}</strong>
+            <span>{t('app.staleSave.discardHint')}</span>
+          </button>
+          <button
+            type="button"
+            className="primary"
+            disabled={busy || staleSave.refusal !== null}
+            onClick={() => void resolveStaleSave('combine')}
+          >
+            <strong>{t('app.staleSave.combine')}</strong>
+            <span>{t('app.staleSave.combineHint')}</span>
+          </button>
         </div>
-        <div className="modal-body">
-          <p>{t('app.staleSave.body')}</p>
-          <ul className="stale-save-files">
-            {listed.map((p) => (
-              <li key={p} title={p}>
-                {describeClash(p, project)}
-              </li>
-            ))}
-            {rest > 0 && <li>{t('app.staleSave.more', { count: rest })}</li>}
-          </ul>
-          <div className="stale-save-choices">
-            <button type="button" disabled={busy} onClick={() => void resolveStaleSave('overwrite')}>
-              <strong>{t('app.staleSave.overwrite')}</strong>
-              <span>{t('app.staleSave.overwriteHint')}</span>
-            </button>
-            <button type="button" disabled={busy} onClick={() => void resolveStaleSave('discard')}>
-              <strong>{t('app.staleSave.discard')}</strong>
-              <span>{t('app.staleSave.discardHint')}</span>
-            </button>
-            <button
-              type="button"
-              className="primary"
-              disabled={busy || staleSave.refusal !== null}
-              onClick={() => void resolveStaleSave('combine')}
-            >
-              <strong>{t('app.staleSave.combine')}</strong>
-              <span>{t('app.staleSave.combineHint')}</span>
-            </button>
-          </div>
-          {staleSave.refusal && (
-            <p className="stale-save-refusal" role="alert">
-              {t('app.staleSave.refusal', { reason: staleSave.refusal })}
-            </p>
-          )}
-          {staleSave.error && (
-            <p className="stale-save-refusal" role="alert">
-              {staleSave.error}
-            </p>
-          )}
-          <div className="modal-actions">
-            <button type="button" onClick={dismissStaleSave} title={t('app.staleSave.laterTitle')}>
-              {t('app.staleSave.later')}
-            </button>
-          </div>
+        {staleSave.refusal && (
+          <p className="stale-save-refusal" role="alert">
+            {t('app.staleSave.refusal', { reason: staleSave.refusal })}
+          </p>
+        )}
+        {staleSave.error && (
+          <p className="stale-save-refusal" role="alert">
+            {staleSave.error}
+          </p>
+        )}
+        <div className="modal-actions">
+          <button type="button" onClick={dismissStaleSave} title={t('app.staleSave.laterTitle')}>
+            {t('app.staleSave.later')}
+          </button>
         </div>
       </div>
-    </div>
+      
+    </Modal>
   )
 }

@@ -11,6 +11,7 @@ import type { Disposition, FieldChange, PaperChange } from '../git/changes'
 import type { FieldValue } from '../model/annotations'
 import { GitStashSection } from './GitStashSection'
 import '../styles/git.css'
+import { Modal } from './Modal'
 
 /** Sentinel for "New branch…" in the branch `<select>` — never a real branch name. */
 const NEW_BRANCH_OPTION = '__sailor_new_branch__'
@@ -188,319 +189,312 @@ export function GitDialog() {
   }
 
   return (
-    <div className="modal-overlay" onClick={requestClose}>
-      <div
-        className="modal git-dialog"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label="Git"
-      >
-        <div className="modal-head">
-          <strong>
-            Git —{' '}
-            {repo.branch && localBranches.length > 0 ? (
-              <select
-                className="git-branch-select"
-                aria-label={t('git.dialog.switchBranch')}
-                value={repo.branch}
-                disabled={working}
-                onChange={(e) => {
-                  if (e.target.value === NEW_BRANCH_OPTION) openNewBranchPrompt()
-                  else if (e.target.value === DELETE_BRANCH_OPTION) openDeleteBranchPrompt()
-                  else requestSwitchBranch(e.target.value)
-                }}
-              >
-                {localBranches.map((b) => (
-                  <option key={b.name} value={b.name}>
-                    {b.name}
-                  </option>
-                ))}
-                <option value={NEW_BRANCH_OPTION}>{t('git.dialog.newBranchOption')}</option>
-                {localBranches.some((b) => !b.current) && (
-                  <option value={DELETE_BRANCH_OPTION}>{t('git.dialog.deleteBranchOption')}</option>
-                )}
-              </select>
-            ) : (
-              (repo.branch ?? t('git.common.detachedHead'))
-            )}
-            <span className="git-upstream"> ▸ {repo.upstream ?? t('git.dialog.noUpstream')}</span>
-          </strong>
-          <div className="modal-head-actions">
-            {mergeable.length > 0 && (
-              <button
-                type="button"
-                className="git-header-action-btn"
-                title={t('git.dialog.mergeBranchTitle')}
-                disabled={working || dirty}
-                onClick={openMergeBranchPrompt}
-              >
-                {t('git.dialog.mergeBranch')}
-              </button>
-            )}
+    <Modal onClose={requestClose} className="git-dialog" aria-label="Git">
+      <div className="modal-head">
+        <strong>
+          Git —{' '}
+          {repo.branch && localBranches.length > 0 ? (
+            <select
+              className="git-branch-select"
+              aria-label={t('git.dialog.switchBranch')}
+              value={repo.branch}
+              disabled={working}
+              onChange={(e) => {
+                if (e.target.value === NEW_BRANCH_OPTION) openNewBranchPrompt()
+                else if (e.target.value === DELETE_BRANCH_OPTION) openDeleteBranchPrompt()
+                else requestSwitchBranch(e.target.value)
+              }}
+            >
+              {localBranches.map((b) => (
+                <option key={b.name} value={b.name}>
+                  {b.name}
+                </option>
+              ))}
+              <option value={NEW_BRANCH_OPTION}>{t('git.dialog.newBranchOption')}</option>
+              {localBranches.some((b) => !b.current) && (
+                <option value={DELETE_BRANCH_OPTION}>{t('git.dialog.deleteBranchOption')}</option>
+              )}
+            </select>
+          ) : (
+            (repo.branch ?? t('git.common.detachedHead'))
+          )}
+          <span className="git-upstream"> ▸ {repo.upstream ?? t('git.dialog.noUpstream')}</span>
+        </strong>
+        <div className="modal-head-actions">
+          {mergeable.length > 0 && (
             <button
               type="button"
               className="git-header-action-btn"
-              title={t('git.dialog.historyTitle', { path: repo.relPath })}
-              disabled={working}
-              onClick={() => void openHistory()}
+              title={t('git.dialog.mergeBranchTitle')}
+              disabled={working || dirty}
+              onClick={openMergeBranchPrompt}
             >
-              {t('git.dialog.history')}
+              {t('git.dialog.mergeBranch')}
+            </button>
+          )}
+          <button
+            type="button"
+            className="git-header-action-btn"
+            title={t('git.dialog.historyTitle', { path: repo.relPath })}
+            disabled={working}
+            onClick={() => void openHistory()}
+          >
+            {t('git.dialog.history')}
+          </button>
+          <button
+            type="button"
+            className="icon-btn"
+            onClick={requestClose}
+            title={t('common.close')}
+            aria-label={t('common.close')}
+          >
+            ×
+          </button>
+        </div>
+      </div>
+
+      <div className="modal-body">
+        {dirty && (
+          <div className="git-dirty-banner">
+            {t('git.dialog.dirtyBanner')}
+            <button type="button" onClick={() => void save()} title={t('git.dialog.saveProjectTitle')}>
+              {t('git.dialog.saveProject')}
+            </button>
+          </div>
+        )}
+
+        <label className="git-field-label" htmlFor="git-commit-message">
+          {t('git.dialog.commitMessage')}
+        </label>
+        <CommitMessageField value={panel.message} onChange={setCommitMessage} />
+        <label className="git-amend-checkbox">
+          <input
+            type="checkbox"
+            checked={panel.amend}
+            disabled={working || dirty}
+            onChange={(e) => void setAmend(e.target.checked)}
+          />
+          {t('git.dialog.amendPrevious')}
+        </label>
+
+        <div className="git-panel-actions">
+          <button
+            type="button"
+            className={`primary${discardOnlyMode ? ' danger' : ''}`}
+            title={nothingPending ? t('git.dialog.nothingPendingTitle') : undefined}
+            disabled={
+              working ||
+              dirty ||
+              (selectedCount === 0 && !review) ||
+              nothingPending ||
+              (!discardOnlyMode && !panel.message.trim())
+            }
+            onClick={runPrimaryAction}
+          >
+            {discardOnlyMode ? t('git.dialog.discardAll') : panel.amend ? 'Amend' : 'Commit'}
+          </button>
+          <div className="git-panel-actions-right">
+            <button
+              type="button"
+              disabled={working || dirty || !repo.upstream}
+              onClick={() => void runPull((summary) => window.confirm(summary))}
+              title={t('git.dialog.pullTitle')}
+            >
+              Pull
             </button>
             <button
               type="button"
+              disabled={working || dirty}
+              onClick={() => {
+                // [impl->req~git-190~1]
+                // [impl->req~git-490~1]
+                const ok = window.confirm(t('git.dialog.undoMergeConfirm'))
+                if (ok) void runUndoMerge()
+              }}
+              title={t('git.dialog.undoMergeTitle')}
+            >
+              {t('git.dialog.undoMerge')}
+            </button>
+            <button
+              type="button"
+              disabled={working}
+              onClick={() => void runPush()}
+              title={t('git.dialog.pushTitle')}
+            >
+              Push
+            </button>
+          </div>
+        </div>
+
+        {review && (
+          <>
+            <div className="git-changes-head">
+              <strong>{t('git.dialog.yourChanges', { path: repo.relPath, count: reviewRowCount })}</strong>
+              <button type="button" className="icon-btn" title={t('git.dialog.refresh')} onClick={() => void refreshStatus()}>
+                ↻
+              </button>
+            </div>
+            <p className="git-muted">{t('git.dialog.reviewExplanation')}</p>
+            {/* These have no row of their own and are carried regardless of
+                what is decided above (see `BOOKKEEPING_FIELDS`), so the one
+                thing this list must not be is invisible. */}
+            {bookkeepingPapers.length > 0 && (
+              <p className="git-muted">{tp('git.dialog.bookkeeping', bookkeepingPapers.length)}</p>
+            )}
+            <div className="git-field-review-bulk">
+              <button type="button" onClick={() => setAllFieldDispositions('use')} title={t('git.dialog.useAllTitle')}>
+                {t('git.dialog.useAll')}
+              </button>
+              <button type="button" onClick={() => setAllFieldDispositions('ignore')} title={t('git.dialog.ignoreAllTitle')}>
+                {t('git.dialog.ignoreAll')}
+              </button>
+              <button type="button" onClick={() => setAllFieldDispositions('discard')} title={t('git.dialog.discardAllTitle')}>
+                {t('git.dialog.discardAll')}
+              </button>
+            </div>
+            <ul className="git-field-rows">
+              {review.changes.papers.map((pc) => (
+                <PaperChangeRow
+                  key={pc.id}
+                  change={pc}
+                  disposition={review.decisions[pc.id] ?? 'use'}
+                  onSet={(d) => setFieldDisposition(pc.id, d)}
+                />
+              ))}
+              {review.changes.fields.map((fc) => (
+                <FieldChangeRow
+                  key={fc.id}
+                  change={fc}
+                  disposition={review.decisions[fc.id] ?? 'use'}
+                  onSet={(d) => setFieldDisposition(fc.id, d)}
+                />
+              ))}
+            </ul>
+          </>
+        )}
+
+        <div className="git-changes-head">
+          <strong>
+            {review
+              ? t('git.dialog.otherChanges', { count: changes.length })
+              : t('git.dialog.changes', { count: changes.length })}
+          </strong>
+          {!review && (
+            <button type="button" className="icon-btn" title={t('git.dialog.refresh')} onClick={() => void refreshStatus()}>
+              ↻
+            </button>
+          )}
+        </div>
+
+        {panel.phase === 'loading' ? (
+          <p className="git-muted">{t('git.dialog.readingStatus')}</p>
+        ) : changes.length === 0 ? (
+          <p className="git-muted">
+            {review ? t('git.dialog.nothingElseChanged') : t('git.dialog.nothingChanged')}
+          </p>
+        ) : (
+          <ul className="git-changes">
+            {changes.map((c) => {
+              // Own project files never get this button (see `isProjectOwnPath`); `git:discardFile` enforces it server-side too.
+              const isOwn = isProjectOwnPath(c.path, repo.relPath, repo.annotationsDir)
+              // `git status --porcelain` reports an untracked dir as one record, e.g. `?? exports/`.
+              const isDir = c.path.endsWith('/')
+              // A rename needs more than one `checkout` to undo, and an unresolved conflict has no single well-defined "discard".
+              const discardable = !isOwn && !c.from && !c.unmerged
+              const untracked = c.code.startsWith('?')
+              const discard = () => {
+                // [impl->req~git-190~1]
+                const ok = window.confirm(
+                  untracked
+                    ? isDir
+                      ? t('git.dialog.deleteUntrackedFolderConfirm', { path: c.path })
+                      : t('git.dialog.deleteUntrackedFileConfirm', { path: c.path })
+                    : t('git.dialog.discardFileConfirm', { path: c.path }),
+                )
+                if (ok) void runDiscardFile(c.path)
+              }
+              const title = isOwn
+                ? t('git.dialog.ownFileTitle')
+                : discardable
+                  ? untracked
+                    ? isDir
+                      ? t('git.dialog.deleteUntrackedFolderTitle')
+                      : t('git.dialog.deleteUntrackedFileTitle')
+                    : t('git.dialog.discardFileTitle')
+                  : t('git.dialog.notDiscardableTitle')
+              return (
+                <li key={c.path} className="git-change-row">
+                  <label>
+                    <input
+                      type="checkbox"
+                      checked={!!panel.selected[c.path]}
+                      onChange={() => toggleSelected(c.path)}
+                    />
+                    <span className="git-change-code">{c.code}</span>
+                    <span className="git-change-path">
+                      {c.from ? `${c.from} → ${c.path}` : c.path}
+                    </span>
+                  </label>
+                  <button
+                    type="button"
+                    className="icon-btn"
+                    title={title}
+                    aria-label={
+                      isOwn
+                        ? t('git.dialog.cannotDiscardHere', { path: c.path })
+                        : untracked
+                          ? t('git.dialog.deletePath', { path: c.path })
+                          : t('git.dialog.discardPath', { path: c.path })
+                    }
+                    disabled={working || !discardable}
+                    onClick={discard}
+                  >
+                    ↺
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+
+        {panel.status?.diff && (
+          <details className="git-diff-details">
+            <summary>{review ? t('git.dialog.rawDiff') : t('git.dialog.diff')}</summary>
+            <pre className="git-diff">
+              {diffLines(panel.status.diff).map((line, i) => (
+                // Index is safe here: this list is a pure function of the diff
+                // text and re-renders wholesale whenever it changes, never
+                // reordered or edited in place.
+                <span key={i} className={`git-diff-line git-diff-${line.kind}`}>
+                  {line.text}
+                  {'\n'}
+                </span>
+              ))}
+            </pre>
+          </details>
+        )}
+        {panel.status?.diffTruncated && <p className="git-muted">{t('git.dialog.diffTruncated')}</p>}
+        {hasUntracked && <p className="git-muted">{t('git.dialog.untrackedNoDiff')}</p>}
+
+        <GitStashSection disabled={working || !!panel.merge} />
+
+        {(panel.error || panel.notice) && (
+          <div className={panel.error ? 'git-message git-message-error' : 'git-message git-message-notice'}>
+            <pre className="git-message-text">{panel.error ?? panel.notice}</pre>
+            <button
+              type="button"
               className="icon-btn"
-              onClick={requestClose}
-              title={t('common.close')}
-              aria-label={t('common.close')}
+              onClick={dismissPanelMessage}
+              title={t('git.dialog.dismissMessageTitle')}
+              aria-label={t('git.common.dismiss')}
             >
               ×
             </button>
           </div>
-        </div>
-
-        <div className="modal-body">
-          {dirty && (
-            <div className="git-dirty-banner">
-              {t('git.dialog.dirtyBanner')}
-              <button type="button" onClick={() => void save()} title={t('git.dialog.saveProjectTitle')}>
-                {t('git.dialog.saveProject')}
-              </button>
-            </div>
-          )}
-
-          <label className="git-field-label" htmlFor="git-commit-message">
-            {t('git.dialog.commitMessage')}
-          </label>
-          <CommitMessageField value={panel.message} onChange={setCommitMessage} />
-          <label className="git-amend-checkbox">
-            <input
-              type="checkbox"
-              checked={panel.amend}
-              disabled={working || dirty}
-              onChange={(e) => void setAmend(e.target.checked)}
-            />
-            {t('git.dialog.amendPrevious')}
-          </label>
-
-          <div className="git-panel-actions">
-            <button
-              type="button"
-              className={`primary${discardOnlyMode ? ' danger' : ''}`}
-              title={nothingPending ? t('git.dialog.nothingPendingTitle') : undefined}
-              disabled={
-                working ||
-                dirty ||
-                (selectedCount === 0 && !review) ||
-                nothingPending ||
-                (!discardOnlyMode && !panel.message.trim())
-              }
-              onClick={runPrimaryAction}
-            >
-              {discardOnlyMode ? t('git.dialog.discardAll') : panel.amend ? 'Amend' : 'Commit'}
-            </button>
-            <div className="git-panel-actions-right">
-              <button
-                type="button"
-                disabled={working || dirty || !repo.upstream}
-                onClick={() => void runPull((summary) => window.confirm(summary))}
-                title={t('git.dialog.pullTitle')}
-              >
-                Pull
-              </button>
-              <button
-                type="button"
-                disabled={working || dirty}
-                onClick={() => {
-                  // [impl->req~git-190~1]
-                  // [impl->req~git-490~1]
-                  const ok = window.confirm(t('git.dialog.undoMergeConfirm'))
-                  if (ok) void runUndoMerge()
-                }}
-                title={t('git.dialog.undoMergeTitle')}
-              >
-                {t('git.dialog.undoMerge')}
-              </button>
-              <button
-                type="button"
-                disabled={working}
-                onClick={() => void runPush()}
-                title={t('git.dialog.pushTitle')}
-              >
-                Push
-              </button>
-            </div>
-          </div>
-
-          {review && (
-            <>
-              <div className="git-changes-head">
-                <strong>{t('git.dialog.yourChanges', { path: repo.relPath, count: reviewRowCount })}</strong>
-                <button type="button" className="icon-btn" title={t('git.dialog.refresh')} onClick={() => void refreshStatus()}>
-                  ↻
-                </button>
-              </div>
-              <p className="git-muted">{t('git.dialog.reviewExplanation')}</p>
-              {/* These have no row of their own and are carried regardless of
-                  what is decided above (see `BOOKKEEPING_FIELDS`), so the one
-                  thing this list must not be is invisible. */}
-              {bookkeepingPapers.length > 0 && (
-                <p className="git-muted">{tp('git.dialog.bookkeeping', bookkeepingPapers.length)}</p>
-              )}
-              <div className="git-field-review-bulk">
-                <button type="button" onClick={() => setAllFieldDispositions('use')} title={t('git.dialog.useAllTitle')}>
-                  {t('git.dialog.useAll')}
-                </button>
-                <button type="button" onClick={() => setAllFieldDispositions('ignore')} title={t('git.dialog.ignoreAllTitle')}>
-                  {t('git.dialog.ignoreAll')}
-                </button>
-                <button type="button" onClick={() => setAllFieldDispositions('discard')} title={t('git.dialog.discardAllTitle')}>
-                  {t('git.dialog.discardAll')}
-                </button>
-              </div>
-              <ul className="git-field-rows">
-                {review.changes.papers.map((pc) => (
-                  <PaperChangeRow
-                    key={pc.id}
-                    change={pc}
-                    disposition={review.decisions[pc.id] ?? 'use'}
-                    onSet={(d) => setFieldDisposition(pc.id, d)}
-                  />
-                ))}
-                {review.changes.fields.map((fc) => (
-                  <FieldChangeRow
-                    key={fc.id}
-                    change={fc}
-                    disposition={review.decisions[fc.id] ?? 'use'}
-                    onSet={(d) => setFieldDisposition(fc.id, d)}
-                  />
-                ))}
-              </ul>
-            </>
-          )}
-
-          <div className="git-changes-head">
-            <strong>
-              {review
-                ? t('git.dialog.otherChanges', { count: changes.length })
-                : t('git.dialog.changes', { count: changes.length })}
-            </strong>
-            {!review && (
-              <button type="button" className="icon-btn" title={t('git.dialog.refresh')} onClick={() => void refreshStatus()}>
-                ↻
-              </button>
-            )}
-          </div>
-
-          {panel.phase === 'loading' ? (
-            <p className="git-muted">{t('git.dialog.readingStatus')}</p>
-          ) : changes.length === 0 ? (
-            <p className="git-muted">
-              {review ? t('git.dialog.nothingElseChanged') : t('git.dialog.nothingChanged')}
-            </p>
-          ) : (
-            <ul className="git-changes">
-              {changes.map((c) => {
-                // Own project files never get this button (see `isProjectOwnPath`); `git:discardFile` enforces it server-side too.
-                const isOwn = isProjectOwnPath(c.path, repo.relPath, repo.annotationsDir)
-                // `git status --porcelain` reports an untracked dir as one record, e.g. `?? exports/`.
-                const isDir = c.path.endsWith('/')
-                // A rename needs more than one `checkout` to undo, and an unresolved conflict has no single well-defined "discard".
-                const discardable = !isOwn && !c.from && !c.unmerged
-                const untracked = c.code.startsWith('?')
-                const discard = () => {
-                  // [impl->req~git-190~1]
-                  const ok = window.confirm(
-                    untracked
-                      ? isDir
-                        ? t('git.dialog.deleteUntrackedFolderConfirm', { path: c.path })
-                        : t('git.dialog.deleteUntrackedFileConfirm', { path: c.path })
-                      : t('git.dialog.discardFileConfirm', { path: c.path }),
-                  )
-                  if (ok) void runDiscardFile(c.path)
-                }
-                const title = isOwn
-                  ? t('git.dialog.ownFileTitle')
-                  : discardable
-                    ? untracked
-                      ? isDir
-                        ? t('git.dialog.deleteUntrackedFolderTitle')
-                        : t('git.dialog.deleteUntrackedFileTitle')
-                      : t('git.dialog.discardFileTitle')
-                    : t('git.dialog.notDiscardableTitle')
-                return (
-                  <li key={c.path} className="git-change-row">
-                    <label>
-                      <input
-                        type="checkbox"
-                        checked={!!panel.selected[c.path]}
-                        onChange={() => toggleSelected(c.path)}
-                      />
-                      <span className="git-change-code">{c.code}</span>
-                      <span className="git-change-path">
-                        {c.from ? `${c.from} → ${c.path}` : c.path}
-                      </span>
-                    </label>
-                    <button
-                      type="button"
-                      className="icon-btn"
-                      title={title}
-                      aria-label={
-                        isOwn
-                          ? t('git.dialog.cannotDiscardHere', { path: c.path })
-                          : untracked
-                            ? t('git.dialog.deletePath', { path: c.path })
-                            : t('git.dialog.discardPath', { path: c.path })
-                      }
-                      disabled={working || !discardable}
-                      onClick={discard}
-                    >
-                      ↺
-                    </button>
-                  </li>
-                )
-              })}
-            </ul>
-          )}
-
-          {panel.status?.diff && (
-            <details className="git-diff-details">
-              <summary>{review ? t('git.dialog.rawDiff') : t('git.dialog.diff')}</summary>
-              <pre className="git-diff">
-                {diffLines(panel.status.diff).map((line, i) => (
-                  // Index is safe here: this list is a pure function of the diff
-                  // text and re-renders wholesale whenever it changes, never
-                  // reordered or edited in place.
-                  <span key={i} className={`git-diff-line git-diff-${line.kind}`}>
-                    {line.text}
-                    {'\n'}
-                  </span>
-                ))}
-              </pre>
-            </details>
-          )}
-          {panel.status?.diffTruncated && <p className="git-muted">{t('git.dialog.diffTruncated')}</p>}
-          {hasUntracked && <p className="git-muted">{t('git.dialog.untrackedNoDiff')}</p>}
-
-          <GitStashSection disabled={working || !!panel.merge} />
-
-          {(panel.error || panel.notice) && (
-            <div className={panel.error ? 'git-message git-message-error' : 'git-message git-message-notice'}>
-              <pre className="git-message-text">{panel.error ?? panel.notice}</pre>
-              <button
-                type="button"
-                className="icon-btn"
-                onClick={dismissPanelMessage}
-                title={t('git.dialog.dismissMessageTitle')}
-                aria-label={t('git.common.dismiss')}
-              >
-                ×
-              </button>
-            </div>
-          )}
-        </div>
+        )}
       </div>
-    </div>
+      
+    </Modal>
   )
 }
 

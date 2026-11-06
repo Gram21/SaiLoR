@@ -2,6 +2,7 @@
 import { useEffect } from 'react'
 import { useStore } from '../state/store'
 import { useT } from '../i18n'
+import { Modal } from './Modal'
 
 /**
  * Asked when a reviewer has changed their answers on a paper the consolidator
@@ -32,36 +33,30 @@ export function ConsolidationUpdatePrompt() {
   if (!paperId) return null
 
   return (
-    <div className="modal-overlay" onClick={() => resolve(false)}>
-      <div
-        className="modal close-prompt"
-        onClick={(e) => e.stopPropagation()}
-        role="alertdialog"
-        aria-modal="true"
-      >
-        <div className="modal-body">
-          <h3>{t('consolidation.updatePrompt.title', { title: title ?? '' })}</h3>
-          <p>{t('consolidation.updatePrompt.body')}</p>
-        </div>
-        <div className="close-prompt-actions">
-          <button
-            type="button"
-            className="primary"
-            onClick={() => resolve(false)}
-            autoFocus
-            title={t('consolidation.updatePrompt.keepTitle')}
-          >
-            {t('consolidation.updatePrompt.keep')}
-          </button>
-          <button
-            type="button"
-            onClick={() => resolve(true)}
-            title={t('consolidation.updatePrompt.updateTitle')}
-          >
-            {t('consolidation.updatePrompt.update')}
-          </button>
-        </div>
+    <Modal onClose={() => resolve(false)} className="close-prompt" role="alertdialog">
+      <div className="modal-body">
+        <h3>{t('consolidation.updatePrompt.title', { title: title ?? '' })}</h3>
+        <p>{t('consolidation.updatePrompt.body')}</p>
       </div>
-    </div>
+      <div className="close-prompt-actions">
+        <button
+          type="button"
+          className="primary"
+          onClick={() => resolve(false)}
+          autoFocus
+          title={t('consolidation.updatePrompt.keepTitle')}
+        >
+          {t('consolidation.updatePrompt.keep')}
+        </button>
+        <button
+          type="button"
+          onClick={() => resolve(true)}
+          title={t('consolidation.updatePrompt.updateTitle')}
+        >
+          {t('consolidation.updatePrompt.update')}
+        </button>
+      </div>
+      
+    </Modal>
   )
 }

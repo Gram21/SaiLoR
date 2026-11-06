@@ -7,6 +7,7 @@ import { getPlatform } from '../platform'
 import { agreePercent, evaluateAi, evaluationCsv } from '../llm/evaluation'
 import { useT } from '../i18n'
 import '../styles/ai.css'
+import { Modal } from './Modal'
 
 export function AiEvaluationDialog({ onClose }: { onClose: () => void }) {
   const project = useStore((s) => s.project)
@@ -43,62 +44,55 @@ export function AiEvaluationDialog({ onClose }: { onClose: () => void }) {
   const empty = evaluation.seat === null ? t('aiEval.noSeat') : evaluation.papers === 0 ? t('aiEval.empty') : null
 
   return (
-    <div className="modal-overlay" onClick={onClose}>
-      <div
-        className="modal"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={t('aiEval.title')}
-      >
-        <div className="modal-head">
-          <strong>{t('aiEval.title')}</strong>
-          <button type="button" className="icon-btn" title={t('common.close')} onClick={onClose} aria-label={t('common.close')}>
-            ×
-          </button>
-        </div>
-        <div className="modal-body">
-          {empty ? (
-            <p>{empty}</p>
-          ) : (
-            <>
-              <p>{t('aiEval.intro', { count: evaluation.papers })}</p>
-              <p>{t('aiEval.models')}</p>
-              <div className="agreement-perfield-scroll">
-                <table className="agreement-perfield-table">
-                  <thead>
-                    <tr>
-                      <th>{t('consolidation.agreement.field')}</th>
-                      <th>{t('aiEval.compared')}</th>
-                      <th>{t('aiEval.agree')}</th>
+    <Modal onClose={onClose} aria-label={t('aiEval.title')}>
+      <div className="modal-head">
+        <strong>{t('aiEval.title')}</strong>
+        <button type="button" className="icon-btn" title={t('common.close')} onClick={onClose} aria-label={t('common.close')}>
+          ×
+        </button>
+      </div>
+      <div className="modal-body">
+        {empty ? (
+          <p>{empty}</p>
+        ) : (
+          <>
+            <p>{t('aiEval.intro', { count: evaluation.papers })}</p>
+            <p>{t('aiEval.models')}</p>
+            <div className="agreement-perfield-scroll">
+              <table className="agreement-perfield-table">
+                <thead>
+                  <tr>
+                    <th>{t('consolidation.agreement.field')}</th>
+                    <th>{t('aiEval.compared')}</th>
+                    <th>{t('aiEval.agree')}</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {evaluation.fields.map((f) => (
+                    <tr key={f.key}>
+                      <td>{f.label}</td>
+                      <td>{f.compared}</td>
+                      <td>{f.compared === 0 ? '—' : `${agreePercent(f)} %`}</td>
                     </tr>
-                  </thead>
-                  <tbody>
-                    {evaluation.fields.map((f) => (
-                      <tr key={f.key}>
-                        <td>{f.label}</td>
-                        <td>{f.compared}</td>
-                        <td>{f.compared === 0 ? '—' : `${agreePercent(f)} %`}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </>
-          )}
-          {message && <p className={message.ok ? undefined : 'ai-error'}>{message.text}</p>}
-          <div className="screening-import-actions">
-            <button type="button" onClick={onClose}>
-              {t('common.close')}
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </>
+        )}
+        {message && <p className={message.ok ? undefined : 'ai-error'}>{message.text}</p>}
+        <div className="screening-import-actions">
+          <button type="button" onClick={onClose}>
+            {t('common.close')}
+          </button>
+          {!empty && (
+            <button type="button" className="primary" onClick={() => void runExport()}>
+              {t('aiEval.export')}
             </button>
-            {!empty && (
-              <button type="button" className="primary" onClick={() => void runExport()}>
-                {t('aiEval.export')}
-              </button>
-            )}
-          </div>
+          )}
         </div>
       </div>
-    </div>
+      
+    </Modal>
   )
 }

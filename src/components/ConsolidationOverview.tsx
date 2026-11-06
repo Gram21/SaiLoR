@@ -10,6 +10,7 @@ import { Dropdown } from './Dropdown'
 import { AiEvaluationDialog } from './AiEvaluationDialog'
 import { useExportTextMenu } from '../hooks/useExportTextMenu'
 import { tp, useT } from '../i18n'
+import { Modal } from './Modal'
 
 interface DisagreementPaper {
   id: string
@@ -106,102 +107,96 @@ export function ConsolidationOverview() {
 
   return (
     <>
-    <div className="modal-overlay" onClick={() => setOpen(false)}>
-      <div
-        className="modal consolidation-overview"
-        onClick={(event) => event.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="modal-head">
-          <strong>{t('consolidation.overview.title')}</strong>
-          <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label={t('common.close')} title={t('consolidation.overview.closeTitle')}>
-            ×
-          </button>
-        </div>
-        <div className="modal-body">
-          <div className="consolidation-overview-actions">
-            <button
-              type="button"
-              className="primary"
-              title={
-                unanimousRun?.running
-                  ? t('consolidation.overview.adoptingTitle', { done: unanimousRun.done, total: unanimousRun.total })
-                  : t('consolidation.overview.adoptAllTitle')
-              }
-              disabled={unanimousRun?.running || readOnly}
-              onClick={() => void adoptAllUnanimousAnnotations()}
-            >
-              {unanimousRun?.running
-                ? t('consolidation.overview.adopting', { done: unanimousRun.done, total: unanimousRun.total })
-                : t('consolidation.overview.adoptAll')}
-            </button>
-            <button type="button" onClick={openAgreementFromOverview} title={t('consolidation.overview.agreementTitle')}>
-              {t('consolidation.overview.agreement')}
-            </button>
-            {project.aiEnabled && (
-              <button type="button" onClick={() => setAiEvalOpen(true)} title={t('consolidation.overview.aiEvalTitle')}>
-                {t('consolidation.overview.aiEval')}
-              </button>
-            )}
-            <Dropdown label={t('consolidation.export')} title={t('consolidation.overview.exportTitle')} items={exportMenu.items} />
-            {exportMenu.status && <span className="export-status">{exportMenu.status}</span>}
-          </div>
-          {unanimousRun && !unanimousRun.running && (
-            <div className="consolidation-run-notice">
-              <span>
-                {unanimousRun.interrupted
-                  ? t('consolidation.overview.stopped', { done: unanimousRun.done, total: unanimousRun.total })
-                  : ''}
-                {tp('consolidation.overview.adopted', unanimousRun.filled)}
-                {unanimousRun.skipped > 0 && t('consolidation.overview.leftUnchanged', { skipped: unanimousRun.skipped })}
-              </span>
-              <button type="button" onClick={dismissUnanimousRun} title={t('consolidation.overview.dismissTitle')}>
-                {t('consolidation.overview.dismiss')}
-              </button>
-            </div>
-          )}
-          <p className="disagreement-intro">
-            {total === 0
-              ? t('consolidation.overview.noneLeft')
-              : t('consolidation.overview.intro', {
-                  disagreements: tp('consolidation.disagreementCount', total),
-                  papers: tp('consolidation.paperCount', papers.length),
-                })}
-          </p>
-          <div className="paper-search consolidation-overview-search">
-            <input
-              className="paper-search-input"
-              type="text"
-              placeholder={t('consolidation.overview.searchPlaceholder')}
-              aria-label={t('consolidation.overview.searchLabel')}
-              value={query}
-              onChange={(event) => setQuery(event.target.value)}
-            />
-          </div>
-          {filtered.length === 0 ? (
-            <p className="paper-list-empty">
-              {words.length > 0 ? t('consolidation.overview.noMatch') : t('consolidation.overview.noneListed')}
-            </p>
-          ) : (
-            <ul className="consolidation-overview-papers">
-              {filtered.map((paper) => (
-                <li key={paper.id}>
-                  <button
-                    type="button"
-                    onClick={() => openDisagreementsFromOverview(paper.id)}
-                    title={t('consolidation.overview.openPaper')}
-                  >
-                    <span>{paper.title}</span>
-                    <span>{tp('consolidation.disagreementCount', paper.disagreements)}</span>
-                  </button>
-                </li>
-              ))}
-            </ul>
-          )}
-        </div>
+    <Modal onClose={() => setOpen(false)} className="consolidation-overview">
+      <div className="modal-head">
+        <strong>{t('consolidation.overview.title')}</strong>
+        <button type="button" className="icon-btn" onClick={() => setOpen(false)} aria-label={t('common.close')} title={t('consolidation.overview.closeTitle')}>
+          ×
+        </button>
       </div>
-    </div>
+      <div className="modal-body">
+        <div className="consolidation-overview-actions">
+          <button
+            type="button"
+            className="primary"
+            title={
+              unanimousRun?.running
+                ? t('consolidation.overview.adoptingTitle', { done: unanimousRun.done, total: unanimousRun.total })
+                : t('consolidation.overview.adoptAllTitle')
+            }
+            disabled={unanimousRun?.running || readOnly}
+            onClick={() => void adoptAllUnanimousAnnotations()}
+          >
+            {unanimousRun?.running
+              ? t('consolidation.overview.adopting', { done: unanimousRun.done, total: unanimousRun.total })
+              : t('consolidation.overview.adoptAll')}
+          </button>
+          <button type="button" onClick={openAgreementFromOverview} title={t('consolidation.overview.agreementTitle')}>
+            {t('consolidation.overview.agreement')}
+          </button>
+          {project.aiEnabled && (
+            <button type="button" onClick={() => setAiEvalOpen(true)} title={t('consolidation.overview.aiEvalTitle')}>
+              {t('consolidation.overview.aiEval')}
+            </button>
+          )}
+          <Dropdown label={t('consolidation.export')} title={t('consolidation.overview.exportTitle')} items={exportMenu.items} />
+          {exportMenu.status && <span className="export-status">{exportMenu.status}</span>}
+        </div>
+        {unanimousRun && !unanimousRun.running && (
+          <div className="consolidation-run-notice">
+            <span>
+              {unanimousRun.interrupted
+                ? t('consolidation.overview.stopped', { done: unanimousRun.done, total: unanimousRun.total })
+                : ''}
+              {tp('consolidation.overview.adopted', unanimousRun.filled)}
+              {unanimousRun.skipped > 0 && t('consolidation.overview.leftUnchanged', { skipped: unanimousRun.skipped })}
+            </span>
+            <button type="button" onClick={dismissUnanimousRun} title={t('consolidation.overview.dismissTitle')}>
+              {t('consolidation.overview.dismiss')}
+            </button>
+          </div>
+        )}
+        <p className="disagreement-intro">
+          {total === 0
+            ? t('consolidation.overview.noneLeft')
+            : t('consolidation.overview.intro', {
+                disagreements: tp('consolidation.disagreementCount', total),
+                papers: tp('consolidation.paperCount', papers.length),
+              })}
+        </p>
+        <div className="paper-search consolidation-overview-search">
+          <input
+            className="paper-search-input"
+            type="text"
+            placeholder={t('consolidation.overview.searchPlaceholder')}
+            aria-label={t('consolidation.overview.searchLabel')}
+            value={query}
+            onChange={(event) => setQuery(event.target.value)}
+          />
+        </div>
+        {filtered.length === 0 ? (
+          <p className="paper-list-empty">
+            {words.length > 0 ? t('consolidation.overview.noMatch') : t('consolidation.overview.noneListed')}
+          </p>
+        ) : (
+          <ul className="consolidation-overview-papers">
+            {filtered.map((paper) => (
+              <li key={paper.id}>
+                <button
+                  type="button"
+                  onClick={() => openDisagreementsFromOverview(paper.id)}
+                  title={t('consolidation.overview.openPaper')}
+                >
+                  <span>{paper.title}</span>
+                  <span>{tp('consolidation.disagreementCount', paper.disagreements)}</span>
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
+      
+    </Modal>
     {aiEvalOpen && <AiEvaluationDialog onClose={() => setAiEvalOpen(false)} />}
     </>
   )

@@ -8,6 +8,7 @@ import { YEAR_MIN, YEAR_MAX } from '../model/year'
 import { ComboBox } from './ComboBox'
 import { t, tp, useT } from '../i18n'
 import '../styles/git.css'
+import { Modal } from './Modal'
 
 /** The wording that differs between a git merge and a save that met changes on disk. */
 export interface ConflictDialogLabels {
@@ -129,144 +130,137 @@ export function ConflictResolutionDialog({
   const bulkEligibleIds = merge.conflicts.filter((c) => !foreignIds.has(c.id)).map((c) => c.id)
 
   return (
-    <div className="modal-overlay">
-      <div
-        className="modal git-merge-dialog"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-        aria-label={labels.title}
-      >
-        <div className="modal-head">
-          <strong>
-            {labels.title}{' '}
-            <span className="git-merge-progress">
-              {t('consolidation.conflict.decided', { decided: decidedCount, total: merge.conflicts.length })}
-            </span>
-          </strong>
+    <Modal className="git-merge-dialog" aria-label={labels.title}>
+      <div className="modal-head">
+        <strong>
+          {labels.title}{' '}
+          <span className="git-merge-progress">
+            {t('consolidation.conflict.decided', { decided: decidedCount, total: merge.conflicts.length })}
+          </span>
+        </strong>
+      </div>
+
+      <div className="modal-body">
+        <p>{labels.intro}</p>
+
+        <div className="git-merge-bulk">
+          <button
+            type="button"
+            title={t('consolidation.conflict.useAllMineTitle')}
+            onClick={() => onTakeAll('ours', bulkEligibleIds)}
+          >
+            {t('consolidation.conflict.useAllMine')}
+          </button>
+          <button
+            type="button"
+            title={t('consolidation.conflict.useAllTheirsTitle', { value: labels.theirsValue })}
+            onClick={() => onTakeAll('theirs', bulkEligibleIds)}
+          >
+            {labels.useAllTheirs}
+          </button>
         </div>
-
-        <div className="modal-body">
-          <p>{labels.intro}</p>
-
-          <div className="git-merge-bulk">
-            <button
-              type="button"
-              title={t('consolidation.conflict.useAllMineTitle')}
-              onClick={() => onTakeAll('ours', bulkEligibleIds)}
-            >
-              {t('consolidation.conflict.useAllMine')}
-            </button>
-            <button
-              type="button"
-              title={t('consolidation.conflict.useAllTheirsTitle', { value: labels.theirsValue })}
-              onClick={() => onTakeAll('theirs', bulkEligibleIds)}
-            >
-              {labels.useAllTheirs}
-            </button>
-          </div>
-          {foreignIds.size > 0 && (
-            <p className="git-merge-foreign-note">
-              {tp('consolidation.conflict.foreign', foreignIds.size)}{' '}
-              <span className="git-merge-foreign-badge">{t('consolidation.conflict.foreignBadge')}</span>{' '}
-              {t('consolidation.conflict.foreignSkip')}
-            </p>
-          )}
-
-          {merge.notes.length > 0 && (
-            <ul className="git-notes">
-              {merge.notes.map((n, i) => (
-                <li key={i}>{n.message}</li>
-              ))}
-            </ul>
-          )}
-
-          <ul className="git-merge-rows">
-            {groups.map((g) => {
-              const groupDecided = g.conflicts.filter((c) => merge.decided[c.id]).length
-              const groupDone = groupDecided >= g.conflicts.length
-              const isCollapsed = !!collapsed[g.paperId]
-              return (
-                <li key={g.paperId || '__project__'} className="git-merge-group">
-                  <button
-                    type="button"
-                    className="git-merge-group-head"
-                    aria-expanded={!isCollapsed}
-                    title={isCollapsed ? t('consolidation.conflict.expand') : t('consolidation.conflict.collapse')}
-                    onClick={() => toggleGroup(g.paperId)}
-                  >
-                    <span className={`git-merge-group-chevron${isCollapsed ? ' is-collapsed' : ''}`} aria-hidden="true">
-                      ▾
-                    </span>
-                    <span className="git-merge-group-title">{g.paperTitle || t('consolidation.conflict.projectGroup')}</span>
-                    <span className={`git-merge-group-progress${groupDone ? ' is-done' : ''}`}>
-                      {groupDone
-                        ? t('consolidation.conflict.resolved')
-                        : t('consolidation.conflict.decided', { decided: groupDecided, total: g.conflicts.length })}
-                    </span>
-                  </button>
-                  {!isCollapsed && (
-                    <ul className="git-merge-group-rows">
-                      {g.conflicts.map((c) => (
-                        <ConflictRow
-                          key={c.id}
-                          conflict={c}
-                          reviewers={reviewers}
-                          project={project}
-                          decided={!!merge.decided[c.id]}
-                          foreign={foreignIds.has(c.id)}
-                          value={c.id in merge.resolutions ? merge.resolutions[c.id] : c.ours}
-                          theirsValue={labels.theirsValue}
-                          onTake={(side) => onResolve(c.id, side === 'ours' ? c.ours : c.theirs)}
-                          onChange={(v) => onResolve(c.id, v)}
-                        />
-                      ))}
-                    </ul>
-                  )}
-                </li>
-              )
-            })}
-          </ul>
-        </div>
-
-        {/* A failure raised by finishing (a rejected merge commit, a refused
-            save) would otherwise leave an unexplained dialog whose Finish
-            button silently re-fails. */}
-        {error && (
-          <div className="git-message git-message-error">
-            <pre className="git-message-text">{error}</pre>
-            <button
-              type="button"
-              className="icon-btn"
-              title={t('consolidation.conflict.dismissErrorTitle')}
-              onClick={onDismissError}
-              aria-label={t('consolidation.conflict.dismiss')}
-            >
-              ×
-            </button>
-          </div>
+        {foreignIds.size > 0 && (
+          <p className="git-merge-foreign-note">
+            {tp('consolidation.conflict.foreign', foreignIds.size)}{' '}
+            <span className="git-merge-foreign-badge">{t('consolidation.conflict.foreignBadge')}</span>{' '}
+            {t('consolidation.conflict.foreignSkip')}
+          </p>
         )}
 
-        <div className="git-merge-footer">
+        {merge.notes.length > 0 && (
+          <ul className="git-notes">
+            {merge.notes.map((n, i) => (
+              <li key={i}>{n.message}</li>
+            ))}
+          </ul>
+        )}
+
+        <ul className="git-merge-rows">
+          {groups.map((g) => {
+            const groupDecided = g.conflicts.filter((c) => merge.decided[c.id]).length
+            const groupDone = groupDecided >= g.conflicts.length
+            const isCollapsed = !!collapsed[g.paperId]
+            return (
+              <li key={g.paperId || '__project__'} className="git-merge-group">
+                <button
+                  type="button"
+                  className="git-merge-group-head"
+                  aria-expanded={!isCollapsed}
+                  title={isCollapsed ? t('consolidation.conflict.expand') : t('consolidation.conflict.collapse')}
+                  onClick={() => toggleGroup(g.paperId)}
+                >
+                  <span className={`git-merge-group-chevron${isCollapsed ? ' is-collapsed' : ''}`} aria-hidden="true">
+                    ▾
+                  </span>
+                  <span className="git-merge-group-title">{g.paperTitle || t('consolidation.conflict.projectGroup')}</span>
+                  <span className={`git-merge-group-progress${groupDone ? ' is-done' : ''}`}>
+                    {groupDone
+                      ? t('consolidation.conflict.resolved')
+                      : t('consolidation.conflict.decided', { decided: groupDecided, total: g.conflicts.length })}
+                  </span>
+                </button>
+                {!isCollapsed && (
+                  <ul className="git-merge-group-rows">
+                    {g.conflicts.map((c) => (
+                      <ConflictRow
+                        key={c.id}
+                        conflict={c}
+                        reviewers={reviewers}
+                        project={project}
+                        decided={!!merge.decided[c.id]}
+                        foreign={foreignIds.has(c.id)}
+                        value={c.id in merge.resolutions ? merge.resolutions[c.id] : c.ours}
+                        theirsValue={labels.theirsValue}
+                        onTake={(side) => onResolve(c.id, side === 'ours' ? c.ours : c.theirs)}
+                        onChange={(v) => onResolve(c.id, v)}
+                      />
+                    ))}
+                  </ul>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </div>
+
+      {/* A failure raised by finishing (a rejected merge commit, a refused
+          save) would otherwise leave an unexplained dialog whose Finish
+          button silently re-fails. */}
+      {error && (
+        <div className="git-message git-message-error">
+          <pre className="git-message-text">{error}</pre>
           <button
             type="button"
-            title={labels.cancelTitle}
-            onClick={onCancel}
+            className="icon-btn"
+            title={t('consolidation.conflict.dismissErrorTitle')}
+            onClick={onDismissError}
+            aria-label={t('consolidation.conflict.dismiss')}
           >
-            {labels.cancel}
-          </button>
-          <button
-            type="button"
-            className="primary"
-            disabled={!allDecided}
-            title={allDecided ? labels.finishTitle : t('consolidation.conflict.finishDisabled')}
-            onClick={onFinish}
-          >
-            {labels.finish}
+            ×
           </button>
         </div>
+      )}
+
+      <div className="git-merge-footer">
+        <button
+          type="button"
+          title={labels.cancelTitle}
+          onClick={onCancel}
+        >
+          {labels.cancel}
+        </button>
+        <button
+          type="button"
+          className="primary"
+          disabled={!allDecided}
+          title={allDecided ? labels.finishTitle : t('consolidation.conflict.finishDisabled')}
+          onClick={onFinish}
+        >
+          {labels.finish}
+        </button>
       </div>
-    </div>
+      
+    </Modal>
   )
 }
 

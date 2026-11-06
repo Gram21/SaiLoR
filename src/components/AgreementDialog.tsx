@@ -16,6 +16,7 @@ import {
   type MetricInput,
   type MetricResult,
 } from '../consolidate/metrics'
+import { Modal } from './Modal'
 
 export interface MetricSpec {
   key: string
@@ -134,126 +135,120 @@ export function AgreementDialog() {
   }
 
   return (
-    <div className="modal-overlay" onClick={closeAgreement}>
-      <div
-        className="modal agreement-dialog"
-        onClick={(e) => e.stopPropagation()}
-        role="dialog"
-        aria-modal="true"
-      >
-        <div className="modal-head">
-          <strong>{t('consolidation.agreement.title')}</strong>
-          <button type="button" className="icon-btn" onClick={closeAgreement} aria-label={t('common.close')} title={t('common.close')}>
-            ×
-          </button>
-        </div>
-        <div className="modal-body">
-          {needsAlignment > 0 && (
-            <div className="agreement-alignment-warning" role="alert">
-              <p>
-                {rich('consolidation.agreement.alignWarning', {
-                  count: needsAlignment,
-                  lead: tp('consolidation.agreement.alignLead', needsAlignment),
-                })}
-              </p>
-              <button
-                type="button"
-                disabled={unanimousRun?.running || readOnly}
-                title={t('consolidation.agreement.alignTitle')}
-                onClick={() => void adoptAllUnanimousAnnotations()}
-              >
-                {unanimousRun?.running
-                  ? t('consolidation.agreement.liningUp', { done: unanimousRun.done, total: unanimousRun.total })
-                  : t('consolidation.agreement.lineUp')}
-              </button>
-            </div>
-          )}
-          {built.unitCount === 0 ? (
-            <p>{t('consolidation.agreement.noneAnswered')}</p>
-          ) : (
-            <>
-              <p className="agreement-basis">
-                {rich('consolidation.agreement.basis', {
-                  count: built.unitCount,
-                  noun: tp('consolidation.agreement.fieldNoun', built.unitCount),
-                })}{' '}
-                {built.skipped > 0 && tp('consolidation.agreement.skipped', built.skipped)}
-              </p>
-              <ul className="agreement-metrics">
-                {METRICS.map((m) => {
-                  const applicability = m.applicable(built.input)
-                  const checked = selected.has(m.key)
-                  const result = checked ? m.compute(built.input) : null
-                  return (
-                    <li
-                      key={m.key}
-                      className={`agreement-metric${applicability.usable ? '' : ' unusable'}`}
-                      title={applicability.usable ? undefined : applicability.reason}
-                    >
-                      <label className="agreement-metric-label">
-                        <input
-                          type="checkbox"
-                          checked={checked}
-                          disabled={!applicability.usable}
-                          onChange={() => toggle(m.key)}
-                        />
-                        {m.label}
-                      </label>
-                      {result && (
-                        <span className="agreement-result">
-                          {result.value !== null && (
-                            <strong className="agreement-value">{result.value.toFixed(3)}</strong>
-                          )}
-                          {result.note && <span className="agreement-note">{result.note}</span>}
-                        </span>
-                      )}
-                    </li>
-                  )
-                })}
-              </ul>
-              {built.perField.length > 1 && (
-                <PerFieldTable
-                  perField={built.perField}
-                  title={t('consolidation.agreement.perField')}
-                  metrics={METRICS.filter((m) => selected.has(m.key))}
-                  copied={copied}
-                  onCopy={() => {
-                    const tsv = perFieldTsv(
-                      built.perField,
-                      METRICS.filter((m) => selected.has(m.key)),
-                    )
-                    void copyText(tsv).then((ok) => {
-                      if (!ok) return
-                      setCopied(true)
-                      setTimeout(() => setCopied(false), 2000)
-                    })
-                  }}
-                />
-              )}
-              {built.perEntry.length > 0 && (
-                <PerFieldTable
-                  title={t('consolidation.agreement.perEntry')}
-                  perField={built.perEntry}
-                  metrics={METRICS.filter((m) => selected.has(m.key))}
-                  copied={copiedEntry}
-                  onCopy={() => {
-                    const tsv = perFieldTsv(
-                      built.perEntry,
-                      METRICS.filter((m) => selected.has(m.key)),
-                    )
-                    void copyText(tsv).then((ok) => {
-                      if (!ok) return
-                      setCopiedEntry(true)
-                      setTimeout(() => setCopiedEntry(false), 2000)
-                    })
-                  }}
-                />
-              )}
-            </>
-          )}
-        </div>
+    <Modal onClose={closeAgreement} className="agreement-dialog">
+      <div className="modal-head">
+        <strong>{t('consolidation.agreement.title')}</strong>
+        <button type="button" className="icon-btn" onClick={closeAgreement} aria-label={t('common.close')} title={t('common.close')}>
+          ×
+        </button>
       </div>
-    </div>
+      <div className="modal-body">
+        {needsAlignment > 0 && (
+          <div className="agreement-alignment-warning" role="alert">
+            <p>
+              {rich('consolidation.agreement.alignWarning', {
+                count: needsAlignment,
+                lead: tp('consolidation.agreement.alignLead', needsAlignment),
+              })}
+            </p>
+            <button
+              type="button"
+              disabled={unanimousRun?.running || readOnly}
+              title={t('consolidation.agreement.alignTitle')}
+              onClick={() => void adoptAllUnanimousAnnotations()}
+            >
+              {unanimousRun?.running
+                ? t('consolidation.agreement.liningUp', { done: unanimousRun.done, total: unanimousRun.total })
+                : t('consolidation.agreement.lineUp')}
+            </button>
+          </div>
+        )}
+        {built.unitCount === 0 ? (
+          <p>{t('consolidation.agreement.noneAnswered')}</p>
+        ) : (
+          <>
+            <p className="agreement-basis">
+              {rich('consolidation.agreement.basis', {
+                count: built.unitCount,
+                noun: tp('consolidation.agreement.fieldNoun', built.unitCount),
+              })}{' '}
+              {built.skipped > 0 && tp('consolidation.agreement.skipped', built.skipped)}
+            </p>
+            <ul className="agreement-metrics">
+              {METRICS.map((m) => {
+                const applicability = m.applicable(built.input)
+                const checked = selected.has(m.key)
+                const result = checked ? m.compute(built.input) : null
+                return (
+                  <li
+                    key={m.key}
+                    className={`agreement-metric${applicability.usable ? '' : ' unusable'}`}
+                    title={applicability.usable ? undefined : applicability.reason}
+                  >
+                    <label className="agreement-metric-label">
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        disabled={!applicability.usable}
+                        onChange={() => toggle(m.key)}
+                      />
+                      {m.label}
+                    </label>
+                    {result && (
+                      <span className="agreement-result">
+                        {result.value !== null && (
+                          <strong className="agreement-value">{result.value.toFixed(3)}</strong>
+                        )}
+                        {result.note && <span className="agreement-note">{result.note}</span>}
+                      </span>
+                    )}
+                  </li>
+                )
+              })}
+            </ul>
+            {built.perField.length > 1 && (
+              <PerFieldTable
+                perField={built.perField}
+                title={t('consolidation.agreement.perField')}
+                metrics={METRICS.filter((m) => selected.has(m.key))}
+                copied={copied}
+                onCopy={() => {
+                  const tsv = perFieldTsv(
+                    built.perField,
+                    METRICS.filter((m) => selected.has(m.key)),
+                  )
+                  void copyText(tsv).then((ok) => {
+                    if (!ok) return
+                    setCopied(true)
+                    setTimeout(() => setCopied(false), 2000)
+                  })
+                }}
+              />
+            )}
+            {built.perEntry.length > 0 && (
+              <PerFieldTable
+                title={t('consolidation.agreement.perEntry')}
+                perField={built.perEntry}
+                metrics={METRICS.filter((m) => selected.has(m.key))}
+                copied={copiedEntry}
+                onCopy={() => {
+                  const tsv = perFieldTsv(
+                    built.perEntry,
+                    METRICS.filter((m) => selected.has(m.key)),
+                  )
+                  void copyText(tsv).then((ok) => {
+                    if (!ok) return
+                    setCopiedEntry(true)
+                    setTimeout(() => setCopiedEntry(false), 2000)
+                  })
+                }}
+              />
+            )}
+          </>
+        )}
+      </div>
+      
+    </Modal>
   )
 }
 
