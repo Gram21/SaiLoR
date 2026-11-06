@@ -22,13 +22,26 @@ import type {
   StashRestoreResult,
 } from '../git/types'
 
+/**
+ * An opened project. For the split layout `text` holds every paper without its annotation files
+ * and `readPapers` reads and assembles the named papers (every paper when `ids` is omitted).
+ */
+export interface OpenedHead {
+  path: string
+  text: string
+  corrupt: string[]
+  readPapers?: (ids?: string[]) => Promise<{ text: string; corrupt: string[] }>
+}
+
 /** Backend API: the Tauri bridge in `./tauri`. */
 export interface SlrBridge {
   /** The machine this build is running on (Node names: process.platform / process.arch). */
   os?: { platform: string; arch: string }
-  openProject(): Promise<{ path: string; text: string; corrupt: string[] } | null>
+  openProject(): Promise<OpenedHead | null>
   /** Read a specific file by absolute path (for recent files). Null if missing. */
-  openPath(path: string): Promise<{ path: string; text: string; corrupt: string[] } | null>
+  openPath(path: string): Promise<OpenedHead | null>
+  /** The named papers' annotation files of a project opened before, annotations-relative. */
+  readPapers(path: string, ids: string[]): Promise<{ relPath: string; text: string }[]>
   /** `metaText` is null when `project.json` itself is unchanged — see `lastWritten`.
    *  Writes nothing and names the files when any changed on disk since last read or written. */
   saveProject(

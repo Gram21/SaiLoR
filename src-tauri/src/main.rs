@@ -114,6 +114,7 @@ fn main() {
             probe_report,
             project::project_open,
             project::project_open_path,
+            project::project_read_papers,
             project::project_save,
             project::project_set_dir,
             project::project_pick_save_path,

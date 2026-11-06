@@ -72,6 +72,34 @@ describe('DesktopAdapter.saveProject', () => {
     expect(saveProject.mock.calls[1][1]).toBeNull()
   })
 
+  // [utest->req~plt-440~1]
+  // [utest->req~plt-442~1]
+  it('streams papers on request and refuses to save the project until every paper was read', async () => {
+    const text = makeProjectText()
+    const whole = JSON.parse(text) as { papers: { id: string }[] }
+    const only = (ids?: string[]) => JSON.stringify({ ...whole, papers: whole.papers.filter((p) => !ids || ids.includes(p.id)) })
+    const head = JSON.stringify({ ...whole, papers: whole.papers.map((p) => ({ ...p, annotations: {} })) })
+    const readPapers = vi.fn(async (ids?: string[]) => ({ text: only(ids), corrupt: ids ? [] : ['x/consolidated.json'] }))
+    const openPath = vi.fn().mockResolvedValue({ path: '/s/project.json', text: head, corrupt: ['s.json'], readPapers })
+    setBridge({ saveProject, openPath, setProjectDir: vi.fn().mockResolvedValue(undefined) } as never)
+    const adapter = new DesktopAdapter()
+    const handle = { kind: 'electron' as const, path: '/s/project.json' }
+
+    const drained = await adapter.openRecent('/s/project.json')
+    expect(drained).toMatchObject({ text: only(), corruptFiles: ['s.json', 'x/consolidated.json'] })
+    expect(drained!.readPapers).toBeUndefined()
+
+    const opened = await adapter.openRecent('/s/project.json', true)
+    expect(opened).toMatchObject({ text: head, corruptFiles: ['s.json'] })
+    expect(await opened!.readPapers!(['p1'])).toEqual({ text: only(['p1']), corruptFiles: [] })
+    await expect(adapter.saveProject(text, handle)).rejects.toThrow(/still loading/)
+    expect(saveProject).not.toHaveBeenCalled()
+    await opened!.readPapers!(['p2'])
+    await adapter.saveProject(text, handle)
+    expect(saveProject.mock.calls[0][1]).toBeNull()
+    expect(saveProject.mock.calls[0][2]).toEqual([])
+  })
+
   // [utest->req~plt-43~1]
   it('writes only project.json when a new schema version renames a field nobody edited since', async () => {
     // The rename moves every file's answers on load; that alone must not make

@@ -10,6 +10,7 @@
     "allow-probe-report",
     "allow-project-open",
     "allow-project-open-path",
+    "allow-project-read-papers",
     "allow-project-save",
     "allow-project-set-dir",
     "allow-project-pick-save-path",

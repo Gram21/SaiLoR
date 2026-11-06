@@ -28,8 +28,17 @@ const isScreening = (raw: unknown) => Boolean((raw as { config?: { screening?: u
  * parse counts as absent and its path goes to `corrupt`.
  */
 export function assembleProject(p: RawProject, corrupt: string[] = []): string {
+  return assembler(p, corrupt)?.(p.files, corrupt) ?? p.text
+}
+
+/**
+ * `project.json` parsed once, for assembling its papers' files in batches: each call returns the
+ * project text with the papers `only` names (every paper when omitted) and `files` attached.
+ * Null for the legacy shape, whose text is already whole.
+ */
+function assembler(p: Omit<RawProject, 'files'>, siblingsCorrupt: string[]) {
   const raw: unknown = JSON.parse(p.text)
-  if (isLegacyProjectShape(raw)) return p.text
+  if (isLegacyProjectShape(raw)) return null
   const screening = isScreening(raw)
   const consolidatedName = screening ? 'screening-consolidated.json' : 'consolidated.json'
   const reviewerRe = screening ? /^screening-(\d+)\.json$/ : /^reviewer-(\d+)\.json$/
@@ -38,44 +47,62 @@ export function assembleProject(p: RawProject, corrupt: string[] = []): string {
       try {
         return [JSON.parse(s.text) as unknown]
       } catch {
-        corrupt.push(s.name)
+        siblingsCorrupt.push(s.name)
         return []
       }
     })
     .filter((s) => !isScreening(s))
-  const files = p.files.map((f) => {
-    const slash = f.relPath.lastIndexOf('/')
-    const name = f.relPath.slice(slash + 1)
-    return { ...f, id: slash < 0 ? '' : f.relPath.slice(0, slash), name, marks: parseMarksFileName(name, screening) }
-  })
-  files.sort((a, b) => Number(!a.marks?.legacy) - Number(!b.marks?.legacy))
-  const papers = new Map<string, PaperFiles>()
-  for (const f of files) {
-    const reviewer = reviewerRe.exec(f.name)
-    if (f.name !== consolidatedName && !reviewer && !f.marks) continue
-    if (f.marks?.legacy && annotationSiblings.some((s) => sharesPaper([f.id], s))) continue
-    let value: unknown
-    try {
-      value = JSON.parse(f.text)
-    } catch {
-      corrupt.push(f.relPath)
-      continue
+  return (rawFiles: RawProject['files'], corrupt: string[], only?: Set<string>): string => {
+    const files = rawFiles.map((f) => {
+      const slash = f.relPath.lastIndexOf('/')
+      const name = f.relPath.slice(slash + 1)
+      return { ...f, id: slash < 0 ? '' : f.relPath.slice(0, slash), name, marks: parseMarksFileName(name, screening) }
+    })
+    files.sort((a, b) => Number(!a.marks?.legacy) - Number(!b.marks?.legacy))
+    const papers = new Map<string, PaperFiles>()
+    for (const f of files) {
+      const reviewer = reviewerRe.exec(f.name)
+      if (f.name !== consolidatedName && !reviewer && !f.marks) continue
+      if (f.marks?.legacy && annotationSiblings.some((s) => sharesPaper([f.id], s))) continue
+      let value: unknown
+      try {
+        value = JSON.parse(f.text)
+      } catch {
+        corrupt.push(f.relPath)
+        continue
+      }
+      let entry = papers.get(f.id)
+      if (!entry) papers.set(f.id, (entry = { reviewers: new Map(), reviewMarks: new Map() }))
+      if (f.name === consolidatedName) entry.consolidated = value
+      else if (reviewer) entry.reviewers.set(reviewer[1], value)
+      else if (f.marks!.seat === 'consolidated') entry.marksConsolidated = value
+      else entry.reviewMarks.set(f.marks!.seat, value)
     }
-    let entry = papers.get(f.id)
-    if (!entry) papers.set(f.id, (entry = { reviewers: new Map(), reviewMarks: new Map() }))
-    if (f.name === consolidatedName) entry.consolidated = value
-    else if (reviewer) entry.reviewers.set(reviewer[1], value)
-    else if (f.marks!.seat === 'consolidated') entry.marksConsolidated = value
-    else entry.reviewMarks.set(f.marks!.seat, value)
+    const meta = only
+      ? { ...(raw as object), papers: (raw as { papers: { id?: unknown }[] }).papers.filter((x) => only.has(x?.id as string)) }
+      : raw
+    return JSON.stringify(assembleLegacyProjectJson(meta, papers))
   }
-  return JSON.stringify(assembleLegacyProjectJson(raw, papers))
 }
 
+// [impl->req~plt-440~1]
+/**
+ * Rust opens only `project.json`; `text` is every paper's metadata without annotations, and
+ * `readPapers` reads and assembles the named papers' files (every paper when `ids` is omitted).
+ */
 const opened = (o: RawProject | null) => {
   if (!o) return null
   const corrupt: string[] = []
-  const text = assembleProject(o, corrupt)
-  return { path: o.path, text, corrupt }
+  const assemble = assembler(o, corrupt)
+  if (!assemble) return { path: o.path, text: o.text, corrupt }
+  const text = assemble([], [])
+  const readPapers = async (ids?: string[]) => {
+    const all = () => (JSON.parse(o.text) as { papers: { id?: unknown }[] }).papers.flatMap((x) => (typeof x?.id === 'string' ? [x.id] : []))
+    const files = await tauriBridge.readPapers(o.path!, ids ?? all())
+    const batchCorrupt: string[] = []
+    return { text: assemble(files, batchCorrupt, ids && new Set(ids)), corrupt: batchCorrupt }
+  }
+  return { path: o.path, text, corrupt, readPapers }
 }
 
 const snapshot = (s: RawProject | null) => (s ? assembleProject(s) : null)
@@ -134,6 +161,7 @@ export const tauriBridge: SlrBridge = {
   },
   openProject: then(call('project:open'), opened),
   openPath: then(call('project:openPath', 'filePath'), opened),
+  readPapers: call('project:readPapers', 'filePath', 'ids'),
   saveProject: call('project:save', 'filePath', 'metaText', 'files'),
   setProjectDir: call('project:setDir', 'filePath'),
 

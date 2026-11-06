@@ -10,7 +10,7 @@ import type {
 } from './adapter'
 import { StaleSaveError, type SharedAnnotations } from './adapter'
 import { readRecents, pushRecent, removeRecent, replaceRecents, type RecentEntry } from './recents'
-import { getBridge } from './bridge'
+import { getBridge, type OpenedHead } from './bridge'
 import type { LlmConfig, LlmHttpRequest, LlmHttpResponse, WebFetchResult } from '../llm/types'
 import type { LocalServerResult, OllamaApi } from './ollamaApi'
 import type { LocalRuntimeApi } from './localRuntime'
@@ -99,6 +99,10 @@ function noteOpened(path: string, text: string): void {
   }
 }
 
+// [impl->req~plt-442~1]
+/** The project whose papers are still being read, and which are left: saving it would drop them. */
+let streaming: { path: string; left: Set<string> } | null = null
+
 const bridge = getBridge
 
 /** Desktop adapter: native dialogs + fs via the bridge, PDFs via the slr-file:// protocol. */
@@ -150,33 +154,55 @@ export class DesktopAdapter implements PlatformAdapter {
     return fresh
   }
 
-  async openProject(): Promise<OpenedProject | null> {
-    const res = await bridge().openProject()
-    if (!res) return null
-    await bridge().setProjectDir(res.path)
-    noteOpened(res.path, res.text)
-    pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path), path: res.path })
-    return {
-      text: res.text,
-      handle: { kind: 'electron', path: res.path },
-      name: baseName(res.path),
-      corruptFiles: res.corrupt,
-    }
+  async openProject(streamed = false): Promise<OpenedProject | null> {
+    return this.opened(await bridge().openProject(), streamed)
   }
 
-  async openRecent(id: string): Promise<OpenedProject | null> {
-    const res = await bridge().openPath(id)
+  async openRecent(id: string, streamed = false): Promise<OpenedProject | null> {
     // Keep the entry even if the file is gone — the drive may come back — caller marks it unavailable instead.
+    return this.opened(await bridge().openPath(id), streamed)
+  }
+
+  // [impl->req~plt-440~1]
+  // [impl->req~plt-442~1]
+  /** Unless `streamed`, reads every paper before returning the whole project. */
+  private async opened(res: OpenedHead | null, streamed: boolean): Promise<OpenedProject | null> {
     if (!res) return null
     await bridge().setProjectDir(res.path)
-    noteOpened(res.path, res.text)
     pushRecent(RECENTS_KEY, { id: res.path, name: baseName(res.path), path: res.path })
-    return {
-      text: res.text,
-      handle: { kind: 'electron', path: res.path },
-      name: baseName(res.path),
-      corruptFiles: res.corrupt,
+    const at = { handle: { kind: 'electron' as const, path: res.path }, name: baseName(res.path) }
+    streaming = null
+    if (!res.readPapers || !streamed) {
+      const all = res.readPapers ? await res.readPapers() : { text: res.text, corrupt: [] }
+      noteOpened(res.path, all.text)
+      return { ...at, text: all.text, corruptFiles: [...res.corrupt, ...all.corrupt] }
     }
+    const left = new Set<string>()
+    try {
+      const head = loadProject(res.text)
+      for (const p of head.papers) left.add(p.id)
+      noteWritten(res.path, JSON.stringify(splitProjectFiles(head).meta, null, 2), [])
+    } catch {
+      lastWritten = null
+    }
+    const mine = left.size > 0 ? (streaming = { path: res.path, left }) : null
+    const base = lastWritten
+    const read = res.readPapers
+    const readPapers = async (ids: string[]) => {
+      const batch = await read(ids)
+      try {
+        if (base && lastWritten === base)
+          for (const f of splitProjectFiles(loadProject(batch.text)).files) base.files.set(f.relPath, f.text)
+      } catch {
+        lastWritten = null
+      }
+      if (mine && streaming === mine) {
+        for (const id of ids) mine.left.delete(id)
+        if (mine.left.size === 0) streaming = null
+      }
+      return { text: batch.text, corruptFiles: batch.corrupt }
+    }
+    return { ...at, text: res.text, corruptFiles: res.corrupt, readPapers }
   }
 
   // [impl->req~plt-41~1]
@@ -184,6 +210,7 @@ export class DesktopAdapter implements PlatformAdapter {
   // [impl->req~plt-135~1]
   async saveProject(text: string, handle: SaveHandle): Promise<SaveHandle> {
     if (!handle.path) throw new Error('No file path; use "Save as".')
+    if (streaming?.path === handle.path) throw new Error('The project is still loading; save once every paper has loaded.')
     // `text` is the shared whole-project JSON contract; on disk this build splits it into
     // `project.json` (meta) plus per-tree `annotations/<paperId>/…` files — see `splitProjectFiles`.
     const { meta, files } = splitProjectFiles(loadProject(text))

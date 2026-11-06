@@ -349,3 +349,24 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `scripts/ci.sh`, `scripts/ci/rust.sh`, `scripts/ci/trace.sh`, `scripts/ci/bundle.sh`, `scripts/ci/e2e.sh`, `Makefile` (`ci`, `ci-all`), `.github/workflows/ci.yml`
 - **Verified by:** `src/ci/ciScripts.test.ts` (`every workflow job step that builds or tests calls a script that exists`)
 - **Status:** Implemented
+
+### REQ-PLT-440: Open a project in two steps
+- **Description:** When the desktop shell opens a project in the split layout, the shell shall read only the project file first. The renderer shall show the project with the metadata of all papers. The renderer shall then read the annotation files of the papers in batches. The renderer shall give control back to the event loop between two batches. A project in the legacy single-file layout shall open in one step, as before. All callers that need the whole project, for example a reload after a stale save, shall read all papers before they continue.
+- **Type:** Non-functional (ISO 25010: Performance Efficiency, Usability)
+- **Evidence:** `src-tauri/src/project.rs` (`read_head`, `open`), `src/platform/tauri.ts` (`opened`), `src/platform/desktop.ts` (`opened`)
+- **Verified by:** `src-tauri/src/project.rs` (`open_reads_the_head_and_batches_only_listed_papers`), `src/platform/tauri.test.ts` (`opens the head first and assembles papers in batches`), `src/platform/desktop.test.ts` (`streams papers on request and refuses to save the project until every paper was read`)
+- **Status:** Implemented
+
+### REQ-PLT-441: Read paper batches only for an opened project
+- **Description:** The desktop shell shall read a batch of paper files only for a project file that the user opened before. The shell shall read only the folders of papers that the project file lists. The shell shall apply the same path checks as for the first open, so a paper id cannot name a file outside the annotations folder.
+- **Type:** Functional (ISO 25010: Security)
+- **Evidence:** `src-tauri/src/project.rs` (`read_papers`, `project_read_papers`)
+- **Verified by:** `src-tauri/src/project.rs` (`open_reads_the_head_and_batches_only_listed_papers`), `src/platform/tauri.test.ts` (`invokes exactly the commands main.rs registers`)
+- **Status:** Implemented
+
+### REQ-PLT-442: Do not save a project that is still loading
+- **Description:** While the renderer reads the papers of a project, SaiLoR shall not write the project. A save, an automatic save and a save on close shall stop and tell the user why. The desktop adapter shall also refuse to write the project file until it has read every paper, so a partial project can never replace the whole project on disk.
+- **Type:** Functional (ISO 25010: Reliability)
+- **Evidence:** `src/platform/desktop.ts` (`streaming`, `saveProject`)
+- **Verified by:** `src/platform/desktop.test.ts` (`streams papers on request and refuses to save the project until every paper was read`)
+- **Status:** Implemented
