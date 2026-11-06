@@ -21,6 +21,7 @@ use url::Url;
 
 const API_KEY_SENTINEL: &str = "{{apiKey}}";
 // [impl->req~llm-70~1]
+const MAX_RESPONSE_BYTES: usize = 32 * 1024 * 1024;
 const LLM_TIMEOUT: Duration = Duration::from_secs(10 * 60);
 // [impl->req~llm-50~1]
 const KEYRING_SERVICE: &str = "SaiLoR";
@@ -459,7 +460,12 @@ pub async fn call(
             now,
         );
         let status = res.status();
-        let bytes = res.bytes().await.map_err(|e| crate::webfetch::cause(&e))?;
+        let (bytes, capped) = crate::webfetch::read_capped(res, MAX_RESPONSE_BYTES)
+            .await
+            .map_err(|e| crate::webfetch::cause(&e))?;
+        if capped {
+            return Err("The model answer is too large.".into());
+        }
         let body = String::from_utf8_lossy(bytes.strip_prefix(b"\xEF\xBB\xBF").unwrap_or(&bytes))
             .into_owned();
         Ok(CallResult {

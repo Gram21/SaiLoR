@@ -627,7 +627,12 @@ async fn get_json(client: &Client, allow: Allow, url: &str) -> Result<Value, Str
         if !res.status().is_success() {
             return Err(format!("{host} answered {}.", res.status().as_u16()));
         }
-        let bytes = res.bytes().await.map_err(|e| crate::webfetch::cause(&e))?;
+        let (bytes, capped) = crate::webfetch::read_capped(res, 8 * 1024 * 1024)
+            .await
+            .map_err(|e| crate::webfetch::cause(&e))?;
+        if capped {
+            return Err(format!("{host} answered with too much data."));
+        }
         serde_json::from_slice::<Value>(&bytes).map_err(err)
     };
     tokio::time::timeout(Duration::from_secs(20), fetch)

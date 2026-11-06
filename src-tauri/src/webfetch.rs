@@ -262,7 +262,7 @@ where
             return fail(url, status, e, &content_type);
         }
         let ok = res.status().is_success();
-        let (bytes, truncated) = match read_capped(res).await {
+        let (bytes, truncated) = match read_capped(res, MAX_BYTES).await {
             Ok(b) => b,
             Err(e) => return fail(url, status, cause(&e), &content_type),
         };
@@ -280,10 +280,13 @@ where
     unreachable!()
 }
 
-async fn read_capped(mut res: reqwest::Response) -> Result<(Vec<u8>, bool), reqwest::Error> {
+pub(crate) async fn read_capped(
+    mut res: reqwest::Response,
+    max: usize,
+) -> Result<(Vec<u8>, bool), reqwest::Error> {
     let mut bytes = Vec::new();
     while let Some(chunk) = res.chunk().await? {
-        let remaining = MAX_BYTES - bytes.len();
+        let remaining = max - bytes.len();
         if chunk.len() > remaining {
             bytes.extend_from_slice(&chunk[..remaining]);
             return Ok((bytes, true));

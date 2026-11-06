@@ -45,7 +45,7 @@ pub async fn update_check(app: AppHandle) -> Value {
         Ok(updater) => match updater.check().await {
             Ok(Some(update)) => {
                 let version = update.version.clone();
-                *app.state::<State>().lock().unwrap() = Pending {
+                *app.state::<State>().lock().unwrap_or_else(std::sync::PoisonError::into_inner) = Pending {
                     update: Some(update),
                     bytes: None,
                 };
@@ -63,7 +63,7 @@ pub async fn update_check(app: AppHandle) -> Value {
 // [impl->req~plt-290~1]
 #[tauri::command]
 pub fn update_download(app: AppHandle) {
-    let Some(update) = app.state::<State>().lock().unwrap().update.clone() else {
+    let Some(update) = app.state::<State>().lock().unwrap_or_else(std::sync::PoisonError::into_inner).update.clone() else {
         return;
     };
     tauri::async_runtime::spawn(async move {
@@ -78,7 +78,7 @@ pub fn update_download(app: AppHandle) {
         };
         match update.download(progress, || {}).await {
             Ok(bytes) => {
-                app.state::<State>().lock().unwrap().bytes = Some(bytes);
+                app.state::<State>().lock().unwrap_or_else(std::sync::PoisonError::into_inner).bytes = Some(bytes);
                 let _ = app.emit("update:downloaded", ());
             }
             Err(e) => error(&app, e),
@@ -94,7 +94,7 @@ pub async fn update_install(app: AppHandle) {
         error(&app, "Save your project before you install the update.");
         return;
     }
-    let pending = std::mem::take(&mut *app.state::<State>().lock().unwrap());
+    let pending = std::mem::take(&mut *app.state::<State>().lock().unwrap_or_else(std::sync::PoisonError::into_inner));
     let (Some(update), Some(bytes)) = (pending.update, pending.bytes) else {
         return;
     };

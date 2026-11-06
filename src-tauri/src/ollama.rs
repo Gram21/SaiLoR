@@ -318,7 +318,10 @@ fn unreachable(origin: &str) -> String {
 
 async fn read_error(res: reqwest::Response) -> String {
     let status = res.status().as_u16();
-    let body = res.text().await.unwrap_or_default();
+    let body = crate::webfetch::read_capped(res, 64 * 1024)
+        .await
+        .map(|(b, _)| String::from_utf8_lossy(&b).into_owned())
+        .unwrap_or_default();
     if let Some(e) = serde_json::from_str::<Value>(&body)
         .ok()
         .and_then(|j| text(&j["error"]))
@@ -354,7 +357,13 @@ async fn request(
         if !res.status().is_success() {
             return Err(read_error(res).await);
         }
-        let t = res.text().await.map_err(|_| unreachable(origin))?;
+        let (b, capped) = crate::webfetch::read_capped(res, 32 * 1024 * 1024)
+            .await
+            .map_err(|_| unreachable(origin))?;
+        if capped {
+            return Err("The Ollama answer is too large.".into());
+        }
+        let t = String::from_utf8_lossy(&b).into_owned();
         if t.is_empty() {
             return Ok(Value::Null);
         }
