@@ -12,6 +12,7 @@ import type { LocalServerResult, OllamaApi } from './ollamaApi'
 import type { LocalRuntimeApi } from './localRuntime'
 import type { GitPlatform } from '../git/types'
 import type { PdfMark } from '../model/pdfMarks'
+import type { Paper } from '../model/project'
 
 export type { RecentEntry }
 export type { OsInfo }
@@ -36,9 +37,10 @@ export interface OpenedProject {
   corruptFiles?: string[]
   /**
    * Set only when the project was opened streamed: `text` then holds every paper without its
-   * annotations, and this reads the named papers whole. Saving refuses until every paper was read.
+   * annotations, and this reads the named papers whole, parsed once. Saving refuses until every
+   * paper was read.
    */
-  readPapers?: (ids: string[]) => Promise<{ text: string; corruptFiles: string[] }>
+  readPapers?: (ids: string[]) => Promise<{ papers: Paper[]; corruptFiles: string[] }>
 }
 
 export interface SaveHandle {

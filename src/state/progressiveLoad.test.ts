@@ -2,6 +2,7 @@
 // [utest->req~plt-442~1]
 // [utest->req~plt-443~1]
 import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { loadProject } from '../model/project'
 
 /**
  * A split project opens from its head (every paper, no answers) and the store
@@ -29,7 +30,7 @@ let fail = false
 const readPapers = vi.fn(async (ids: string[]) => {
   await new Promise<void>((resolve) => gate.push(resolve))
   if (fail) throw new Error('disk gone')
-  return { text: only(ids), corruptFiles: ids[0] === 'p2000' ? ['p2000/consolidated.json'] : [] }
+  return { papers: loadProject(only(ids)).papers, corruptFiles: ids[0] === 'p2000' ? ['p2000/consolidated.json'] : [] }
 })
 
 const opened = (path: string) => ({

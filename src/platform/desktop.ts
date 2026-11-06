@@ -190,9 +190,10 @@ export class DesktopAdapter implements PlatformAdapter {
     const read = res.readPapers
     const readPapers = async (ids: string[]) => {
       const batch = await read(ids)
+      const project = loadProject(batch.text)
       try {
         if (base && lastWritten === base)
-          for (const f of splitProjectFiles(loadProject(batch.text)).files) base.files.set(f.relPath, f.text)
+          for (const f of splitProjectFiles(project).files) base.files.set(f.relPath, f.text)
       } catch {
         lastWritten = null
       }
@@ -200,7 +201,7 @@ export class DesktopAdapter implements PlatformAdapter {
         for (const id of ids) mine.left.delete(id)
         if (mine.left.size === 0) streaming = null
       }
-      return { text: batch.text, corruptFiles: batch.corrupt }
+      return { papers: project.papers, corruptFiles: batch.corrupt }
     }
     return { ...at, text: res.text, corruptFiles: res.corrupt, readPapers }
   }

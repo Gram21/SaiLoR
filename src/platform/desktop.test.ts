@@ -91,7 +91,7 @@ describe('DesktopAdapter.saveProject', () => {
 
     const opened = await adapter.openRecent('/s/project.json', true)
     expect(opened).toMatchObject({ text: head, corruptFiles: ['s.json'] })
-    expect(await opened!.readPapers!(['p1'])).toEqual({ text: only(['p1']), corruptFiles: [] })
+    expect(await opened!.readPapers!(['p1'])).toEqual({ papers: loadProject(only(['p1'])).papers, corruptFiles: [] })
     await expect(adapter.saveProject(text, handle)).rejects.toThrow(/still loading/)
     expect(saveProject).not.toHaveBeenCalled()
     await opened!.readPapers!(['p2'])

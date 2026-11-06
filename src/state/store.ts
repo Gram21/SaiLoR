@@ -1442,7 +1442,7 @@ async function streamPapers(readPapers: NonNullable<OpenedProject['readPapers']>
     for (let i = 0; i < ids.length; i += PAPER_BATCH) {
       const batch = await readPapers(ids.slice(i, i + PAPER_BATCH))
       if (generation !== projectGeneration) return null
-      const papers = loadProject(batch.text).papers
+      const papers = batch.papers
       loaded.push(...papers)
       corrupt.push(...batch.corruptFiles)
       const landed = landing !== null && papers.some((p) => p.id === landing)
