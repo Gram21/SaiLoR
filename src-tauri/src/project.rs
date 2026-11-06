@@ -337,39 +337,40 @@ fn meta_of(file: &Path, meta_text: Option<&str>) -> Result<Value, String> {
 // [impl->req~dat-390~1]
 // [impl->req~plt-40~1]
 // [impl->req~plt-42~1]
+fn outside_project(rel: &str) -> String {
+    format!("Refusing to write annotation file outside the project: \"{rel}\"")
+}
+
 // [impl->req~plt-61~1]
 // [impl->req~plt-70~1]
 /// `writeProjectFiles`: meta, then reconcile the annotations folder against `files`.
+/// Every path is checked before the first write, so a refused batch changes nothing.
 pub fn write_project_files(
     session: &Mutex<Session>,
     file: &Path,
     meta_text: Option<&str>,
     files: &[SaveFile],
 ) -> Result<(), String> {
-    if let Some(meta) = meta_text {
-        assert_not_symlink(file)?;
-        write_atomic(file, meta).map_err(err)?;
-        lock(session).remember(file, file);
-    }
     let base = annotations_dir_for(file, &meta_of(file, meta_text)?)?;
-    fs::create_dir_all(&base).map_err(err)?;
-    let real_base = base.canonicalize().map_err(err)?;
     for f in files {
-        let target = resolve(&base, Path::new(&f.rel_path));
-        let outside = || {
-            format!(
-                "Refusing to write annotation file outside the project: \"{}\"",
-                f.rel_path
-            )
-        };
-        if !within(&target, &base) {
-            return Err(outside());
+        if !within(&resolve(&base, Path::new(&f.rel_path)), &base) {
+            return Err(outside_project(&f.rel_path));
         }
         if is_feedback_path(&f.rel_path) {
             return Err(format!(
                 "\"{FEEDBACK_DIR}\" is reserved for AI feedback files and cannot be a paper id."
             ));
         }
+    }
+    if let Some(meta) = meta_text {
+        assert_not_symlink(file)?;
+        write_atomic(file, meta).map_err(err)?;
+        lock(session).remember(file, file);
+    }
+    fs::create_dir_all(&base).map_err(err)?;
+    let real_base = base.canonicalize().map_err(err)?;
+    for f in files {
+        let target = resolve(&base, Path::new(&f.rel_path));
         let parent = dir_of(&target).to_path_buf();
         let Some(text) = &f.text else {
             match read_lossy(&target) {
@@ -389,7 +390,7 @@ pub fn write_project_files(
         };
         fs::create_dir_all(&parent).map_err(err)?;
         if !within(&parent.canonicalize().map_err(err)?, &real_base) {
-            return Err(outside());
+            return Err(outside_project(&f.rel_path));
         }
         assert_not_symlink(&target)?;
         write_atomic(&target, text).map_err(err)?;
@@ -830,6 +831,27 @@ pub mod tests {
         assert!(lock(&s).known_projects.is_empty());
         assert!(open_recent(&s, &d.join("p.json")).is_ok());
         assert!(lock(&s).is_known(&d.join("p.json")));
+    }
+
+    #[test]
+    fn refused_batch_writes_nothing() {
+        let d = tmp("batch-atomic");
+        let f = d.join("p.json");
+        let meta = r#"{"papers":[],"schema":[{"name":"A","type":"string"}]}"#;
+        let s = Mutex::new(Session::default());
+        let files = [
+            SaveFile {
+                rel_path: "p1/a.json".into(),
+                text: Some("{}".into()),
+            },
+            SaveFile {
+                rel_path: "../evil.json".into(),
+                text: Some("{}".into()),
+            },
+        ];
+        assert!(write_project_files(&s, &f, Some(meta), &files).is_err());
+        assert!(!f.exists());
+        assert!(!d.join("annotations").join("p1").exists());
     }
 
     #[test]
