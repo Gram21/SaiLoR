@@ -477,14 +477,15 @@ Tags: Functional, Functional_Suitability
 ### REQ-PLT-230: Renderer sandboxing
 `req~plt-230~1`
 
-The system shall give the user-interface webview no Node.js runtime. The webview shall reach native capability only through the commands that the shell registers. The capability file shall grant the webview only the `core:default` permission set.
+The system shall give the user-interface webview no Node.js runtime. The webview shall reach native capability only through the commands that the shell registers. The app manifest in `build.rs` shall list every registered command. The capability file shall grant the webview the `core:default` permission set, the window title permission and one `allow-<command>` permission per listed command.
 
 Comment:
 - **Type:** Non-functional, design constraint (ISO 25010: Security)
-- **Evidence:** `src-tauri/src/main.rs` (`main`'s generate_handler! command list), `src-tauri/capabilities/default.json`, `src/platform/tauri.ts` (`command`, `tauriBridge`)
+- **Evidence:** `src-tauri/src/main.rs` (`main`'s generate_handler! command list), `src-tauri/build.rs` (`COMMANDS`), `src-tauri/capabilities/default.json`, `src/platform/tauri.ts` (`command`, `tauriBridge`)
+- **Verified by:** `src/platform/tauri.test.ts` (`lists every registered command in the app manifest and the capability`)
 - **Status:** Implemented
 
-Needs: impl
+Needs: impl, utest
 
 Tags: NonFunctional, Security
 

@@ -104,6 +104,7 @@ describe('tauriBridge', () => {
     expect(capability.permissions).toContain('core:window:allow-set-title')
   })
 
+  // [utest->req~plt-230~1]
   it('lists every registered command in the app manifest and the capability', () => {
     const main = readFileSync('src-tauri/src/main.rs', 'utf-8')
     const handler = main.slice(main.indexOf('generate_handler!['))

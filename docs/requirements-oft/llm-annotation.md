@@ -473,7 +473,7 @@ Tags: Functional, Functional_Suitability
 ### REQ-LLM-340: Verify agent-mode evidence before the judge sees it
 `req~llm-340~1`
 
-Before an agent-mode submission reaches the judge, the system shall validate every value against the schema and, for a paper-sourced value, verify that its evidence quote is found in the extracted paper text (tolerating case, whitespace, hyphenation, ligatures and quote-mark differences; a quote of fewer than four words shall match only as an exact normalized substring), and shall reject a web-sourced value whose declared source URL was not fetched during the run.
+Before an agent-mode submission reaches the judge, the system shall validate every value against the schema and, for a paper-sourced value, verify that its evidence quote is found in the extracted paper text (tolerating case, whitespace, hyphenation, ligatures and quote-mark differences), and shall reject a web-sourced value whose declared source URL was not fetched during the run.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
