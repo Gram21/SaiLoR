@@ -358,10 +358,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-441: Read paper batches only for an opened project
-- **Description:** The desktop shell shall read a batch of paper files only for a project file that the user opened before. The shell shall read only the folders of papers that the project file lists. The shell shall apply the same path checks as for the first open, so a paper id cannot name a file outside the annotations folder.
+- **Description:** The desktop shell shall read a batch of paper files only for a project file that the user opened before. The shell shall read only the folders of papers that the project file listed when the user opened it. The shell shall parse the project file once per open, not once per batch. The shell shall check the annotations folder again for each batch. The shell shall apply the same path checks as for the first open, so a paper id or a link cannot name a file outside the annotations folder. The shell shall read the stamps of the paper files in the same pass as the files.
 - **Type:** Functional (ISO 25010: Security)
-- **Evidence:** `src-tauri/src/project.rs` (`read_papers`, `project_read_papers`)
-- **Verified by:** `src-tauri/src/project.rs` (`open_reads_the_head_and_batches_only_listed_papers`), `src/platform/tauri.test.ts` (`invokes exactly the commands main.rs registers`)
+- **Evidence:** `src-tauri/src/project.rs` (`read_papers`, `read_paper_files`, `open`), `src-tauri/src/authz.rs` (`Head`, `remember_stamps`), `src-tauri/src/annotations.rs` (`move_dir`)
+- **Verified by:** `src-tauri/src/project.rs` (`open_reads_the_head_and_batches_only_listed_papers`, `batches_use_the_papers_and_folder_listed_when_opened`, `batches_follow_links_only_inside_the_annotations_folder`), `src/platform/tauri.test.ts` (`invokes exactly the commands main.rs registers`)
 - **Status:** Implemented
 
 ### REQ-PLT-442: Do not save a project that is still loading
