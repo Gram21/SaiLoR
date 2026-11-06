@@ -76,6 +76,8 @@ jobs:
           - AI evidence checks, per-project prompt overrides and AI evaluation export.
           - Knowledge graph export (JSON-LD, Turtle, GraphML, CSV).
           - Knowledge graph view with canvas rendering for large graphs.
+          - Knowledge graph queries: text queries and read-only Cypher queries, run in a background worker.
+          - Large projects open progressively. Papers load in batches of 2000. Saving waits until all papers have loaded.
           - Nine interface languages. The non-English texts are drafts.
           - Security hardening: atomic writes, path validation, network guards and capped responses.
 
