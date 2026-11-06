@@ -1,20 +1,17 @@
 // [impl->req~llm-330~1]
 import type { LlmConfig, LlmHttpRequest, Provider } from './types'
-import { API_KEY_SENTINEL } from './types'
 import {
   PROVIDERS,
-  baseOf,
-  join,
+  chatEndpoint,
   anthropicContent,
   openaiContent,
   googleParts,
   anthropicThinkingFields,
   googleThinkingConfig,
   openaiReasoningFields,
-  OLLAMA_CHAT_PATH,
-  CHAT_PATH,
   DEFAULT_MAX_TOKENS,
-  textOfParts,
+  extractText,
+  wasTruncated,
   type PaperPart,
 } from './providers'
 import { inputWasTruncated, numCtxOfBody, ollamaChatBody } from './ollama'
@@ -276,20 +273,13 @@ export function buildChatRequest(
   opts?: { maxTokens?: number; paper?: PaperPart; webSearch?: boolean },
 ): LlmHttpRequest & { body: string } {
   const maxTokens = opts?.maxTokens ?? DEFAULT_MAX_TOKENS
-  const base = baseOf(cfg)
   const effort = cfg.reasoningEffort
   // [impl->req~llm-620~1]
   const webSearch = Boolean(opts?.webSearch) && PROVIDERS[cfg.provider].supportsWebSearch
 
   if (cfg.provider === 'anthropic') {
     return {
-      configId: cfg.id,
-      url: join(base, '/v1/messages'),
-      headers: {
-        'content-type': 'application/json',
-        'x-api-key': API_KEY_SENTINEL,
-        'anthropic-version': '2023-06-01',
-      },
+      ...chatEndpoint(cfg),
       body: JSON.stringify({
         model: cfg.model,
         max_tokens: maxTokens,
@@ -317,12 +307,7 @@ export function buildChatRequest(
   if (cfg.provider === 'google') {
     const thinkingConfig = googleThinkingConfig(cfg.model, effort)
     return {
-      configId: cfg.id,
-      url: join(base, `/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`),
-      headers: {
-        'content-type': 'application/json',
-        'x-goog-api-key': API_KEY_SENTINEL,
-      },
+      ...chatEndpoint(cfg),
       body: JSON.stringify({
         contents: googleContents(messages, opts?.paper),
         systemInstruction: { parts: [{ text: system }] },
@@ -349,9 +334,7 @@ export function buildChatRequest(
 
   if (cfg.provider === 'ollama') {
     return {
-      configId: cfg.id,
-      url: join(base, OLLAMA_CHAT_PATH),
-      headers: { 'content-type': 'application/json', Authorization: `Bearer ${API_KEY_SENTINEL}` },
+      ...chatEndpoint(cfg),
       body: ollamaChatBody(
         cfg,
         [{ role: 'system', content: system }, ...ollamaMessages(messages, opts?.paper)],
@@ -366,12 +349,7 @@ export function buildChatRequest(
 
   const { tokenParam } = PROVIDERS[cfg.provider]
   return {
-    configId: cfg.id,
-    url: join(base, CHAT_PATH),
-    headers: {
-      'content-type': 'application/json',
-      Authorization: `Bearer ${API_KEY_SENTINEL}`,
-    },
+    ...chatEndpoint(cfg),
     body: JSON.stringify({
       model: cfg.model,
       [tokenParam]: maxTokens,
@@ -421,12 +399,11 @@ export function parseChatResponse(provider: Provider, json: unknown, req?: { bod
     paused: false,
   }
   if (!isRecord(json)) return empty
+  const text = extractText(provider, json)
+  const truncated = wasTruncated(provider, json)
 
   if (provider === 'anthropic') {
     const content = Array.isArray(json.content) ? json.content : []
-    const text = content
-      .map((b) => (isRecord(b) && b.type === 'text' && typeof b.text === 'string' ? b.text : ''))
-      .join('')
     const toolCalls: ToolCall[] = content
       .filter((b): b is Record<string, unknown> => isRecord(b) && b.type === 'tool_use')
       .map((b) => ({
@@ -451,7 +428,7 @@ export function parseChatResponse(provider: Provider, json: unknown, req?: { bod
     return {
       text,
       toolCalls,
-      truncated: json.stop_reason === 'max_tokens',
+      truncated,
       usage: {
         // Anthropic reports cache reads and writes apart from `input_tokens`; they are still billed input.
         inputTokens: tokens(usage.input_tokens) + tokens(usage.cache_read_input_tokens) + tokens(usage.cache_creation_input_tokens),
@@ -471,9 +448,6 @@ export function parseChatResponse(provider: Provider, json: unknown, req?: { bod
       isRecord(first) && isRecord(first.content) && Array.isArray(first.content.parts)
         ? first.content.parts
         : []
-    const text = parts
-      .map((p) => (isRecord(p) && typeof p.text === 'string' ? p.text : ''))
-      .join('')
     const toolCalls: ToolCall[] = parts
       .filter((p): p is Record<string, unknown> => isRecord(p) && isRecord(p.functionCall))
       .map((p, i) => {
@@ -484,7 +458,7 @@ export function parseChatResponse(provider: Provider, json: unknown, req?: { bod
     return {
       text,
       toolCalls,
-      truncated: isRecord(first) && first.finishReason === 'MAX_TOKENS',
+      truncated,
       usage: {
         inputTokens: typeof usage.promptTokenCount === 'number' ? usage.promptTokenCount : 0,
         // Gemini bills thinking tokens as output but counts them apart from `candidatesTokenCount`.
@@ -506,9 +480,9 @@ export function parseChatResponse(provider: Provider, json: unknown, req?: { bod
         })
       : []
     return {
-      text: typeof message.content === 'string' ? message.content : '',
+      text,
       toolCalls,
-      truncated: json.done_reason === 'length',
+      truncated,
       usage: {
         inputTokens: typeof json.prompt_eval_count === 'number' ? json.prompt_eval_count : 0,
         outputTokens: typeof json.eval_count === 'number' ? json.eval_count : 0,
@@ -525,8 +499,6 @@ export function parseChatResponse(provider: Provider, json: unknown, req?: { bod
   const choices = Array.isArray(json.choices) ? json.choices : []
   const first = choices[0]
   const message = isRecord(first) && isRecord(first.message) ? first.message : {}
-  const content = message.content
-  const text = typeof content === 'string' ? content : Array.isArray(content) ? textOfParts(content) : ''
   const toolCalls: ToolCall[] = Array.isArray(message.tool_calls)
     ? message.tool_calls
         .filter(isRecord)
@@ -549,7 +521,7 @@ export function parseChatResponse(provider: Provider, json: unknown, req?: { bod
   return {
     text,
     toolCalls,
-    truncated: isRecord(first) && first.finish_reason === 'length',
+    truncated,
     usage: {
       inputTokens: typeof usage.prompt_tokens === 'number' ? usage.prompt_tokens : 0,
       outputTokens: typeof usage.completion_tokens === 'number' ? usage.completion_tokens : 0,

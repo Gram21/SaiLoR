@@ -321,16 +321,9 @@ export function openaiReasoningFields(provider: Provider, effort?: string): Reco
   return provider === 'openrouter' ? { reasoning: { effort } } : { reasoning_effort: effort }
 }
 
-// [impl->req~llm-720~1]
-export function buildRequest(
-  cfg: LlmConfig,
-  system: string,
-  user: PaperPart,
-  opts?: { maxTokens?: number },
-): LlmHttpRequest & { body: string } {
-  const maxTokens = opts?.maxTokens ?? DEFAULT_MAX_TOKENS
+/** Where and how to POST one chat turn: shared by `buildRequest` and chat.ts `buildChatRequest`. */
+export function chatEndpoint(cfg: LlmConfig): LlmHttpRequest {
   const base = baseOf(cfg)
-  const effort = cfg.reasoningEffort
 
   if (cfg.provider === 'anthropic') {
     return {
@@ -341,6 +334,55 @@ export function buildRequest(
         'x-api-key': API_KEY_SENTINEL,
         'anthropic-version': '2023-06-01',
       },
+    }
+  }
+
+  if (cfg.provider === 'google') {
+    // Model lives in the URL path, not the body — a genuinely different shape
+    // than the OpenAI family. Auth uses the `x-goog-api-key` header (Google's
+    // documented alternative to `?key=`) so the key never sits in a URL, matching
+    // this app's header-only sentinel-substitution.
+    return {
+      configId: cfg.id,
+      url: join(base, `/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`),
+      headers: {
+        'content-type': 'application/json',
+        'x-goog-api-key': API_KEY_SENTINEL,
+      },
+    }
+  }
+
+  if (cfg.provider === 'ollama') {
+    return {
+      configId: cfg.id,
+      url: join(base, OLLAMA_CHAT_PATH),
+      headers: { 'content-type': 'application/json', Authorization: `Bearer ${API_KEY_SENTINEL}` },
+    }
+  }
+
+  return {
+    configId: cfg.id,
+    url: join(base, CHAT_PATH),
+    headers: {
+      'content-type': 'application/json',
+      Authorization: `Bearer ${API_KEY_SENTINEL}`,
+    },
+  }
+}
+
+// [impl->req~llm-720~1]
+export function buildRequest(
+  cfg: LlmConfig,
+  system: string,
+  user: PaperPart,
+  opts?: { maxTokens?: number },
+): LlmHttpRequest & { body: string } {
+  const maxTokens = opts?.maxTokens ?? DEFAULT_MAX_TOKENS
+  const effort = cfg.reasoningEffort
+
+  if (cfg.provider === 'anthropic') {
+    return {
+      ...chatEndpoint(cfg),
       body: JSON.stringify({
         model: cfg.model,
         max_tokens: maxTokens,
@@ -352,18 +394,9 @@ export function buildRequest(
   }
 
   if (cfg.provider === 'google') {
-    // Model lives in the URL path, not the body — a genuinely different shape
-    // than the OpenAI family. Auth uses the `x-goog-api-key` header (Google's
-    // documented alternative to `?key=`) so the key never sits in a URL, matching
-    // this app's header-only sentinel-substitution.
     const thinkingConfig = googleThinkingConfig(cfg.model, effort)
     return {
-      configId: cfg.id,
-      url: join(base, `/v1beta/models/${encodeURIComponent(cfg.model)}:generateContent`),
-      headers: {
-        'content-type': 'application/json',
-        'x-goog-api-key': API_KEY_SENTINEL,
-      },
+      ...chatEndpoint(cfg),
       body: JSON.stringify({
         contents: [{ role: 'user', parts: googleParts(user) }],
         systemInstruction: { parts: [{ text: system }] },
@@ -378,9 +411,7 @@ export function buildRequest(
   if (cfg.provider === 'ollama') {
     if (user.kind === 'pdf') throw new Error('Ollama cannot take a PDF; attach the paper as text.')
     return {
-      configId: cfg.id,
-      url: join(base, OLLAMA_CHAT_PATH),
-      headers: { 'content-type': 'application/json', Authorization: `Bearer ${API_KEY_SENTINEL}` },
+      ...chatEndpoint(cfg),
       body: ollamaChatBody(
         cfg,
         [
@@ -395,12 +426,7 @@ export function buildRequest(
 
   const { tokenParam } = PROVIDERS[cfg.provider]
   return {
-    configId: cfg.id,
-    url: join(base, CHAT_PATH),
-    headers: {
-      'content-type': 'application/json',
-      Authorization: `Bearer ${API_KEY_SENTINEL}`,
-    },
+    ...chatEndpoint(cfg),
     body: JSON.stringify({
       model: cfg.model,
       [tokenParam]: maxTokens,
