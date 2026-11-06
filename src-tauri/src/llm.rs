@@ -319,6 +319,15 @@ pub fn parse_retry_after(header: Option<&str>, now_ms: i64) -> Option<u64> {
     Some(http_date_ms(t)?.saturating_sub(now_ms).max(0) as u64)
 }
 
+fn is_local_host(u: &Url) -> bool {
+    match u.host() {
+        Some(url::Host::Domain(d)) => crate::webfetch::is_blocked_hostname(d),
+        Some(url::Host::Ipv4(v4)) => crate::webfetch::is_blocked_ip(std::net::IpAddr::V4(v4)),
+        Some(url::Host::Ipv6(v6)) => crate::webfetch::is_blocked_ip(std::net::IpAddr::V6(v6)),
+        None => false,
+    }
+}
+
 fn origin(u: &Url) -> String {
     u.origin().ascii_serialization()
 }
@@ -371,6 +380,9 @@ pub async fn call(
             "Refusing to send the API key to {}.",
             origin(&target)
         ));
+    }
+    if target.scheme() == "http" && has_key(&config) && !is_local_host(&target) {
+        return Err("Refusing to send the API key over http to a non-local host.".into());
     }
     let api_key = if has_key(&config) {
         keys.get(&request.config_id)?
@@ -503,6 +515,19 @@ pub async fn llm_abort(request_id: String) {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn keyed_http_is_limited_to_local_hosts() {
+        for (u, local) in [
+            ("http://127.0.0.1:11434", true),
+            ("http://localhost:1234", true),
+            ("http://192.168.1.5", true),
+            ("http://api.example.com", false),
+            ("http://8.8.8.8", false),
+        ] {
+            assert_eq!(is_local_host(&Url::parse(u).unwrap()), local, "{u}");
+        }
+    }
+
     use super::*;
     use crate::net::mock::{response, serve};
     use serde_json::json;

@@ -290,6 +290,14 @@ pub fn check_base_url(raw: &str) -> Result<(String, bool), String> {
     if !url.username().is_empty() || url.password().is_some() {
         return Err("URLs with embedded credentials are not allowed.".into());
     }
+    let link_local = match url.host() {
+        Some(Host::Ipv4(v4)) => v4.is_link_local(),
+        Some(Host::Ipv6(v6)) => (v6.segments()[0] & 0xffc0) == 0xfe80,
+        _ => false,
+    };
+    if link_local {
+        return Err("Link-local addresses are not allowed.".into());
+    }
     let is_local = match url.host() {
         Some(Host::Domain(d)) => is_blocked_hostname(d),
         Some(Host::Ipv4(v4)) => is_blocked_ip(IpAddr::V4(v4)),
@@ -668,6 +676,13 @@ pub async fn localserver_discover(base_url: String) -> Result<Value, String> {
 
 #[cfg(test)]
 mod tests {
+    #[test]
+    fn base_url_refuses_link_local() {
+        assert!(check_base_url("http://169.254.169.254").is_err());
+        assert!(check_base_url("http://[fe81::1]:11434").is_err());
+        assert!(check_base_url("http://127.0.0.1:11434").is_ok());
+    }
+
     use super::*;
     use crate::net::mock::{response, serve};
     use std::sync::Mutex;
