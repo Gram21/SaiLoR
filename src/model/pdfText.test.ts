@@ -2,7 +2,7 @@ import { describe, it, expect } from 'vitest'
 import { readFileSync } from 'node:fs'
 import { createRequire } from 'node:module'
 import { pathToFileURL } from 'node:url'
-import { extractPdfText, linesFromItems } from './pdfText'
+import { countPdfPages, extractPdfText, linesFromItems } from './pdfText'
 import { pdfjs } from '../platform/pdfjs'
 
 // Under vitest/jsdom, import.meta.url for platform/pdfjs.ts resolves to an
@@ -42,6 +42,23 @@ describe('linesFromItems', () => {
   it('is a no-op for text that was already precomposed', () => {
     const items = [{ str: 'café résumé', transform: [0, 0, 0, 0, 0, 100] }]
     expect(linesFromItems(items)).toEqual(['café résumé'])
+  })
+
+  const at = (str: string, x: number, y: number) => ({ str, transform: [0, 0, 0, 0, x, y] })
+
+  it('orders lines top of page first and items left to right', () => {
+    expect(linesFromItems([at('low', 0, 100), at('b ', 10, 200), at('a  ', 0, 200)])).toEqual(['a b', 'low'])
+  })
+
+  it('merges baselines up to two points apart, and the earliest baseline wins', () => {
+    expect(linesFromItems([at('a', 0, 100), at('b', 10, 102)])).toEqual(['ab'])
+    expect(linesFromItems([at('a', 0, 100), at('b', 10, 103)])).toEqual(['b', 'a'])
+    expect(linesFromItems([at('a', 0, 100), at('b', 0, 103), at('c', 10, 102)])).toEqual(['b', 'ac'])
+    expect(linesFromItems([at('a', 0, 100), at('b', 10, 98)])).toEqual(['ab'])
+  })
+
+  it('ignores blank items, so they open no line of their own', () => {
+    expect(linesFromItems([at(' ', 0, 100), at('b', 10, 102), at('a', 0, 103)])).toEqual(['ab'])
   })
 })
 
@@ -83,6 +100,23 @@ describe('extractPdfText', () => {
     // Total page count still reflects the real document, only the text is cut.
     expect(result.pages).toBe(4)
     expect(result.text).toMatch(/more page\(s\) omitted/)
+  })
+
+  it('joins page blocks with one blank line and names the omitted page count', async () => {
+    const result = await extractPdfText(loadPdf('samples/pdfs/multipage.pdf'), { maxPages: 2 })
+    expect(result.text).toBe(
+      '[page 1]\nPage 1 of 4\nMulti-page test PDF with an internal link.\nJump to page 3 (reference)\n\n' +
+        '[page 2]\nPage 2 of 4\nBody text of page 2.\n\n[2 more page(s) omitted]',
+    )
+  })
+
+  it('reads every page when maxPages is zero', async () => {
+    const result = await extractPdfText(loadPdf('samples/pdfs/multipage.pdf'), { maxPages: 0 })
+    expect(result.text).toContain('[page 4]')
+  })
+
+  it('counts pages without reading them', async () => {
+    expect(await countPdfPages(loadPdf('samples/pdfs/multipage.pdf'))).toBe(4)
   })
 
   it('is not empty for a normal text PDF', async () => {
@@ -135,5 +169,6 @@ trailer<</Size 4/Root 1 0 R>>
     const result = await extractPdfText(data)
     expect(result.pages).toBe(N)
     expect(result.empty).toBe(true)
+    expect(result.text.startsWith('[page 1]\n\n[page 2]\n\n[page 3]')).toBe(true)
   })
 })
