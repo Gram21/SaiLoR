@@ -2601,7 +2601,9 @@ function writeCrossCheck(id: string | null): void {
 
 function readThreshold(): number {
   try {
-    const raw = Number(localStorage?.getItem(THRESHOLD_KEY))
+    const stored = localStorage?.getItem(THRESHOLD_KEY)
+    if (stored === null || stored === undefined || stored.trim() === '') return DEFAULT_THRESHOLD
+    const raw = Number(stored)
     return Number.isFinite(raw) && raw >= 0 && raw <= 1 ? raw : DEFAULT_THRESHOLD
   } catch {
     return DEFAULT_THRESHOLD
