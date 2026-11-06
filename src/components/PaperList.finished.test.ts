@@ -325,6 +325,11 @@ describe('matchesFilter — the buckets the dropdown offers', () => {
     expect(matchesFilter('flagged', 'all')).toBe(true)
   })
 
+  it('puts a seat with no state in no other bucket', () => {
+    expect(matchesFilter(null, 'open')).toBe(false)
+    expect(matchesFilter(null, 'in-progress', true)).toBe(false)
+  })
+
   it('covers every state exactly once across the "open"/finished/issues partition', () => {
     // A state that matched two of these buckets would be double-counted by the
     // counter; one that matched none would be invisible in every filtered view
@@ -349,6 +354,12 @@ describe('annotationState — the vocabulary itself', () => {
 
   it('only flags when the schema requires something', () => {
     expect(annotationState({ filled: 0, total: 3 }, true, false, false)).toBe('finished')
+  })
+
+  // [utest->req~dat-250~1]
+  it('without a tick, finishes a boolean-only schema once touched', () => {
+    expect(annotationState({ filled: 0, total: 0 }, false, true, false, false)).toBe('finished')
+    expect(annotationState({ filled: 0, total: 0 }, true, false, false, false)).toBe('untouched')
   })
 })
 
