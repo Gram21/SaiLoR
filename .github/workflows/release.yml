@@ -27,6 +27,7 @@ jobs:
   release:
     if: github.event_name != 'release'
     runs-on: ubuntu-latest
+    environment: release
     outputs:
       id: ${{ steps.draft.outputs.id }}
       tag: ${{ steps.tag.outputs.tag }}
