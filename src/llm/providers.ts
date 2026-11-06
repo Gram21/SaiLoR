@@ -215,13 +215,13 @@ export type PaperPart =
  * reliable cross-provider way to disable reasoning, so generous headroom is
  * the mitigation — costs nothing on ordinary models since they stop early anyway.
  */
-const DEFAULT_MAX_TOKENS = 8192
+export const DEFAULT_MAX_TOKENS = 8192
 
 /** Accompanies an attached PDF: both APIs want the attachment next to some
  * text, and an attachment-only turn is undefined behaviour on some servers. */
 const PDF_USER_TEXT = 'The paper is attached as a PDF. Annotate it as instructed.'
 
-const CHAT_PATH = '/v1/chat/completions'
+export const CHAT_PATH = '/v1/chat/completions'
 export const OLLAMA_CHAT_PATH = '/api/chat'
 
 /**
@@ -413,7 +413,7 @@ export function buildRequest(
   }
 }
 
-function textOfParts(parts: unknown[]): string {
+export function textOfParts(parts: unknown[]): string {
   return parts
     .map((p) => (isRecord(p) && typeof p.text === 'string' ? p.text : ''))
     .join('')

@@ -12,6 +12,9 @@ import {
   googleThinkingConfig,
   openaiReasoningFields,
   OLLAMA_CHAT_PATH,
+  CHAT_PATH,
+  DEFAULT_MAX_TOKENS,
+  textOfParts,
   type PaperPart,
 } from './providers'
 import { inputWasTruncated, numCtxOfBody, ollamaChatBody } from './ollama'
@@ -89,8 +92,6 @@ export interface ChatResponse {
   /** Ollama only: the server cut the front of the prompt (instructions lost); the answer cannot be trusted. */
   inputTruncated?: boolean
 }
-
-const CHAT_PATH = '/v1/chat/completions'
 
 // ---------------------------------------------------------------------------
 // Request building
@@ -256,8 +257,6 @@ function ollamaMessages(messages: ChatMessage[], paper?: PaperPart): unknown[] {
     return { role: 'user', content: m.content ?? '' }
   })
 }
-
-const DEFAULT_MAX_TOKENS = 8192
 
 /** Cap on provider-side searches per request (cost + prompt-injection surface). */
 const WEB_SEARCH_MAX_USES = 5
@@ -573,8 +572,3 @@ function uniqueCitations(items: unknown[]): { url: string; title?: string }[] {
   return [...seen.values()]
 }
 
-function textOfParts(parts: unknown[]): string {
-  return parts
-    .map((p) => (isRecord(p) && typeof p.text === 'string' ? p.text : ''))
-    .join('')
-}
