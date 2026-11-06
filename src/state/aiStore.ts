@@ -64,6 +64,7 @@ import { promptOverridesTag } from '../model/promptOverrides'
 import type { ResolvedDef } from '../model/schema'
 import type { AnnotationValueTree, FieldValue } from '../model/annotations'
 import { extractPdfText, countPdfPages } from '../model/pdfText'
+import { safeGet, safeRemove, safeSet } from './settings'
 
 /**
  * State for the AI-assisted annotation flow, kept out of the main store as
@@ -2531,162 +2532,69 @@ function toBase64(buf: ArrayBuffer): string {
   return btoa(binary)
 }
 
-function readSelected(): string | null {
-  try {
-    return localStorage?.getItem(SELECTED_KEY) ?? null
-  } catch {
-    return null
-  }
-}
+function readSelected(): string | null { return safeGet(SELECTED_KEY) }
+function writeSelected(id: string): void { return safeSet(SELECTED_KEY, id) }
 
-function writeSelected(id: string): void {
-  try {
-    localStorage?.setItem(SELECTED_KEY, id)
-  } catch {
-    /* ignore (private mode / disabled storage) */
-  }
-}
-
-function readMode(): AiMode {
-  try {
-    return localStorage?.getItem(MODE_KEY) === 'agent' ? 'agent' : 'prompt'
-  } catch {
-    return 'prompt'
-  }
-}
-
-function writeMode(mode: AiMode): void {
-  try {
-    localStorage?.setItem(MODE_KEY, mode)
-  } catch {
-    /* ignore (private mode / disabled storage) */
-  }
-}
+function readMode(): AiMode { return (safeGet(MODE_KEY) === 'agent' ? 'agent' : 'prompt') }
+function writeMode(mode: AiMode): void { return safeSet(MODE_KEY, mode) }
 
 /** `null` ("same as agent") is stored as no key at all, not an empty string. */
-function readJudge(): string | null {
-  try {
-    return localStorage?.getItem(JUDGE_KEY) ?? null
-  } catch {
-    return null
-  }
-}
+function readJudge(): string | null { return safeGet(JUDGE_KEY) }
 
 function writeJudge(id: string | null): void {
-  try {
-    if (id) localStorage?.setItem(JUDGE_KEY, id)
-    else localStorage?.removeItem(JUDGE_KEY)
-  } catch {
-    /* ignore (private mode / disabled storage) */
-  }
+  if (id) safeSet(JUDGE_KEY, id)
+  else safeRemove(JUDGE_KEY)
 }
 
 /** `null` ("no cross-check model") is stored as no key at all, same rule as `readJudge`. */
-function readCrossCheck(): string | null {
-  try {
-    return localStorage?.getItem(CROSSCHECK_KEY) ?? null
-  } catch {
-    return null
-  }
-}
+function readCrossCheck(): string | null { return safeGet(CROSSCHECK_KEY) }
 
 function writeCrossCheck(id: string | null): void {
-  try {
-    if (id) localStorage?.setItem(CROSSCHECK_KEY, id)
-    else localStorage?.removeItem(CROSSCHECK_KEY)
-  } catch {
-    /* ignore (private mode / disabled storage) */
-  }
+  if (id) safeSet(CROSSCHECK_KEY, id)
+  else safeRemove(CROSSCHECK_KEY)
 }
 
 function readThreshold(): number {
-  try {
-    const stored = localStorage?.getItem(THRESHOLD_KEY)
-    if (stored === null || stored === undefined || stored.trim() === '') return DEFAULT_THRESHOLD
-    const raw = Number(stored)
-    return Number.isFinite(raw) && raw >= 0 && raw <= 1 ? raw : DEFAULT_THRESHOLD
-  } catch {
-    return DEFAULT_THRESHOLD
-  }
+  const stored = safeGet(THRESHOLD_KEY)
+  if (stored === null || stored.trim() === '') return DEFAULT_THRESHOLD
+  const raw = Number(stored)
+  return Number.isFinite(raw) && raw >= 0 && raw <= 1 ? raw : DEFAULT_THRESHOLD
 }
 
-function writeThreshold(n: number): void {
-  try {
-    localStorage?.setItem(THRESHOLD_KEY, String(n))
-  } catch {
-    /* ignore (private mode / disabled storage) */
-  }
-}
+function writeThreshold(n: number): void { return safeSet(THRESHOLD_KEY, String(n)) }
 
 /** Both the toggle and the count live in one key — nothing else needs them separately. */
-function readFewShot(): boolean {
+function readFewShotJson(): { on?: unknown; count?: unknown } {
   try {
-    const raw = localStorage?.getItem(FEW_SHOT_KEY)
-    return raw ? (JSON.parse(raw).on ?? false) : false
+    const raw = safeGet(FEW_SHOT_KEY)
+    return raw ? JSON.parse(raw) : {}
   } catch {
-    return false
+    return {}
   }
 }
+
+function readFewShot(): boolean { return Boolean(readFewShotJson().on) }
 
 function readFewShotCount(): number {
-  try {
-    const raw = localStorage?.getItem(FEW_SHOT_KEY)
-    const count = raw ? JSON.parse(raw).count : undefined
-    return typeof count === 'number' && count >= 1 && count <= 5 ? count : DEFAULT_FEW_SHOT_COUNT
-  } catch {
-    return DEFAULT_FEW_SHOT_COUNT
-  }
+  const { count } = readFewShotJson()
+  return typeof count === 'number' && count >= 1 && count <= 5 ? count : DEFAULT_FEW_SHOT_COUNT
 }
 
-function writeFewShot(on: boolean, count: number): void {
-  try {
-    localStorage?.setItem(FEW_SHOT_KEY, JSON.stringify({ on, count }))
-  } catch {
-    /* ignore (private mode / disabled storage) */
-  }
-}
+function writeFewShot(on: boolean, count: number): void { return safeSet(FEW_SHOT_KEY, JSON.stringify({ on, count })) }
 
-function readWebSearch(): boolean {
-  try {
-    return localStorage?.getItem(WEB_SEARCH_KEY) === 'true'
-  } catch {
-    return false
-  }
-}
+function readWebSearch(): boolean { return safeGet(WEB_SEARCH_KEY) === 'true' }
 
 /** On unless explicitly switched off. */
-function readSaveFeedback(): boolean {
-  try {
-    return localStorage?.getItem(FEEDBACK_KEY) !== 'false'
-  } catch {
-    return true
-  }
-}
+function readSaveFeedback(): boolean { return safeGet(FEEDBACK_KEY) !== 'false' }
 
-function writeFlag(key: string, on: boolean): void {
-  try {
-    localStorage?.setItem(key, String(on))
-  } catch {
-    /* ignore (private mode / disabled storage) */
-  }
-}
+function writeFlag(key: string, on: boolean): void { return safeSet(key, String(on)) }
 
 function readConcurrency(): number {
-  try {
-    const raw = Number(localStorage?.getItem(CONCURRENCY_KEY))
-    return Number.isInteger(raw) && raw >= 1 && raw <= MAX_CONCURRENCY ? raw : DEFAULT_CONCURRENCY
-  } catch {
-    return DEFAULT_CONCURRENCY
-  }
+  const raw = Number(safeGet(CONCURRENCY_KEY))
+  return Number.isInteger(raw) && raw >= 1 && raw <= MAX_CONCURRENCY ? raw : DEFAULT_CONCURRENCY
 }
 
-function writeConcurrency(n: number): void {
-  try {
-    localStorage?.setItem(CONCURRENCY_KEY, String(n))
-  } catch {
-    /* ignore (private mode / disabled storage) */
-  }
-}
+function writeConcurrency(n: number): void { return safeSet(CONCURRENCY_KEY, String(n)) }
 
 // A run belongs to the project it started in: closing or replacing that
 // project aborts it, so a batch never keeps spending (or later applies) into
