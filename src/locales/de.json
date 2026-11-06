@@ -2066,6 +2066,7 @@
   "store.loadError.recentMissingHint": "Es wurde möglicherweise verschoben, umbenannt oder gelöscht.",
   "store.loadError.recentFailed": "Die zuletzt verwendete Datei konnte nicht geöffnet werden.",
   "store.loadError.loadFailed": "Das Projekt konnte nicht geladen werden.",
+  "store.loadError.stillLoading": "Das Projekt lädt noch. Speichern Sie, sobald alle Paper geladen sind.",
   "store.staleSave.unreadable": "Die Projektdatei konnte nicht gelesen werden.",
   "store.staleSave.combinedRefused": "Das zusammengeführte Projekt ließe sich nicht erneut öffnen: {problem}",
   "store.staleSave.combinedNothingSaved": "Das zusammengeführte Projekt ließe sich nicht erneut öffnen, daher wurde nichts gespeichert: {problem}",

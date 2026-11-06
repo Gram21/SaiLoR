@@ -21,8 +21,8 @@ export function useAutosave() {
   useEffect(() => {
     if (!enabled || !hasProject || editorOpen) return
     const id = setInterval(() => {
-      const { dirty, busy, save } = useStore.getState()
-      if (dirty && !busy) void save()
+      const { dirty, busy, loadState, save } = useStore.getState()
+      if (dirty && !busy && loadState !== 'loading') void save()
     }, INTERVAL_MS)
     return () => clearInterval(id)
   }, [enabled, hasProject, editorOpen])

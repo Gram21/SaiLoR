@@ -74,7 +74,7 @@ import {
   CHECK_INTERVAL_MS,
   type UpdateInfo,
 } from '../model/version'
-import { getPlatform, type SaveHandle } from '../platform'
+import { getPlatform, type OpenedProject, type SaveHandle } from '../platform'
 import { StaleSaveError } from '../platform/adapter'
 import { t, tp } from '../i18n'
 import { resolveClash } from '../model/staleSave'
@@ -811,6 +811,13 @@ interface AppState {
    * Without this, PaperList's search survived a project switch.
    */
   projectGeneration: number
+  /**
+   * `loading` while a project opened from its head still reads its papers in
+   * batches (`loadProgress` counts them): only the papers read so far are in
+   * `project.papers`, so saving and every feature over the whole project wait.
+   */
+  loadState: 'idle' | 'loading' | 'ready'
+  loadProgress: { loaded: number; total: number } | null
   /** Shown when discarding an open project's unsaved changes. */
   closePromptOpen: boolean
   /** What to do once the unsaved-changes prompt is answered — carries the
@@ -1380,6 +1387,16 @@ export function containerAt(root: AnnotationValueTree, path: PathSeg[]): Annotat
  * history goes with it, as on any reload: its snapshots branch off a project
  * that no longer matches the files.
  */
+// [impl->req~plt-442~1]
+/** True, and says why, while the open project's papers are still being read: a save now would drop the rest. */
+function stillLoading(): boolean {
+  if (useStore.getState().loadState !== 'loading') return false
+  useStore.setState((s) => {
+    s.loadError = { message: t('store.loadError.stillLoading'), details: [] }
+  })
+  return true
+}
+
 async function adoptAndSave(result: Project): Promise<void> {
   lastFieldKey = null
   useStore.setState((s) => {
@@ -1391,6 +1408,64 @@ async function adoptAndSave(result: Project): Promise<void> {
     if (!result.papers.some((p) => p.id === s.currentPaperId)) s.currentPaperId = result.papers[0]?.id ?? null
   })
   await useStore.getState().save()
+}
+
+/** Papers read per batch while a project opens; the UI renders between batches. */
+const PAPER_BATCH = 2000
+
+// [impl->req~plt-440~1]
+/**
+ * Fills the project `loadFromText` just opened from its head (every paper's
+ * metadata, no answers) batch by batch. `project.papers` holds only the papers
+ * read so far, in the file's order, so per-paper work can start on them; undo
+ * snapshots get each batch too, or an undo would drop it again. Returns the
+ * corrupt files the batches found, or null once another project replaced this
+ * one. A failed batch closes the project: what is open could never be saved.
+ */
+async function streamPapers(readPapers: NonNullable<OpenedProject['readPapers']>): Promise<string[] | null> {
+  const head = useStore.getState().project
+  if (!head) return null
+  const generation = projectGeneration
+  const ids = head.papers.map((p) => p.id)
+  const landing = useStore.getState().currentPaperId
+  const loaded: Paper[] = []
+  const corrupt: string[] = []
+  diskProject = { ...head, papers: loaded }
+  useStore.setState((s) => {
+    s.project!.papers = []
+    s.currentPaperId = null
+    s.loadState = 'loading'
+    s.loadProgress = { loaded: 0, total: ids.length }
+  })
+  try {
+    for (let i = 0; i < ids.length; i += PAPER_BATCH) {
+      const batch = await readPapers(ids.slice(i, i + PAPER_BATCH))
+      if (generation !== projectGeneration) return null
+      const papers = loadProject(batch.text).papers
+      loaded.push(...papers)
+      corrupt.push(...batch.corruptFiles)
+      const landed = landing !== null && papers.some((p) => p.id === landing)
+      useStore.setState((s) => {
+        for (const e of [...s.past, ...s.future]) e.project.papers.push(...papers)
+        s.project!.papers.push(...papers)
+        s.loadProgress = { loaded: loaded.length, total: ids.length }
+        if (landed && s.currentPaperId === null) s.currentPaperId = landing
+      })
+      if (landed) void useStore.getState().extractScreeningAbstract(landing)
+      await new Promise((resolve) => setTimeout(resolve, 0))
+      if (generation !== projectGeneration) return null
+    }
+  } catch (err) {
+    if (generation === projectGeneration) useStore.getState().closeProject()
+    throw err
+  }
+  useStore.setState((s) => {
+    s.loadState = 'ready'
+    s.loadProgress = null
+    if (s.currentPaperId === null) s.currentPaperId = s.project!.papers[0]?.id ?? null
+  })
+  void useStore.getState().scanPdfFolder()
+  return corrupt
 }
 
 // [impl->req~dat-300~1]
@@ -1450,6 +1525,8 @@ export const useStore = create<AppState>()(
     returnToDisagreements: false,
     unanimousRun: null,
     projectGeneration: 0,
+    loadState: 'idle',
+    loadProgress: null,
     closePromptOpen: false,
     pendingAfterPrompt: null,
     appVersion: APP_VERSION,
@@ -1481,18 +1558,25 @@ export const useStore = create<AppState>()(
         s.busy = true
       })
       try {
-        const opened = await platform.openProject()
+        const opened = await platform.openProject(true)
         if (!opened) {
           set((s) => {
             s.busy = false
           })
           return
         }
+        const generation = projectGeneration
         get().loadFromText(opened.text, opened.handle, opened.name)
+        const corrupt = [...(opened.corruptFiles ?? [])]
+        if (opened.readPapers && generation !== projectGeneration) {
+          const more = await streamPapers(opened.readPapers)
+          if (!more) return
+          corrupt.push(...more)
+        }
         set((s) => {
           s.recents = platform.getRecents()
           // After `loadFromText`, which resets both on success.
-          s.corruptFiles = opened.corruptFiles ?? []
+          s.corruptFiles = corrupt
           if (!s.loadError && s.corruptFiles.length > 0) {
             s.loadError = corruptFilesWarning(s.corruptFiles)
           }
@@ -1609,6 +1693,8 @@ export const useStore = create<AppState>()(
       projectGeneration++
       set((s) => {
         s.projectGeneration = projectGeneration
+        s.loadState = 'idle'
+        s.loadProgress = null
         s.project = null
         s.staleSave = null
         s.annotationsSplit = null
@@ -1678,7 +1764,7 @@ export const useStore = create<AppState>()(
       })
       try {
         // [impl->req~plt-135~1]
-        const opened = await platform.openRecent(id)
+        const opened = await platform.openRecent(id, true)
         if (!opened) {
           // The file is gone. Keep the entry — the drive may come back — but
           // mark it unavailable so it greys out instead of vanishing.
@@ -1692,10 +1778,17 @@ export const useStore = create<AppState>()(
           })
           return
         }
+        const generation = projectGeneration
         get().loadFromText(opened.text, opened.handle, opened.name)
+        const corrupt = [...(opened.corruptFiles ?? [])]
+        if (opened.readPapers && generation !== projectGeneration) {
+          const more = await streamPapers(opened.readPapers)
+          if (!more) return
+          corrupt.push(...more)
+        }
         set((s) => {
           s.recents = platform.getRecents()
-          s.corruptFiles = opened.corruptFiles ?? []
+          s.corruptFiles = corrupt
           if (!s.loadError && s.corruptFiles.length > 0) {
             s.loadError = corruptFilesWarning(s.corruptFiles)
           }
@@ -1758,6 +1851,8 @@ export const useStore = create<AppState>()(
         diskProject = project
         set((s) => {
           s.projectGeneration = projectGeneration
+          s.loadState = 'ready'
+          s.loadProgress = null
           s.project = project
           s.saveHandle = handle
           s.projectName = name
@@ -1836,7 +1931,7 @@ export const useStore = create<AppState>()(
 
     resyncProjectFromDisk: async () => {
       const handle = get().saveHandle
-      if (!handle?.path) return
+      if (!handle?.path || get().loadState === 'loading') return
       const opened = await getPlatform().openRecent(handle.path)
       if (!opened) return
       try {
@@ -1866,7 +1961,7 @@ export const useStore = create<AppState>()(
 
     // One write at a time: autosave, Ctrl+S, the quit prompt and finishing a seat may all fire together.
     save: async () => {
-      if (!get().project) return false
+      if (!get().project || stillLoading()) return false
       if (!get().saveHandle) return get().saveAs()
       const run = saveQueue.then(() => get().saveOnce())
       saveQueue = run.then(
@@ -2176,7 +2271,7 @@ export const useStore = create<AppState>()(
 
     saveAs: async () => {
       const { project, projectName, saveHandle } = get()
-      if (!project) return false
+      if (!project || stillLoading()) return false
       const platform = getPlatform()
       set((s) => {
         s.busy = true
@@ -3906,7 +4001,7 @@ export const useStore = create<AppState>()(
       const st = get()
       const project = st.project
       const handle = st.saveHandle
-      if (!project?.pdfFolder || !handle) return
+      if (!project?.pdfFolder || !handle || st.loadState === 'loading') return
       if (manual) {
         set((s) => {
           s.pdfDialogOpen = true

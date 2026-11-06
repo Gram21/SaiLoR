@@ -765,8 +765,8 @@ When the desktop shell opens a project in the split layout, the shell shall read
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Performance Efficiency, Usability)
-- **Evidence:** `src-tauri/src/project.rs` (`read_head`, `open`), `src/platform/tauri.ts` (`opened`), `src/platform/desktop.ts` (`opened`)
-- **Verified by:** `src-tauri/src/project.rs` (`open_reads_the_head_and_batches_only_listed_papers`), `src/platform/tauri.test.ts` (`opens the head first and assembles papers in batches`), `src/platform/desktop.test.ts` (`streams papers on request and refuses to save the project until every paper was read`)
+- **Evidence:** `src-tauri/src/project.rs` (`read_head`, `open`), `src/platform/tauri.ts` (`opened`), `src/platform/desktop.ts` (`opened`), `src/state/store.ts` (`streamPapers`, `openProject`, `openRecent`)
+- **Verified by:** `src-tauri/src/project.rs` (`open_reads_the_head_and_batches_only_listed_papers`), `src/platform/tauri.test.ts` (`opens the head first and assembles papers in batches`), `src/platform/desktop.test.ts` (`streams papers on request and refuses to save the project until every paper was read`), `src/state/progressiveLoad.test.ts`
 - **Status:** Implemented
 
 Needs: impl, utest
@@ -795,8 +795,8 @@ While the renderer reads the papers of a project, SaiLoR shall not write the pro
 
 Comment:
 - **Type:** Functional (ISO 25010: Reliability)
-- **Evidence:** `src/platform/desktop.ts` (`streaming`, `saveProject`)
-- **Verified by:** `src/platform/desktop.test.ts` (`streams papers on request and refuses to save the project until every paper was read`)
+- **Evidence:** `src/platform/desktop.ts` (`streaming`, `saveProject`), `src/state/store.ts` (`stillLoading`, `save`, `saveAs`), `src/hooks/useAutosave.ts`
+- **Verified by:** `src/platform/desktop.test.ts` (`streams papers on request and refuses to save the project until every paper was read`), `src/state/progressiveLoad.test.ts` (`refuses to save until every paper has loaded, then saves the whole project`)
 - **Status:** Implemented
 
 Needs: impl, utest

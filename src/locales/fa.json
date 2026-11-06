@@ -2066,6 +2066,7 @@
   "store.loadError.recentMissingHint": "ممکن است جابه‌جا، تغییرنام یا حذف شده باشد.",
   "store.loadError.recentFailed": "باز کردن فایل اخیر ناموفق بود.",
   "store.loadError.loadFailed": "بارگذاری پروژه ناموفق بود.",
+  "store.loadError.stillLoading": "پروژه هنوز در حال بارگذاری است. پس از بارگذاری همهٔ مقاله‌ها ذخیره کنید.",
   "store.staleSave.unreadable": "فایل پروژه خوانده نشد.",
   "store.staleSave.combinedRefused": "پروژهٔ ادغام‌شده دوباره باز نمی‌شود: {problem}",
   "store.staleSave.combinedNothingSaved": "پروژهٔ ادغام‌شده دوباره باز نمی‌شود، بنابراین چیزی ذخیره نشد: {problem}",

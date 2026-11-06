@@ -2066,6 +2066,7 @@
   "store.loadError.recentMissingHint": "It may have been moved, renamed, or deleted.",
   "store.loadError.recentFailed": "Failed to open the recent file.",
   "store.loadError.loadFailed": "Failed to load the project.",
+  "store.loadError.stillLoading": "The project is still loading. Save once every paper has loaded.",
   "store.staleSave.unreadable": "The project file could not be read.",
   "store.staleSave.combinedRefused": "The combined project would not open again: {problem}",
   "store.staleSave.combinedNothingSaved": "The combined project would not open again, so nothing was saved: {problem}",

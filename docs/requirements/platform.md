@@ -353,8 +353,8 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-440: Open a project in two steps
 - **Description:** When the desktop shell opens a project in the split layout, the shell shall read only the project file first. The renderer shall show the project with the metadata of all papers. The renderer shall then read the annotation files of the papers in batches. The renderer shall give control back to the event loop between two batches. A project in the legacy single-file layout shall open in one step, as before. All callers that need the whole project, for example a reload after a stale save, shall read all papers before they continue.
 - **Type:** Non-functional (ISO 25010: Performance Efficiency, Usability)
-- **Evidence:** `src-tauri/src/project.rs` (`read_head`, `open`), `src/platform/tauri.ts` (`opened`), `src/platform/desktop.ts` (`opened`)
-- **Verified by:** `src-tauri/src/project.rs` (`open_reads_the_head_and_batches_only_listed_papers`), `src/platform/tauri.test.ts` (`opens the head first and assembles papers in batches`), `src/platform/desktop.test.ts` (`streams papers on request and refuses to save the project until every paper was read`)
+- **Evidence:** `src-tauri/src/project.rs` (`read_head`, `open`), `src/platform/tauri.ts` (`opened`), `src/platform/desktop.ts` (`opened`), `src/state/store.ts` (`streamPapers`, `openProject`, `openRecent`)
+- **Verified by:** `src-tauri/src/project.rs` (`open_reads_the_head_and_batches_only_listed_papers`), `src/platform/tauri.test.ts` (`opens the head first and assembles papers in batches`), `src/platform/desktop.test.ts` (`streams papers on request and refuses to save the project until every paper was read`), `src/state/progressiveLoad.test.ts`
 - **Status:** Implemented
 
 ### REQ-PLT-441: Read paper batches only for an opened project
@@ -367,6 +367,6 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-442: Do not save a project that is still loading
 - **Description:** While the renderer reads the papers of a project, SaiLoR shall not write the project. A save, an automatic save and a save on close shall stop and tell the user why. The desktop adapter shall also refuse to write the project file until it has read every paper, so a partial project can never replace the whole project on disk.
 - **Type:** Functional (ISO 25010: Reliability)
-- **Evidence:** `src/platform/desktop.ts` (`streaming`, `saveProject`)
-- **Verified by:** `src/platform/desktop.test.ts` (`streams papers on request and refuses to save the project until every paper was read`)
+- **Evidence:** `src/platform/desktop.ts` (`streaming`, `saveProject`), `src/state/store.ts` (`stillLoading`, `save`, `saveAs`), `src/hooks/useAutosave.ts`
+- **Verified by:** `src/platform/desktop.test.ts` (`streams papers on request and refuses to save the project until every paper was read`), `src/state/progressiveLoad.test.ts` (`refuses to save until every paper has loaded, then saves the whole project`)
 - **Status:** Implemented
