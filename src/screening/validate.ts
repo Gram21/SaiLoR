@@ -1,4 +1,4 @@
-import type { Paper, Project } from '../model/project'
+import type { Project } from '../model/project'
 import { seatTree } from '../model/seatTree'
 import type { ValidationIssue } from '../model/validate'
 import { SCREENING_REASON } from './schema'

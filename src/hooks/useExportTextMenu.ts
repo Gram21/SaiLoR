@@ -21,7 +21,7 @@ export function useExportTextMenu(getText: () => string, suggestedFileName: stri
   const [status, setStatus] = useState<string | null>(null)
   const t = useT()
 
-  const timer = useRef<number>()
+  const timer = useRef<number | undefined>(undefined)
   useEffect(() => () => window.clearTimeout(timer.current), [])
   const announce = (message: string) => {
     setStatus(message)

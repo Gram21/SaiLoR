@@ -1,6 +1,6 @@
 // [impl->req~scr-180~1]
 import type { AnnotationValueTree } from '../model/annotations'
-import type { Paper, Project } from '../model/project'
+import type { Project } from '../model/project'
 import { seatTree } from '../model/seatTree'
 import { unanimousFills } from '../consolidate/unanimous'
 import { SCREENING_DECISION } from './schema'

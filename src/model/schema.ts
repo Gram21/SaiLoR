@@ -210,7 +210,7 @@ export const paperSchema = z
     pdf: z.string().default(''),
     // Loosely typed; validated/normalized structurally in project.ts so a
     // malformed entry is dropped rather than failing the whole file to load.
-    annotations: z.record(z.unknown()).optional(),
+    annotations: z.record(z.string(), z.unknown()).optional(),
     aiUsage: z.unknown().optional(),
     reviews: z.unknown().optional(),
     // Ditto — canonical field paths, deduped/validated in project.ts.
