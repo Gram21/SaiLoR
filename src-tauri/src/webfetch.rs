@@ -50,11 +50,34 @@ fn is_blocked_v6(ip: Ipv6Addr) -> bool {
     if let Some(v4) = ip.to_ipv4_mapped() {
         return is_blocked_v4(v4);
     }
-    // Same test as the JS string checks on the first group: "fe80:", /^f[cd][0-9a-f]{0,2}:/, "ff".
-    let first = format!("{:x}", ip.segments()[0]);
-    first == "fe80"
-        || ((first.starts_with("fc") || first.starts_with("fd")) && first.len() >= 2)
-        || first.starts_with("ff")
+    let seg = ip.segments();
+    // Embedded IPv4 forms: IPv4-compatible (::/96), NAT64 (64:ff9b::/96), 6to4 (2002::/16).
+    if seg[..6] == [0; 6] {
+        return is_blocked_v4(Ipv4Addr::new(
+            (seg[6] >> 8) as u8,
+            seg[6] as u8,
+            (seg[7] >> 8) as u8,
+            seg[7] as u8,
+        ));
+    }
+    if seg[..6] == [0x64, 0xff9b, 0, 0, 0, 0] {
+        return is_blocked_v4(Ipv4Addr::new(
+            (seg[6] >> 8) as u8,
+            seg[6] as u8,
+            (seg[7] >> 8) as u8,
+            seg[7] as u8,
+        ));
+    }
+    if seg[0] == 0x2002 {
+        return is_blocked_v4(Ipv4Addr::new(
+            (seg[1] >> 8) as u8,
+            seg[1] as u8,
+            (seg[2] >> 8) as u8,
+            seg[2] as u8,
+        ));
+    }
+    // fe80::/10 link-local, fc00::/7 unique-local, ff00::/8 multicast.
+    (seg[0] & 0xffc0) == 0xfe80 || (seg[0] & 0xfe00) == 0xfc00 || (seg[0] & 0xff00) == 0xff00
 }
 
 // [impl->req~llm-400~1]
@@ -337,6 +360,12 @@ mod tests {
             "::ffff:10.0.0.1",
             "::ffff:7f00:1",
             "::ffff:a9fe:a9fe",
+            "fe81::1",
+            "febf::1",
+            "::127.0.0.1",
+            "::a9fe:a9fe",
+            "64:ff9b::a9fe:a9fe",
+            "2002:7f00:1::1",
             "example.com",
         ] {
             assert!(is_blocked_address(ip), "{ip}");
@@ -348,6 +377,9 @@ mod tests {
             "172.15.255.255",
             "2606:4700:4700::1111",
             "::ffff:8.8.8.8",
+            "64:ff9b::808:808",
+            "2002:808:808::1",
+            "fec0::1",
         ] {
             assert!(!is_blocked_address(ip), "{ip}");
         }
