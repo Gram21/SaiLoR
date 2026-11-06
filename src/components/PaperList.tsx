@@ -460,7 +460,7 @@ export function PaperList() {
           </span>
           <SidebarToggle />
         </div>
-        {loadProgress ? (
+        {loadProgress && (
           <div className="paper-list-progress" role="status">
             {t(loadFailed ? 'paperList.loading.failed' : 'paperList.loading.progress', {
               loaded: loadProgress.loaded.toLocaleString(),
@@ -475,9 +475,8 @@ export function PaperList() {
               </>
             )}
           </div>
-        ) : (
-          progress && progress.total > 0 && <div className="paper-list-progress">{progress.text}</div>
         )}
+        {progress && progress.total > 0 && <div className="paper-list-progress">{progress.text}</div>}
         <div className="paper-search">
           <input
             ref={searchInput}
