@@ -149,14 +149,43 @@ describe('progressive project loading', () => {
     expect(readPapers).toHaveBeenCalledTimes(2)
   })
 
-  it('closes a project whose batch cannot be read, and says why', async () => {
+  it('keeps a project whose batch cannot be read open, with its edits, and reads the batch again on retry', async () => {
+    const done = st().openRecent('/big/project.json')
+    await release()
+    await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(2000))
+    st().selectPaper('p0')
+    st().setFieldValue([], 'Relevant', 0, false)
+    fail = true
+    await release()
+    await vi.waitFor(() => expect(st().loadFailed).toContain('disk gone'))
+    expect(st().loadError?.details.join()).toContain('disk gone')
+    expect(st().loadState).toBe('loading')
+    expect(st().project!.papers).toHaveLength(2000)
+    expect(await st().save()).toBe(false)
+    expect(mockPlatform.saveProject).not.toHaveBeenCalled()
+
+    fail = false
+    st().retryLoad()
+    expect(st().loadFailed).toBeNull()
+    await release()
+    await release()
+    await done
+    expect(readPapers.mock.calls.map((c) => c[0][0])).toEqual(['p0', 'p2000', 'p2000', 'p4000'])
+    expect(st().loadState).toBe('ready')
+    expect(st().project!.papers).toHaveLength(N)
+    expect(st().project!.papers[0].annotations.Relevant).toEqual([{ value: false }])
+  })
+
+  it('stops a load waiting on a failed batch once the project is closed', async () => {
     const done = st().openRecent('/big/project.json')
     await release()
     fail = true
     await release()
+    await vi.waitFor(() => expect(st().loadFailed).not.toBeNull())
+    st().closeProject()
     await done
     expect(st().project).toBeNull()
-    expect(st().loadState).toBe('idle')
-    expect(st().loadError?.details.join()).toContain('disk gone')
+    expect(st().loadFailed).toBeNull()
+    expect(readPapers).toHaveBeenCalledTimes(2)
   })
 })

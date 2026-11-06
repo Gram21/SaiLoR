@@ -818,6 +818,10 @@ interface AppState {
    */
   loadState: 'idle' | 'loading' | 'ready'
   loadProgress: { loaded: number; total: number } | null
+  /** Why a batch could not be read: loading waits, still `loading`, until `retryLoad`. */
+  loadFailed: string | null
+  /** Reads the batch that failed again. */
+  retryLoad: () => void
   /** Shown when discarding an open project's unsaved changes. */
   closePromptOpen: boolean
   /** What to do once the unsaved-changes prompt is answered — carries the
@@ -1379,6 +1383,13 @@ function firstUnfinishedOf(project: Project, papers: Paper[], currentReviewer: s
  * each batch instead. `reviewer` is the seat `loadFromText` chose.
  */
 let landOnFirstUnfinished: { seats: RememberedSeats; reviewer: string | null } | null = null
+/** Resumes a load waiting on a failed batch; called on retry, close or replace. */
+let wakeLoad: (() => void) | null = null
+function resumeLoad(): void {
+  const wake = wakeLoad
+  wakeLoad = null
+  wake?.()
+}
 
 /** Walk from a paper's annotation root to the container tree addressed by `path`. */
 export function containerAt(root: AnnotationValueTree, path: PathSeg[]): AnnotationValueTree {
@@ -1432,7 +1443,8 @@ const PAPER_BATCH = 2000
  * read so far, in the file's order, so per-paper work can start on them; undo
  * snapshots get each batch too, or an undo would drop it again. Returns the
  * corrupt files the batches found, or null once another project replaced this
- * one. A failed batch closes the project: what is open could never be saved.
+ * one. A failed batch keeps the project open with what has loaded and every
+ * edit, still unsaveable, and waits for `retryLoad` to read it again.
  */
 async function streamPapers(readPapers: NonNullable<OpenedProject['readPapers']>): Promise<string[] | null> {
   const head = useStore.getState().project
@@ -1450,38 +1462,45 @@ async function streamPapers(readPapers: NonNullable<OpenedProject['readPapers']>
     s.loadState = 'loading'
     s.loadProgress = { loaded: 0, total: ids.length }
   })
-  try {
-    for (let i = 0; i < ids.length; i += PAPER_BATCH) {
-      const batch = await readPapers(ids.slice(i, i + PAPER_BATCH))
-      if (generation !== projectGeneration) return null
-      const papers = batch.papers
-      loaded.push(...papers)
-      corrupt.push(...batch.corruptFiles)
-      const now = useStore.getState()
-      const landed =
-        now.currentPaperId !== null
-          ? null
-          : unfinished
-            ? firstUnfinishedOf(now.project!, papers, unfinished.seats.last)
-            : landing !== null && papers.some((p) => p.id === landing)
-              ? landing
-              : null
-      useStore.setState((s) => {
-        for (const e of [...s.past, ...s.future]) e.project.papers.push(...papers)
-        s.project!.papers.push(...papers)
-        s.loadProgress = { loaded: loaded.length, total: ids.length }
-        if (landed === null) return
-        s.currentPaperId = landed
-        if (unfinished && s.project!.reviewers > 1 && s.currentReviewer === unfinished.reviewer)
-          s.currentReviewer = unfinished.seats.perPaper[landed] || unfinished.seats.last
-      })
-      if (landed) void useStore.getState().extractScreeningAbstract(landed)
-      await new Promise((resolve) => setTimeout(resolve, 0))
+  for (let i = 0; i < ids.length; i += PAPER_BATCH) {
+    let batch: Awaited<ReturnType<typeof readPapers>> | undefined
+    while (!batch) {
+      try {
+        batch = await readPapers(ids.slice(i, i + PAPER_BATCH))
+      } catch (err) {
+        if (generation !== projectGeneration) return null
+        useStore.setState((s) => {
+          s.loadFailed = String(err)
+          s.loadError = { message: t('store.loadError.batchFailed'), details: [String(err)] }
+        })
+        await new Promise<void>((resolve) => (wakeLoad = resolve))
+      }
       if (generation !== projectGeneration) return null
     }
-  } catch (err) {
-    if (generation === projectGeneration) useStore.getState().closeProject()
-    throw err
+    const papers = batch.papers
+    loaded.push(...papers)
+    corrupt.push(...batch.corruptFiles)
+    const now = useStore.getState()
+    const landed =
+      now.currentPaperId !== null
+        ? null
+        : unfinished
+          ? firstUnfinishedOf(now.project!, papers, unfinished.seats.last)
+          : landing !== null && papers.some((p) => p.id === landing)
+            ? landing
+            : null
+    useStore.setState((s) => {
+      for (const e of [...s.past, ...s.future]) e.project.papers.push(...papers)
+      s.project!.papers.push(...papers)
+      s.loadProgress = { loaded: loaded.length, total: ids.length }
+      if (landed === null) return
+      s.currentPaperId = landed
+      if (unfinished && s.project!.reviewers > 1 && s.currentReviewer === unfinished.reviewer)
+        s.currentReviewer = unfinished.seats.perPaper[landed] || unfinished.seats.last
+    })
+    if (landed) void useStore.getState().extractScreeningAbstract(landed)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    if (generation !== projectGeneration) return null
   }
   useStore.setState((s) => {
     s.loadState = 'ready'
@@ -1551,6 +1570,14 @@ export const useStore = create<AppState>()(
     projectGeneration: 0,
     loadState: 'idle',
     loadProgress: null,
+    loadFailed: null,
+    retryLoad: () => {
+      useStore.setState((s) => {
+        s.loadFailed = null
+        s.loadError = null
+      })
+      resumeLoad()
+    },
     closePromptOpen: false,
     pendingAfterPrompt: null,
     appVersion: APP_VERSION,
@@ -1715,10 +1742,12 @@ export const useStore = create<AppState>()(
       lastFieldKey = null
       diskProject = null
       projectGeneration++
+      resumeLoad()
       set((s) => {
         s.projectGeneration = projectGeneration
         s.loadState = 'idle'
         s.loadProgress = null
+        s.loadFailed = null
         s.project = null
         s.staleSave = null
         s.annotationsSplit = null
@@ -1873,11 +1902,13 @@ export const useStore = create<AppState>()(
         // entry is enriched here rather than in the adapter's open path.
         if (handle) getPlatform().rememberProject(handle, name, project.title)
         projectGeneration++
+        resumeLoad()
         diskProject = project
         set((s) => {
           s.projectGeneration = projectGeneration
           s.loadState = 'ready'
           s.loadProgress = null
+          s.loadFailed = null
           s.project = project
           s.saveHandle = handle
           s.projectName = name

@@ -1,5 +1,5 @@
 import '@testing-library/jest-dom/vitest'
-import { describe, it, expect, beforeEach } from 'vitest'
+import { describe, it, expect, beforeEach, onTestFinished } from 'vitest'
 import { render, screen, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { useStore } from '../state/store'
@@ -300,5 +300,26 @@ describe('the paper list while a project still loads', () => {
     useStore.setState({ loadState: 'ready', loadProgress: null })
     rerender(<PaperList />)
     expect(screen.queryByText(/Loading papers/)).not.toBeInTheDocument()
+  })
+
+  it('says where loading stopped and retries the failed batch', async () => {
+    st().loadFromText(
+      projectJson([{ id: 'p1', title: 'First Paper', authors: [], pdf: 'a.pdf', annotations: {} }]),
+      null,
+      'test.json',
+    )
+    let retried = 0
+    const { retryLoad } = st()
+    onTestFinished(() => useStore.setState({ retryLoad, loadFailed: null }))
+    useStore.setState({
+      loadState: 'loading',
+      loadProgress: { loaded: 1, total: 3 },
+      loadFailed: 'disk gone',
+      retryLoad: () => retried++,
+    })
+    render(<PaperList />)
+    expect(screen.getByRole('status')).toHaveTextContent('Loading stopped at 1 / 3 papers.')
+    await userEvent.click(screen.getByRole('button', { name: 'Retry' }))
+    expect(retried).toBe(1)
   })
 })

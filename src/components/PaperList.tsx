@@ -275,6 +275,8 @@ export function PaperList() {
   const currentPaperId = useStore((s) => s.currentPaperId)
   // [impl->req~plt-443~1]
   const loadProgress = useStore((s) => s.loadProgress)
+  const loadFailed = useStore((s) => s.loadFailed)
+  const retryLoad = useStore((s) => s.retryLoad)
   const currentReviewer = useStore((s) => s.currentReviewer)
   const missingPdfs = useStore((s) => s.missingPdfs)
   const selectPaper = useStore((s) => s.selectPaper)
@@ -460,10 +462,18 @@ export function PaperList() {
         </div>
         {loadProgress ? (
           <div className="paper-list-progress" role="status">
-            {t('paperList.loading.progress', {
+            {t(loadFailed ? 'paperList.loading.failed' : 'paperList.loading.progress', {
               loaded: loadProgress.loaded.toLocaleString(),
               total: loadProgress.total.toLocaleString(),
             })}
+            {loadFailed && (
+              <>
+                {' '}
+                <button type="button" onClick={retryLoad}>
+                  {t('paperList.loading.retry')}
+                </button>
+              </>
+            )}
           </div>
         ) : (
           progress && progress.total > 0 && <div className="paper-list-progress">{progress.text}</div>
