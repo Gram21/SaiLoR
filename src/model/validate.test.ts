@@ -234,6 +234,31 @@ describe('required', () => {
     expect(kinds(shown)).toEqual(['required'])
   })
 
+  it('flags a required grandchild gated on a grandparent inside a group, per grandparent entry', () => {
+    const schema = [
+      def({
+        name: 'G',
+        children: [
+          def({
+            name: 'Field A',
+            type: 'boolean',
+            max: null,
+            children: [
+              def({
+                name: 'Field B',
+                type: 'string',
+                children: [def({ name: 'Field C', type: 'string', required: true, visibleIf: gateOn('Field A') })],
+              }),
+            ],
+          }),
+        ],
+      }),
+    ]
+    const entry = (value: boolean) => ({ value, children: { 'Field B': [{ value: 'x', children: { 'Field C': [{ value: null }] } }] } })
+    const issues = validatePaper(schema, paper({ G: [{ children: { 'Field A': [entry(false), entry(true)] } }] }))
+    expect(issues.map((i) => [i.kind, i.canonicalPath])).toEqual([['required', 'G/Field A[1]/Field B/Field C']])
+  })
+
   it('skips a required field hidden by a gate on another branch (an absolute path)', () => {
     const schema = [
       def({ name: 'Findings', children: [def({ name: 'Relevant', type: 'boolean' })] }),
@@ -317,6 +342,115 @@ describe('type', () => {
     const schema = [def({ name: 'Year', type: 'number', required: true })]
     const issues = validatePaper(schema, paper({ Year: [{ value: 'x' as never }] }))
     expect(kinds(issues)).toEqual(['type'])
+  })
+
+  it('reads an entry without a value as unanswered, not as mistyped', () => {
+    const schema = [def({ name: 'Claim', type: 'string', required: true })]
+    expect(kinds(validatePaper(schema, paper({ Claim: [{}] })))).toEqual(['required'])
+  })
+
+  it('places a node-level issue under its parent entry', () => {
+    const schema = [def({ name: 'G', children: [def({ name: 'T', type: 'string', min: 1 }), def({ name: 'L', type: 'string' })] })]
+    const issues = validatePaper(schema, paper({ G: [{ children: { L: 'x' as never } }] }))
+    expect(issues.map((i) => [i.kind, i.path, i.canonicalPath])).toEqual([
+      ['cardinality', 'G › T', 'G/T'],
+      ['type', 'G › L', 'G/L'],
+    ])
+  })
+})
+
+// [utest->req~dat-190~1]
+describe('type — messages name what is stored', () => {
+  const one = (d: ResolvedDef, tree: Record<string, unknown>) =>
+    validatePaper([d], paper(tree as AnnotationValueTree)).map((i) => i.message)
+
+  it('spells out the year bounds and accepts both ends', () => {
+    const y = def({ name: 'Y', type: 'year' })
+    expect(one(y, { Y: [{ value: 999 }] })).toEqual(['"Y" should be a year between 1000 and 2100 but holds a number (999).'])
+    expect(one(y, { Y: [{ value: 1000 }] })).toEqual([])
+    expect(one(y, { Y: [{ value: 2100 }] })).toEqual([])
+  })
+
+  it('describes booleans, lists, objects and unusual types', () => {
+    const s = def({ name: 'S', type: 'string' })
+    expect(one(s, { S: [{ value: true }] })).toEqual(['"S" should be a string but holds a boolean (true).'])
+    expect(one(s, { S: [{ value: [1] }] })).toEqual(['"S" should be a string but holds a list.'])
+    expect(one(s, { S: [{ value: { a: 1 } }] })).toEqual(['"S" should be a string but holds an object.'])
+    expect(one(s, { S: [{ value: 1n }] })).toEqual(['"S" should be a string but holds a bigint (1).'])
+    expect(one(def({ name: 'N', type: 'number' }), { N: [{ value: NaN }] })).toEqual([
+      '"N" should be a number but holds NaN.',
+    ])
+  })
+
+  it('cuts a long value preview after 40 characters', () => {
+    const n = def({ name: 'N', type: 'number' })
+    expect(one(n, { N: [{ value: 'a'.repeat(38) }] })).toEqual([`"N" should be a number but holds a string ("${'a'.repeat(38)}").`])
+    expect(one(n, { N: [{ value: 'a'.repeat(39) }] })).toEqual([`"N" should be a number but holds a string ("${'a'.repeat(39)}…).`])
+  })
+
+  it('names what a node holds instead of a list, and what an entry is instead of an object', () => {
+    const t = def({ name: 'T', type: 'string', min: 0, max: null })
+    expect(one(t, { T: null })).toEqual(['"T" should hold a list of entries but holds null.'])
+    expect(one(t, { T: NaN })).toEqual(['"T" should hold a list of entries but holds NaN.'])
+    expect(one(t, { T: 'x' })).toEqual(['"T" should hold a list of entries but holds a string ("x").'])
+    expect(one(t, { T: [undefined, [], 5] })).toEqual([
+      '"T" entry should be an object but is nothing.',
+      '"T" entry should be an object but is a list.',
+      '"T" entry should be an object but is a number (5).',
+    ])
+  })
+
+  it('treats a whitespace-only string as empty for required and enum checks', () => {
+    const e = def({ name: 'E', type: 'string', required: true, options: ['A'] })
+    expect(one(e, { E: [{ value: '  ' }] })).toEqual(['"E" is required but empty.'])
+  })
+
+  it('checks options only on string values', () => {
+    expect(one(def({ name: 'N', type: 'number', options: ['1'] }), { N: [{ value: 2 }] })).toEqual([])
+    expect(one(def({ name: 'E', type: 'string', options: [] }), { E: [{ value: 'any' }] })).toEqual([])
+  })
+
+  it('lists exactly eight options without a remainder, and counts the ninth', () => {
+    const opts = (n: number) => Array.from({ length: n }, (_, i) => `o${i + 1}`)
+    expect(one(def({ name: 'E', type: 'string', options: opts(8) }), { E: [{ value: 'x' }] })).toEqual([
+      '"E" holds "x", which is not one of: o1, o2, o3, o4, o5, o6, o7, o8.',
+    ])
+    expect(one(def({ name: 'E', type: 'string', options: opts(9) }), { E: [{ value: 'x' }] })).toEqual([
+      '"E" holds "x", which is not one of: o1, o2, o3, o4, o5, o6, o7, o8, … (+1 more).',
+    ])
+  })
+
+  it('accepts counts exactly at min and max, and words plural bounds', () => {
+    const t = def({ name: 'T', type: 'string', min: 2, max: 2 })
+    expect(one(t, { T: [{ value: 'a' }, { value: 'b' }] })).toEqual([])
+    expect(one(t, { T: [{ value: 'a' }] })).toEqual(['"T" needs at least 2 entries but has 1.'])
+    expect(one(def({ name: 'T', type: 'string', min: 0, max: 1 }), { T: [{ value: 'a' }, { value: 'b' }] })).toEqual([
+      '"T" allows at most 1 entry but has 2.',
+    ])
+  })
+})
+
+describe('duplicate entries', () => {
+  it('flags a repeated entry of a unique field at its own path, tolerating malformed entries', () => {
+    const d = def({ name: 'Tag', type: 'string', min: 0, max: null, unique: true })
+    const issues = validatePaper([d], paper({ Tag: [{ value: 'a' }, 'bad' as never, { value: 'b' }, { value: 'a' }] }))
+    expect(issues.map((i) => [i.kind, i.path, i.canonicalPath, i.message])).toEqual([
+      ['type', 'Tag #2', 'Tag[1]', '"Tag" entry should be an object but is a string ("bad").'],
+      ['duplicate', 'Tag #4', 'Tag[3]', '"Tag" #4 repeats #1. Each entry is allowed once.'],
+    ])
+  })
+
+  it('ignores repeats when the field is not unique', () => {
+    const d = def({ name: 'Tag', type: 'string', min: 0, max: null })
+    expect(validatePaper([d], paper({ Tag: [{ value: 'a' }, { value: 'a' }] }))).toEqual([])
+  })
+})
+
+describe('validatePaper — defensive inputs', () => {
+  it('tolerates a missing paper and a non-array schema', () => {
+    const issues = validatePaper([def({ name: 'T', type: 'string' })], null as never)
+    expect(issues.map((i) => [i.paperId, i.paperTitle, i.kind])).toEqual([['', '', 'cardinality']])
+    expect(validatePaper(null as never, paper({}))).toEqual([])
   })
 })
 
@@ -662,5 +796,90 @@ describe('answers hidden by a schema change are reported', () => {
   it('stays quiet for a project whose schema describes everything', () => {
     const result = validateProject(projectWith({ 'Study Type': [{ value: 'RCT' }] }))
     expect(result.issues.some((i) => i.kind === 'orphaned')).toBe(false)
+  })
+
+  it('lists five orphans and counts the rest, as a paper-level issue', () => {
+    const five = { A: [{ value: 1 }], B: [{ value: 1 }], C: [{ value: 1 }], D: [{ value: 1 }], E: [{ value: 1 }] }
+    const at = (extra: Record<string, unknown>) =>
+      validateProject(projectWith({ ...five, ...extra })).issues.find((i) => i.kind === 'orphaned')
+    expect(at({})).toMatchObject({
+      path: '',
+      canonicalPath: '',
+      paperTitle: 'Paper One',
+      message: expect.stringMatching(/^Holds answers under "A", "B", "C", "D", "E", which/),
+    })
+    expect(at({ F: [{ value: 1 }] })?.message).toMatch(/^Holds answers under "A", "B", "C", "D", "E", and 1 more, which/)
+  })
+})
+
+// [utest->req~dat-168~1]
+describe('files under an unknown schema version are reported', () => {
+  const base = (over: Partial<Paper>): Project => ({
+    version: 1,
+    provenance: null,
+    protocol: null,
+    schemaInfo: null,
+    schemaVersion: null,
+    schemaHistory: [],
+    annotationsDir: null,
+    schema: sampleSchema,
+    aiEnabled: false,
+    aiSeat: false,
+    finishCheckbox: true,
+    reviewers: 2,
+    papers: [paper(validSample(), over)],
+    screening: null,
+    extra: {},
+  })
+
+  it('names every file in words, before the paper\'s own issues', () => {
+    const tree = validSample()
+    tree.Year = [{ value: null }]
+    const { issues } = validateProject({
+      ...base({}),
+      papers: [paper(tree, { unknownSchemaFiles: ['review-2', 'marks-1', 'marks-consolidated', 'consolidated'] })],
+    })
+    expect(issues.map((i) => [i.kind, i.path, i.canonicalPath])).toEqual([
+      ['schema-version', '', ''],
+      ['required', 'Year', 'Year'],
+    ])
+    expect(issues[0].message).toMatch(
+      /^Reviewer 2's answers, Reviewer 1's PDF highlights, The PDF highlights, The consolidated answers were written under/,
+    )
+  })
+
+  it('uses the singular for one file and stays quiet without any', () => {
+    expect(validateProject(base({ unknownSchemaFiles: ['review-1'] })).issues[0].message).toMatch(
+      /^Reviewer 1's answers was written under/,
+    )
+    expect(validateProject(base({ unknownSchemaFiles: 'x' as never })).issues).toEqual([])
+  })
+
+  it('reads only a whole review-N or marks-N key as a seat file', () => {
+    const keys = ['review-12', 'marks-10', 'xreview-1', 'review-1x', 'xmarks-1', 'marks-1x']
+    expect(validateProject(base({ unknownSchemaFiles: keys })).issues[0].message).toMatchInlineSnapshot(`"Reviewer 12's answers, Reviewer 10's PDF highlights, The consolidated answers, The consolidated answers, The consolidated answers, The consolidated answers were written under a schema version this project doesn't know — from another branch, or edited by hand — so fields renamed or moved since could not be carried over. Answers under old names are hidden."`)
+  })
+})
+
+describe('validateProject — a paper that cannot be read', () => {
+  it('reports an internal error instead of throwing, and keeps going', () => {
+    const broken = paper({}, { id: 'bad', title: 'Bad' })
+    Object.defineProperty(broken, 'annotations', {
+      get() {
+        throw new Error('boom')
+      },
+    })
+    const result = validateProject({ schema: sampleSchema, papers: [broken, null] } as never)
+    expect(result.issues).toEqual([
+      {
+        paperId: 'bad',
+        paperTitle: 'Bad',
+        path: '',
+        canonicalPath: '',
+        kind: 'type',
+        message: "Could not validate this paper's annotations: Error: boom",
+      },
+    ])
+    expect(result.unannotated).toEqual([{ paperId: '', paperTitle: '' }])
   })
 })
