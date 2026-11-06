@@ -32,6 +32,14 @@ describe('linkifyText', () => {
     ])
   })
 
+  it('strips a run of trailing punctuation, not just the last mark', () => {
+    expect(linkifyText('Really, https://example.com/x?!')).toEqual([
+      { text: 'Really, ' },
+      { text: 'https://example.com/x', href: 'https://example.com/x' },
+      { text: '?!' },
+    ])
+  })
+
   it('strips a trailing closing paren from a parenthetical', () => {
     expect(linkifyText('(see https://example.com/x)')).toEqual([
       { text: '(see ' },
