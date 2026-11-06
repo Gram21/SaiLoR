@@ -65,6 +65,8 @@ export interface ChatMessage {
   raw?: unknown
 }
 
+const tokens = (v: unknown): number => (typeof v === 'number' ? v : 0)
+
 export interface ChatUsage {
   inputTokens: number
   outputTokens: number
@@ -452,7 +454,8 @@ export function parseChatResponse(provider: Provider, json: unknown, req?: { bod
       toolCalls,
       truncated: json.stop_reason === 'max_tokens',
       usage: {
-        inputTokens: typeof usage.input_tokens === 'number' ? usage.input_tokens : 0,
+        // Anthropic reports cache reads and writes apart from `input_tokens`; they are still billed input.
+        inputTokens: tokens(usage.input_tokens) + tokens(usage.cache_read_input_tokens) + tokens(usage.cache_creation_input_tokens),
         outputTokens: typeof usage.output_tokens === 'number' ? usage.output_tokens : 0,
       },
       raw: content,
@@ -485,7 +488,8 @@ export function parseChatResponse(provider: Provider, json: unknown, req?: { bod
       truncated: isRecord(first) && first.finishReason === 'MAX_TOKENS',
       usage: {
         inputTokens: typeof usage.promptTokenCount === 'number' ? usage.promptTokenCount : 0,
-        outputTokens: typeof usage.candidatesTokenCount === 'number' ? usage.candidatesTokenCount : 0,
+        // Gemini bills thinking tokens as output but counts them apart from `candidatesTokenCount`.
+        outputTokens: tokens(usage.candidatesTokenCount) + tokens(usage.thoughtsTokenCount),
       },
       raw: parts,
       webSearches: 0,

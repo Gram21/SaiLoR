@@ -156,4 +156,17 @@ describe('buildChatRequest / parseChatResponse round-trip per wire format', () =
       expect(parseChatResponse(p, {}).truncated).toBe(false)
     }
   })
+
+  it('counts Anthropic cache tokens as input and Gemini thinking tokens as output', () => {
+    const a = parseChatResponse('anthropic', {
+      content: [{ type: 'text', text: 'x' }],
+      usage: { input_tokens: 10, output_tokens: 5, cache_read_input_tokens: 100, cache_creation_input_tokens: 7 },
+    })
+    expect(a.usage).toEqual({ inputTokens: 117, outputTokens: 5 })
+    const g = parseChatResponse('google', {
+      candidates: [{ content: { parts: [{ text: 'x' }] }, finishReason: 'STOP' }],
+      usageMetadata: { promptTokenCount: 20, candidatesTokenCount: 8, thoughtsTokenCount: 30 },
+    })
+    expect(g.usage).toEqual({ inputTokens: 20, outputTokens: 38 })
+  })
 })
