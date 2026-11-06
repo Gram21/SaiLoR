@@ -217,6 +217,9 @@ inspection only.
 | REQ-UI-150 | Open the Settings dialog from the help | Functional · Usability | `src/components/HelpDialog.tsx` (`HelpDialog`)<br>`src-tauri/src/shell.rs` (`action`, `menu`, `macos_menu`) | `src/components/HelpDialog.test.tsx`<br>`src-tauri/src/shell.rs` (`help_menus_open_settings_without_a_shortcut`) | — | `user-guide/getting-started.md` §Changing the language |
 | REQ-UI-160 | Show project entries only with a project | Functional · Usability | `src/components/Toolbar.tsx` (`Toolbar`) | `src/components/Toolbar.test.tsx` | — | — |
 | REQ-UI-170 | Hide AI entries when AI is off | Functional · Usability | `src/components/Toolbar.tsx` (`Toolbar`)<br>`src/components/SettingsDialog.tsx` (`SettingsDialog`)<br>`src/components/ProjectEditor.tsx`<br>`src/components/ConsolidationOverview.tsx` (`ConsolidationOverview`) | `src/components/Toolbar.test.tsx`<br>`src/components/SettingsDialog.test.tsx` | — | — |
+| REQ-UI-190 | Knowledge graph view | Functional · Usability | `src/components/GraphView.tsx` (`GraphView`)<br>`src/components/Toolbar.tsx` (`Toolbar`)<br>`src/styles/index.css` (`.graph-view`) | `src/components/GraphView.test.tsx`<br>`src/components/Toolbar.test.tsx` | — | — |
+| REQ-UI-200 | Knowledge graph query | Functional · Functional Suitability, Usability | `src/model/graphQuery.ts` (`parseQuery`, `indexGraph`)<br>`src/components/GraphView.tsx` (`GraphView`) | `src/model/graphQuery.test.ts`<br>`src/components/GraphView.test.tsx` | — | — |
+| REQ-UI-210 | Knowledge graph sub-graph and limit | Functional · Functional Suitability, Performance Efficiency | `src/model/graphQuery.ts` (`selectSubgraph`, `neighbours`)<br>`src/components/GraphView.tsx` (`GraphView`) | `src/model/graphQuery.test.ts`<br>`src/components/GraphView.test.tsx` | — | — |
 
 ## Screening ([screening.md](screening.md))
 

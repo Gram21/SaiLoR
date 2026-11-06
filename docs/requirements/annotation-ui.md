@@ -442,3 +442,24 @@ export. See the [index](index.md) for the glossary.
 - **Evidence:** `src/components/Modal.tsx` (`Modal`)
 - **Verified by:** `src/components/Modal.test.tsx`
 - **Status:** Implemented
+
+### REQ-UI-190: Knowledge graph view
+- **Description:** The Export menu shall have an "Explore knowledge graph" item. The item shall open the knowledge graph view. The view shall show the papers, authors, venues, keywords and answers of the knowledge graph of REQ-DAT-480 and REQ-DAT-490 as nodes and edges in a force layout. The user shall pan the graph with a drag on the background. The user shall zoom with the mouse wheel and with the "Zoom in", "Zoom out" and "Reset view" buttons. The user shall move a node with a drag. A click on a node shall select it. A double-click on a node shall add its neighbours to the view. The side panel shall show the label, type, DOI, year and values of the selected node and list its neighbours. The "Show neighbours" button shall add the neighbours of the selected node to the view. The side panel shall list every shown node as a button, as an accessible alternative to the canvas. A click on a listed node shall select it and center the view on it. If the project has no consolidated answers and more than one reviewer, the view shall have a seat selector. The view shall have an "Export…" button that opens the export dialog of REQ-DAT-520. Escape shall close the view when the export dialog is not open. A click on the overlay shall not close the view.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/GraphView.tsx` (`GraphView`), `src/components/Toolbar.tsx` (`Toolbar`), `src/styles/index.css` (`.graph-view`)
+- **Verified by:** `src/components/GraphView.test.tsx`, `src/components/Toolbar.test.tsx`
+- **Status:** Implemented
+
+### REQ-UI-200: Knowledge graph query
+- **Description:** The knowledge graph view shall have a query box. The view shall apply the query when the user presses Enter or the "Show" button. A query shall be a list of terms separated by spaces. A node shall match a query when it matches every term. Text comparison shall ignore case. A word or a "quoted phrase" shall match a node whose label, DOI, year, abstract or answer value contains the text. `type:T` shall match nodes of type T, where T is `paper`, `author`, `venue`, `keyword`, `choice` or `answer`. `paper:X`, `author:X`, `venue:X`, `keyword:X`, `choice:X` and `answer:X` shall match nodes of that type whose text contains X. `field:F` shall match nodes that have an answer for field F. `F=V` and `F:V` shall match nodes that have the answer V for field F. A field name shall match the full field path or its last path segment. A `-` before a term shall exclude the nodes that match the term. `depth:N` shall set the neighbour depth of REQ-UI-210 from 0 to 3. The default depth shall be 1. A larger N shall count as 3. A paper and an answer group shall also match the answers below them, nested answers included. An empty query shall match every node. The view shall show the query syntax below the query box.
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/model/graphQuery.ts` (`parseQuery`, `indexGraph`), `src/components/GraphView.tsx` (`GraphView`)
+- **Verified by:** `src/model/graphQuery.test.ts`, `src/components/GraphView.test.tsx`
+- **Status:** Implemented
+
+### REQ-UI-210: Knowledge graph sub-graph and limit
+- **Description:** The view shall show the nodes that match the query of REQ-UI-200 and their neighbours up to the query depth, in both edge directions. The view shall show only the edges between shown nodes. The view shall mark the matching nodes. The view shall show at most 300 nodes. If more nodes qualify, the view shall keep the matches with the most edges first and shall show "Showing N of M nodes". Neighbours that the user adds with REQ-UI-190 shall stay in the view beyond the limit until the next query. If no node matches, the view shall show "No node matches the query."
+- **Type:** Functional (ISO 25010: Functional Suitability, Performance Efficiency)
+- **Evidence:** `src/model/graphQuery.ts` (`selectSubgraph`, `neighbours`), `src/components/GraphView.tsx` (`GraphView`)
+- **Verified by:** `src/model/graphQuery.test.ts`, `src/components/GraphView.test.tsx`
+- **Status:** Implemented
