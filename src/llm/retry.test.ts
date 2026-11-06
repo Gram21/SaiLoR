@@ -103,6 +103,11 @@ describe('withRetry', () => {
 })
 
 describe('runPool', () => {
+  it('treats concurrency below 1 as 1 instead of rejecting every item', async () => {
+    const res = await runPool([1, 2], 0, async (n) => n * 2)
+    expect(res.map((r) => (r.status === 'fulfilled' ? r.value : null))).toEqual([2, 4])
+  })
+
   it('runs with bounded concurrency and returns results in input order', async () => {
     let inFlight = 0
     let maxInFlight = 0

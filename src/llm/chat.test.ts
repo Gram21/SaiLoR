@@ -134,6 +134,11 @@ describe('buildChatRequest / parseChatResponse round-trip per wire format', () =
     expect(body2.messages[3]).toEqual({ role: 'tool', tool_call_id: 'call_1', content: 'found on page 3' })
   })
 
+  it('gives a tool call without an id a stable fallback id', () => {
+    const response = { choices: [{ message: { tool_calls: [{ function: { name: 'search_paper', arguments: '{}' } }] } }] }
+    expect(parseChatResponse('openai', response).toolCalls[0].id).toBe('call_0')
+  })
+
   it('handles a malformed tool-call arguments string without throwing', () => {
     const response = {
       choices: [

@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { useStore, selectCurrentPaper } from '../state/store'
 import { getPlatform } from '../platform'
 import { annotatedFileName } from '../model/pdfExport'
@@ -31,6 +31,8 @@ export function ExportPdfDialog() {
   const [busy, setBusy] = useState(false)
   const [exportError, setExportError] = useState<string | null>(null)
   const [successPath, setSuccessPath] = useState<string | null>(null)
+  const closeTimer = useRef<ReturnType<typeof setTimeout>>(undefined)
+  useEffect(() => () => clearTimeout(closeTimer.current), [])
 
   useEffect(() => {
     if (!open || !paper) return
@@ -84,14 +86,14 @@ export function ExportPdfDialog() {
         if (!res.ok) setExportError(res.error)
         else {
           setSuccessPath(res.path)
-          setTimeout(() => setOpen(false), 1500)
+          closeTimer.current = setTimeout(() => setOpen(false), 1500)
         }
       } else {
         const res = await platform.embedPdfAnnotations(absPath, marks, 'original')
         if (!res.ok) setExportError(res.error)
         else {
           setSuccessPath(res.path)
-          setTimeout(() => setOpen(false), 1500)
+          closeTimer.current = setTimeout(() => setOpen(false), 1500)
         }
       }
     } finally {

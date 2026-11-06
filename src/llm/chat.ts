@@ -530,10 +530,10 @@ export function parseChatResponse(provider: Provider, json: unknown, req?: { bod
   const toolCalls: ToolCall[] = Array.isArray(message.tool_calls)
     ? message.tool_calls
         .filter(isRecord)
-        .map((tc) => {
+        .map((tc, i) => {
           const fn = isRecord(tc.function) ? tc.function : {}
           return {
-            id: String(tc.id ?? ''),
+            id: tc.id ? String(tc.id) : `call_${i}`,
             name: String(fn.name ?? ''),
             args: safeParseArgs(fn.arguments),
           }

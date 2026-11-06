@@ -132,7 +132,7 @@ export async function runPool<T, R>(
     }
   }
 
-  const workers = Array.from({ length: Math.min(concurrency, items.length) }, () => runOne())
+  const workers = Array.from({ length: Math.min(Math.max(1, concurrency), items.length) }, () => runOne())
   await Promise.all(workers)
   // An item never started (abort came before its turn) still needs a slot.
   for (let i = 0; i < results.length; i++) {
