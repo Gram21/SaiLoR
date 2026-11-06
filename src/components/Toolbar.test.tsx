@@ -166,6 +166,17 @@ describe('toolbar entries that need a project or AI', () => {
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
+  // [utest->req~ui-190~1]
+  it('opens the knowledge graph view from the Export menu', async () => {
+    st().loadFromText(annotationProjectJson({ ai: false }), null, 'test.json')
+    render(<Toolbar />)
+    await userEvent.click(screen.getByRole('button', { name: /^Export/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /Explore knowledge graph/ }))
+    expect(screen.getByRole('dialog', { name: 'Knowledge graph' })).toBeInTheDocument()
+    await userEvent.click(screen.getByRole('button', { name: 'Close' }))
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
   it('never shows the AI evaluation on the toolbar', () => {
     st().loadFromText(annotationProjectJson({ reviewers: 2 }), null, 'test.json')
     render(<Toolbar />)

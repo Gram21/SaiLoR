@@ -2731,6 +2731,135 @@ button.validation-search-case:hover {
   padding: 0 16px 16px;
 }
 
+.modal.graph-view {
+  width: 96vw;
+  height: 92vh;
+  max-height: 92vh;
+}
+.graph-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px 0;
+}
+.graph-query {
+  display: flex;
+  flex: 1;
+  gap: 6px;
+  min-width: 240px;
+}
+.graph-query input {
+  flex: 1;
+}
+.graph-zoom {
+  display: flex;
+  gap: 4px;
+}
+.graph-hint {
+  color: var(--muted);
+  font-size: 0.8rem;
+  margin: 4px 16px;
+}
+.graph-body {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  border-top: 1px solid var(--border);
+}
+.graph-canvas {
+  flex: 1;
+  min-width: 0;
+  height: 100%;
+  background: var(--bg);
+  touch-action: none;
+  cursor: grab;
+  user-select: none;
+}
+.graph-edge {
+  stroke: var(--muted);
+  stroke-opacity: 0.5;
+  stroke-width: 1;
+}
+.graph-node {
+  cursor: pointer;
+}
+.graph-node circle {
+  fill: var(--muted);
+  stroke: var(--panel-bg);
+  stroke-width: 1.5;
+}
+.graph-node text {
+  fill: var(--text);
+  font-size: 10px;
+  pointer-events: none;
+}
+.graph-node-paper circle {
+  fill: var(--accent);
+}
+.graph-node-author circle {
+  fill: var(--ok);
+}
+.graph-node-venue circle,
+.graph-node-keyword circle {
+  fill: var(--progress);
+}
+.graph-node-choice circle,
+.graph-node-answer circle {
+  fill: var(--ai-mark);
+}
+.graph-node.is-match circle {
+  stroke: var(--text);
+  stroke-width: 2;
+}
+.graph-node.is-selected circle {
+  stroke: var(--danger);
+  stroke-width: 3;
+}
+.graph-side {
+  width: 300px;
+  flex-shrink: 0;
+  overflow: auto;
+  padding: 8px 12px;
+  border-inline-start: 1px solid var(--border);
+}
+.graph-side h3 {
+  font-size: 0.95rem;
+  margin: 8px 0 4px;
+}
+.graph-side h4 {
+  font-size: 0.85rem;
+  margin: 8px 0 4px;
+}
+.graph-side .graph-hint {
+  margin: 4px 0;
+}
+.graph-values {
+  margin: 4px 0 8px;
+  font-size: 0.85rem;
+}
+.graph-values dd {
+  margin-inline-start: 12px;
+}
+.graph-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.graph-list button {
+  display: block;
+  width: 100%;
+  text-align: start;
+  background: none;
+  border: none;
+  padding: 2px 4px;
+  color: var(--text);
+  cursor: pointer;
+}
+.graph-list button[aria-pressed='true'] {
+  background: var(--accent-weak);
+}
+
 .help-keys {
   border-collapse: collapse;
   width: 100%;
