@@ -176,6 +176,23 @@ describe('progressive project loading', () => {
     expect(st().project!.papers[0].annotations.Relevant).toEqual([{ value: false }])
   })
 
+  it.each([
+    ['validation', config, () => st().runValidation()],
+    ['adopt all (annotations)', { ...config, reviewers: 2 }, () => st().adoptAllUnanimousAnnotations()],
+    ['adopt all (screening)', { reviewers: 2, screening: { reasons: ['Duplicate'] } }, () => st().adoptAllUnanimousScreening()],
+  ])('refuses %s while loading, and says why', async (_, cfg, run) => {
+    const two = papers.slice(0, 2).map((p) => ({ ...p, annotations: {} }))
+    st().loadFromText(JSON.stringify({ version: 1, config: cfg, papers: two }), null, 'p.json')
+    expect(st().loadError).toBeNull()
+    useStore.setState({ loadState: 'loading', loadProgress: { loaded: 2, total: N } })
+    const before = st().project
+    await run()
+    expect(st().loadError?.message).toMatch(/still loading. Try again/)
+    expect(st().validation).toBeNull()
+    expect(st().unanimousRun).toBeNull()
+    expect(st().project).toBe(before)
+  })
+
   it('stops a load waiting on a failed batch once the project is closed', async () => {
     const done = st().openRecent('/big/project.json')
     await release()

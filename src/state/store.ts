@@ -1410,11 +1410,14 @@ export function containerAt(root: AnnotationValueTree, path: PathSeg[]): Annotat
  * that no longer matches the files.
  */
 // [impl->req~plt-442~1]
-/** True, and says why, while the open project's papers are still being read: a save now would drop the rest. */
-function stillLoading(): boolean {
+/**
+ * True, and says why, while the open project's papers are still being read: a
+ * save now would drop the rest, and a run over every paper would miss them.
+ */
+function stillLoading(run = false): boolean {
   if (useStore.getState().loadState !== 'loading') return false
   useStore.setState((s) => {
-    s.loadError = { message: t('store.loadError.stillLoading'), details: [] }
+    s.loadError = { message: t(run ? 'store.loadError.stillLoadingRun' : 'store.loadError.stillLoading'), details: [] }
   })
   return true
 }
@@ -2568,9 +2571,10 @@ export const useStore = create<AppState>()(
       })
     },
 
+    // [impl->req~plt-443~1]
     runValidation: () => {
       const { project, currentReviewer } = get()
-      if (!project) return
+      if (!project || stillLoading(true)) return
       // Nothing to validate as "the reviewer" until one is picked — the
       // Validate button is disabled in this state too (see Toolbar.tsx).
       if (project.reviewers > 1 && currentReviewer === null) return
@@ -4187,10 +4191,11 @@ export const useStore = create<AppState>()(
         s.pdfDialogOpen = open
       }),
 
+    // [impl->req~plt-443~1]
     adoptAllUnanimousScreening: () => {
       if (get().readOnly) return 0
       const project = get().project
-      if (!project || project.screening === null) return 0
+      if (!project || project.screening === null || stillLoading(true)) return 0
       let filledPapers = 0
       let coalesce = false
       for (const paper of project.papers) {
@@ -4208,7 +4213,7 @@ export const useStore = create<AppState>()(
       const project = get().project
       // Screening has its own button (`adoptAllUnanimousScreening`) and stays
       // synchronous — its schema has no repeatable node to line up.
-      if (!project || project.screening !== null || project.reviewers <= 1) return
+      if (!project || project.screening !== null || project.reviewers <= 1 || stillLoading(true)) return
       // A second run would interleave two coalesce chains and split the batch
       // across two undo entries.
       if (get().unanimousRun?.running) return
