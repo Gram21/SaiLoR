@@ -85,6 +85,8 @@ jobs:
             target: x86_64-pc-windows-msvc
           - os: ubuntu-22.04
             target: x86_64-unknown-linux-gnu
+          - os: ubuntu-22.04-arm
+            target: aarch64-unknown-linux-gnu
     runs-on: ${{ matrix.os }}
     defaults:
       run:
@@ -173,7 +175,7 @@ jobs:
           asset=$(gh api "repos/$GH_REPO/releases/$ID/assets" --jq '.[] | select(.name == "latest.json") | .id')
           gh api -H 'Accept: application/octet-stream' "repos/$GH_REPO/releases/assets/$asset" > latest.json
           jq . latest.json
-          jq -e '.platforms | has("darwin-aarch64") and has("darwin-x86_64") and has("windows-x86_64") and has("linux-x86_64")' latest.json
+          jq -e '.platforms | has("darwin-aarch64") and has("darwin-x86_64") and has("windows-x86_64") and has("linux-x86_64") and has("linux-aarch64")' latest.json
 
   # Checksums for manual installs (.deb, .rpm, first 2.x install). The updater
   # still verifies its own minisign signatures.
