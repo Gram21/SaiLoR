@@ -121,6 +121,14 @@ describe('alignedReviews', () => {
     const alignment: StoredAlignment = { Findings: [{ members: { '2': 0 } }] }
     expect(claims(alignedReviews(schema, alignment, reviews)['1'])).toEqual([null, null])
   })
+
+  it('gives a group no value and a field no children', () => {
+    const { schema, reviews } = setup(FINDINGS, { '1': { Findings: [finding('a')] } })
+    const alignment: StoredAlignment = { Findings: [{ members: { '1': 0 } }] }
+    expect(alignedReviews(schema, alignment, reviews)['1']).toEqual({
+      Findings: [{ children: { Claim: [{ value: 'a' }] } }],
+    })
+  })
 })
 
 describe('parseAlignment', () => {
@@ -152,6 +160,17 @@ describe('parseAlignment', () => {
     expect(parseAlignment({ Findings: [null, 7, { members: { '1': 0 } }] })).toEqual({
       Findings: [{ members: {} }, { members: {} }, { members: { '1': 0 } }],
     })
+    expect(parseAlignment({ Findings: ['ab', [1]] })).toEqual({ Findings: [{ members: {} }, { members: {} }] })
+  })
+
+  it('reads members only from an object', () => {
+    for (const members of [undefined, null, [3], 'ab']) {
+      expect(parseAlignment({ Findings: [{ members }] })).toEqual({ Findings: [{ members: {} }] })
+    }
+  })
+
+  it('drops a node with no slots', () => {
+    expect(parseAlignment({ Findings: [] })).toEqual({})
   })
 
   it('keeps the manual marker and keys it does not know', () => {
@@ -183,5 +202,29 @@ describe('reviewerEntriesAt', () => {
   it('reads by position where no mapping exists', () => {
     expect(reviewerEntriesAt({}, tree, [{ name: 'Findings', index: 0 }], 'Notes', '1')).toEqual([{ value: 'a' }])
     expect(reviewerEntriesAt({}, tree, [], 'Findings', '1')).toHaveLength(2)
+  })
+
+  it('follows the nested mapping of a matched slot', () => {
+    const nested: AnnotationValueTree = {
+      Findings: [{ children: { Evidence: [{ children: { Notes: [{ value: 'x' }] } }, { children: {} }] } }],
+    }
+    const alignment: StoredAlignment = {
+      Findings: [{ members: { '1': 0 }, children: { Evidence: [{ members: { '1': 1 } }, { members: { '1': 0 } }] } }],
+    }
+    const path = [
+      { name: 'Findings', index: 0 },
+      { name: 'Evidence', index: 1 },
+    ]
+    expect(reviewerEntriesAt(alignment, nested, path, 'Notes', '1')).toEqual([{ value: 'x' }])
+  })
+
+  it('finds nothing where the tree, the slot or the entry is missing', () => {
+    const at0 = [{ name: 'Findings', index: 0 }]
+    expect(reviewerEntriesAt({}, undefined, at0, 'Notes', '1')).toEqual([])
+    expect(reviewerEntriesAt({}, undefined, [], 'Notes', '1')).toEqual([])
+    expect(reviewerEntriesAt({}, tree, [], 'Nope', '1')).toEqual([])
+    const stale: StoredAlignment = { Findings: [{ members: { '1': 5 } }] }
+    expect(reviewerEntriesAt(stale, tree, at0, 'Notes', '1')).toEqual([])
+    expect(reviewerEntriesAt(stale, tree, [{ name: 'Findings', index: 3 }], 'Notes', '1')).toEqual([])
   })
 })
