@@ -177,10 +177,15 @@ jobs:
 
   # Checksums for manual installs (.deb, .rpm, first 2.x install). The updater
   # still verifies its own minisign signatures.
+  # Also attests build provenance, so `gh attestation verify <file> --repo <owner>/<repo>` works.
   checksums:
     needs: [release, build]
     runs-on: ubuntu-latest
     timeout-minutes: 10
+    permissions:
+      contents: write
+      id-token: write
+      attestations: write
     steps:
       - name: Upload SHA256SUMS.txt
         env:
@@ -193,6 +198,11 @@ jobs:
           sha256sum -- * > SHA256SUMS.txt
           cat SHA256SUMS.txt
           gh release upload "$TAG" SHA256SUMS.txt --clobber
+
+      - name: Attest build provenance
+        uses: actions/attest-build-provenance@4d101475d8b20a2381f78447822ac1eab6504dd8 # v4.2.2
+        with:
+          subject-path: assets/*
 
   # Archive the published release on Zenodo as a new version of the existing
   # record (shared concept DOI): source zip plus every release
