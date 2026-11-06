@@ -299,7 +299,6 @@ fn build_server_args(
     port: u16,
     context_tokens: u32,
     gpu: bool,
-    api_key: &str,
 ) -> Vec<String> {
     let c = context_tokens.to_string();
     let mut a: Vec<String> = vec![
@@ -324,7 +323,7 @@ fn build_server_args(
         &["-dev", "none", "-ngl", "0"]
     };
     a.extend(dev.iter().map(|s| s.to_string()));
-    a.extend(["--no-webui", "--api-key", api_key, "-lv", "4"].map(String::from));
+    a.extend(["--no-webui", "-lv", "4"].map(String::from));
     a
 }
 
@@ -1136,9 +1135,11 @@ fn remove(dir: &Path, id: &str) -> Result<Vec<InstalledModel>, String> {
 
 // ---- server manager ---------------------------------------------------------------------
 
-fn spawn_server(bin: &Path, args: &[String]) -> std::io::Result<Child> {
+fn spawn_server(bin: &Path, args: &[String], api_key: &str) -> std::io::Result<Child> {
     let mut c = Command::new(bin);
+    // Env, not argv: argv is readable by every local user via the process list.
     c.args(args)
+        .env("LLAMA_API_KEY", api_key)
         .stdin(Stdio::null())
         .stdout(Stdio::piped())
         .stderr(Stdio::piped());
@@ -1234,12 +1235,12 @@ async fn launch(
         .map_err(|x| plain(x.to_string()))?
         .port();
     let api_key = random_key().map_err(plain)?;
-    let args = build_server_args(&model_file(dir, e), port, e.context_tokens, gpu, &api_key);
+    let args = build_server_args(&model_file(dir, e), port, e.context_tokens, gpu);
     let log = Arc::new(Mutex::new(RingLog::new(200)));
     state().logs.insert(e.id, log.clone());
     // The offload summary sits early in a long startup log; the 200-line ring would drop it.
     let startup = Arc::new(Mutex::new(RingLog::new(2000)));
-    let mut child = spawn_server(bin, &args).map_err(|x| plain(x.to_string()))?;
+    let mut child = spawn_server(bin, &args, &api_key).map_err(|x| plain(x.to_string()))?;
     if let Some(s) = child.stdout.take() {
         pump(s, [log.clone(), startup.clone()]);
     }
@@ -1676,9 +1677,9 @@ mod tests {
     #[test]
     fn server_flags_and_logs() {
         let m = Path::new("/m/x.gguf");
-        let a = build_server_args(m, 5555, 2048, true, "k").join(" ");
-        assert_eq!(a, "-m /m/x.gguf --host 127.0.0.1 --port 5555 -c 2048 -b 2048 -ub 2048 -np 1 -ngl 99 --no-webui --api-key k -lv 4");
-        assert!(build_server_args(m, 5555, 2048, false, "k")
+        let a = build_server_args(m, 5555, 2048, true).join(" ");
+        assert_eq!(a, "-m /m/x.gguf --host 127.0.0.1 --port 5555 -c 2048 -b 2048 -ub 2048 -np 1 -ngl 99 --no-webui -lv 4");
+        assert!(build_server_args(m, 5555, 2048, false)
             .join(" ")
             .contains("-dev none -ngl 0"));
 
@@ -1974,7 +1975,7 @@ mod tests {
     #[test]
     fn terminate_reaches_the_whole_tree() {
         let args = ["-c".to_string(), "sleep 30 & echo $!; wait".to_string()];
-        let mut child = spawn_server(Path::new("/bin/sh"), &args).unwrap();
+        let mut child = spawn_server(Path::new("/bin/sh"), &args, "k").unwrap();
         let mut out = child.stdout.take().unwrap();
         let mut buf = [0; 32];
         let n = out.read(&mut buf).unwrap();
