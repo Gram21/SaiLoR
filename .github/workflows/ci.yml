@@ -5,6 +5,7 @@ name: CI
 # or another CI provider:
 #   build       scripts/ci.sh              (also: make ci)
 #   rust        scripts/ci/rust.sh         (make ci-rust)
+#   lint        scripts/ci/lint.sh         (needs actionlint, shellcheck, hadolint)
 #   trace       scripts/ci/trace.sh        (make ci-trace)
 #   tauri-build scripts/ci/bundle.sh       (make ci-bundle)
 #   tauri-e2e   scripts/ci/e2e.sh          (make ci-e2e)
@@ -65,6 +66,39 @@ jobs:
           workspaces: src-tauri
 
       - run: scripts/ci/rust.sh
+
+  # Lint workflows, shell scripts and Dockerfiles. Tool downloads are pinned by SHA-256.
+  # Allowed to fail until the first CI run shows its findings; then remove continue-on-error.
+  lint:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Install actionlint and hadolint
+        run: |
+          curl -fsSLO https://github.com/rhysd/actionlint/releases/download/v1.7.7/actionlint_1.7.7_linux_amd64.tar.gz
+          curl -fsSLO https://github.com/hadolint/hadolint/releases/download/v2.12.0/hadolint-Linux-x86_64
+          sha256sum -c - <<'SUMS'
+          023070a287cd8cccd71515fedc843f1985bf96c436b7effaecce67290e7e0757  actionlint_1.7.7_linux_amd64.tar.gz
+          56de6d5e5ec427e17b74fa48d51271c7fc0d61244bf5c90e828aab8362d55010  hadolint-Linux-x86_64
+          SUMS
+          mkdir -p "$HOME/bin"
+          tar -xzf actionlint_1.7.7_linux_amd64.tar.gz -C "$HOME/bin" actionlint
+          install -m 755 hadolint-Linux-x86_64 "$HOME/bin/hadolint"
+          echo "$HOME/bin" >> "$GITHUB_PATH"
+
+      - run: scripts/ci/lint.sh
+
+  # Known advisories in production npm dependencies.
+  audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - run: npm audit --omit=dev --audit-level=high
 
   # Requirement trace links (OpenFastTrace). Allowed to fail until the trace tags are in the sources.
   trace:
