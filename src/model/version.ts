@@ -81,7 +81,17 @@ export function pickInstaller(assets: ReleaseAsset[], os: OsInfo | null): Update
 
   const asset = assets.find((a) => match.test(a.name))
   if (!asset) return undefined
+  if (!isHttps(asset.browser_download_url)) return undefined
   return { url: asset.browser_download_url, name: asset.name, label }
+}
+
+/** Release links come from a remote API, so only `https:` may reach an `href`. */
+function isHttps(url: string): boolean {
+  try {
+    return new URL(url).protocol === 'https:'
+  } catch {
+    return false
+  }
 }
 
 /** Numeric components of a version, ignoring a leading "v" and any pre-release suffix. */
@@ -168,7 +178,7 @@ export async function fetchLatestRelease(
     if (!data.tag_name || data.draft) return null
     return {
       latest: data.tag_name.replace(/^v/, ''),
-      url: data.html_url || RELEASES_URL,
+      url: data.html_url && isHttps(data.html_url) ? data.html_url : RELEASES_URL,
       download: pickInstaller(data.assets ?? [], os),
     }
   } catch {

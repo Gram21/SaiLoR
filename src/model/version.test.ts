@@ -84,16 +84,16 @@ describe('fetchLatestRelease', () => {
 describe('pickInstaller', () => {
   // The names the release workflow actually produces.
   const assets = [
-    { name: 'SaiLoR_0.2.0_aarch64.dmg', browser_download_url: 'u/mac-arm' },
-    { name: 'SaiLoR_0.2.0_x64.dmg', browser_download_url: 'u/mac-intel' },
-    { name: 'SaiLoR_0.2.0_x64-setup.exe', browser_download_url: 'u/win' },
-    { name: 'SaiLoR_0.2.0_amd64.AppImage', browser_download_url: 'u/linux' },
+    { name: 'SaiLoR_0.2.0_aarch64.dmg', browser_download_url: 'https://e.test/mac-arm' },
+    { name: 'SaiLoR_0.2.0_x64.dmg', browser_download_url: 'https://e.test/mac-intel' },
+    { name: 'SaiLoR_0.2.0_x64-setup.exe', browser_download_url: 'https://e.test/win' },
+    { name: 'SaiLoR_0.2.0_amd64.AppImage', browser_download_url: 'https://e.test/linux' },
   ]
 
   it('picks the dmg matching the Mac architecture', () => {
     // Handing an Intel Mac the arm64 build (or vice versa) is the whole point.
-    expect(pickInstaller(assets, { platform: 'darwin', arch: 'arm64' })?.url).toBe('u/mac-arm')
-    expect(pickInstaller(assets, { platform: 'darwin', arch: 'x64' })?.url).toBe('u/mac-intel')
+    expect(pickInstaller(assets, { platform: 'darwin', arch: 'arm64' })?.url).toBe('https://e.test/mac-arm')
+    expect(pickInstaller(assets, { platform: 'darwin', arch: 'x64' })?.url).toBe('https://e.test/mac-intel')
   })
 
   it('labels the download so the user knows what they are getting', () => {
@@ -104,8 +104,8 @@ describe('pickInstaller', () => {
   })
 
   it('picks the Windows and Linux installers', () => {
-    expect(pickInstaller(assets, { platform: 'win32', arch: 'x64' })?.url).toBe('u/win')
-    expect(pickInstaller(assets, { platform: 'linux', arch: 'x64' })?.url).toBe('u/linux')
+    expect(pickInstaller(assets, { platform: 'win32', arch: 'x64' })?.url).toBe('https://e.test/win')
+    expect(pickInstaller(assets, { platform: 'linux', arch: 'x64' })?.url).toBe('https://e.test/linux')
   })
 
   it('offers nothing in the browser, which has no installer', () => {
@@ -122,10 +122,10 @@ describe('pickInstaller', () => {
 
   it('is wired through fetchLatestRelease', async () => {
     const res = await fetchLatestRelease({ platform: 'linux', arch: 'x64' }, async () =>
-      reply(200, { tag_name: 'v0.2.0', html_url: 'p', assets }),
+      reply(200, { tag_name: 'v0.2.0', html_url: 'https://e.test/p', assets }),
     )
     expect(res?.download).toEqual({
-      url: 'u/linux',
+      url: 'https://e.test/linux',
       name: 'SaiLoR_0.2.0_amd64.AppImage',
       label: 'Linux',
     })
