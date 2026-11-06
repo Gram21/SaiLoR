@@ -167,6 +167,27 @@ describe('runAgent', () => {
     })
   })
 
+  it('does not keep an old accept for a changed field the judge leaves out', async () => {
+    const changed = [
+      goodFields[0],
+      { path: 'Year', value: 2020, evidence: 'conducted in 2021', source: 'paper' },
+    ]
+    const deps = scriptedDeps([
+      submitResponse(goodFields),
+      judgeResponse([
+        { path: 'Study Type', verdict: 'revise', feedback: 'be specific' },
+        { path: 'Year', verdict: 'accept', feedback: '' },
+      ]),
+      submitResponse(changed),
+      judgeResponse([]),
+    ])
+    const result = await runAgent(
+      { config: config(), judgeConfig: config({ id: 'judge' }), schema, targets, paper, paperText: PAPER_TEXT, delivery: 'text', maxRounds: 2 },
+      deps,
+    )
+    expect(result.answer.fields.find((f) => f.path === 'Year')?.judge?.verdict).not.toBe('accept')
+  })
+
   it('(c) stops at maxRounds and keeps the judge feedback on an unaccepted field', async () => {
     const deps = scriptedDeps([
       submitResponse(goodFields),

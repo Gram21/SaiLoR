@@ -147,3 +147,11 @@ describe('checkSubmission', () => {
     expect(failures).toEqual([]) // nothing accepted, so nothing to evidence-check
   })
 })
+
+describe('checkSubmission without paper text', () => {
+  it('does not fail a quoted field when the paper has no extractable text', () => {
+    const payload = { fields: [{ path: 'Study Type', value: 'RCT', evidence: 'a randomized trial', confidence: 0.9 }], skipped: [] }
+    const { failures } = checkSubmission(schema, payload as never, '', new Set())
+    expect(failures).toEqual([])
+  })
+})

@@ -174,6 +174,8 @@ export function checkSubmission(
     // quote must actually be in the paper.
     const check = checkEvidence(suggestion.evidence, paperText, suggestion.page)
     if (check) suggestion.evidenceCheck = check
+    // A scanned PDF has no text layer: nothing to check the quote against, so it stays unchecked.
+    if (!paperText.trim() && suggestion.evidence.trim()) continue
     if (check !== 'verified' && check !== 'wrongPage') {
       failures.push({
         path: suggestion.path,

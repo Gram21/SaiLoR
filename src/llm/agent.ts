@@ -363,6 +363,8 @@ export async function runAgent(input: AgentInput, deps: AgentDeps): Promise<Agen
         webUnverified: s.webUnverified,
       })
       signatureByPath.set(s.path, sig)
+      // An old verdict must not survive a changed value; the judge has to rule again.
+      verdictByPath.delete(s.path)
     }
 
     let missed: { path: string; feedback: string }[] = lastMissed
