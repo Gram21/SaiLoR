@@ -183,7 +183,7 @@
   "graphView.edge.hasKeyword": "キーワード",
   "graphView.edge.cites": "引用",
   "graphView.edgeTitle": "{type}: {source} → {target}",
-  "graphView.cypherHelp": "読み取り専用の Cypher クエリは MATCH で始めます。例: MATCH (p:Paper)-[:authoredBy]->(a:Author) WHERE a.label CONTAINS 'Turing' RETURN p, a",
+  "graphView.cypherHelp": "読み取り専用の Cypher クエリは MATCH で始めます。例: MATCH (p:Paper)-[:authoredBy]->(a:Author) WHERE a.label CONTAINS 'Turing' RETURN p, a。単独の * は 1〜3 ステップを意味します。各 MATCH は 1 つのリレーションシップを最大 1 回使用します。テキストの比較では大文字と小文字が区別されます。",
   "graphView.cypher.error": "Cypher クエリのエラー: {message}",
   "graphView.cypher.unexpected": "位置 {at} に予期しない「{token}」があります。",
   "graphView.cypher.end": "クエリが途中で終わっています。",

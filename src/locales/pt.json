@@ -183,7 +183,7 @@
   "graphView.edge.hasKeyword": "palavra-chave",
   "graphView.edge.cites": "cita",
   "graphView.edgeTitle": "{type}: {source} → {target}",
-  "graphView.cypherHelp": "Comece com MATCH para uma consulta Cypher somente leitura, por exemplo MATCH (p:Paper)-[:authoredBy]->(a:Author) WHERE a.label CONTAINS 'Turing' RETURN p, a.",
+  "graphView.cypherHelp": "Comece com MATCH para uma consulta Cypher somente leitura, por exemplo MATCH (p:Paper)-[:authoredBy]->(a:Author) WHERE a.label CONTAINS 'Turing' RETURN p, a. Um * isolado significa de 1 a 3 passos. Cada MATCH usa uma relação no máximo uma vez. As comparações de texto diferenciam maiúsculas de minúsculas.",
   "graphView.cypher.error": "Erro na consulta Cypher: {message}",
   "graphView.cypher.unexpected": "\"{token}\" inesperado na posição {at}.",
   "graphView.cypher.end": "A consulta termina cedo demais.",

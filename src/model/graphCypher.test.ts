@@ -114,13 +114,21 @@ describe('runCypher patterns', () => {
     ])
   })
 
-  it('uses each relationship at most once per match', () => {
+  it('uses each relationship at most once per MATCH clause', () => {
     expect(rows('MATCH (a:Author)<-[:authoredBy]-(p)-[:authoredBy]->(b:Author) RETURN a.label, b.label')).toEqual([
       'Ada Lovelace | Alan Turing',
       'Alan Turing | Ada Lovelace',
     ])
     const two = rows("MATCH (a {id: 'author:ada'})-[*2]-(b) RETURN b.label")
     expect(two).toEqual(['Alan Turing', 'Experiment', 'Graph Mining', 'ICSE', 'Survey', 'Testing Things', 'Tool 1'])
+    expect(rows('MATCH (a:Author)<-[:authoredBy]-(p), (p)-[:authoredBy]->(b:Author) RETURN a.label, b.label')).toHaveLength(2)
+    expect(rows('MATCH (a:Author)<-[:authoredBy]-(p) MATCH (p)-[:authoredBy]->(b:Author) RETURN a.label, b.label')).toEqual([
+      'Ada Lovelace | Ada Lovelace',
+      'Ada Lovelace | Ada Lovelace',
+      'Ada Lovelace | Alan Turing',
+      'Alan Turing | Ada Lovelace',
+      'Alan Turing | Alan Turing',
+    ])
   })
 
   it('joins several patterns and MATCH clauses on shared variables', () => {

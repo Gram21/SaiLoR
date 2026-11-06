@@ -47,6 +47,8 @@ interface RelPat {
   flip?: boolean
 }
 interface Chain {
+  /** Index of the MATCH clause; each clause uses a relationship at most once. */
+  clause: number
   nodes: NodePat[]
   rels: RelPat[]
 }
@@ -287,6 +289,7 @@ export function parseCypher(input: string): CypherQuery {
     const right = eat('>')
     return { slot, dir: left === right ? 0 : right ? 1 : -1, types, min, max, varLen }
   }
+  let clause = 0
   const chain = (where: Expr[]): Chain => {
     if (++parts > MAX_NESTING) throw new CypherError('graphView.cypher.tooDeep', { max: MAX_NESTING })
     const nodes = [nodePat(where)]
@@ -295,7 +298,7 @@ export function parseCypher(input: string): CypherQuery {
       rels.push(r)
       nodes.push(nodePat(where))
     }
-    return { nodes, rels }
+    return { clause, nodes, rels }
   }
 
   if (!keyword('MATCH')) fail()
@@ -305,6 +308,7 @@ export function parseCypher(input: string): CypherQuery {
     do chains.push(chain(where))
     while (eat(','))
     if (keyword('WHERE')) where.push(expr())
+    clause++
   } while (keyword('MATCH'))
   if (!keyword('RETURN')) fail()
   const distinct = keyword('DISTINCT')
@@ -460,6 +464,7 @@ function byType(index: GraphIndex) {
 
 interface Step {
   from: number
+  used: Set<GraphEdge>
   rel?: RelPat
   to: NodePat
   filters: Expr[]
@@ -472,8 +477,11 @@ export function runCypher(index: GraphIndex, q: CypherQuery): CypherResult {
   const bound = new Set<number>()
   const steps: Step[] = []
   const boundAt: number[] = []
+  const used = new Map<number, Set<GraphEdge>>()
   for (const c of q.chains) {
     let { nodes, rels } = c
+    if (!used.has(c.clause)) used.set(c.clause, new Set())
+    const clauseUsed = used.get(c.clause)!
     const first = nodes[0]
     const last = nodes[nodes.length - 1]
     const reverse =
@@ -486,10 +494,10 @@ export function runCypher(index: GraphIndex, q: CypherQuery): CypherResult {
       if (!bound.has(slot)) boundAt[slot] = steps.length - 1
       bound.add(slot)
     }
-    steps.push({ from: -1, to: nodes[0], filters: [] })
+    steps.push({ from: -1, used: clauseUsed, to: nodes[0], filters: [] })
     mark(nodes[0].slot)
     rels.forEach((rel, r) => {
-      steps.push({ from: nodes[r].slot, rel, to: nodes[r + 1], filters: [] })
+      steps.push({ from: nodes[r].slot, used: clauseUsed, rel, to: nodes[r + 1], filters: [] })
       mark(rel.slot)
       mark(nodes[r + 1].slot)
     })
@@ -497,7 +505,6 @@ export function runCypher(index: GraphIndex, q: CypherQuery): CypherResult {
   for (const f of q.where) steps[Math.max(0, ...slotsOf(f).map((s) => boundAt[s]))].filters.push(f)
 
   const env: (Val | undefined)[] = new Array(q.slots.length)
-  const used = new Set<GraphEdge>()
   const aggregate = q.items.some((it) => it.expr.op === 'count')
   const cap = Math.min(q.limit, MAX_ROWS)
   const rows: Val[][] = []
@@ -581,7 +588,7 @@ export function runCypher(index: GraphIndex, q: CypherQuery): CypherResult {
   }
   const run = (s: number): void => {
     if (s === steps.length) return emit()
-    const { from, rel, to, filters } = steps[s]
+    const { from, used, rel, to, filters } = steps[s]
     const enter = (n: GraphNode, via?: GraphEdge | GraphEdge[]) => {
       if (++work > MAX_WORK) stop()
       if (to.label && n.type !== to.label) return

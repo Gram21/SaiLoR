@@ -183,7 +183,7 @@
   "graphView.edge.hasKeyword": "کلیدواژه",
   "graphView.edge.cites": "ارجاع می‌دهد",
   "graphView.edgeTitle": "{type}: {source} → {target}",
-  "graphView.cypherHelp": "برای پرس‌وجوی فقط‌خواندنی Cypher با MATCH شروع کنید، برای نمونه MATCH (p:Paper)-[:authoredBy]->(a:Author) WHERE a.label CONTAINS 'Turing' RETURN p, a",
+  "graphView.cypherHelp": "برای پرس‌وجوی فقط‌خواندنی Cypher با MATCH شروع کنید، برای نمونه MATCH (p:Paper)-[:authoredBy]->(a:Author) WHERE a.label CONTAINS 'Turing' RETURN p, a. یک * تنها یعنی ۱ تا ۳ گام. هر MATCH از هر رابطه حداکثر یک بار استفاده می‌کند. مقایسه‌های متنی به بزرگی و کوچکی حروف حساس است.",
   "graphView.cypher.error": "خطا در پرس‌وجوی Cypher: {message}",
   "graphView.cypher.unexpected": "«{token}» غیرمنتظره در موقعیت {at}.",
   "graphView.cypher.end": "پرس‌وجو زودتر از موعد تمام می‌شود.",

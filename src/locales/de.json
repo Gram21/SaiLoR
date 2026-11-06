@@ -183,7 +183,7 @@
   "graphView.edge.hasKeyword": "Schlagwort",
   "graphView.edge.cites": "zitiert",
   "graphView.edgeTitle": "{type}: {source} → {target}",
-  "graphView.cypherHelp": "Beginnen Sie mit MATCH für eine schreibgeschützte Cypher-Abfrage, zum Beispiel MATCH (p:Paper)-[:authoredBy]->(a:Author) WHERE a.label CONTAINS 'Turing' RETURN p, a.",
+  "graphView.cypherHelp": "Beginnen Sie mit MATCH für eine schreibgeschützte Cypher-Abfrage, zum Beispiel MATCH (p:Paper)-[:authoredBy]->(a:Author) WHERE a.label CONTAINS 'Turing' RETURN p, a. Ein einzelnes * bedeutet 1 bis 3 Schritte. Jedes MATCH verwendet eine Beziehung höchstens einmal. Textvergleiche unterscheiden Groß- und Kleinschreibung.",
   "graphView.cypher.error": "Fehler in der Cypher-Abfrage: {message}",
   "graphView.cypher.unexpected": "Unerwartetes „{token}“ an Position {at}.",
   "graphView.cypher.end": "Die Abfrage endet zu früh.",
