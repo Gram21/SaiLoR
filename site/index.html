@@ -63,7 +63,6 @@
         </ul>
 
         <h3>Evidence from the PDF</h3>
-        <p>Keep each answer tied to the text that supports it.</p>
         <ul>
           <li>Select text in the PDF and copy it into a field.</li>
           <li>Highlight text or add sticky notes. Each mark can carry its own comment.</li>
@@ -77,7 +76,6 @@
         </figure>
 
         <h3>Several reviewers and reconciliation</h3>
-        <p>Two or more people can annotate the same papers without overwriting each other.</p>
         <ul>
           <li>Set 2 to 10 reviewers. Each reviewer works on their own answers.</li>
           <li>The Consolidation seat compares answers field by field with the &#8644; button.</li>
@@ -90,6 +88,18 @@
           <img src="img/screenshot-pending.svg" alt="Placeholder: the Consolidation view comparing two reviewers' answers for one field, with an agreement badge." width="1440" height="900">
           <figcaption>The Consolidation seat compares reviewers&rsquo; answers side by side.</figcaption>
         </figure>
+
+        <h3>Strict mode</h3>
+        <p>Strict mode adds a workflow for a team with named persons.</p>
+        <ul>
+          <li>Add persons and assign papers to them.</li>
+          <li>Each person sees only their assigned papers. A Manager sees all papers and all seats.</li>
+          <li>Finishing a person&rsquo;s work locks it at the next save. Only the Manager can unlock it.</li>
+          <li>Consolidation waits until every assigned person has finished. The Manager can override this gate.</li>
+        </ul>
+        <div class="note">
+          <p>Warning: strict mode is a workflow aid, not security. Anyone can pick a different person or edit the files.</p>
+        </div>
 
         <h3>Screening</h3>
         <p>Screen titles and abstracts before you annotate full papers.</p>
@@ -112,26 +122,70 @@
           <li>Probable duplicates are flagged. You decide each one. Nothing merges silently.</li>
         </ul>
 
-        <h3>AI-assisted annotation (preview)</h3>
-        <p>AI support is off unless the project turns it on with <code>"ai": true</code> in <code>config</code>.</p>
+        <h3>Metadata correction</h3>
         <ul>
-          <li>Prompt mode sends one request per paper. Agent mode uses tools and a judge to check the evidence. It takes longer and costs more.</li>
-          <li>Each suggestion is checked against the schema before you see it.</li>
+          <li>Set the metadata correction mode in the project editor. With the mode off, title, authors, year and DOI stay read-only.</li>
+          <li>Get proposals from the PDF. Crossref lookup is optional.</li>
+          <li>Confirm each correction before it is saved.</li>
+        </ul>
+
+        <h3>PDF folder scan</h3>
+        <ul>
+          <li>Scan a PDF folder to find new files. Files are compared by SHA-256 hash, not by name.</li>
+          <li>Two files with the same hash count as one paper.</li>
+        </ul>
+
+        <h3>AI-assisted annotation (preview)</h3>
+        <p>AI support is off unless the project sets <code>"ai": true</code> in <code>config</code>.</p>
+        <ul>
+          <li>Prompt mode sends one request per paper. Agent mode uses tools and a judge. It sends more requests and costs more.</li>
+          <li>Each quote in an AI answer is checked against the paper text. A quote that is not in the paper is marked.</li>
+          <li>Prompt overrides let a project add a role, field help and examples. The fixed rules stay in force.</li>
+          <li>An evaluation compares the AI seat with the consolidated answers, field by field. You can export it as CSV.</li>
           <li>You review each suggestion, can edit it, and then apply it. AI-written fields stay marked until you confirm them.</li>
-          <li>Use a cloud provider with your own API key, or a local model server.</li>
+          <li>Use a cloud provider with your own API key, or a local model server. API keys are stored in the operating system keychain.</li>
           <li>AI use is recorded in the project file, with the provider and model.</li>
         </ul>
         <figure class="placeholder-shot">
           <!-- TODO screenshot: replace img/screenshot-pending.svg with img/ai-review.png -->
-          <img src="img/screenshot-pending.svg" alt="Placeholder: the AI review table listing suggested field values, with edit and apply controls." width="1440" height="900">
+          <img src="img/screenshot-pending.svg" alt="Placeholder: the AI review table listing suggested field values, with quote checks, edit and apply controls." width="1440" height="900">
           <figcaption>AI suggestions wait for your review before they are applied.</figcaption>
         </figure>
+
+        <h3>Knowledge graph</h3>
+        <ul>
+          <li>Export the papers, authors, venues, keywords and answers as JSON-LD, RDF Turtle, GraphML, or two CSV files.</li>
+          <li>Explore the same graph in a view. Drag, zoom, and expand the neighbours of a node.</li>
+          <li>Search with text queries, for example <code>type:paper</code> or <code>Method=Survey</code>.</li>
+          <li>Run read-only Cypher queries. A subset of Cypher is supported, with limits on size and run time.</li>
+          <li>Queries run in a background worker, so the view stays usable.</li>
+        </ul>
+        <figure class="placeholder-shot">
+          <!-- TODO screenshot: replace img/screenshot-pending.svg with img/knowledge-graph.png -->
+          <img src="img/screenshot-pending.svg" alt="Placeholder: the knowledge graph view with paper, author and keyword nodes and the text query box." width="1440" height="900">
+          <figcaption>The knowledge graph view with a text query.</figcaption>
+        </figure>
+
+        <h3>Large projects</h3>
+        <ul>
+          <li>A large project opens in two steps. The paper list appears first, and annotation files load in batches of 2000 papers.</li>
+          <li>The paper list shows the load progress. You can open and annotate each paper that has loaded.</li>
+          <li>Saving waits until every paper has loaded, so a partial project never replaces the full one on disk.</li>
+        </ul>
+
+        <h3>Languages</h3>
+        <p>The interface is available in nine languages: English, German, Chinese (Simplified), Persian, Spanish, French, Italian, Portuguese and Japanese. You choose the language in the Settings dialog.</p>
+        <div class="note">
+          <p>Warning: the texts in the languages other than English are drafts.</p>
+        </div>
 
         <h3>Git integration</h3>
         <ul>
           <li>SaiLoR runs your own <code>git</code> program. It uses your existing credentials.</li>
           <li>Review each changed field before you commit it.</li>
           <li>Pull and merge reviewers&rsquo; work field by field. Only a field that both sides changed asks you to choose.</li>
+          <li>A dry-run summary shows what a merge changes before you confirm it.</li>
+          <li>SaiLoR backs up the branch before a merge. You can undo the last merge.</li>
           <li>Switch branches, and browse the history of the project file.</li>
         </ul>
         <figure class="placeholder-shot">
@@ -140,12 +194,18 @@
           <figcaption>Field-level review of the project&rsquo;s changes.</figcaption>
         </figure>
 
-        <h3>Local first and private</h3>
+        <h3>Local first and secure</h3>
         <ul>
-          <li>SaiLoR has no account and no server of its own.</li>
-          <li>Your project files stay in folders you choose.</li>
-          <li>API keys are stored encrypted with your operating system&rsquo;s secure storage.</li>
+          <li>SaiLoR has no account and no server of its own. Your project files stay in folders you choose.</li>
+          <li>The app checks file paths before it reads or writes a file. A write replaces the old file in one step.</li>
+          <li>AI web access is limited to public web hosts.</li>
           <li>This page loads no scripts, fonts, or trackers from other sites.</li>
+        </ul>
+
+        <h3>Requirements and tests</h3>
+        <ul>
+          <li>Every requirement is listed in <code>docs/requirements</code> and linked to its code and tests.</li>
+          <li>Mutation tests check that the unit tests catch wrong code. You start them on demand.</li>
         </ul>
       </section>
 
@@ -156,37 +216,37 @@
           <thead>
             <tr>
               <th scope="col">System</th>
-              <th scope="col">File</th>
+              <th scope="col">Files</th>
               <th scope="col">First start</th>
             </tr>
           </thead>
           <tbody>
             <tr>
-              <th scope="row">macOS, Apple silicon</th>
-              <td><code>SaiLoR-&lt;version&gt;-macos-arm64.dmg</code></td>
+              <th scope="row">macOS 15 or later, Apple silicon</th>
+              <td><code>.dmg</code></td>
               <td>macOS blocks the unsigned app. Allow it in Privacy &amp; Security.</td>
             </tr>
             <tr>
-              <th scope="row">macOS, Intel</th>
-              <td><code>SaiLoR-&lt;version&gt;-macos-x64.dmg</code></td>
+              <th scope="row">macOS 15 or later, Intel</th>
+              <td><code>.dmg</code></td>
               <td>Same as Apple silicon.</td>
             </tr>
             <tr>
               <th scope="row">Windows, x64</th>
-              <td><code>SaiLoR-&lt;version&gt;-windows-x64.exe</code></td>
+              <td><code>.exe</code> installer</td>
               <td>SmartScreen warns about the unsigned installer. Choose More info, then Run anyway.</td>
             </tr>
             <tr>
-              <th scope="row">Linux, x86_64</th>
-              <td><code>SaiLoR-&lt;version&gt;-x86_64.AppImage</code></td>
-              <td>Make the file executable and run it.</td>
+              <th scope="row">Linux, x64 and arm64</th>
+              <td><code>.AppImage</code>, <code>.deb</code>, <code>.rpm</code></td>
+              <td>Make the AppImage executable and run it. Install <code>.deb</code> or <code>.rpm</code> with your package manager.</td>
             </tr>
           </tbody>
         </table>
+        <p>The macOS, Windows and Linux AppImage builds update in the app. Update the <code>.deb</code> and <code>.rpm</code> packages by hand.</p>
         <div class="note">
           <p>Warning: the releases are not signed with an Apple or Microsoft certificate. The first start shows a warning. The full steps are in the <a href="https://github.com/Gram21/SaiLoR/blob/main/README.md#installing-a-release">README</a>.</p>
         </div>
-        <p>There are no builds for Windows on Arm or Linux on arm64.</p>
       </section>
 
       <section id="try-online" aria-labelledby="try-online-title">
@@ -207,19 +267,21 @@
         <ol class="step-list">
           <li>Download the file for your system from the <a href="https://github.com/Gram21/SaiLoR/releases/latest">latest release</a>.</li>
           <li>Install the app. Follow the steps for your system in the table under <a href="#platforms">Platforms</a>.</li>
+          <li>If you used SaiLoR 1.x, read <a href="https://github.com/Gram21/SaiLoR/blob/main/README.md#upgrading-from-1x">Upgrading from 1.x</a> first.</li>
           <li>Open the app. Create a project as shown in <a href="create-project.html">Create your first project.json</a>.</li>
         </ol>
 
-        <h3>Run the development version</h3>
-        <p>Use this route to change the code. You need Git and Node.js 24, the version the CI uses.</p>
+        <h3>Build from source</h3>
+        <p>Use this route to change the code. The build needs Node.js 22 or later and Rust. <code>make setup</code> installs them.</p>
         <div class="code-block">
           <button class="copy-button" type="button" aria-describedby="copy-status-dev">Copy</button>
           <pre><code>git clone https://github.com/Gram21/SaiLoR.git
 cd SaiLoR
-npm install
-npm run dev:electron</code></pre>
+make setup
+make dev</code></pre>
           <p class="sr-status" id="copy-status-dev" role="status" aria-live="polite"></p>
         </div>
+        <p>The full build guide is in <a href="https://github.com/Gram21/SaiLoR/blob/main/docs/building.md">docs/building.md</a>.</p>
       </section>
 
       <section id="cite" aria-labelledby="cite-title">
