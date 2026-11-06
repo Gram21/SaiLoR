@@ -260,6 +260,8 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
 
 - **Open ▾ menu** — open a project file, or reopen one of the last 5 recent projects.
 - **Save ▾ menu** — Save or Save as…, with their shortcuts shown next to each item.
+- **Export ▾ menu** — **Knowledge graph** exports the papers, metadata and answers as a graph file.
+  **Explore knowledge graph** opens the graph view. See [Knowledge graph](#knowledge-graph).
 - **? (Help)** — opens a dialog describing the workflow and listing all keyboard shortcuts.
 - **Left pane** — collapsible list of papers (toggle with the ☰ button). A completeness dot next to
   each paper fills in proportionally as fields are completed (a fraction of required fields if any
@@ -449,6 +451,143 @@ carried over versus left behind. For a multi-reviewer screening project, "includ
 
 > 📖 Full details, including the derived schema's exact shape, are in
 > [§10 of the schema guide](docs/annotation-schema.md#10-screening-projects).
+
+## Knowledge graph
+
+The **Export ▾** menu in the toolbar has two items:
+
+| Item | Action |
+|---|---|
+| **Knowledge graph** | Exports the graph as JSON-LD, RDF Turtle, GraphML or two CSV files (nodes and edges). |
+| **Explore knowledge graph** | Opens the graph view. The view shows the same graph as the export. |
+
+The graph has these node types:
+
+| Node type | Made from |
+|---|---|
+| `Paper` | Each paper. |
+| `Author` | Each author. Names that differ only in letter case or spaces become one node. |
+| `Venue` | The venue of a paper. |
+| `Keyword` | Each entry of the paper's `keywords` field. A `;` or `,` separates two keywords. |
+| `Choice` | Each value of a choice field. A choice field is a `string` field with `options`, or a `boolean` field. |
+| `Answer` | Each filled entry of a group (a schema node with children). |
+
+Other answers are values of the paper node or of the entry node. The graph ignores a `false`
+answer, an empty answer and a field that `visibleIf` hides.
+
+The edges connect the nodes:
+
+| Edge type | Name in the view | Line style | From → to |
+|---|---|---|---|
+| `hasAnswer` | answer | solid | Paper or entry → `Choice` or `Answer` |
+| `authoredBy` | authored by | dashed | Paper → author |
+| `publishedIn` | published in | dotted | Paper → venue |
+| `hasKeyword` | keyword | dash-dot | Paper → keyword |
+| `cites` | cites | long dash | Paper → paper. The paper's `references` or `cites` field names the id or DOI of the other paper. |
+
+With one reviewer, the graph uses the answers of that reviewer. With more reviewers, the graph uses
+the consolidated answers if one paper or more has a consolidated answer. Otherwise, select the seat
+in the view.
+
+### Use the graph view
+
+- Drag the background to move the graph.
+- Turn the mouse wheel to zoom. You can also use **Zoom in**, **Zoom out** and **Reset view**.
+  **Reset view** fits all nodes into the view.
+- Drag a node to move it. Click a node to select it.
+- Double-click a node to add its neighbours. The **Show neighbours** button in the side panel does
+  the same.
+- The side panel shows the type, DOI, year and values of the selected node, and its neighbours.
+- The side panel lists every shown node as a button. Use this list as a keyboard alternative to the
+  canvas. Each list shows 200 entries first. **Show more** adds the next 200 entries.
+- The selected node, its edges and its neighbours stay strong. The other nodes and edges become dim.
+- The **Relations** legend has one checkbox per edge type. Clear a checkbox to hide the edges of
+  that type.
+- Point at a node or an edge to see a tooltip.
+- **Export…** opens the export dialog. Press `Escape` to close the view.
+
+The view has no node limit. It draws only the nodes and edges in the visible area. It draws the
+node labels at a zoom of 0.6 or more, if 2000 or fewer nodes are visible. It draws arrowheads at a
+zoom of 0.8 or more. A background worker calculates the layout and stops when the layout is stable.
+
+### Text query
+
+Type a query into the query box. Then press `Enter` or click **Show**. The view shows the matching
+nodes and their neighbours. A node matches when it matches every term. Letter case does not matter.
+
+| Term | Matches |
+|---|---|
+| `word` or `"a phrase"` | Nodes whose label, DOI, year, abstract or answer value contains the text. |
+| `type:T` | Nodes of type `T`: `paper`, `author`, `venue`, `keyword`, `choice` or `answer`. |
+| `author:X` | Author nodes that contain `X`. `paper:`, `venue:`, `keyword:`, `choice:` and `answer:` work the same way. |
+| `field:F` | Nodes that have an answer for field `F`. |
+| `F=V` or `F:V` | Nodes that have the answer `V` for field `F`. `V` must be the whole answer. |
+| `-term` | Removes the nodes that match `term`. |
+| `depth:N` | Shows the neighbours up to `N` steps away, from 0 to 3. The default is 1. |
+
+Example: `type:paper Method=Survey -author:smith depth:2`
+
+- `F` matches the full field path, for example `Tool/Name`, or its last part, for example `Name`.
+- A field name in a text query cannot contain spaces. For such a field, use a Cypher query.
+- A paper and an entry also match the answers below them.
+- An empty query shows every node.
+
+### Cypher query
+
+A query that starts with `MATCH` runs as a read-only [Cypher](https://opencypher.org/) query.
+SaiLoR supports a subset of Cypher. Letter case of `MATCH` does not matter.
+
+```cypher
+MATCH (p:Paper)-[:authoredBy]->(a:Author) WHERE a.label CONTAINS 'Turing' RETURN p, a
+```
+
+| Part | Supported |
+|---|---|
+| Clauses | One or more `MATCH`, each with an optional `WHERE`. Then one `RETURN` and an optional `LIMIT`. |
+| Node labels | `Paper`, `Author`, `Venue`, `Keyword`, `Choice`, `Answer` |
+| Relationship types | `authoredBy`, `publishedIn`, `hasKeyword`, `cites`, `hasAnswer`, alternatives with `\|` |
+| Directions | `->`, `<-`, `-` |
+| Variable length | `*`, `*N`, `*N..M`, `*..M` |
+| Inline properties | `{key: value}` |
+| `WHERE` | `=`, `<>`, `<`, `<=`, `>`, `>=`, `CONTAINS`, `STARTS WITH`, `ENDS WITH`, `IN`, `IS NULL`, `IS NOT NULL`, `AND`, `OR`, `NOT`, parentheses |
+| Values | Strings, numbers, lists, `true`, `false`, `null` |
+| `RETURN` | Variables, properties, values, `count(*)`, `DISTINCT`, `AS` |
+| Node properties | `id`, `type`, `label`, `field`, `doi`, `year`, `abstract`, and each answer by field path |
+| Relationship properties | `type`, `field` |
+
+Rules:
+
+- Labels and relationship types ignore letter case and underscores.
+- Text comparisons are case-sensitive. This is different from the text query.
+- A bare `*` means 1 to 3 steps.
+- One `MATCH` clause uses each relationship at most once. Different `MATCH` clauses can use the
+  same relationship.
+- `count(*)` groups the rows by the other columns.
+- `null` follows the Cypher rules. For example, `null = null` is not true.
+- Put a field path with `/` or spaces in backticks, for example ``a.`Tool/Name` ``.
+
+These parts give an error: `CREATE`, `MERGE`, `DELETE`, `DETACH`, `SET`, `REMOVE`, `OPTIONAL`,
+`WITH`, `UNWIND`, `CALL`, `ORDER`, `SKIP`, `UNION`, `LOAD`, `FOREACH` and all functions except
+`count(*)`. Unknown labels, relationship types and variables also give an error.
+
+The graph shows the nodes and relationships of all matches and marks the returned nodes. The side
+panel shows the row count and a table of the first 200 rows. If the query has an error, the view
+shows the reason and its position. The previous result stays.
+
+A background worker runs the query, so the view stays usable. The status line shows "Running the
+query…". A new query or closing the view stops the running query.
+
+| Limit | Value |
+|---|---|
+| Query length | 4000 characters |
+| Nesting | 32 nested expressions, 32 patterns and relationships |
+| Variable-length steps | 3 |
+| Result rows | 10 000 |
+| Work | 2 000 000 steps |
+| Run time | 20 seconds |
+
+If a query stops at the row limit or the work limit, the view tells you that the result is not
+complete. If a query runs longer than 20 seconds, SaiLoR stops it and shows an error.
 
 ## Saving
 
@@ -657,7 +796,9 @@ have no updater files. macOS and Windows installers must be built on their nativ
 
 - `src/model/` — schema types + zod validation, project load/normalize/serialize (including the
   `project.json` + `annotations/` split and legacy-format migration), annotation instance-tree
-  helpers (unit-tested).
+  helpers, and the knowledge graph (`graph.ts`, the text query in `graphQuery.ts`, the Cypher subset
+  in `graphCypher.ts`, the force layout in `graphLayout.ts`; the last two run in workers)
+  (unit-tested).
 - `src/screening/` — the derived screening schema, tri-state decision/reason reading, PRISMA-style
   counts, and the two cross-field validation rules screening needs (unit-tested).
 - `src/platform/` — a `PlatformAdapter` seam; `desktop.ts` (native dialogs, fs, `slr-file://`
@@ -671,6 +812,7 @@ have no updater files. macOS and Windows installers must be built on their nativ
   the parser that validates every proposal against the schema before a reviewer ever sees it.
 - `src/state/store.ts` — Zustand + immer store (`src/state/aiStore.ts` for the AI flow,
   `src/state/gitStore.ts` for git).
-- `src/components/` — Toolbar, PaperList, PdfViewer, AnnotationPanel/Node/Field, AiDialog.
+- `src/components/` — Toolbar, PaperList, PdfViewer, AnnotationPanel/Node/Field, AiDialog,
+  GraphView (canvas drawing in `graphCanvas.ts`).
 - `src-tauri/` — the Rust shell (Tauri v2): window, menu, dialog/fs commands, path authorization,
   PDF protocol, git, AI calls with keychain-held keys, local runtime and updater.
