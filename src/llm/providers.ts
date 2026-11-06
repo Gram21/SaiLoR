@@ -1,6 +1,7 @@
 import type { LlmConfig, LlmHttpRequest, Provider } from './types'
 import { API_KEY_SENTINEL } from './types'
 import { ollamaChatBody } from './ollama'
+import { isRecord } from '../model/json'
 
 /**
  * Everything that differs between the LLM vendors: where to POST, how to
@@ -410,10 +411,6 @@ export function buildRequest(
       ...openaiReasoningFields(cfg.provider, effort),
     }),
   }
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null
 }
 
 function textOfParts(parts: unknown[]): string {

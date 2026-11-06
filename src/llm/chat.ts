@@ -15,6 +15,7 @@ import {
   type PaperPart,
 } from './providers'
 import { inputWasTruncated, numCtxOfBody, ollamaChatBody } from './ollama'
+import { isRecord } from '../model/json'
 
 /**
  * Provider-neutral tool-calling on top of `providers.ts`'s single-shot request
@@ -85,10 +86,6 @@ export interface ChatResponse {
   // [impl->req~llm-721~1]
   /** Ollama only: the server cut the front of the prompt (instructions lost); the answer cannot be trusted. */
   inputTruncated?: boolean
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null
 }
 
 const CHAT_PATH = '/v1/chat/completions'

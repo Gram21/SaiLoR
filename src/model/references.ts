@@ -5,6 +5,7 @@
  */
 
 import { parseYear } from './year'
+import { isRecord } from './json'
 
 export interface RefEntry {
   title: string
@@ -611,10 +612,6 @@ function parseRis(text: string): RefEntry[] {
 // ---------------------------------------------------------------------------
 // CSL-JSON (Zotero's native export)
 // ---------------------------------------------------------------------------
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null
-}
 
 function parseCslItem(raw: unknown): RefEntry | null {
   if (!isRecord(raw)) return null

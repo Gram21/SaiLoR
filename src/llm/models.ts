@@ -4,6 +4,7 @@ import type { LlmConfig, LlmHttpRequest, ModelInfo, ModelsPage, Provider, Reason
 import { API_KEY_SENTINEL } from './types'
 import { baseOf, join } from './providers'
 import { parseTags } from './ollama'
+import { isRecord } from '../model/json'
 
 /**
  * "Ask the API yourself which models are available" — one GET per provider,
@@ -31,10 +32,6 @@ import { parseTags } from './ollama'
  *    offering a control that silently does nothing on some servers would be
  *    worse than not offering one.
  */
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null
-}
 
 /** "medium" when the model offers it, else the level in the middle of the range. */
 function reasoningProfile(levels: string[]): ReasoningProfile {

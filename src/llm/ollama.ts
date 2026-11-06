@@ -1,5 +1,6 @@
 import type { MessageKey } from '../i18n'
 import type { LlmConfig } from './types'
+import { isRecord } from '../model/json'
 
 /**
  * Pure helpers for a local Ollama server (native API) and the other local
@@ -12,10 +13,6 @@ import type { LlmConfig } from './types'
  * answering 200. So every Ollama request sets `options.num_ctx` explicitly and
  * the answer is checked for truncation afterwards.
  */
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null
-}
 
 const num = (v: unknown): number | undefined => (typeof v === 'number' && Number.isFinite(v) ? v : undefined)
 const str = (v: unknown): string | undefined => (typeof v === 'string' && v ? v : undefined)

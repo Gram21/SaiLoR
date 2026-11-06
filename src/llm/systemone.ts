@@ -6,6 +6,7 @@ import { estimateTokens, fitPaperText } from './budget'
 import { optionsBudgetOf, systemOneProfileFor } from './modelProfiles'
 import type { LlmConfig, LlmHttpRequest, Suggestion } from './types'
 import { API_KEY_SENTINEL } from './types'
+import { isRecord } from '../model/json'
 
 // [impl->req~llm-520~1]
 /**
@@ -269,10 +270,6 @@ export function buildSystemOneRequest(
 // ---------------------------------------------------------------------------
 // Response parsing
 // ---------------------------------------------------------------------------
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null
-}
 
 export interface SystemOneResult {
   suggestions: Suggestion[]

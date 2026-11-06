@@ -1,5 +1,6 @@
 // [impl->req~llm-330~1]
 import type { SchemaRemark, WebFetchResult } from './types'
+import { isRecord } from '../model/json'
 
 /**
  * Agent-mode tools: what the model can call, and what running one actually
@@ -155,10 +156,6 @@ export interface SubmitPayload {
   notes?: string
   /** Unvalidated; agent.ts checks the paths against the schema. */
   schemaRemarks?: SchemaRemark[]
-}
-
-function isRecord(v: unknown): v is Record<string, unknown> {
-  return typeof v === 'object' && v !== null
 }
 
 // [impl->req~llm-600~1]
