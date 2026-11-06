@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-llm-delete-config"
+description = "Enables the llm_delete_config command without any pre-configured scope."
+commands.allow = ["llm_delete_config"]
+
+[[permission]]
+identifier = "deny-llm-delete-config"
+description = "Denies the llm_delete_config command without any pre-configured scope."
+commands.deny = ["llm_delete_config"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-git-branch-switch-abort"
+description = "Enables the git_branch_switch_abort command without any pre-configured scope."
+commands.allow = ["git_branch_switch_abort"]
+
+[[permission]]
+identifier = "deny-git-branch-switch-abort"
+description = "Denies the git_branch_switch_abort command without any pre-configured scope."
+commands.deny = ["git_branch_switch_abort"]

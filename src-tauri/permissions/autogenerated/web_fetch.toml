@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-web-fetch"
+description = "Enables the web_fetch command without any pre-configured scope."
+commands.allow = ["web_fetch"]
+
+[[permission]]
+identifier = "deny-web-fetch"
+description = "Denies the web_fetch command without any pre-configured scope."
+commands.deny = ["web_fetch"]

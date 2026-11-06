@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-git-pick-project-in"
+description = "Enables the git_pick_project_in command without any pre-configured scope."
+commands.allow = ["git_pick_project_in"]
+
+[[permission]]
+identifier = "deny-git-pick-project-in"
+description = "Denies the git_pick_project_in command without any pre-configured scope."
+commands.deny = ["git_pick_project_in"]

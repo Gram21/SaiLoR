@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-paths-absolute"
+description = "Enables the paths_absolute command without any pre-configured scope."
+commands.allow = ["paths_absolute"]
+
+[[permission]]
+identifier = "deny-paths-absolute"
+description = "Denies the paths_absolute command without any pre-configured scope."
+commands.deny = ["paths_absolute"]

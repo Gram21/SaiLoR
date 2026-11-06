@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-ollama-ps"
+description = "Enables the ollama_ps command without any pre-configured scope."
+commands.allow = ["ollama_ps"]
+
+[[permission]]
+identifier = "deny-ollama-ps"
+description = "Denies the ollama_ps command without any pre-configured scope."
+commands.deny = ["ollama_ps"]

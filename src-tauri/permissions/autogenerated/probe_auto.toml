@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-probe-auto"
+description = "Enables the probe_auto command without any pre-configured scope."
+commands.allow = ["probe_auto"]
+
+[[permission]]
+identifier = "deny-probe-auto"
+description = "Denies the probe_auto command without any pre-configured scope."
+commands.deny = ["probe_auto"]

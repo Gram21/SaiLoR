@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-git-write-working"
+description = "Enables the git_write_working command without any pre-configured scope."
+commands.allow = ["git_write_working"]
+
+[[permission]]
+identifier = "deny-git-write-working"
+description = "Denies the git_write_working command without any pre-configured scope."
+commands.deny = ["git_write_working"]

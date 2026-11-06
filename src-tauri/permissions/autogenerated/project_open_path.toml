@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-project-open-path"
+description = "Enables the project_open_path command without any pre-configured scope."
+commands.allow = ["project_open_path"]
+
+[[permission]]
+identifier = "deny-project-open-path"
+description = "Denies the project_open_path command without any pre-configured scope."
+commands.deny = ["project_open_path"]

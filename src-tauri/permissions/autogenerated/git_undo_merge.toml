@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-git-undo-merge"
+description = "Enables the git_undo_merge command without any pre-configured scope."
+commands.allow = ["git_undo_merge"]
+
+[[permission]]
+identifier = "deny-git-undo-merge"
+description = "Denies the git_undo_merge command without any pre-configured scope."
+commands.deny = ["git_undo_merge"]

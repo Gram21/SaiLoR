@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-project-shared-annotations"
+description = "Enables the project_shared_annotations command without any pre-configured scope."
+commands.allow = ["project_shared_annotations"]
+
+[[permission]]
+identifier = "deny-project-shared-annotations"
+description = "Denies the project_shared_annotations command without any pre-configured scope."
+commands.deny = ["project_shared_annotations"]

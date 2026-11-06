@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-project-write-feedback"
+description = "Enables the project_write_feedback command without any pre-configured scope."
+commands.allow = ["project_write_feedback"]
+
+[[permission]]
+identifier = "deny-project-write-feedback"
+description = "Denies the project_write_feedback command without any pre-configured scope."
+commands.deny = ["project_write_feedback"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-project-annotations-dir-users"
+description = "Enables the project_annotations_dir_users command without any pre-configured scope."
+commands.allow = ["project_annotations_dir_users"]
+
+[[permission]]
+identifier = "deny-project-annotations-dir-users"
+description = "Denies the project_annotations_dir_users command without any pre-configured scope."
+commands.deny = ["project_annotations_dir_users"]

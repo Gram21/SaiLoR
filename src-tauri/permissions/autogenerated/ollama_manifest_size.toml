@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-ollama-manifest-size"
+description = "Enables the ollama_manifest_size command without any pre-configured scope."
+commands.allow = ["ollama_manifest_size"]
+
+[[permission]]
+identifier = "deny-ollama-manifest-size"
+description = "Denies the ollama_manifest_size command without any pre-configured scope."
+commands.deny = ["ollama_manifest_size"]

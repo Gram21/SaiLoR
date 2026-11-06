@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-llm-configs"
+description = "Enables the llm_configs command without any pre-configured scope."
+commands.allow = ["llm_configs"]
+
+[[permission]]
+identifier = "deny-llm-configs"
+description = "Denies the llm_configs command without any pre-configured scope."
+commands.deny = ["llm_configs"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pdf-embed-marks"
+description = "Enables the pdf_embed_marks command without any pre-configured scope."
+commands.allow = ["pdf_embed_marks"]
+
+[[permission]]
+identifier = "deny-pdf-embed-marks"
+description = "Denies the pdf_embed_marks command without any pre-configured scope."
+commands.deny = ["pdf_embed_marks"]

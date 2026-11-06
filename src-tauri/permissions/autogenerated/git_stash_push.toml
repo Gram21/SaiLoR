@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-git-stash-push"
+description = "Enables the git_stash_push command without any pre-configured scope."
+commands.allow = ["git_stash_push"]
+
+[[permission]]
+identifier = "deny-git-stash-push"
+description = "Denies the git_stash_push command without any pre-configured scope."
+commands.deny = ["git_stash_push"]

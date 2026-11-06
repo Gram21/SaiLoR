@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-text-pick-export-path"
+description = "Enables the text_pick_export_path command without any pre-configured scope."
+commands.allow = ["text_pick_export_path"]
+
+[[permission]]
+identifier = "deny-text-pick-export-path"
+description = "Denies the text_pick_export_path command without any pre-configured scope."
+commands.deny = ["text_pick_export_path"]

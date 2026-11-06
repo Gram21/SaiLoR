@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-ollama-show"
+description = "Enables the ollama_show command without any pre-configured scope."
+commands.allow = ["ollama_show"]
+
+[[permission]]
+identifier = "deny-ollama-show"
+description = "Denies the ollama_show command without any pre-configured scope."
+commands.deny = ["ollama_show"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-git-clone"
+description = "Enables the git_clone command without any pre-configured scope."
+commands.allow = ["git_clone"]
+
+[[permission]]
+identifier = "deny-git-clone"
+description = "Denies the git_clone command without any pre-configured scope."
+commands.deny = ["git_clone"]

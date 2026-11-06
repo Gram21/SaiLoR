@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pdf-pick-folder"
+description = "Enables the pdf_pick_folder command without any pre-configured scope."
+commands.allow = ["pdf_pick_folder"]
+
+[[permission]]
+identifier = "deny-pdf-pick-folder"
+description = "Denies the pdf_pick_folder command without any pre-configured scope."
+commands.deny = ["pdf_pick_folder"]

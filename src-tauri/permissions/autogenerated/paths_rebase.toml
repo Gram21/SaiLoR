@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-paths-rebase"
+description = "Enables the paths_rebase command without any pre-configured scope."
+commands.allow = ["paths_rebase"]
+
+[[permission]]
+identifier = "deny-paths-rebase"
+description = "Denies the paths_rebase command without any pre-configured scope."
+commands.deny = ["paths_rebase"]

@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-local-logs"
+description = "Enables the local_logs command without any pre-configured scope."
+commands.allow = ["local_logs"]
+
+[[permission]]
+identifier = "deny-local-logs"
+description = "Denies the local_logs command without any pre-configured scope."
+commands.deny = ["local_logs"]

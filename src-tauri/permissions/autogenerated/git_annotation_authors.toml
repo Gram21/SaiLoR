@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-git-annotation-authors"
+description = "Enables the git_annotation_authors command without any pre-configured scope."
+commands.allow = ["git_annotation_authors"]
+
+[[permission]]
+identifier = "deny-git-annotation-authors"
+description = "Denies the git_annotation_authors command without any pre-configured scope."
+commands.deny = ["git_annotation_authors"]

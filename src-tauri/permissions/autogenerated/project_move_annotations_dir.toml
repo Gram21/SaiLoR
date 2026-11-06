@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-project-move-annotations-dir"
+description = "Enables the project_move_annotations_dir command without any pre-configured scope."
+commands.allow = ["project_move_annotations_dir"]
+
+[[permission]]
+identifier = "deny-project-move-annotations-dir"
+description = "Denies the project_move_annotations_dir command without any pre-configured scope."
+commands.deny = ["project_move_annotations_dir"]

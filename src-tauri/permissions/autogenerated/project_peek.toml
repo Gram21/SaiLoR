@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-project-peek"
+description = "Enables the project_peek command without any pre-configured scope."
+commands.allow = ["project_peek"]
+
+[[permission]]
+identifier = "deny-project-peek"
+description = "Denies the project_peek command without any pre-configured scope."
+commands.deny = ["project_peek"]

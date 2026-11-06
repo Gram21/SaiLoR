@@ -104,6 +104,18 @@ describe('tauriBridge', () => {
     expect(capability.permissions).toContain('core:window:allow-set-title')
   })
 
+  it('lists every registered command in the app manifest and the capability', () => {
+    const main = readFileSync('src-tauri/src/main.rs', 'utf-8')
+    const handler = main.slice(main.indexOf('generate_handler!['))
+    const registered = [...handler.slice(0, handler.indexOf('])')).matchAll(/^\s+(?:\w+::)?(\w+),$/gm)].map((m) => m[1])
+    const build = readFileSync('src-tauri/build.rs', 'utf-8')
+    const manifest = [...build.matchAll(/^\s+"(\w+)",$/gm)].map((m) => m[1])
+    const capability = JSON.parse(readFileSync('src-tauri/capabilities/default.json', 'utf-8'))
+    const granted = capability.permissions.filter((p: string) => p.startsWith('allow-'))
+    expect(manifest.sort()).toEqual([...registered].sort())
+    expect(granted.sort()).toEqual(registered.map((c) => `allow-${c.replaceAll('_', '-')}`).sort())
+  })
+
   // [utest->req~plt-400~1]
   it('invokes exactly the commands main.rs registers', () => {
     const main = readFileSync('src-tauri/src/main.rs', 'utf-8')

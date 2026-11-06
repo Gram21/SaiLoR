@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-git-log-diff"
+description = "Enables the git_log_diff command without any pre-configured scope."
+commands.allow = ["git_log_diff"]
+
+[[permission]]
+identifier = "deny-git-log-diff"
+description = "Denies the git_log_diff command without any pre-configured scope."
+commands.deny = ["git_log_diff"]

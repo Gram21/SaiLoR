@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-paths-sibling"
+description = "Enables the paths_sibling command without any pre-configured scope."
+commands.allow = ["paths_sibling"]
+
+[[permission]]
+identifier = "deny-paths-sibling"
+description = "Denies the paths_sibling command without any pre-configured scope."
+commands.deny = ["paths_sibling"]

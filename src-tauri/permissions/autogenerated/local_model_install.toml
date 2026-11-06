@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-local-model-install"
+description = "Enables the local_model_install command without any pre-configured scope."
+commands.allow = ["local_model_install"]
+
+[[permission]]
+identifier = "deny-local-model-install"
+description = "Denies the local_model_install command without any pre-configured scope."
+commands.deny = ["local_model_install"]

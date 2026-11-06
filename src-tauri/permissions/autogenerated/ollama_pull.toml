@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-ollama-pull"
+description = "Enables the ollama_pull command without any pre-configured scope."
+commands.allow = ["ollama_pull"]
+
+[[permission]]
+identifier = "deny-ollama-pull"
+description = "Denies the ollama_pull command without any pre-configured scope."
+commands.deny = ["ollama_pull"]

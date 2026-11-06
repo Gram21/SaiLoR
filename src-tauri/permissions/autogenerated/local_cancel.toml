@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-local-cancel"
+description = "Enables the local_cancel command without any pre-configured scope."
+commands.allow = ["local_cancel"]
+
+[[permission]]
+identifier = "deny-local-cancel"
+description = "Denies the local_cancel command without any pre-configured scope."
+commands.deny = ["local_cancel"]

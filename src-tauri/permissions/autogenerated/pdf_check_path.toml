@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pdf-check-path"
+description = "Enables the pdf_check_path command without any pre-configured scope."
+commands.allow = ["pdf_check_path"]
+
+[[permission]]
+identifier = "deny-pdf-check-path"
+description = "Denies the pdf_check_path command without any pre-configured scope."
+commands.deny = ["pdf_check_path"]

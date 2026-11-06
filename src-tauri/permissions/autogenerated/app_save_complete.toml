@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-app-save-complete"
+description = "Enables the app_save_complete command without any pre-configured scope."
+commands.allow = ["app_save_complete"]
+
+[[permission]]
+identifier = "deny-app-save-complete"
+description = "Denies the app_save_complete command without any pre-configured scope."
+commands.deny = ["app_save_complete"]
