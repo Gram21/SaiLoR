@@ -453,6 +453,16 @@ describe('classifyImport — picking the best of several matches', () => {
     expect(v).toEqual({ kind: 'certain', target: { where: 'batch', index: 1 }, reason: { via: 'doi' } })
   })
 
+  it('keeps an earlier certain match over a later probable one, and the first of tied existing papers', () => {
+    const exactFirst = classifyImport(
+      [rec('Continuous Integration Best Practices'), rec('Continuous Integraton Best Practices')],
+      [rec('Continuous Integration Best Practices')],
+    )[0]
+    expect(exactFirst).toEqual({ kind: 'certain', target: { where: 'existing', index: 0 }, reason: { via: 'title', score: 1 } })
+    const tie = classifyImport([rec('Same Title Here'), rec('Same Title Here')], [rec('Same Title Here')])[0]
+    expect(tie.kind !== 'new' && tie.target).toEqual({ where: 'existing', index: 0 })
+  })
+
   it('on a tie in the batch the first match wins', () => {
     const v = classifyImport([], [rec('Same Title Here'), rec('Same Title Here'), rec('Same Title Here')])[2]
     expect(v.kind !== 'new' && v.target).toEqual({ where: 'batch', index: 0 })
