@@ -1,7 +1,7 @@
 // [utest->req~pdf-185~1]
 import { describe, it, expect } from 'vitest'
 import { loadProject } from './project'
-import { screeningMarksByPaper } from './screeningMarks'
+import { screeningMarksByPaper, screeningSeatLabel } from './screeningMarks'
 
 const mark = (id: string) => ({
   id,
@@ -57,5 +57,30 @@ describe('screeningMarksByPaper', () => {
       screening,
     )
     expect(marks).toEqual({})
+  })
+
+  it('strips only a whole trailing import suffix from the id', () => {
+    const marks = screeningMarksByPaper(
+      annotation([
+        { id: 'p2-12', title: 'y', authors: [], pdf: 'p2.pdf', annotations: {} },
+        { id: 'p-1x', title: 'z', authors: [], pdf: 'px.pdf', annotations: {} },
+      ]),
+      loadProject({
+        version: 1,
+        config: { reviewers: 2, screening: { reasons: ['Off topic'] } },
+        papers: [
+          { id: 'p2', title: 'Second paper', authors: [], pdf: 'p2.pdf', annotations: {}, marks: [mark('d')] },
+          { id: 'px', title: 'Other paper', authors: [], pdf: 'px.pdf', annotations: {}, marks: [mark('x')] },
+        ],
+      }),
+    )
+    expect(Object.keys(marks)).toEqual(['p2-12'])
+  })
+})
+
+describe('screeningSeatLabel', () => {
+  it('names the consolidated seat and a reviewer seat', () => {
+    expect(screeningSeatLabel('consolidated')).toBe('Screening, consolidated')
+    expect(screeningSeatLabel('2')).toBe('Screening, Reviewer 2')
   })
 })
