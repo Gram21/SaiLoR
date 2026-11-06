@@ -100,6 +100,20 @@ jobs:
 
       - run: npm audit --omit=dev --audit-level=high
 
+  # Known advisories in Rust dependencies. Allowed to fail until the first run shows its findings.
+  cargo-audit:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - uses: taiki-e/install-action@c509219cf42fba86913069efd0ade2458c59337b # v2
+        with:
+          tool: cargo-audit@0.22.2
+
+      - run: cargo audit --file src-tauri/Cargo.lock
+
   # Requirement trace links (OpenFastTrace). Allowed to fail until the trace tags are in the sources.
   trace:
     runs-on: ubuntu-latest
