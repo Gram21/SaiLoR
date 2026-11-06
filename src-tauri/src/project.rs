@@ -1,7 +1,9 @@
 //! `project:*` file handlers. Thin I/O plus authorization: assembling the split
 //! layout into one project stays in TypeScript (src/model/project.ts).
 
-use crate::authz::{assert_not_symlink, changed, err, lock, within, Session};
+use crate::authz::{
+    assert_not_symlink, changed, err, lock, stamp, stamp_of, within, Head, Session,
+};
 use crate::paths::{dir_of, normalize, resolve, write_atomic};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -66,8 +68,13 @@ pub fn is_legacy_shape(raw: &Value) -> bool {
 // [impl->req~dat-169~1]
 /// `annotationsDirFor`: one folder directly inside the project's directory, never a link.
 pub fn annotations_dir_for(file: &Path, raw: &Value) -> Result<PathBuf, String> {
+    annotations_folder_for(file, &annotations_dir_of(raw))
+}
+
+/// `annotationsDirFor` of a folder name `annotations_dir_of` returned.
+fn annotations_folder_for(file: &Path, folder: &str) -> Result<PathBuf, String> {
     let project_dir = dir_of(&normalize(file)).to_path_buf();
-    let dir = project_dir.join(annotations_dir_of(raw));
+    let dir = project_dir.join(folder);
     let outside = || {
         format!(
             "Refusing an annotations folder outside the project's own directory: \"{}\"",
@@ -195,7 +202,8 @@ pub fn projects_using_folder(file: &Path, folder: &str) -> Vec<Sibling> {
 // [impl->req~dat-172~1]
 // [impl->req~plt-60~1]
 /// Every `.json` in each listed paper's folder (`<paperId>/<name>`,
-/// annotations-relative); records their stamps for a later save.
+/// annotations-relative); records the stamps of each folder's entries, taken
+/// before reading, for a later save. `dir` comes from `annotations_dir_for`.
 fn read_paper_files(
     session: &Mutex<Session>,
     file: &Path,
@@ -203,6 +211,7 @@ fn read_paper_files(
     ids: &[String],
 ) -> Vec<FileText> {
     let mut files = vec![];
+    let mut taken = vec![];
     for id in ids {
         let paper_dir = resolve(dir, Path::new(id));
         if paper_dir == dir || !within(&paper_dir, dir) {
@@ -211,26 +220,38 @@ fn read_paper_files(
         let Ok(entries) = fs::read_dir(&paper_dir) else {
             continue;
         };
-        let mut names: Vec<String> = entries
-            .flatten()
-            .filter(|e| e.file_type().is_ok_and(|t| !t.is_dir()))
-            .map(|e| e.file_name().to_string_lossy().into_owned())
-            .filter(|n| n.ends_with(".json"))
-            .collect();
+        // A plain file in a plain folder directly inside `dir` cannot resolve
+        // outside it; anything reached through a link goes through `safe_read`.
+        let plain_dir = paper_dir.parent() == Some(dir)
+            && fs::symlink_metadata(&paper_dir).is_ok_and(|m| m.is_dir());
+        let mut names = vec![];
+        for e in entries.flatten() {
+            let path = e.path();
+            let kind = e.file_type().ok();
+            let now = match kind {
+                Some(t) if !t.is_symlink() => e.metadata().ok().as_ref().and_then(stamp_of),
+                _ => stamp(&path),
+            };
+            taken.push((path, now));
+            let name = e.file_name().to_string_lossy().into_owned();
+            if kind.is_some_and(|t| !t.is_dir()) && name.ends_with(".json") {
+                names.push((name, plain_dir && kind.is_some_and(|t| t.is_file())));
+            }
+        }
         names.sort();
-        for name in names {
+        for (name, plain) in names {
             let rel_path = format!("{id}/{name}");
-            if let Some(text) = safe_read(dir, &rel_path) {
+            let text = if plain {
+                read_lossy(&paper_dir.join(&name)).ok()
+            } else {
+                safe_read(dir, &rel_path)
+            };
+            if let Some(text) = text {
                 files.push(FileText { rel_path, text });
             }
         }
     }
-    let mut s = lock(session);
-    for id in ids {
-        for e in fs::read_dir(dir.join(id)).into_iter().flatten().flatten() {
-            s.remember(file, &e.path());
-        }
-    }
+    lock(session).remember_stamps(file, taken);
     files
 }
 
@@ -276,30 +297,62 @@ pub fn read_project(session: &Mutex<Session>, file: &Path) -> Result<Opened, Str
 // [impl->req~plt-440~1]
 /// Opens only the head; the renderer streams the papers' files in batches.
 pub(crate) fn open(session: &Mutex<Session>, file: &Path) -> Result<Opened, String> {
-    let (opened, _) = read_head(session, file)?;
-    lock(session).known_projects.insert(normalize(file));
+    let (opened, split) = read_head(session, file)?;
+    let head = split.map(|(raw, _)| head_of(&raw));
+    let mut s = lock(session);
+    s.known_projects.insert(normalize(file));
+    match head {
+        Some(h) => s.heads.insert(normalize(file), h),
+        None => s.heads.remove(&normalize(file)),
+    };
     Ok(opened)
+}
+
+fn head_of(raw: &Value) -> Head {
+    Head {
+        folder: annotations_dir_of(raw),
+        listed: paper_ids(raw).into_iter().collect(),
+    }
 }
 
 // [impl->req~plt-441~1]
 /// One batch of an opened project's paper files. Only papers `project.json`
-/// lists are read, so a renderer cannot name other folders.
+/// listed when opened are read, so a renderer cannot name other folders.
 pub fn read_papers(
     session: &Mutex<Session>,
     file: &Path,
     ids: &[String],
 ) -> Result<Vec<FileText>, String> {
-    if !lock(session).is_known(file) {
-        return Err("Refusing to read papers of a project that was not opened.".into());
-    }
-    let raw: Value = serde_json::from_str(&read_lossy(file).map_err(err)?).map_err(err)?;
-    if is_legacy_shape(&raw) {
-        return Ok(vec![]);
-    }
-    let dir = annotations_dir_for(file, &raw)?;
-    let listed: HashSet<String> = paper_ids(&raw).into_iter().collect();
-    let ids: Vec<String> = ids.iter().filter(|id| listed.contains(*id)).cloned().collect();
+    let key = normalize(file);
+    let cached = {
+        let s = lock(session);
+        if !s.known_projects.contains(&key) {
+            return Err("Refusing to read papers of a project that was not opened.".into());
+        }
+        s.heads
+            .get(&key)
+            .map(|h| (h.folder.clone(), listed(h, ids)))
+    };
+    let (folder, ids) = match cached {
+        Some(c) => c,
+        None => {
+            let raw: Value = serde_json::from_str(&read_lossy(file).map_err(err)?).map_err(err)?;
+            if is_legacy_shape(&raw) {
+                return Ok(vec![]);
+            }
+            let h = head_of(&raw);
+            (h.folder.clone(), listed(&h, ids))
+        }
+    };
+    let dir = annotations_folder_for(file, &folder)?;
     Ok(read_paper_files(session, file, &dir, &ids))
+}
+
+fn listed(head: &Head, ids: &[String]) -> Vec<String> {
+    ids.iter()
+        .filter(|id| head.listed.contains(*id))
+        .cloned()
+        .collect()
 }
 
 #[tauri::command]
@@ -971,8 +1024,77 @@ pub mod tests {
             rels(read_project(&s, &proj).unwrap().files),
             ["p1/consolidated.json", "p2/consolidated.json"]
         );
-        let stamps = lock(&s).stamps.get(&normalize(&proj)).map_or(0, |m| m.len());
+        let stamps = lock(&s)
+            .stamps
+            .get(&normalize(&proj))
+            .map_or(0, |m| m.len());
         assert_eq!(stamps, 3);
+    }
+
+    // [utest->req~plt-441~1]
+    #[test]
+    fn batches_use_the_papers_and_folder_listed_when_opened() {
+        let d = tmp("batch-head");
+        let s = Mutex::new(Session::default());
+        let proj = d.join("p.json");
+        fs::write(&proj, r#"{"papers":[{"id":"p1"}]}"#).unwrap();
+        for id in ["p1", "other"] {
+            fs::create_dir_all(d.join("annotations").join(id)).unwrap();
+            fs::write(d.join(format!("annotations/{id}/consolidated.json")), id).unwrap();
+        }
+        open(&s, &proj).unwrap();
+        fs::write(&proj, r#"{"papers":[{"id":"other"}]}"#).unwrap();
+        let read = |ids: &[&str]| {
+            let ids: Vec<String> = ids.iter().map(|x| x.to_string()).collect();
+            read_papers(&s, &proj, &ids)
+                .unwrap()
+                .into_iter()
+                .map(|f| f.text)
+                .collect::<Vec<_>>()
+        };
+        assert!(read(&["other"]).is_empty());
+        assert_eq!(read(&["p1"]), ["p1"]);
+
+        fs::write(&proj, r#"{"papers":[{"id":"p1"}]}"#).unwrap();
+        crate::annotations::move_dir(&s, &proj.to_string_lossy(), "notes").unwrap();
+        assert_eq!(read(&["p1"]), ["p1"]);
+    }
+
+    // [utest->req~plt-441~1]
+    #[cfg(unix)]
+    #[test]
+    fn batches_follow_links_only_inside_the_annotations_folder() {
+        use std::os::unix::fs::symlink;
+        let d = tmp("batch-links");
+        let outside = tmp("batch-links-out");
+        fs::write(outside.join("consolidated.json"), "out").unwrap();
+        let s = Mutex::new(Session::default());
+        let proj = d.join("p.json");
+        fs::write(&proj, r#"{"papers":[{"id":"p1"},{"id":"p2"},{"id":"p3"}]}"#).unwrap();
+        let a = d.join("annotations");
+        fs::create_dir_all(a.join("p2")).unwrap();
+        fs::create_dir_all(a.join("p3")).unwrap();
+        symlink(&outside, a.join("p1")).unwrap();
+        fs::write(a.join("p2/plain.json"), "plain").unwrap();
+        symlink(outside.join("consolidated.json"), a.join("p2/out.json")).unwrap();
+        fs::write(a.join("p3/consolidated.json"), "p3").unwrap();
+        symlink(a.join("p3/consolidated.json"), a.join("p2/in.json")).unwrap();
+        open(&s, &proj).unwrap();
+        let ids: Vec<String> = ["p1", "p2", "p3"].iter().map(|x| x.to_string()).collect();
+        let got: Vec<_> = read_papers(&s, &proj, &ids)
+            .unwrap()
+            .into_iter()
+            .map(|f| (f.rel_path, f.text))
+            .collect();
+        let want = [
+            ("p2/in.json", "p3"),
+            ("p2/plain.json", "plain"),
+            ("p3/consolidated.json", "p3"),
+        ];
+        assert_eq!(
+            got,
+            want.map(|(r, t)| (r.to_string(), t.to_string())).to_vec()
+        );
     }
 
     #[test]

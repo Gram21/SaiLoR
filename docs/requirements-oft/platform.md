@@ -761,7 +761,7 @@ Tags: NonFunctional, Maintainability, Portability
 ### REQ-PLT-440: Open a project in two steps
 `req~plt-440~1`
 
-When the desktop shell opens a project in the split layout, the shell shall read only the project file first. The renderer shall show the project with the metadata of all papers. The renderer shall then read the annotation files of the papers in batches. The renderer shall give control back to the event loop between two batches. A project in the legacy single-file layout shall open in one step, as before. All callers that need the whole project, for example a reload after a stale save, shall read all papers before they continue.
+When the desktop shell opens a project in the split layout, the shell shall read only the project file first. The renderer shall show the project with the metadata of all papers. The renderer shall then read the annotation files of the papers in batches. The renderer shall parse each batch once and share the parsed papers between the save baseline and the store. The renderer shall give control back to the event loop between two batches. A project in the legacy single-file layout shall open in one step, as before. Limit: the legacy layout keeps every paper and answer in one JSON file. The shell must read and parse that file as a whole, so batches would not make the first view faster. To open a large legacy project progressively, the user saves it once in the split layout. All callers that need the whole project, for example a reload after a stale save, shall read all papers before they continue.
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Performance Efficiency, Usability)
@@ -776,12 +776,12 @@ Tags: NonFunctional, Performance_Efficiency, Usability
 ### REQ-PLT-441: Read paper batches only for an opened project
 `req~plt-441~1`
 
-The desktop shell shall read a batch of paper files only for a project file that the user opened before. The shell shall read only the folders of papers that the project file lists. The shell shall apply the same path checks as for the first open, so a paper id cannot name a file outside the annotations folder.
+The desktop shell shall read a batch of paper files only for a project file that the user opened before. The shell shall read only the folders of papers that the project file listed when the user opened it. The shell shall parse the project file once per open, not once per batch. The shell shall check the annotations folder again for each batch. The shell shall apply the same path checks as for the first open, so a paper id or a link cannot name a file outside the annotations folder. The shell shall read the stamps of the paper files in the same pass as the files.
 
 Comment:
 - **Type:** Functional (ISO 25010: Security)
-- **Evidence:** `src-tauri/src/project.rs` (`read_papers`, `project_read_papers`)
-- **Verified by:** `src-tauri/src/project.rs` (`open_reads_the_head_and_batches_only_listed_papers`), `src/platform/tauri.test.ts` (`invokes exactly the commands main.rs registers`)
+- **Evidence:** `src-tauri/src/project.rs` (`read_papers`, `read_paper_files`, `open`), `src-tauri/src/authz.rs` (`Head`, `remember_stamps`), `src-tauri/src/annotations.rs` (`move_dir`)
+- **Verified by:** `src-tauri/src/project.rs` (`open_reads_the_head_and_batches_only_listed_papers`, `batches_use_the_papers_and_folder_listed_when_opened`, `batches_follow_links_only_inside_the_annotations_folder`), `src/platform/tauri.test.ts` (`invokes exactly the commands main.rs registers`)
 - **Status:** Implemented
 
 Needs: impl, utest
@@ -806,12 +806,12 @@ Tags: Functional, Reliability
 ### REQ-PLT-443: Show the load progress and wait with whole-project features
 `req~plt-443~1`
 
-While the renderer reads the papers of a project, the paper list shall show how many papers have loaded, for example "Loading papers: 12,000 / 50,000". The user shall be able to open and annotate each paper that has loaded. SaiLoR shall disable each feature that reads all papers until the last paper has loaded: save, save as, validation, AI evaluation, the knowledge graph export and view, the PDF folder scan, the Git panel, the consolidation overview, the disagreement lists, the screening summary, the screening agreement and adopt all. Each disabled control shall tell the user why in its tooltip. If the papers of a project cannot be read, SaiLoR shall close the project and show the error. If the user closes the project during the load, SaiLoR shall stop the load.
+While the renderer reads the papers of a project, the paper list shall show how many papers have loaded, for example "Loading papers: 12,000 / 50,000". The paper list shall also show the usual progress line over the papers that have loaded. The user shall be able to open and annotate each paper that has loaded. If the project opens on its first unfinished paper, SaiLoR shall select that paper when its batch has loaded. If the user selected a paper before, SaiLoR shall keep that selection. SaiLoR shall disable each feature that reads all papers until the last paper has loaded: save, save as, validation, AI evaluation, the knowledge graph export and view, the PDF folder scan, the Git panel, the consolidation overview, the disagreement lists, the screening summary, the screening agreement and adopt all. Each disabled control shall tell the user why in its tooltip. If validation or adopt all starts while the project loads, SaiLoR shall refuse it and tell the user why. If a batch of papers cannot be read, SaiLoR shall keep the project open with the papers that have loaded and with every edit. SaiLoR shall show the error and keep save blocked. The paper list shall show where the load stopped and a retry button that reads the failed batch again. If the user closes the project during the load, SaiLoR shall stop the load.
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability, Reliability)
-- **Evidence:** `src/state/store.ts` (`loadState`, `loadProgress`, `streamPapers`, `scanPdfFolder`, `resyncProjectFromDisk`), `src/components/PaperList.tsx`, `src/components/Toolbar.tsx`, `src/components/AnnotationPanel.tsx`, `src/components/ScreeningPanel.tsx`, `src/locales/*.json` (`paperList.loading.progress`, `paperList.loading.wait`)
-- **Verified by:** `src/state/progressiveLoad.test.ts`, `src/components/PaperList.test.tsx` (`shows how many papers have loaded, then the usual progress line`), `src/components/Toolbar.test.tsx` (`disables validation, AI, saving and the exports with the reason`)
+- **Evidence:** `src/state/store.ts` (`loadState`, `loadProgress`, `loadFailed`, `retryLoad`, `streamPapers`, `stillLoading`, `runValidation`, `adoptAllUnanimousScreening`, `adoptAllUnanimousAnnotations`, `scanPdfFolder`, `resyncProjectFromDisk`), `src/components/PaperList.tsx`, `src/components/Toolbar.tsx`, `src/components/AnnotationPanel.tsx`, `src/components/ScreeningPanel.tsx`, `src/locales/*.json` (`paperList.loading.progress`, `paperList.loading.wait`, `paperList.loading.failed`, `paperList.loading.retry`, `store.loadError.batchFailed`, `store.loadError.stillLoadingRun`)
+- **Verified by:** `src/state/progressiveLoad.test.ts`, `src/components/PaperList.test.tsx` (`shows how many papers have loaded next to the usual progress line`, `says where loading stopped and retries the failed batch`), `src/components/Toolbar.test.tsx` (`disables validation, AI, saving and the exports with the reason`)
 - **Status:** Implemented
 
 Needs: impl, utest

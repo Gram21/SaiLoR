@@ -149,6 +149,9 @@ pub fn move_dir(session: &Mutex<Session>, project_path: &str, folder: &str) -> R
     }
     let mut s = lock(session);
     s.remember(&key, &key);
+    if let Some(h) = s.heads.get_mut(&key) {
+        h.folder = folder.to_string();
+    }
     if moved {
         for id in fs::read_dir(&to).into_iter().flatten().flatten() {
             for f in fs::read_dir(id.path()).into_iter().flatten().flatten() {

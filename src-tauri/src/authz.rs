@@ -26,6 +26,16 @@ pub struct Session {
     pub known_git_roots: HashSet<PathBuf>,
     /// What `project:sharedAnnotations` listed, per open project (`listedSplits`).
     pub listed_splits: HashMap<PathBuf, ListedSplit>,
+    /// Split projects as `project:open` parsed them, for reading their papers in batches.
+    pub heads: HashMap<PathBuf, Head>,
+}
+
+/// The parts of an opened split `project.json` a paper batch needs.
+pub struct Head {
+    /// Validated annotations folder name.
+    pub folder: String,
+    /// Paper ids the project lists.
+    pub listed: HashSet<String>,
 }
 
 #[derive(Clone)]
@@ -44,11 +54,22 @@ impl Session {
 
     /// Remember `abs` as it is right now for `project` (`rememberStamp`).
     pub fn remember(&mut self, project: &Path, abs: &Path) {
+        self.remember_stamps(project, [(abs.to_path_buf(), stamp(abs))]);
+    }
+
+    /// `remember` for stamps already taken.
+    pub fn remember_stamps(
+        &mut self,
+        project: &Path,
+        taken: impl IntoIterator<Item = (PathBuf, Option<String>)>,
+    ) {
         let stamps = self.stamps.entry(normalize(project)).or_default();
-        match stamp(abs) {
-            Some(s) => stamps.insert(normalize(abs), s),
-            None => stamps.remove(&normalize(abs)),
-        };
+        for (abs, s) in taken {
+            match s {
+                Some(s) => stamps.insert(normalize(&abs), s),
+                None => stamps.remove(&normalize(&abs)),
+            };
+        }
     }
 }
 
@@ -63,7 +84,11 @@ pub fn err(e: impl std::fmt::Display) -> String {
 
 // [impl->req~plt-135~1]
 pub fn stamp(abs: &Path) -> Option<String> {
-    let m = std::fs::metadata(abs).ok()?;
+    stamp_of(&std::fs::metadata(abs).ok()?)
+}
+
+/// `stamp` of metadata already read.
+pub fn stamp_of(m: &std::fs::Metadata) -> Option<String> {
     let t = m
         .modified()
         .ok()?

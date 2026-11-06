@@ -818,6 +818,10 @@ interface AppState {
    */
   loadState: 'idle' | 'loading' | 'ready'
   loadProgress: { loaded: number; total: number } | null
+  /** Why a batch could not be read: loading waits, still `loading`, until `retryLoad`. */
+  loadFailed: string | null
+  /** Reads the batch that failed again. */
+  retryLoad: () => void
   /** Shown when discarding an open project's unsaved changes. */
   closePromptOpen: boolean
   /** What to do once the unsaved-changes prompt is answered — carries the
@@ -1353,10 +1357,14 @@ export function currentFinished(
  * seat, which has its own sign-off (`completenessApplies`).
  */
 function firstUnfinishedPaperId(project: Project, currentReviewer: string | null): string | null {
-  const fallback = project.papers[0]?.id ?? null
+  return firstUnfinishedOf(project, project.papers, currentReviewer) ?? project.papers[0]?.id ?? null
+}
+
+/** The first of `papers` (of `project`) not finished yet, or null; the first of them when nothing is tracked. */
+function firstUnfinishedOf(project: Project, papers: Paper[], currentReviewer: string | null): string | null {
   const applies = completenessApplies(project)
-  if (!applies || (project.reviewers > 1 && currentReviewer === null)) return fallback
-  for (const paper of project.papers) {
+  if (!applies || (project.reviewers > 1 && currentReviewer === null)) return papers[0]?.id ?? null
+  for (const paper of papers) {
     const state = annotationStateFor(
       project.schema,
       currentTree(project, currentReviewer, paper),
@@ -1366,7 +1374,21 @@ function firstUnfinishedPaperId(project: Project, currentReviewer: string | null
     )
     if (state !== 'finished') return paper.id
   }
-  return fallback
+  return null
+}
+
+/**
+ * Set by `loadFromText` when the project lands on its first unfinished paper,
+ * which a head without answers cannot tell: a streamed open looks for it in
+ * each batch instead. `reviewer` is the seat `loadFromText` chose.
+ */
+let landOnFirstUnfinished: { seats: RememberedSeats; reviewer: string | null } | null = null
+/** Resumes a load waiting on a failed batch; called on retry, close or replace. */
+let wakeLoad: (() => void) | null = null
+function resumeLoad(): void {
+  const wake = wakeLoad
+  wakeLoad = null
+  wake?.()
 }
 
 /** Walk from a paper's annotation root to the container tree addressed by `path`. */
@@ -1388,11 +1410,14 @@ export function containerAt(root: AnnotationValueTree, path: PathSeg[]): Annotat
  * that no longer matches the files.
  */
 // [impl->req~plt-442~1]
-/** True, and says why, while the open project's papers are still being read: a save now would drop the rest. */
-function stillLoading(): boolean {
+/**
+ * True, and says why, while the open project's papers are still being read: a
+ * save now would drop the rest, and a run over every paper would miss them.
+ */
+function stillLoading(run = false): boolean {
   if (useStore.getState().loadState !== 'loading') return false
   useStore.setState((s) => {
-    s.loadError = { message: t('store.loadError.stillLoading'), details: [] }
+    s.loadError = { message: t(run ? 'store.loadError.stillLoadingRun' : 'store.loadError.stillLoading'), details: [] }
   })
   return true
 }
@@ -1421,7 +1446,8 @@ const PAPER_BATCH = 2000
  * read so far, in the file's order, so per-paper work can start on them; undo
  * snapshots get each batch too, or an undo would drop it again. Returns the
  * corrupt files the batches found, or null once another project replaced this
- * one. A failed batch closes the project: what is open could never be saved.
+ * one. A failed batch keeps the project open with what has loaded and every
+ * edit, still unsaveable, and waits for `retryLoad` to read it again.
  */
 async function streamPapers(readPapers: NonNullable<OpenedProject['readPapers']>): Promise<string[] | null> {
   const head = useStore.getState().project
@@ -1429,6 +1455,7 @@ async function streamPapers(readPapers: NonNullable<OpenedProject['readPapers']>
   const generation = projectGeneration
   const ids = head.papers.map((p) => p.id)
   const landing = useStore.getState().currentPaperId
+  const unfinished = landOnFirstUnfinished
   const loaded: Paper[] = []
   const corrupt: string[] = []
   diskProject = { ...head, papers: loaded }
@@ -1438,27 +1465,45 @@ async function streamPapers(readPapers: NonNullable<OpenedProject['readPapers']>
     s.loadState = 'loading'
     s.loadProgress = { loaded: 0, total: ids.length }
   })
-  try {
-    for (let i = 0; i < ids.length; i += PAPER_BATCH) {
-      const batch = await readPapers(ids.slice(i, i + PAPER_BATCH))
-      if (generation !== projectGeneration) return null
-      const papers = loadProject(batch.text).papers
-      loaded.push(...papers)
-      corrupt.push(...batch.corruptFiles)
-      const landed = landing !== null && papers.some((p) => p.id === landing)
-      useStore.setState((s) => {
-        for (const e of [...s.past, ...s.future]) e.project.papers.push(...papers)
-        s.project!.papers.push(...papers)
-        s.loadProgress = { loaded: loaded.length, total: ids.length }
-        if (landed && s.currentPaperId === null) s.currentPaperId = landing
-      })
-      if (landed) void useStore.getState().extractScreeningAbstract(landing)
-      await new Promise((resolve) => setTimeout(resolve, 0))
+  for (let i = 0; i < ids.length; i += PAPER_BATCH) {
+    let batch: Awaited<ReturnType<typeof readPapers>> | undefined
+    while (!batch) {
+      try {
+        batch = await readPapers(ids.slice(i, i + PAPER_BATCH))
+      } catch (err) {
+        if (generation !== projectGeneration) return null
+        useStore.setState((s) => {
+          s.loadFailed = String(err)
+          s.loadError = { message: t('store.loadError.batchFailed'), details: [String(err)] }
+        })
+        await new Promise<void>((resolve) => (wakeLoad = resolve))
+      }
       if (generation !== projectGeneration) return null
     }
-  } catch (err) {
-    if (generation === projectGeneration) useStore.getState().closeProject()
-    throw err
+    const papers = batch.papers
+    loaded.push(...papers)
+    corrupt.push(...batch.corruptFiles)
+    const now = useStore.getState()
+    const landed =
+      now.currentPaperId !== null
+        ? null
+        : unfinished
+          ? firstUnfinishedOf(now.project!, papers, unfinished.seats.last)
+          : landing !== null && papers.some((p) => p.id === landing)
+            ? landing
+            : null
+    useStore.setState((s) => {
+      for (const e of [...s.past, ...s.future]) e.project.papers.push(...papers)
+      s.project!.papers.push(...papers)
+      s.loadProgress = { loaded: loaded.length, total: ids.length }
+      if (landed === null) return
+      s.currentPaperId = landed
+      if (unfinished && s.project!.reviewers > 1 && s.currentReviewer === unfinished.reviewer)
+        s.currentReviewer = unfinished.seats.perPaper[landed] || unfinished.seats.last
+    })
+    if (landed) void useStore.getState().extractScreeningAbstract(landed)
+    await new Promise((resolve) => setTimeout(resolve, 0))
+    if (generation !== projectGeneration) return null
   }
   useStore.setState((s) => {
     s.loadState = 'ready'
@@ -1528,6 +1573,14 @@ export const useStore = create<AppState>()(
     projectGeneration: 0,
     loadState: 'idle',
     loadProgress: null,
+    loadFailed: null,
+    retryLoad: () => {
+      useStore.setState((s) => {
+        s.loadFailed = null
+        s.loadError = null
+      })
+      resumeLoad()
+    },
     closePromptOpen: false,
     pendingAfterPrompt: null,
     appVersion: APP_VERSION,
@@ -1692,10 +1745,12 @@ export const useStore = create<AppState>()(
       lastFieldKey = null
       diskProject = null
       projectGeneration++
+      resumeLoad()
       set((s) => {
         s.projectGeneration = projectGeneration
         s.loadState = 'idle'
         s.loadProgress = null
+        s.loadFailed = null
         s.project = null
         s.staleSave = null
         s.annotationsSplit = null
@@ -1845,15 +1900,18 @@ export const useStore = create<AppState>()(
           : project.reviewers > 1
             ? (landingPaperId && seats.perPaper[landingPaperId]) || seats.last
             : null
+        landOnFirstUnfinished = !ownPapers && !savedPaperStillExists ? { seats, reviewer } : null
         // The title only becomes known once the JSON is parsed, so the recents
         // entry is enriched here rather than in the adapter's open path.
         if (handle) getPlatform().rememberProject(handle, name, project.title)
         projectGeneration++
+        resumeLoad()
         diskProject = project
         set((s) => {
           s.projectGeneration = projectGeneration
           s.loadState = 'ready'
           s.loadProgress = null
+          s.loadFailed = null
           s.project = project
           s.saveHandle = handle
           s.projectName = name
@@ -2513,9 +2571,10 @@ export const useStore = create<AppState>()(
       })
     },
 
+    // [impl->req~plt-443~1]
     runValidation: () => {
       const { project, currentReviewer } = get()
-      if (!project) return
+      if (!project || stillLoading(true)) return
       // Nothing to validate as "the reviewer" until one is picked — the
       // Validate button is disabled in this state too (see Toolbar.tsx).
       if (project.reviewers > 1 && currentReviewer === null) return
@@ -4132,10 +4191,11 @@ export const useStore = create<AppState>()(
         s.pdfDialogOpen = open
       }),
 
+    // [impl->req~plt-443~1]
     adoptAllUnanimousScreening: () => {
       if (get().readOnly) return 0
       const project = get().project
-      if (!project || project.screening === null) return 0
+      if (!project || project.screening === null || stillLoading(true)) return 0
       let filledPapers = 0
       let coalesce = false
       for (const paper of project.papers) {
@@ -4153,7 +4213,7 @@ export const useStore = create<AppState>()(
       const project = get().project
       // Screening has its own button (`adoptAllUnanimousScreening`) and stays
       // synchronous — its schema has no repeatable node to line up.
-      if (!project || project.screening !== null || project.reviewers <= 1) return
+      if (!project || project.screening !== null || project.reviewers <= 1 || stillLoading(true)) return
       // A second run would interleave two coalesce chains and split the batch
       // across two undo entries.
       if (get().unanimousRun?.running) return
