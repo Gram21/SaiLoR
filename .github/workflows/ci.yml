@@ -68,11 +68,9 @@ jobs:
       - run: scripts/ci/rust.sh
 
   # Lint workflows, shell scripts and Dockerfiles. Tool downloads are pinned by SHA-256.
-  # Allowed to fail until the first CI run shows its findings; then remove continue-on-error.
   lint:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -100,11 +98,10 @@ jobs:
 
       - run: scripts/ci/audit.sh npm
 
-  # Known advisories in Rust dependencies. Allowed to fail until the first run shows its findings.
+  # Known advisories in Rust dependencies.
   cargo-audit:
     runs-on: ubuntu-latest
     timeout-minutes: 15
-    continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
@@ -118,7 +115,6 @@ jobs:
   trace:
     runs-on: ubuntu-latest
     timeout-minutes: 10
-    continue-on-error: true
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
