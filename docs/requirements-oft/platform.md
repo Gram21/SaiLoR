@@ -761,7 +761,7 @@ Tags: NonFunctional, Maintainability, Portability
 ### REQ-PLT-440: Open a project in two steps
 `req~plt-440~1`
 
-When the desktop shell opens a project in the split layout, the shell shall read only the project file first. The renderer shall show the project with the metadata of all papers. The renderer shall then read the annotation files of the papers in batches. The renderer shall parse each batch once and share the parsed papers between the save baseline and the store. The renderer shall give control back to the event loop between two batches. A project in the legacy single-file layout shall open in one step, as before. All callers that need the whole project, for example a reload after a stale save, shall read all papers before they continue.
+When the desktop shell opens a project in the split layout, the shell shall read only the project file first. The renderer shall show the project with the metadata of all papers. The renderer shall then read the annotation files of the papers in batches. The renderer shall parse each batch once and share the parsed papers between the save baseline and the store. The renderer shall give control back to the event loop between two batches. A project in the legacy single-file layout shall open in one step, as before. Limit: the legacy layout keeps every paper and answer in one JSON file. The shell must read and parse that file as a whole, so batches would not make the first view faster. To open a large legacy project progressively, the user saves it once in the split layout. All callers that need the whole project, for example a reload after a stale save, shall read all papers before they continue.
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Performance Efficiency, Usability)
