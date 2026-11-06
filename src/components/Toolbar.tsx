@@ -27,6 +27,8 @@ import { ExportGraphDialog } from './ExportGraphDialog'
 import { GraphView } from './GraphView'
 import { PdfFolderDialog } from './PdfFolderDialog'
 import { t, tp, useT, type MessageKey } from '../i18n'
+import { DEMO_MODE } from '../demo/mode'
+import { DEMO_NOT_SAVED } from '../demo/text'
 
 /** Shown on every git entry point in the browser build, where `getGit()` is
  *  always `null` (see `PlatformAdapter.getGit()` and architecture.md's "Git"
@@ -323,30 +325,34 @@ export function Toolbar() {
   // [impl->req~git-420~1]
   // [impl->req~git-430~1]
   // [impl->req~plt-62~1]
+  // [impl->req~plt-447~1]
   const saveItems: MenuItem[] = [
     {
       type: 'item',
       label: t('common.save'),
       shortcut: `${modKey}+S`,
-      hint: loading ? loadingHint : undefined,
-      disabled: !project || loading,
+      hint: DEMO_MODE ? DEMO_NOT_SAVED : loading ? loadingHint : undefined,
+      disabled: !project || loading || DEMO_MODE,
       onSelect: () => void save(),
     },
     {
       type: 'item',
       label: t('toolbar.save.saveAs'),
       shortcut: t('toolbar.save.saveAsShortcut', { mod: modKey }),
-      hint: loading ? loadingHint : undefined,
-      disabled: !project || loading,
+      hint: DEMO_MODE ? DEMO_NOT_SAVED : loading ? loadingHint : undefined,
+      disabled: !project || loading || DEMO_MODE,
       onSelect: () => void saveAs(),
     },
     { type: 'separator' },
     {
       type: 'item',
       label: `${autosaveEnabled ? '✓ ' : ''}${t('toolbar.save.autosave')}`,
-      hint: autosaveEnabled
-        ? t('toolbar.save.autosaveOn')
-        : t('toolbar.save.autosaveOff'),
+      hint: DEMO_MODE
+        ? DEMO_NOT_SAVED
+        : autosaveEnabled
+          ? t('toolbar.save.autosaveOn')
+          : t('toolbar.save.autosaveOff'),
+      disabled: DEMO_MODE,
       onSelect: () => setAutosaveEnabled(!autosaveEnabled),
     },
   ]

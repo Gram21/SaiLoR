@@ -66,6 +66,8 @@ import {
 } from './state/settings'
 import { rich, useLanguage, useT } from './i18n'
 import { getBridge } from './platform/bridge'
+import { DEMO_MODE } from './demo/mode'
+import { DemoBanner } from './components/DemoBanner'
 
 export function App() {
   const t = useT()
@@ -120,9 +122,15 @@ export function App() {
   }, [language])
 
   // Look for a newer release once per launch (the result is cached for a day).
+  // [impl->req~plt-447~1]
   useEffect(() => {
-    void checkForUpdate()
+    if (!DEMO_MODE) void checkForUpdate()
   }, [checkForUpdate])
+
+  // [impl->req~plt-445~1]
+  useEffect(() => {
+    if (DEMO_MODE && !useStore.getState().project) void openProject()
+  }, [openProject])
 
   // Find out which recent projects still exist, so the gone ones grey out.
   useEffect(() => {
@@ -195,7 +203,7 @@ export function App() {
   // enough across browsers. Gate before any project-opening UI ever renders —
   // no file picker, no drag-and-drop, nothing that could start a session this
   // build can't finish.
-  if (!isTauri()) {
+  if (!isTauri() && !DEMO_MODE) {
     return (
       <div className="app">
         <div className="welcome">
@@ -226,6 +234,8 @@ export function App() {
 
   return (
     <div className="app">
+      {/* [impl->req~plt-448~1] */}
+      {DEMO_MODE && <DemoBanner />}
       <Toolbar />
       {editorOpen ? (
         <ProjectEditor />
