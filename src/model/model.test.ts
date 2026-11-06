@@ -1110,6 +1110,11 @@ describe('normalize', () => {
     expect(normalizeTree(resolved, { Gone: [{}, { value: 'x' }] })['Gone']).toEqual([{}, { value: 'x' }])
     expect(normalizeTree(resolved, { Gone: [{}, null] } as never)).not.toHaveProperty('Gone')
   })
+
+  it('keeps a null entry of a field as a null value', () => {
+    const resolved = resolveSchema([{ name: 'X', type: 'string' }])
+    expect(normalizeTree(resolved, { X: [null] } as never)).toEqual({ X: [{ value: null }] })
+  })
 })
 
 describe('isRecordedAnswer / instanceHoldsAnswer', () => {
@@ -1143,6 +1148,13 @@ describe('hasAnnotations', () => {
     const tree = initTree(resolved)
     tree['Year'][0].value = 0
     expect(hasAnnotations(resolved, tree)).toBe(true)
+  })
+
+  it('treats a missing value, a stray group value and a group without children as empty', () => {
+    const resolved = resolveSchema(sampleSchema)
+    expect(hasAnnotations(resolved, { 'Study Type': [{}] })).toBe(false)
+    expect(hasAnnotations(resolved, { Findings: [{ value: 'x' } as never] })).toBe(false)
+    expect(hasAnnotations(resolved, { Findings: [{}] })).toBe(false)
   })
 })
 
