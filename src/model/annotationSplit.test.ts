@@ -132,4 +132,26 @@ describe('applySplit', () => {
     ).rejects.toThrow(/No folder/)
     expect(fs.log).toEqual([])
   })
+
+  it('changes nothing when a later project file is malformed', async () => {
+    const fs = memoryFs({
+      'a.json': JSON.stringify({ version: 1 }),
+      'b.json': '{ not json',
+      'annotations/p/reviewer-1.json': 'A',
+    })
+    await expect(
+      applySplit(
+        {
+          shared: 'annotations',
+          projects: [
+            { file: 'a.json', folder: 'a-annotations' },
+            { file: 'b.json', folder: 'b-annotations' },
+          ],
+          rows: [{ relPath: 'p/reviewer-1.json', targets: ['a.json', 'b.json'] }],
+        },
+        fs,
+      ),
+    ).rejects.toThrow()
+    expect(fs.log.filter((l) => !l.startsWith('read'))).toEqual([])
+  })
 })

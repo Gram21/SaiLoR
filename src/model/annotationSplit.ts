@@ -200,6 +200,9 @@ export interface SplitPlan {
 export async function applySplit(plan: SplitPlan, fs: SplitFs): Promise<void> {
   const folderOf = new Map(plan.projects.map((p) => [p.file, p.folder]))
   const moved = plan.rows.filter((r) => r.targets.length > 0)
+  // Read every project file before the first copy, so a malformed one stops the split with nothing changed.
+  const raws = new Map<string, Record<string, unknown>>()
+  for (const p of plan.projects) raws.set(p.file, JSON.parse(await fs.readText(p.file)) as Record<string, unknown>)
   for (const r of moved) {
     for (const target of r.targets) {
       const folder = folderOf.get(target)
@@ -208,8 +211,7 @@ export async function applySplit(plan: SplitPlan, fs: SplitFs): Promise<void> {
     }
   }
   for (const p of plan.projects) {
-    const raw = JSON.parse(await fs.readText(p.file)) as Record<string, unknown>
-    await fs.writeText(p.file, JSON.stringify({ ...raw, annotationsDir: p.folder }, null, 2))
+    await fs.writeText(p.file, JSON.stringify({ ...raws.get(p.file), annotationsDir: p.folder }, null, 2))
   }
   for (const r of moved) await fs.remove(`${plan.shared}/${r.relPath}`)
   const paperDirs = new Set(moved.map((r) => r.relPath.slice(0, r.relPath.lastIndexOf('/'))))
