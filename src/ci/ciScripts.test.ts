@@ -20,7 +20,7 @@ describe('CI scripts', () => {
   })
 
   it('every CI script stops on the first error and works from the repository root', () => {
-    for (const path of ['scripts/ci.sh', 'scripts/ci/rust.sh', 'scripts/ci/trace.sh', 'scripts/ci/bundle.sh', 'scripts/ci/e2e.sh']) {
+    for (const path of ['scripts/ci.sh', 'scripts/ci/rust.sh', 'scripts/ci/trace.sh', 'scripts/ci/bundle.sh', 'scripts/ci/e2e.sh', 'scripts/ci/pages.sh']) {
       const text = read(path)
       expect(text, path).toMatch(/^set -euo pipefail$/m)
       expect(text, path).toMatch(/cd "\$\(dirname "\$0"\)/)

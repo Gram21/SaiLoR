@@ -2,7 +2,7 @@
 CARGO := cargo
 
 .PHONY: help setup install dev web build build-debug probe test test-js test-rust test-integration \
-        lint fmt typecheck check clean trace report ci ci-rust ci-trace ci-bundle ci-e2e ci-all docker-linux docker-gui-build docker-gui
+        lint fmt typecheck check clean trace report ci ci-rust ci-trace ci-bundle ci-e2e ci-all ci-pages docker-linux docker-gui-build docker-gui
 
 help: ## Show this help
 	@awk 'BEGIN{FS=":.*## "} /^[a-zA-Z_-]+:.*## /{printf "  %-18s %s\n",$$1,$$2}' $(MAKEFILE_LIST)
@@ -52,6 +52,9 @@ ci-e2e: ## Run the Tauri e2e CI job (needs tauri-driver)
 	scripts/ci/e2e.sh
 
 ci-all: ci ci-rust ci-trace ci-bundle ## Run every CI job that works on this OS
+
+ci-pages: ## Build the project website and the demo into _site/ (the Pages job)
+	scripts/ci/pages.sh
 
 test-integration: ## Run integration tests
 	npm run test:integration
