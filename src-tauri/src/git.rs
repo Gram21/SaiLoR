@@ -1885,6 +1885,8 @@ pub fn annotation_authors(
     let log = git(
         &root,
         &[
+            "-c",
+            "core.quotePath=false",
             "log",
             "--no-merges",
             "--format=%x00%an%x09%ae",

@@ -33,11 +33,20 @@ export function assembleProject(p: RawProject, corrupt: string[] = []): string {
   const screening = isScreening(raw)
   const consolidatedName = screening ? 'screening-consolidated.json' : 'consolidated.json'
   const reviewerRe = screening ? /^screening-(\d+)\.json$/ : /^reviewer-(\d+)\.json$/
-  const annotationSiblings = (p.siblings ?? []).map((s) => JSON.parse(s.text) as unknown).filter((s) => !isScreening(s))
+  const annotationSiblings = (p.siblings ?? [])
+    .flatMap((s) => {
+      try {
+        return [JSON.parse(s.text) as unknown]
+      } catch {
+        corrupt.push(s.name)
+        return []
+      }
+    })
+    .filter((s) => !isScreening(s))
   const files = p.files.map((f) => {
     const slash = f.relPath.lastIndexOf('/')
     const name = f.relPath.slice(slash + 1)
-    return { ...f, id: f.relPath.slice(0, slash), name, marks: parseMarksFileName(name, screening) }
+    return { ...f, id: slash < 0 ? '' : f.relPath.slice(0, slash), name, marks: parseMarksFileName(name, screening) }
   })
   files.sort((a, b) => Number(!a.marks?.legacy) - Number(!b.marks?.legacy))
   const papers = new Map<string, PaperFiles>()

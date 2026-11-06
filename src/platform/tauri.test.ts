@@ -175,6 +175,13 @@ describe('project assembly', () => {
     expect(corrupt).toEqual(['p2/reviewer-1.json'])
   })
 
+  it('treats an unparsable sibling project as absent', () => {
+    const corrupt: string[] = []
+    const out = assembleProject({ text: meta(), files: [], siblings: [{ name: 'b.json', text: '{oops' }] }, corrupt)
+    expect(JSON.parse(out).papers).toBeDefined()
+    expect(corrupt).toEqual(['b.json'])
+  })
+
   it("reads a screening project's old highlight files unless an annotation sibling lists the paper", () => {
     const files = [f('p1/marks-1.json', { marks: ['old'] }), f('p1/screening-marks-1.json', { marks: ['own'] }), f('p2/marks-1.json', { marks: ['old'] })]
     const sibling = { name: 'a.json', text: JSON.stringify({ papers: [{ id: 'p2' }] }) }
