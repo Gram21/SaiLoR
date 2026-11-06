@@ -1,14 +1,31 @@
 // [utest->req~ui-210~1]
+// [utest->req~ui-220~1]
 import { describe, it, expect, vi } from 'vitest'
-import type { GraphNode, GraphNodeType } from '../model/graph'
+import type { GraphEdgeType, GraphNode, GraphNodeType } from '../model/graph'
 import type { SubGraph } from '../model/graphQuery'
-import { buildScene, cull, drawScene, fitView, hitTest, LABEL_MAX, MAX_ZOOM, MIN_ZOOM, showLabels, zoomAt, type Scene, type View } from './graphCanvas'
+import {
+  buildScene,
+  cull,
+  drawScene,
+  edgeAt,
+  EDGE_TYPES,
+  fitView,
+  hitTest,
+  LABEL_MAX,
+  MAX_ZOOM,
+  MIN_ZOOM,
+  selectNode,
+  showLabels,
+  zoomAt,
+  type Scene,
+  type View,
+} from './graphCanvas'
 
 const TYPES: GraphNodeType[] = ['Paper', 'Author', 'Venue', 'Keyword', 'Choice', 'Answer']
 const node = (id: string, type: GraphNodeType = 'Paper', label = id): GraphNode => ({ id, type, label, values: {} })
 
-function sub(nodes: GraphNode[], edges: [string, string][] = [], seeds: string[] = []): SubGraph {
-  return { nodes, edges: edges.map(([source, target]) => ({ source, target, type: 'cites' })), seeds: new Set(seeds) }
+function sub(nodes: GraphNode[], edges: [string, string, GraphEdgeType?][] = [], seeds: string[] = []): SubGraph {
+  return { nodes, edges: edges.map(([source, target, type = 'cites']) => ({ source, target, type })), seeds: new Set(seeds) }
 }
 
 function place(scene: Scene, ...pos: [number, number][]) {
@@ -20,23 +37,31 @@ function place(scene: Scene, ...pos: [number, number][]) {
   return scene
 }
 
-/** Counts the calls of the canvas methods that drawScene uses. */
+/** Counts the calls of the canvas methods that drawScene uses and logs the style of each stroke and fill. */
 function mockContext() {
+  const log: string[] = []
   const ctx = {
+    strokeStyle: '',
+    fillStyle: '',
+    globalAlpha: 1,
+    dash: [] as number[],
+    log,
     setTransform: vi.fn(),
     clearRect: vi.fn(),
     beginPath: vi.fn(),
     moveTo: vi.fn(),
     lineTo: vi.fn(),
-    stroke: vi.fn(),
-    fill: vi.fn(),
+    closePath: vi.fn(),
+    setLineDash: vi.fn((d: number[]) => (ctx.dash = [...d])),
+    stroke: vi.fn(() => log.push(`stroke ${ctx.strokeStyle} ${ctx.globalAlpha} [${ctx.dash}]`)),
+    fill: vi.fn(() => log.push(`fill ${ctx.fillStyle} ${ctx.globalAlpha}`)),
     rect: vi.fn(),
     arc: vi.fn(),
     fillText: vi.fn(),
   }
   return ctx as typeof ctx & CanvasRenderingContext2D
 }
-const PALETTE = { edge: 'e', text: 't', selected: 's', groups: ['0', '1', '2', '3'] }
+const PALETTE = { edges: ['e0', 'e1', 'e2', 'e3', 'e4'], text: 't', selected: 's', groups: ['0', '1', '2', '3'] }
 
 describe('buildScene', () => {
   it('keeps the positions of staying nodes and places new nodes next to a placed neighbour', () => {
@@ -77,45 +102,126 @@ describe('showLabels', () => {
 })
 
 describe('drawScene', () => {
-  const scene = () => {
-    const s = place(
-      buildScene(sub([node('a'), node('b', 'Author'), node('c', 'Keyword'), node('far')], [['a', 'b'], ['b', 'far'], ['far', 'far']], ['a']), true, null, () => []),
+  const scene = () =>
+    place(
+      buildScene(
+        sub([node('a'), node('b', 'Author'), node('c', 'Keyword'), node('far')], [['b', 'far'], ['a', 'b', 'authoredBy'], ['far', 'far']], ['a']),
+        true,
+        null,
+        () => [],
+      ),
       [0, 0],
       [50, 0],
       [0, 50],
       [5000, 5000],
     )
-    s.selected = 1
-    return s
-  }
 
-  it('batches edges in one path and nodes in one path per colour, culls and labels when zoomed in', () => {
+  it('sorts edges by type and remembers each type range', () => {
+    const s = scene()
+    expect([...s.edges]).toEqual([0, 1, 1, 3, 3, 3])
+    expect([...s.etype]).toEqual([1, 4, 4])
+    expect([...s.typeStart]).toEqual([0, 0, 1, 1, 1, 3])
+    expect(s.edgeList.map((e) => e.type)).toEqual(['authoredBy', 'cites', 'cites'])
+  })
+
+  it('draws one path per edge type with its colour and dash, arrowheads, nodes per colour, culls and labels when zoomed in', () => {
     const ctx = mockContext()
     drawScene(ctx, scene(), { x: 100, y: 100, k: 1 }, 300, 300, 2, PALETTE)
     expect(ctx.setTransform).toHaveBeenLastCalledWith(2, 0, 0, 2, 200, 200)
-    expect(ctx.lineTo).toHaveBeenCalledTimes(2)
-    expect(ctx.fill).toHaveBeenCalledTimes(4)
-    expect(ctx.stroke).toHaveBeenCalledTimes(3)
-    expect(ctx.arc).toHaveBeenCalledTimes(3 + 1 + 1)
+    expect(ctx.log).toEqual(['stroke e1 0.5 [6,4]', 'fill e1 0.5', 'stroke e4 0.5 [12,4]', 'fill e4 0.5', 'fill 0 1', 'fill 1 1', 'fill 2 1', 'fill 3 1', 'stroke t 1 []'])
+    expect(ctx.lineTo).toHaveBeenCalledTimes(2 + 2)
+    expect(ctx.closePath).toHaveBeenCalledTimes(1)
+    expect(ctx.arc).toHaveBeenCalledTimes(3 + 1)
     expect(ctx.fillText.mock.calls.map((c) => c[0])).toEqual(['a', 'b', 'c'])
     expect(ctx.fillText).toHaveBeenCalledWith('b', 50, -12)
   })
 
-  it('draws small squares and no labels when zoomed out', () => {
+  it('draws small squares, no dashes, no arrowheads and no labels when zoomed out', () => {
     const ctx = mockContext()
-    drawScene(ctx, scene(), { x: 0, y: 0, k: 0.1 }, 300, 300, 1, PALETTE)
+    const s = scene()
+    selectNode(s, 1)
+    drawScene(ctx, s, { x: 0, y: 0, k: 0.1 }, 300, 300, 1, PALETTE)
+    expect(ctx.log.filter((l) => l.includes(' e'))).toEqual(['stroke e1 0.12 []', 'stroke e4 0.12 []', 'stroke e1 1 []', 'fill e1 1', 'stroke e4 1 []', 'fill e4 1'])
     expect(ctx.arc).toHaveBeenCalledTimes(2)
     expect(ctx.rect).toHaveBeenCalledTimes(3)
     expect(ctx.rect).toHaveBeenCalledWith(-10, -10, 20, 20)
     expect(ctx.fillText).not.toHaveBeenCalled()
   })
 
+  it('highlights the edges and neighbours of the selection and dims the rest', () => {
+    const s = scene()
+    selectNode(s, 1)
+    expect(s.incident).toEqual([0, 1])
+    expect([...s.near]).toEqual([1, 1, 0, 1])
+    const ctx = mockContext()
+    drawScene(ctx, s, { x: 100, y: 100, k: 1 }, 300, 300, 1, PALETTE)
+    expect(ctx.log).toEqual([
+      'stroke e1 0.12 [6,4]',
+      'fill e1 0.12',
+      'stroke e4 0.12 [12,4]',
+      'fill e4 0.12',
+      'stroke e1 1 [6,4]',
+      'fill e1 1',
+      'stroke e4 1 [12,4]',
+      'fill e4 1',
+      'fill 0 1',
+      'fill 0 0.24',
+      'fill 1 1',
+      'fill 1 0.24',
+      'fill 2 1',
+      'fill 2 0.24',
+      'fill 3 1',
+      'fill 3 0.24',
+      'stroke t 1 []',
+      'stroke s 1 []',
+    ])
+    selectNode(s, -1)
+    expect(s.incident).toEqual([])
+    expect([...s.near]).toEqual([0, 0, 0, 0])
+  })
+
+  it('leaves out hidden edge types and strengthens the hovered edge', () => {
+    const s = scene()
+    s.hidden = 1 << EDGE_TYPES.indexOf('cites')
+    selectNode(s, 1)
+    expect(s.incident).toEqual([0])
+    expect([...s.near]).toEqual([1, 1, 0, 0])
+    let ctx = mockContext()
+    drawScene(ctx, s, { x: 100, y: 100, k: 1 }, 300, 300, 1, PALETTE)
+    expect(ctx.log.filter((l) => l.includes('e4'))).toEqual([])
+    selectNode(s, -1)
+    s.hover = 1
+    ctx = mockContext()
+    drawScene(ctx, s, { x: 100, y: 100, k: 1 }, 300, 300, 1, PALETTE)
+    expect(ctx.log.filter((l) => l.includes(' e'))).toEqual(['stroke e1 0.5 [6,4]', 'fill e1 0.5'])
+    s.hidden = 0
+    ctx = mockContext()
+    drawScene(ctx, s, { x: 100, y: 100, k: 1 }, 300, 300, 1, PALETTE)
+    expect(ctx.log.filter((l) => l.includes(' e'))).toEqual(['stroke e1 0.5 [6,4]', 'fill e1 0.5', 'stroke e4 0.5 [12,4]', 'fill e4 0.5', 'stroke e4 1 [12,4]', 'fill e4 1'])
+  })
+
   it('skips the selection ring of an unplaced node', () => {
     const ctx = mockContext()
     const s = buildScene(sub([node('a')]), false, null, () => [])
-    s.selected = 0
+    selectNode(s, 0)
     drawScene(ctx, s, { x: 0, y: 0, k: 1 }, 100, 100, 1, PALETTE)
     expect(ctx.arc).not.toHaveBeenCalled()
+  })
+})
+
+describe('edgeAt', () => {
+  it('finds the nearest shown edge within 4 screen pixels', () => {
+    const s = place(buildScene(sub([node('a'), node('b'), node('c')], [['a', 'b', 'authoredBy'], ['a', 'c']]), false, null, () => []), [0, 0], [100, 0], [0, 100])
+    expect(edgeAt(s, 50, 3, 1)).toBe(0)
+    expect(edgeAt(s, 3, 50, 1)).toBe(1)
+    expect(edgeAt(s, 50, 10, 1)).toBe(-1)
+    expect(edgeAt(s, 50, 10, 0.2)).toBe(0)
+    expect(edgeAt(s, 150, 0, 1)).toBe(-1)
+    s.hidden = 1 << EDGE_TYPES.indexOf('authoredBy')
+    expect(edgeAt(s, 50, 3, 1)).toBe(-1)
+    place(s, [0, 0], [0, 0], [NaN, NaN])
+    s.hidden = 0
+    expect(edgeAt(s, 1, 1, 1)).toBe(0)
   })
 })
 
@@ -160,8 +266,8 @@ function bigScene(n: number): Scene {
   let seed = 7
   const rand = () => (seed = (seed * 1103515245 + 12345) % 2147483648) / 2147483648
   const nodes = Array.from({ length: n }, (_, i) => node(`n${i}`, i % 10 === 0 ? 'Paper' : TYPES[1 + (i % 5)], `Node number ${i}`))
-  const edges: [string, string][] = []
-  for (let i = 0; i < n; i += 10) for (let e = 0; e < 5 * 2; e++) edges.push([`n${i}`, `n${Math.floor(rand() * n)}`])
+  const edges: [string, string, GraphEdgeType][] = []
+  for (let i = 0; i < n; i += 10) for (let e = 0; e < 5 * 2; e++) edges.push([`n${i}`, `n${Math.floor(rand() * n)}`, EDGE_TYPES[e % 5]])
   const scene = buildScene(sub(nodes, edges, nodes.slice(0, n / 10).map((x) => x.id)), true, null, () => [])
   const side = Math.sqrt(n) * 30
   for (let i = 0; i < n; i++) {
@@ -195,6 +301,18 @@ describe.each([10_000, 50_000])('canvas performance with %i nodes', (n) => {
   it('culls a zoomed-in frame with labels', () => {
     const view = { x: 500, y: 400, k: 1 }
     expect(ms(() => drawScene(ctx, scene, view, 1000, 800, 2, PALETTE))).toBeLessThan(n / 100)
+  })
+
+  it('draws a zoomed-in frame with arrowheads and a highlighted selection', () => {
+    const view = { x: 500, y: 400, k: 1 }
+    expect(ms(() => selectNode(scene, 0))).toBeLessThan(n / 500)
+    expect(scene.incident.length).toBeGreaterThan(0)
+    expect(ms(() => drawScene(ctx, scene, view, 1000, 800, 2, PALETTE))).toBeLessThan(n / 100)
+    selectNode(scene, -1)
+  })
+
+  it('finds the edge at the pointer', () => {
+    expect(ms(() => edgeAt(scene, 10, 10, 1), 100)).toBeLessThan(n / 2000)
   })
 
   it('answers hit tests', () => {

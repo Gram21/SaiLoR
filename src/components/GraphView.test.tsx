@@ -59,6 +59,8 @@ function mockContext() {
     beginPath: vi.fn(),
     moveTo: vi.fn(),
     lineTo: vi.fn(),
+    closePath: vi.fn(),
+    setLineDash: vi.fn(),
     stroke: vi.fn(),
     fill: vi.fn(),
     rect: vi.fn(),
@@ -162,6 +164,30 @@ describe('GraphView', () => {
     expect(listed()).toContain('Paper Testing Things')
     fireEvent.doubleClick(canvas(), { clientX: 1, clientY: 1 })
     expect(listed()).toHaveLength(2)
+  })
+
+  // [utest->req~ui-220~1]
+  it('names an edge on hover and hides an edge type with its legend toggle', async () => {
+    open()
+    render(<GraphView onClose={() => {}} />)
+    await query('author:alan')
+    ctx.fillText.mockClear()
+    await waitForLabel('Testing Things')
+    await waitForLabel('Alan Turing')
+    const hover = () => {
+      const a = drawn('Testing Things')
+      const b = drawn('Alan Turing')
+      fireEvent.pointerMove(canvas(), { clientX: (a.clientX + b.clientX) / 2, clientY: (a.clientY + b.clientY) / 2 })
+    }
+    await waitFor(() => {
+      hover()
+      expect(canvas()).toHaveAttribute('title', 'authored by: Testing Things → Alan Turing')
+    })
+    const toggle = within(screen.getByRole('group', { name: 'Relations:' })).getByRole('checkbox', { name: 'authored by' })
+    await userEvent.click(toggle)
+    expect(toggle).not.toBeChecked()
+    hover()
+    expect(canvas()).toHaveAttribute('title', '')
   })
 
   it('pans the canvas, zooms, resets the view and drags a node', async () => {
