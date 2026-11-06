@@ -450,15 +450,21 @@ export function pdfKeys(paper: Pick<EditorPaper, 'pdf' | 'sourcePath'>): string[
   return keys
 }
 
+/** `base`, or `base-2`, `base-3`, … — the first form not in `taken`. */
+function uniqueId(base: string, taken: ReadonlySet<string>): string {
+  let id = base
+  let n = 2
+  while (taken.has(id)) id = `${base}-${n++}`
+  return id
+}
+
 export function makePaperFromPdf(
   fileName: string,
   relativePath: string,
   sourcePath: string | undefined,
   existingIds: Set<string>,
 ): EditorPaper {
-  let id = paperIdFromName(fileName)
-  let n = 2
-  while (existingIds.has(id)) id = `${paperIdFromName(fileName)}-${n++}`
+  const id = uniqueId(paperIdFromName(fileName), existingIds)
   return {
     uid: nextUid(),
     id,
@@ -519,9 +525,7 @@ export function findMatchingPaper(papers: EditorPaper[], entry: RefEntry): Edito
  *  `pdfHint`'s file name is a placeholder the user (or a later "Add PDFs…") fills in. */
 export function makePaperFromRef(entry: RefEntry, existingIds: Set<string>): EditorPaper {
   const base = entry.title || 'paper'
-  let id = paperIdFromName(base)
-  let n = 2
-  while (existingIds.has(id)) id = `${paperIdFromName(base)}-${n++}`
+  const id = uniqueId(paperIdFromName(base), existingIds)
   return {
     uid: nextUid(),
     id,
@@ -2427,8 +2431,7 @@ export const useEditorStore = create<EditorState>()(
           const pdf = draft.target !== 'start' && hasSource ? (rebased[rebasedIdx++] ?? p.pdf) : p.pdf
           let id = p.id
           if (draft.target === 'start') {
-            let n = 2
-            while (taken.has(id)) id = `${p.id}-${n++}`
+            id = uniqueId(p.id, taken)
             taken.add(id)
           }
           return {
@@ -2546,9 +2549,7 @@ export const useEditorStore = create<EditorState>()(
               skipped++
               continue
             }
-            let id = row.id
-            let n = 2
-            while (existingIds.has(id)) id = `${row.id}-${n++}`
+            const id = uniqueId(row.id, existingIds)
             existingIds.add(id)
             row.id = id
             toAdd.push(row)
