@@ -35,7 +35,7 @@ const EXE: &str = if cfg!(windows) {
 const SYSTEMONE_COMMIT: &str = "a4cb4c61fd9d9c2066c7c1747821d3d65b8943bd";
 const CANCELLED: &str = "Download cancelled or stalled; the partial file is kept for resuming.";
 #[cfg(windows)]
-const CREATE_NO_WINDOW: u32 = 0x0800_0000;
+pub(crate) const CREATE_NO_WINDOW: u32 = 0x0800_0000;
 
 // ---- catalog (mirror of src/llm/localCatalog.ts) ------------------------------------
 

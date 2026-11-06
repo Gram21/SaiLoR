@@ -148,7 +148,7 @@ async fn run(cmd: &str, args: &[&str], limit: Duration) -> String {
         .kill_on_drop(true)
         .stdin(std::process::Stdio::null());
     #[cfg(windows)]
-    c.creation_flags(0x0800_0000);
+    c.creation_flags(crate::localruntime::CREATE_NO_WINDOW);
     match tokio::time::timeout(limit, c.output()).await {
         Ok(Ok(o)) if o.status.success() => String::from_utf8_lossy(&o.stdout).into_owned(),
         _ => String::new(),

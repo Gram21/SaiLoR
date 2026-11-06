@@ -229,7 +229,7 @@ fn run_git_capped(
     #[cfg(windows)]
     {
         use std::os::windows::process::CommandExt;
-        cmd.creation_flags(0x0800_0000);
+        cmd.creation_flags(crate::localruntime::CREATE_NO_WINDOW);
     }
     let mut child = match cmd.spawn() {
         Ok(c) => c,
