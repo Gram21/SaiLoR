@@ -17,6 +17,7 @@ import type { SaveHandle } from '../platform/adapter'
  * guard. This exercises it directly against a real DOM node (jsdom), so it is
  * a genuine behavioural check rather than a mock of the fix.
  */
+let duringSave: (() => void) | null = null
 const mockPlatform = {
   kind: 'electron' as const,
   getOsInfo: () => null,
@@ -30,7 +31,10 @@ const mockPlatform = {
     name: 'review.json',
   }),
   openRecent: async () => null,
-  saveProject: async (_t: string, h: SaveHandle) => h,
+  saveProject: async (_t: string, h: SaveHandle) => {
+    duringSave?.()
+    return h
+  },
   pickProjectLocation: async () => null,
   rebasePdfPaths: async (paths: string[]) => paths,
   relativePdfPaths: async () => [],
@@ -72,5 +76,17 @@ describe('editorStore.save() commits the focused field before reading the draft'
     expect(blurred).toBe(true)
     expect(document.activeElement).not.toBe(input)
     document.body.removeChild(input)
+  })
+})
+
+describe('editorStore.save() dirty flag', () => {
+  it('stays dirty when the draft is edited while the write is in flight', async () => {
+    await es().startEdit()
+    duringSave = () => es().setTitle('typed during save')
+    expect(await es().save()).toBe(true)
+    duringSave = null
+    expect(es().dirty).toBe(true)
+    expect(await es().save()).toBe(true)
+    expect(es().dirty).toBe(false)
   })
 })

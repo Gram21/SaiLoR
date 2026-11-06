@@ -2697,11 +2697,17 @@ export const useEditorStore = create<EditorState>()(
         // half-done.
         const savedFolder = st.savedAnnotationsDir.trim() || DEFAULT_ANNOTATIONS_DIR
         // (`savedSchemaJson` is set once the file exists: opened, or saved before.)
-        if (st.savedSchemaJson !== '' && st.location.path && folder !== savedFolder) {
-          await getPlatform().moveAnnotationsDir(st.location.path, folder)
-        }
+        const moved = st.savedSchemaJson !== '' && !!st.location.path && folder !== savedFolder
+        if (moved) await getPlatform().moveAnnotationsDir(st.location.path!, folder)
         const text = JSON.stringify(buildProjectJson(versioned), null, 2)
-        const handle = await getPlatform().saveProject(text, st.location.handle)
+        let handle
+        try {
+          handle = await getPlatform().saveProject(text, st.location.handle)
+        } catch (err) {
+          // The folder moved before the project file said so; put it back.
+          if (moved) await getPlatform().moveAnnotationsDir(st.location.path!, savedFolder).catch(() => {})
+          throw err
+        }
         set((s) => {
           s.schemaVersion = versioned.schemaVersion
           s.schemaHistory = versioned.schemaHistory
@@ -2710,11 +2716,15 @@ export const useEditorStore = create<EditorState>()(
           s.keepHidden = {}
           s.savedAnnotationsDir = st.annotationsDir
           s.busy = false
-          s.dirty = false
           if (s.location) s.location.handle = handle
           // Saving only writes the file — the user stays in the editor.
           s.notice = t('editor.store.savedTo', { name: st.location?.name ?? t('editor.store.projectFile') })
           s.justAdded = {}
+        })
+        // An edit made while the write was in flight is not on disk: stay dirty.
+        const unchanged = JSON.stringify(buildProjectJson(get()), null, 2) === text
+        set((s) => {
+          s.dirty = !unchanged
         })
         // The project's title may have just changed, and the recents list shows
         // it — re-read so closing the editor doesn't reveal the old one.
