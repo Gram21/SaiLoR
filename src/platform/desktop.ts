@@ -250,7 +250,9 @@ export class DesktopAdapter implements PlatformAdapter {
     // Carried as a query param, not the URL path: Chromium's URL parser collapses ".."
     // path segments per spec before the request is even made, so a path-based value would
     // silently climb to the wrong file. Query values aren't subject to that normalization.
-    return { url: `slr-file://project/pdf?path=${encodeURIComponent(pdfPath)}` }
+    // WebView2 on Windows serves custom schemes as http://<scheme>.localhost.
+    const base = navigator.userAgent.includes('Windows') ? 'http://slr-file.localhost' : 'slr-file://project'
+    return { url: `${base}/pdf?path=${encodeURIComponent(pdfPath)}` }
   }
 
   // [impl->req~plt-420~1]
