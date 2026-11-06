@@ -1,0 +1,264 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="SaiLoR is a desktop app for annotating papers in a systematic literature review. Fill in your own schema while you read each PDF.">
+  <title>SaiLoR - annotation tool for systematic literature reviews</title>
+  <link rel="icon" href="img/icon.png" type="image/png">
+  <link rel="stylesheet" href="assets/site.css">
+  <script src="assets/site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html">
+        <img src="img/icon.png" alt="" width="32" height="32">
+        SaiLoR
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <ul>
+          <li><a href="#features">Features</a></li>
+          <li><a href="#platforms">Platforms</a></li>
+          <li><a href="#try-online">Try online</a></li>
+          <li><a href="#quickstart">Quickstart</a></li>
+          <li><a href="create-project.html">First project</a></li>
+          <li><a href="#cite">How to cite</a></li>
+          <li><a href="https://github.com/Gram21/SaiLoR">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="wrap">
+
+      <section class="hero" aria-labelledby="hero-title">
+        <h1 id="hero-title">SaiLoR</h1>
+        <p class="lead">Read each paper&rsquo;s PDF beside a structured form. Keep every answer in a plain JSON project file.</p>
+        <div class="buttons">
+          <a class="button primary" href="https://github.com/Gram21/SaiLoR/releases/latest">Download</a>
+          <a class="button" href="./demo/">Try the online demo</a>
+          <a class="button" href="https://github.com/Gram21/SaiLoR">GitHub</a>
+        </div>
+        <figure>
+          <img src="img/annotate.png" alt="The three-pane annotation view: the paper list on the left, the PDF in the middle, and the annotation form on the right." width="1440" height="900">
+          <figcaption>The annotation view. The PDF is in the middle and the form is on the right.</figcaption>
+        </figure>
+      </section>
+
+      <section id="features" aria-labelledby="features-title">
+        <h2 id="features-title">Features</h2>
+
+        <h3>Structured annotation</h3>
+        <p>Define the fields you need once, in a schema. Every paper then gets the same form.</p>
+        <ul>
+          <li>Field types: text, number, yes/no, year, and groups.</li>
+          <li>Text fields with fixed options become a dropdown.</li>
+          <li>Repeatable groups, such as several findings per paper, with minimum and maximum counts.</li>
+          <li>Conditional fields that appear only after another answer (<code>visibleIf</code>).</li>
+          <li>Required fields, and an optional <strong>Annotation finished</strong> mark per paper.</li>
+        </ul>
+
+        <h3>Evidence from the PDF</h3>
+        <p>Keep each answer tied to the text that supports it.</p>
+        <ul>
+          <li>Select text in the PDF and copy it into a field.</li>
+          <li>Highlight text or add sticky notes. Each mark can carry its own comment.</li>
+          <li>Link a highlight or note to a field as evidence. Click it later to jump back to the PDF.</li>
+          <li>Export your marks into a standalone annotated PDF.</li>
+        </ul>
+        <figure class="placeholder-shot">
+          <!-- TODO screenshot: replace img/screenshot-pending.svg with img/evidence.png -->
+          <img src="img/screenshot-pending.svg" alt="Placeholder: a PDF with highlights and a sticky note, and a form field linked to a highlight as evidence." width="1440" height="900">
+          <figcaption>Highlights, notes, and evidence links next to the form.</figcaption>
+        </figure>
+
+        <h3>Several reviewers and reconciliation</h3>
+        <p>Two or more people can annotate the same papers without overwriting each other.</p>
+        <ul>
+          <li>Set 2 to 10 reviewers. Each reviewer works on their own answers.</li>
+          <li>The Consolidation seat compares answers field by field with the &#8644; button.</li>
+          <li>Fields where all reviewers agree are filled in for you.</li>
+          <li>&#9888; Disagreements lists every field that reviewers answered differently.</li>
+          <li>&#9878; Agreement reports Cohen&rsquo;s &kappa;, Fleiss&rsquo; &kappa;, and Krippendorff&rsquo;s &alpha;.</li>
+        </ul>
+        <figure class="placeholder-shot">
+          <!-- TODO screenshot: replace img/screenshot-pending.svg with img/consolidation.png -->
+          <img src="img/screenshot-pending.svg" alt="Placeholder: the Consolidation view comparing two reviewers' answers for one field, with an agreement badge." width="1440" height="900">
+          <figcaption>The Consolidation seat compares reviewers&rsquo; answers side by side.</figcaption>
+        </figure>
+
+        <h3>Screening</h3>
+        <p>Screen titles and abstracts before you annotate full papers.</p>
+        <ul>
+          <li>Include or exclude each paper. Exclusion reasons are set in advance.</li>
+          <li>Keyboard shortcuts: <kbd>I</kbd> to include, <kbd>E</kbd> to exclude, <kbd>U</kbd> to undecide, and <kbd>1</kbd> to <kbd>9</kbd> for a reason.</li>
+          <li>A summary reports the counts for each decision and each exclusion reason.</li>
+          <li>New from screening&hellip; starts the next phase from a screening project.</li>
+        </ul>
+        <figure class="placeholder-shot">
+          <!-- TODO screenshot: replace img/screenshot-pending.svg with img/screening.png -->
+          <img src="img/screenshot-pending.svg" alt="Placeholder: a screening record with the title and abstract, Include and Exclude buttons, and the reason list." width="1440" height="900">
+          <figcaption>Screening decisions use the title and abstract.</figcaption>
+        </figure>
+
+        <h3>Import papers and find duplicates</h3>
+        <ul>
+          <li>Add single PDFs, or a whole folder including its sub-folders.</li>
+          <li>Import references from BibTeX (<code>.bib</code>), RIS (<code>.ris</code>), or CSL-JSON files.</li>
+          <li>Probable duplicates are flagged. You decide each one. Nothing merges silently.</li>
+        </ul>
+
+        <h3>AI-assisted annotation (preview)</h3>
+        <p>AI support is off unless the project turns it on with <code>"ai": true</code> in <code>config</code>.</p>
+        <ul>
+          <li>Prompt mode sends one request per paper. Agent mode uses tools and a judge to check the evidence. It takes longer and costs more.</li>
+          <li>Each suggestion is checked against the schema before you see it.</li>
+          <li>You review each suggestion, can edit it, and then apply it. AI-written fields stay marked until you confirm them.</li>
+          <li>Use a cloud provider with your own API key, or a local model server.</li>
+          <li>AI use is recorded in the project file, with the provider and model.</li>
+        </ul>
+        <figure class="placeholder-shot">
+          <!-- TODO screenshot: replace img/screenshot-pending.svg with img/ai-review.png -->
+          <img src="img/screenshot-pending.svg" alt="Placeholder: the AI review table listing suggested field values, with edit and apply controls." width="1440" height="900">
+          <figcaption>AI suggestions wait for your review before they are applied.</figcaption>
+        </figure>
+
+        <h3>Git integration</h3>
+        <ul>
+          <li>SaiLoR runs your own <code>git</code> program. It uses your existing credentials.</li>
+          <li>Review each changed field before you commit it.</li>
+          <li>Pull and merge reviewers&rsquo; work field by field. Only a field that both sides changed asks you to choose.</li>
+          <li>Switch branches, and browse the history of the project file.</li>
+        </ul>
+        <figure class="placeholder-shot">
+          <!-- TODO screenshot: replace img/screenshot-pending.svg with img/git-panel.png -->
+          <img src="img/screenshot-pending.svg" alt="Placeholder: the Git panel with a branch switcher, field-level change review, and commit controls." width="1440" height="900">
+          <figcaption>Field-level review of the project&rsquo;s changes.</figcaption>
+        </figure>
+
+        <h3>Local first and private</h3>
+        <ul>
+          <li>SaiLoR has no account and no server of its own.</li>
+          <li>Your project files stay in folders you choose.</li>
+          <li>API keys are stored encrypted with your operating system&rsquo;s secure storage.</li>
+          <li>This page loads no scripts, fonts, or trackers from other sites.</li>
+        </ul>
+      </section>
+
+      <section id="platforms" aria-labelledby="platforms-title">
+        <h2 id="platforms-title">Platforms</h2>
+        <p>Download the file for your system from the <a href="https://github.com/Gram21/SaiLoR/releases/latest">latest release</a>.</p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">System</th>
+              <th scope="col">File</th>
+              <th scope="col">First start</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row">macOS, Apple silicon</th>
+              <td><code>SaiLoR-&lt;version&gt;-macos-arm64.dmg</code></td>
+              <td>macOS blocks the unsigned app. Allow it in Privacy &amp; Security.</td>
+            </tr>
+            <tr>
+              <th scope="row">macOS, Intel</th>
+              <td><code>SaiLoR-&lt;version&gt;-macos-x64.dmg</code></td>
+              <td>Same as Apple silicon.</td>
+            </tr>
+            <tr>
+              <th scope="row">Windows, x64</th>
+              <td><code>SaiLoR-&lt;version&gt;-windows-x64.exe</code></td>
+              <td>SmartScreen warns about the unsigned installer. Choose More info, then Run anyway.</td>
+            </tr>
+            <tr>
+              <th scope="row">Linux, x86_64</th>
+              <td><code>SaiLoR-&lt;version&gt;-x86_64.AppImage</code></td>
+              <td>Make the file executable and run it.</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="note">
+          <p>Warning: the releases are not signed with an Apple or Microsoft certificate. The first start shows a warning. The full steps are in the <a href="https://github.com/Gram21/SaiLoR/blob/main/README.md#installing-a-release">README</a>.</p>
+        </div>
+        <p>There are no builds for Windows on Arm or Linux on arm64.</p>
+      </section>
+
+      <section id="try-online" aria-labelledby="try-online-title">
+        <h2 id="try-online-title">Try it online</h2>
+        <p>The <a href="./demo/">online demo</a> runs SaiLoR in your browser. Try the interface before you install the app.</p>
+        <ul>
+          <li>The demo opens example projects. They use papers by Jan Keim from arXiv, and the paper <em>From Scattered to Structured</em>.</li>
+          <li>Nothing you do in the demo is saved.</li>
+        </ul>
+        <div class="note">
+          <p>Warning: use the desktop app for real review data. The demo does not keep your work.</p>
+        </div>
+      </section>
+
+      <section id="quickstart" aria-labelledby="quickstart-title">
+        <h2 id="quickstart-title">Quickstart</h2>
+        <h3>Install a release</h3>
+        <ol class="step-list">
+          <li>Download the file for your system from the <a href="https://github.com/Gram21/SaiLoR/releases/latest">latest release</a>.</li>
+          <li>Install the app. Follow the steps for your system in the table under <a href="#platforms">Platforms</a>.</li>
+          <li>Open the app. Create a project as shown in <a href="create-project.html">Create your first project.json</a>.</li>
+        </ol>
+
+        <h3>Run the development version</h3>
+        <p>Use this route to change the code. You need Git and Node.js 24, the version the CI uses.</p>
+        <div class="code-block">
+          <button class="copy-button" type="button" aria-describedby="copy-status-dev">Copy</button>
+          <pre><code>git clone https://github.com/Gram21/SaiLoR.git
+cd SaiLoR
+npm install
+npm run dev:electron</code></pre>
+          <p class="sr-status" id="copy-status-dev" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="cite" aria-labelledby="cite-title">
+        <h2 id="cite-title">How to cite</h2>
+        <p>Cite SaiLoR through its Zenodo record. The DOI is <a href="https://doi.org/10.5281/zenodo.23804729">10.5281/zenodo.23804729</a>. Add the version you used.</p>
+        <div class="code-block">
+          <button class="copy-button" type="button" aria-describedby="copy-status-cite">Copy</button>
+          <pre><code>@software{keim_sailor,
+  author  = {Keim, Jan},
+  title   = {{SaiLoR}},
+  doi     = {10.5281/zenodo.23804729},
+  url     = {https://github.com/Gram21/SaiLoR},
+  license = {GPL-3.0-only}
+}</code></pre>
+          <p class="sr-status" id="copy-status-cite" role="status" aria-live="polite"></p>
+        </div>
+      </section>
+
+      <section id="license" aria-labelledby="license-title">
+        <h2 id="license-title">License</h2>
+        <p>SaiLoR is free software under the GNU General Public License, version 3 only (GPL-3.0-only). Read the <a href="https://github.com/Gram21/SaiLoR/blob/main/LICENSE">LICENSE</a> file for the full terms.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <ul>
+        <li><a href="https://github.com/Gram21/SaiLoR">GitHub</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR/issues">Issues</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR/releases">Releases</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR/wiki">Wiki</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR/wiki/User-Guide">User guide</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR/blob/main/docs/annotation-schema.md">Schema guide</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR/tree/main/docs/requirements">Requirements</a></li>
+        <li><a href="https://doi.org/10.5281/zenodo.23804729">Zenodo DOI</a></li>
+      </ul>
+      <p>SaiLoR is licensed under GPL-3.0-only.</p>
+    </div>
+  </footer>
+</body>
+</html>

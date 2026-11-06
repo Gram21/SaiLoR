@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Create a SaiLoR project.json from an empty folder. Includes a minimal example, an extended example, and ways to import papers.">
+  <title>Create your first project.json - SaiLoR</title>
+  <link rel="icon" href="img/icon.png" type="image/png">
+  <link rel="stylesheet" href="assets/site.css">
+  <script src="assets/site.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html">
+        <img src="img/icon.png" alt="" width="32" height="32">
+        SaiLoR
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <ul>
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="index.html#platforms">Platforms</a></li>
+          <li><a href="index.html#try-online">Try online</a></li>
+          <li><a href="index.html#quickstart">Quickstart</a></li>
+          <li><a href="create-project.html" aria-current="page">First project</a></li>
+          <li><a href="index.html#cite">How to cite</a></li>
+          <li><a href="https://github.com/Gram21/SaiLoR">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="wrap">
+
+      <section aria-labelledby="walkthrough-title">
+        <h1 id="walkthrough-title">Create your first project.json</h1>
+        <p>A SaiLoR project is one file named <code>project.json</code>. It holds the annotation schema and the list of papers. Your answers are saved in an <code>annotations</code> folder next to it.</p>
+        <p>This guide creates a project from an empty folder.</p>
+        <nav class="toc" aria-labelledby="toc-title">
+          <p id="toc-title"><strong>On this page</strong></p>
+          <ol>
+            <li><a href="#before">Before you start</a></li>
+            <li><a href="#minimal">Create a minimal project</a></li>
+            <li><a href="#open">Open the project</a></li>
+            <li><a href="#add-papers">Add papers</a></li>
+            <li><a href="#extended">Extended example</a></li>
+            <li><a href="#import">Import papers instead of typing them</a></li>
+            <li><a href="#reference">Full reference</a></li>
+          </ol>
+        </nav>
+      </section>
+
+      <section id="before" aria-labelledby="before-title">
+        <h2 id="before-title">Before you start</h2>
+        <ul>
+          <li>Install SaiLoR. See <a href="index.html#quickstart">Quickstart</a>.</li>
+          <li>Choose a location on your computer for the project.</li>
+          <li>Optional: prepare a folder named <code>pdfs</code> for your PDF files.</li>
+        </ul>
+      </section>
+
+      <section id="minimal" aria-labelledby="minimal-title">
+        <h2 id="minimal-title">Create a minimal project</h2>
+        <ol class="step-list">
+          <li>Create an empty folder. Name it <code>my-review</code>.</li>
+          <li>Create a text file named <code>project.json</code> inside <code>my-review</code>.</li>
+          <li>Copy the code below into <code>project.json</code>. Save the file.</li>
+        </ol>
+        <div class="code-block">
+          <button class="copy-button" type="button" aria-describedby="copy-status-minimal">Copy</button>
+          <pre><code>{
+  "version": 1,
+  "config": {
+    "schema": [
+      { "name": "Relevant", "type": "boolean" }
+    ]
+  },
+  "papers": []
+}</code></pre>
+          <p class="sr-status" id="copy-status-minimal" role="status" aria-live="polite"></p>
+        </div>
+        <p>This project has one field, <strong>Relevant</strong>, and no papers yet.</p>
+        <div class="note">
+          <p>Warning: JSON does not allow comments or trailing commas. Use double quotes for all keys and text.</p>
+        </div>
+      </section>
+
+      <section id="open" aria-labelledby="open-title">
+        <h2 id="open-title">Open the project</h2>
+        <ol class="step-list">
+          <li>Start SaiLoR.</li>
+          <li>Select <strong>Open &#9662;</strong>, then select <strong>Open&hellip;</strong>.</li>
+          <li>Select <code>my-review/project.json</code>.</li>
+        </ol>
+        <p>The project opens. The paper list is empty.</p>
+        <div class="note">
+          <p>Warning: SaiLoR rebuilds the <code>config</code> object on every save. Add your own keys at the top level, next to <code>papers</code>, not inside <code>config</code>.</p>
+        </div>
+        <div class="note">
+          <p>Warning: SaiLoR rewrites <code>project.json</code> when you save. Keep a copy of the file before you edit it by hand.</p>
+        </div>
+      </section>
+
+      <section id="add-papers" aria-labelledby="add-papers-title">
+        <h2 id="add-papers-title">Add papers</h2>
+        <ol class="step-list">
+          <li>Open the project editor. On the start screen, select <strong>Edit annotation JSON&hellip;</strong>, then select <code>project.json</code>.</li>
+          <li>In the papers section, select <strong>+ Add PDFs&hellip;</strong> to add single files. Select <strong>+ Add folder&hellip;</strong> to add every PDF in a folder, including sub-folders.</li>
+          <li>Check the title and authors of each new paper. SaiLoR reads them from the file name or the PDF, so they can be wrong.</li>
+          <li>Save the project.</li>
+        </ol>
+        <p>Each paper must have a PDF path. The path is relative to <code>project.json</code>. For example, <code>pdfs/paper-a.pdf</code> points to <code>my-review/pdfs/paper-a.pdf</code>.</p>
+      </section>
+
+      <section id="extended" aria-labelledby="extended-title">
+        <h2 id="extended-title">Extended example</h2>
+        <p>This example uses more of the schema. It has a yes/no field, a dropdown, a number, a year, a repeatable group, a conditional field, and one paper.</p>
+        <table>
+          <thead>
+            <tr>
+              <th scope="col">Part</th>
+              <th scope="col">What it does</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <th scope="row"><code>Relevant</code>, type <code>boolean</code></th>
+              <td>A yes/no field. A ticked box means yes.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>Study Type</code>, type <code>string</code> with <code>options</code></th>
+              <td>A dropdown with three choices. It appears after <strong>Relevant</strong> is ticked.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>Sample Size</code>, type <code>number</code></th>
+              <td>A number field. It appears after <strong>Relevant</strong> is ticked.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>Publication Year</code>, type <code>year</code></th>
+              <td>A year field. It accepts years from about 1000 to 2100.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>Findings</code>, a group</th>
+              <td>A repeatable group. <code>min</code> is 1, so at least one entry is required. <code>max</code> is <code>null</code>, so there is no upper limit.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>Claim</code>, <code>Evidence</code>, <code>Confidence</code></th>
+              <td>The children of <strong>Findings</strong>. <strong>Evidence</strong> appears after <strong>Claim</strong> has an answer.</td>
+            </tr>
+            <tr>
+              <th scope="row"><code>papers</code></th>
+              <td>One paper. Its <code>pdf</code> path is relative to <code>project.json</code>.</td>
+            </tr>
+          </tbody>
+        </table>
+        <div class="code-block">
+          <button class="copy-button" type="button" aria-describedby="copy-status-extended">Copy</button>
+          <pre><code>{
+  "version": 1,
+  "config": {
+    "schema": [
+      { "name": "Relevant", "type": "boolean" },
+      {
+        "name": "Study Type",
+        "type": "string",
+        "options": ["Case study", "Experiment", "Survey"],
+        "visibleIf": "Relevant"
+      },
+      { "name": "Sample Size", "type": "number", "visibleIf": "Relevant" },
+      { "name": "Publication Year", "type": "year" },
+      {
+        "name": "Findings",
+        "min": 1,
+        "max": null,
+        "children": [
+          { "name": "Claim", "type": "string" },
+          { "name": "Evidence", "type": "string", "visibleIf": "Claim" },
+          { "name": "Confidence", "type": "number" }
+        ]
+      }
+    ]
+  },
+  "papers": [
+    {
+      "id": "paper-a",
+      "title": "Deep Learning for Code Search: A Study",
+      "authors": ["A. Author", "B. Writer"],
+      "doi": "10.1000/xyz123",
+      "year": 2024,
+      "venue": "Example Conference",
+      "pdf": "pdfs/paper-a.pdf",
+      "annotations": {}
+    }
+  ]
+}</code></pre>
+          <p class="sr-status" id="copy-status-extended" role="status" aria-live="polite"></p>
+        </div>
+        <p>Each paper needs a unique <code>id</code>. The id also names a folder, so use letters, digits, and hyphens only, such as <code>paper-a</code>.</p>
+        <p>The full list of fields and rules is in the <a href="https://github.com/Gram21/SaiLoR/blob/main/docs/annotation-schema.md">schema guide</a>.</p>
+      </section>
+
+      <section id="import" aria-labelledby="import-title">
+        <h2 id="import-title">Import papers instead of typing them</h2>
+        <h3>Import references from a reference manager</h3>
+        <ol class="step-list">
+          <li>Export your library as a BibTeX (<code>.bib</code>), RIS (<code>.ris</code>), or CSL-JSON file.</li>
+          <li>Open the project editor.</li>
+          <li>Select <strong>Import references&hellip;</strong>, then select the export file.</li>
+          <li>Decide each flagged duplicate. Select <strong>Duplicate</strong> or <strong>Different</strong>.</li>
+          <li>Attach the PDF for each paper. The import brings in titles, authors, DOIs, years, and venues, but not the PDF files.</li>
+        </ol>
+        <h3>Start from a screening project</h3>
+        <ol class="step-list">
+          <li>Screen your papers in a SaiLoR screening project.</li>
+          <li>On the start screen, select <strong>New from screening&hellip;</strong>.</li>
+          <li>Choose the annotation project as the target. Papers that were not excluded carry over.</li>
+        </ol>
+        <h3>Add a folder of PDFs</h3>
+        <p>Select <strong>+ Add folder&hellip;</strong> in the project editor. Every PDF in the folder becomes one paper.</p>
+      </section>
+
+      <section id="reference" aria-labelledby="reference-title">
+        <h2 id="reference-title">Full reference</h2>
+        <p>The <a href="https://github.com/Gram21/SaiLoR/blob/main/docs/annotation-schema.md">annotation schema guide</a> describes every field, the rules for <code>visibleIf</code>, multiple reviewers, and screening projects.</p>
+        <p>The <a href="https://github.com/Gram21/SaiLoR/wiki/User-Guide">user guide</a> describes the app screens.</p>
+      </section>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR">GitHub</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR/issues">Issues</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR/releases">Releases</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR/wiki">Wiki</a></li>
+        <li><a href="https://doi.org/10.5281/zenodo.23804729">Zenodo DOI</a></li>
+      </ul>
+      <p>SaiLoR is licensed under GPL-3.0-only.</p>
+    </div>
+  </footer>
+</body>
+</html>
