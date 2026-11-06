@@ -1,7 +1,7 @@
 // [utest->req~ui-190~1]
 import '@testing-library/jest-dom/vitest'
-import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { fireEvent, render, screen, within } from '@testing-library/react'
+import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
+import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 vi.mock('../platform', () => ({
@@ -23,6 +23,7 @@ if (typeof window.PointerEvent === 'undefined') {
 
 const { useStore } = await import('../state/store')
 const { GraphView } = await import('./GraphView')
+const { layoutHost } = await import('../model/graphLayout')
 
 function open(reviewers = 1) {
   useStore.getState().loadFromText(
@@ -48,7 +49,36 @@ function open(reviewers = 1) {
 
 const nodeList = () => within(screen.getByRole('heading', { name: 'Nodes' }).nextElementSibling as HTMLElement)
 const listed = () => nodeList().getAllByRole('button').map((b) => b.textContent)
-const svgNode = (label: string) => screen.getByText(label, { selector: 'svg text' }).closest('g')!
+const canvas = () => screen.getByRole('img')
+
+/** jsdom has no canvas: this context records the calls of drawScene. */
+function mockContext() {
+  const ctx = {
+    setTransform: vi.fn(),
+    clearRect: vi.fn(),
+    beginPath: vi.fn(),
+    moveTo: vi.fn(),
+    lineTo: vi.fn(),
+    stroke: vi.fn(),
+    fill: vi.fn(),
+    rect: vi.fn(),
+    arc: vi.fn(),
+    fillText: vi.fn(),
+  }
+  return ctx
+}
+let ctx = mockContext()
+
+const zoomLevel = () => ctx.setTransform.mock.lastCall![0] as number
+const offset = () => ctx.setTransform.mock.lastCall!.slice(4) as number[]
+
+/** Screen position of the last drawn node with this label. */
+function drawn(label: string) {
+  const [k, , , , x, y] = ctx.setTransform.mock.lastCall! as number[]
+  const call = ctx.fillText.mock.calls.filter((c) => c[0] === label).at(-1)!
+  return { clientX: (call[1] as number) * k + x, clientY: ((call[2] as number) + 12) * k + y }
+}
+const waitForLabel = (label: string) => waitFor(() => expect(ctx.fillText.mock.calls.some((c) => c[0] === label)).toBe(true))
 
 async function query(text: string) {
   const box = screen.getByRole('searchbox', { name: 'Graph query' })
@@ -58,6 +88,15 @@ async function query(text: string) {
 
 beforeEach(() => {
   useStore.setState({ project: null })
+  ctx = mockContext()
+  vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => ctx as unknown as CanvasRenderingContext2D)
+  vi.spyOn(Element.prototype, 'clientWidth', 'get').mockReturnValue(800)
+  vi.spyOn(Element.prototype, 'clientHeight', 'get').mockReturnValue(600)
+})
+
+afterEach(() => {
+  vi.restoreAllMocks()
+  vi.unstubAllGlobals()
 })
 
 describe('GraphView', () => {
@@ -66,12 +105,13 @@ describe('GraphView', () => {
     expect(container).toBeEmptyDOMElement()
   })
 
-  it('shows every node in the canvas and in the accessible list', () => {
+  it('shows every node in the canvas and in the accessible list', async () => {
     open()
     render(<GraphView onClose={() => {}} />)
     expect(screen.getByRole('dialog', { name: 'Knowledge graph' })).toBeInTheDocument()
     expect(listed()).toEqual(expect.arrayContaining(['Paper Graph Mining', 'Author Alan Turing', 'Choice Survey']))
-    expect(svgNode('Alan Turing')).toHaveClass('graph-node', 'graph-node-author')
+    expect(canvas()).toHaveAccessibleName(/nodes, \d+ edges/)
+    await waitForLabel('Alan Turing')
     expect(screen.getByRole('status')).toHaveTextContent(/nodes, \d+ edges/)
     expect(screen.queryByRole('combobox')).toBeNull()
   })
@@ -82,8 +122,9 @@ describe('GraphView', () => {
     await query('author:alan')
     expect(listed().sort()).toEqual(['Author Alan Turing', 'Paper Testing Things'])
     expect(screen.getByRole('status')).toHaveTextContent('2 nodes, 1 edges')
-    expect(svgNode('Alan Turing')).toHaveClass('is-match')
-    expect(svgNode('Testing Things')).not.toHaveClass('is-match')
+    ctx.fillText.mockClear()
+    await waitForLabel('Testing Things')
+    expect(ctx.fillText.mock.calls.map((c) => c[0]).sort()).toEqual(['Alan Turing', 'Testing Things'])
     await query('type:venue')
     expect(screen.getByRole('status')).toHaveTextContent('No node matches the query.')
   })
@@ -96,7 +137,6 @@ describe('GraphView', () => {
     await userEvent.click(nodeList().getByRole('button', { name: /Alan Turing/ }))
     expect(screen.getByRole('heading', { name: 'Alan Turing' })).toBeInTheDocument()
     expect(nodeList().getByRole('button', { name: /Alan Turing/ })).toHaveAttribute('aria-pressed', 'true')
-    expect(svgNode('Alan Turing')).toHaveClass('is-selected')
     await userEvent.click(screen.getByRole('button', { name: 'Show neighbours' }))
     expect(listed()).toEqual(expect.arrayContaining(['Author Alan Turing', 'Paper Testing Things']))
     const neighbourList = within(screen.getByRole('heading', { name: 'Neighbours' }).nextElementSibling as HTMLElement)
@@ -104,43 +144,93 @@ describe('GraphView', () => {
     expect(screen.getByRole('heading', { name: 'Testing Things' })).toBeInTheDocument()
   })
 
-  it('selects a node on click and reveals its neighbours on double-click in the canvas', async () => {
+  it('selects a node on click, names it on hover and reveals its neighbours on double-click', async () => {
     open()
     render(<GraphView onClose={() => {}} />)
     await query('author:alan depth:0')
-    const g = svgNode('Alan Turing')
-    fireEvent.pointerDown(g, { clientX: 5, clientY: 5 })
-    fireEvent.pointerUp(g)
+    ctx.fillText.mockClear()
+    await waitForLabel('Alan Turing')
+    const at = drawn('Alan Turing')
+    fireEvent.pointerMove(canvas(), at)
+    expect(canvas()).toHaveAttribute('title', 'Author: Alan Turing')
+    fireEvent.pointerMove(canvas(), { clientX: 1, clientY: 1 })
+    expect(canvas()).toHaveAttribute('title', '')
+    fireEvent.pointerDown(canvas(), at)
+    fireEvent.pointerUp(canvas(), at)
     expect(screen.getByRole('heading', { name: 'Alan Turing' })).toBeInTheDocument()
-    fireEvent.doubleClick(svgNode('Alan Turing'))
+    fireEvent.doubleClick(canvas(), at)
     expect(listed()).toContain('Paper Testing Things')
+    fireEvent.doubleClick(canvas(), { clientX: 1, clientY: 1 })
+    expect(listed()).toHaveLength(2)
   })
 
-  it('drags a node, pans the canvas and zooms', async () => {
+  it('pans the canvas, zooms, resets the view and drags a node', async () => {
     open()
     render(<GraphView onClose={() => {}} />)
-    const svg = screen.getByRole('img')
-    const layer = () => svg.firstElementChild!.getAttribute('transform')
-    const before = layer()
-    fireEvent.pointerDown(svg, { clientX: 0, clientY: 0 })
-    fireEvent.pointerMove(svg, { clientX: 1, clientY: 1 })
-    expect(layer()).toBe(before)
-    fireEvent.pointerMove(svg, { clientX: 30, clientY: 40 })
-    fireEvent.pointerUp(svg)
-    expect(layer()).toBe('translate(30,40) scale(1)')
-    await userEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
-    expect(layer()).toContain('scale(1.25)')
-    await userEvent.click(screen.getByRole('button', { name: 'Zoom out' }))
-    fireEvent.wheel(svg, { deltaY: -100, clientX: 0, clientY: 0 })
-    expect(layer()).not.toContain('scale(1)')
-    await userEvent.click(screen.getByRole('button', { name: 'Reset view' }))
-    expect(layer()).toBe('translate(0,0) scale(1)')
+    await waitForLabel('Alan Turing')
+    expect(zoomLevel()).toBe(1)
+    const [x0, y0] = offset()
+    fireEvent.pointerDown(canvas(), { clientX: 1, clientY: 1 })
+    fireEvent.pointerMove(canvas(), { clientX: 2, clientY: 2 })
+    fireEvent.pointerMove(canvas(), { clientX: 31, clientY: 41 })
+    fireEvent.pointerUp(canvas())
+    await waitFor(() => expect(offset()).toEqual([x0 + 30, y0 + 40]))
+    expect(screen.getByText(/^Select a node in the graph/)).toBeInTheDocument()
 
-    const g = svgNode('Alan Turing')
-    fireEvent.pointerDown(g, { clientX: 0, clientY: 0 })
-    fireEvent.pointerMove(svg, { clientX: 50, clientY: 50 })
-    fireEvent.pointerUp(svg)
+    await userEvent.click(screen.getByRole('button', { name: 'Zoom in' }))
+    await waitFor(() => expect(zoomLevel()).toBe(1.25))
+    await userEvent.click(screen.getByRole('button', { name: 'Zoom out' }))
+    await waitFor(() => expect(zoomLevel()).toBe(1))
+    fireEvent.wheel(canvas(), { deltaY: -100, clientX: 0, clientY: 0 })
+    await waitFor(() => expect(zoomLevel()).toBeCloseTo(Math.exp(0.2)))
+    ctx.fillText.mockClear()
+    await userEvent.click(screen.getByRole('button', { name: 'Reset view' }))
+    await waitFor(() => expect(zoomLevel()).toBeLessThanOrEqual(1))
+    await waitForLabel('Alan Turing')
+    const at = drawn('Alan Turing')
+    fireEvent.pointerDown(canvas(), at)
+    fireEvent.pointerMove(canvas(), { clientX: at.clientX + 50, clientY: at.clientY + 50 })
+    await waitFor(() => expect(drawn('Alan Turing').clientX).toBeCloseTo(at.clientX + 50, 0))
+    fireEvent.pointerUp(canvas())
     expect(screen.queryByRole('heading', { name: 'Alan Turing' })).toBeNull()
+  })
+
+  it('pages the node list of a big graph', async () => {
+    useStore.getState().loadFromText(
+      JSON.stringify({
+        version: 1,
+        config: { schema: [{ name: 'Method', type: 'string' }], reviewers: 1 },
+        papers: Array.from({ length: 210 }, (_, i) => ({ id: `p${i}`, title: `Paper ${i}`, authors: [], pdf: `${i}.pdf`, annotations: {} })),
+      }),
+      null,
+      'big.json',
+    )
+    render(<GraphView onClose={() => {}} />)
+    expect(listed()).toHaveLength(200)
+    await userEvent.click(screen.getByRole('button', { name: 'Show more (200 of 210 listed)' }))
+    expect(listed()).toHaveLength(210)
+    expect(screen.queryByRole('button', { name: /Show more/ })).toBeNull()
+  })
+
+  it('runs the layout in a worker and ends it on close', async () => {
+    const workers: { terminate: () => void }[] = []
+    vi.stubGlobal(
+      'Worker',
+      class {
+        onmessage: ((e: { data: unknown }) => void) | null = null
+        postMessage = layoutHost((data) => this.onmessage?.({ data }))
+        terminate = vi.fn()
+        constructor() {
+          workers.push(this)
+        }
+      },
+    )
+    open()
+    const { unmount } = render(<GraphView onClose={() => {}} />)
+    await waitForLabel('Alan Turing')
+    expect(workers).toHaveLength(1)
+    unmount()
+    expect(workers[0].terminate).toHaveBeenCalled()
   })
 
   it('switches the seat when answers are not consolidated', async () => {

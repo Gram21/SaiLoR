@@ -1,22 +1,38 @@
 // [impl->req~ui-190~1]
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent } from 'react'
-import { forceLink, forceManyBody, forceSimulation, forceX, forceY, type Simulation, type SimulationNodeDatum } from 'd3-force'
+import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent, type ReactNode } from 'react'
 import { useStore } from '../state/store'
 import { seatLabel } from '../model/project'
 import { buildGraph, graphSource, graphTrees } from '../model/graph'
 import { indexGraph, neighbours, parseQuery, selectSubgraph } from '../model/graphQuery'
+import { layoutHost, type LayoutFrame, type LayoutMessage } from '../model/graphLayout'
+import { buildScene, drawScene, fitView, hitTest, zoomAt, type Palette, type Scene } from './graphCanvas'
 import { useT } from '../i18n'
 import { Modal } from './Modal'
 import { ExportGraphDialog } from './ExportGraphDialog'
 
-interface SimNode extends SimulationNodeDatum {
-  id: string
+const LIST_PAGE = 200
+
+function readPalette(el: Element): Palette {
+  const css = getComputedStyle(el)
+  const v = (name: string) => css.getPropertyValue(name).trim()
+  return { edge: v('--muted'), text: v('--text'), selected: v('--danger'), groups: [v('--accent'), v('--ok'), v('--progress'), v('--ai-mark')] }
 }
 
-// ponytail: SVG with one element per node; past a few hundred nodes this gets slow, use canvas if bigger views are needed.
-const LIMIT = 300
-
-const short = (s: string) => (s.length > 28 ? `${s.slice(0, 27)}…` : s)
+/** Renders LIST_PAGE items at a time, so the accessible lists stay fast for huge graphs. */
+function PagedList<T>({ items, render }: { items: T[]; render: (item: T, i: number) => ReactNode }) {
+  const t = useT()
+  const [cap, setCap] = useState(LIST_PAGE)
+  return (
+    <>
+      <ul className="graph-list">{items.slice(0, cap).map(render)}</ul>
+      {items.length > cap && (
+        <button type="button" onClick={() => setCap((c) => c + LIST_PAGE)}>
+          {t('graphView.more', { shown: cap, total: items.length })}
+        </button>
+      )}
+    </>
+  )
+}
 
 export function GraphView({ onClose }: { onClose: () => void }) {
   const project = useStore((s) => s.project)
@@ -27,78 +43,108 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   const [extra, setExtra] = useState<string[]>([])
   const [selected, setSelected] = useState<string | null>(null)
   const [exportOpen, setExportOpen] = useState(false)
-  const [view, setView] = useState({ x: 0, y: 0, k: 1 })
-  const [, setFrame] = useState(0)
-  const svgRef = useRef<SVGSVGElement>(null)
-  const simRef = useRef<Simulation<SimNode, undefined> | null>(null)
-  const posRef = useRef(new Map<string, SimNode>())
-  const drag = useRef<{ id: string | null; x: number; y: number; moved: boolean } | null>(null)
+  const canvasRef = useRef<HTMLCanvasElement>(null)
+  const view = useRef({ x: 0, y: 0, k: 1 }).current
+  const sceneRef = useRef<Scene | null>(null)
+  const layout = useRef<(m: LayoutMessage) => void>(() => {})
+  const gen = useRef(0)
+  const frame = useRef(0)
+  const palette = useRef<Palette | null>(null)
+  const drag = useRef<{ i: number; x: number; y: number; moved: boolean } | null>(null)
 
   const index = useMemo(
     () => indexGraph(project ? buildGraph(project, graphTrees(project, seat)) : { nodes: [], edges: [] }),
     [project, seat],
   )
-  const sub = useMemo(() => selectSubgraph(index, query, LIMIT, extra), [index, query, extra])
+  const sub = useMemo(() => selectSubgraph(index, query, extra), [index, query, extra])
+  const scene = useMemo(
+    () => buildScene(sub, query.terms.length > 0, sceneRef.current, (id) => neighbours(index, id)),
+    [sub, query, index],
+  )
 
-  const sim = useMemo(() => {
-    const old = posRef.current
-    const next = new Map<string, SimNode>()
-    for (const n of sub.nodes) {
-      const kept = old.get(n.id)
-      const near = kept ? undefined : neighbours(index, n.id).map((id) => old.get(id)).find((p) => p?.x !== undefined)
-      next.set(n.id, kept ?? (near ? { id: n.id, x: near.x! + 10, y: near.y! + 10 } : { id: n.id }))
-    }
-    posRef.current = next
-    return next
-  }, [sub, index])
+  const requestDraw = useCallback(() => {
+    if (frame.current) return
+    frame.current = requestAnimationFrame(() => {
+      frame.current = 0
+      const c = canvasRef.current
+      const s = sceneRef.current
+      const ctx = c?.getContext('2d')
+      if (!c || !s || !ctx) return
+      const dpr = window.devicePixelRatio || 1
+      const w = c.clientWidth
+      const h = c.clientHeight
+      if (c.width !== Math.round(w * dpr)) c.width = Math.round(w * dpr)
+      if (c.height !== Math.round(h * dpr)) c.height = Math.round(h * dpr)
+      palette.current ??= readPalette(c)
+      drawScene(ctx, s, view, w, h, dpr, palette.current)
+    })
+  }, [view])
 
   useEffect(() => {
-    const nodes = [...sim.values()]
-    const placed = nodes.some((n) => n.x !== undefined)
-    const s = forceSimulation(nodes)
-      .force('charge', forceManyBody().strength(-150))
-      .force('link', forceLink<SimNode, { source: string; target: string }>(sub.edges.map((e) => ({ source: e.source, target: e.target }))).id((d) => d.id).distance(60))
-      .force('x', forceX(0).strength(0.05))
-      .force('y', forceY(0).strength(0.05))
-      .alpha(placed ? 0.5 : 1)
-      .stop()
-    for (let i = 0; i < 300 && s.alpha() > s.alphaMin(); i++) s.tick()
-    s.on('tick', () => setFrame((f) => f + 1))
-    simRef.current = s
-    setFrame((f) => f + 1)
-    return () => {
-      s.stop()
-      s.on('tick', null)
+    const onFrame = (f: LayoutFrame) => {
+      const s = sceneRef.current
+      if (!s || f.gen !== gen.current) return
+      s.xs = f.x
+      s.ys = f.y
+      s.version++
+      requestDraw()
     }
-  }, [sim, sub.edges])
+    // jsdom has no Worker; there the layout runs inline with the same code.
+    const worker = typeof Worker === 'undefined' ? undefined : new Worker(new URL('../model/graphLayout.worker.ts', import.meta.url), { type: 'module' })
+    if (worker) worker.onmessage = (e: MessageEvent<LayoutFrame>) => onFrame(e.data)
+    const send = worker ? (m: LayoutMessage) => worker.postMessage(m) : layoutHost(onFrame)
+    layout.current = send
+    const canvas = canvasRef.current
+    const resize = typeof ResizeObserver === 'undefined' ? undefined : new ResizeObserver(requestDraw)
+    if (canvas) resize?.observe(canvas)
+    return () => {
+      send({ type: 'stop' })
+      worker?.terminate()
+      resize?.disconnect()
+      cancelAnimationFrame(frame.current)
+      frame.current = 0
+    }
+  }, [requestDraw])
 
-  const center = () => {
-    const r = svgRef.current?.getBoundingClientRect()
-    return { cx: (r?.width ?? 0) / 2, cy: (r?.height ?? 0) / 2 }
-  }
+  useEffect(() => {
+    sceneRef.current = scene
+    gen.current++
+    const placed = scene.xs.some((x) => !Number.isNaN(x))
+    layout.current({ type: 'start', gen: gen.current, x: scene.xs, y: scene.ys, links: scene.edges, alpha: placed ? 0.5 : 1 })
+    requestDraw()
+  }, [scene, requestDraw])
+
+  useEffect(() => {
+    scene.selected = selected === null ? -1 : (scene.indexOf.get(selected) ?? -1)
+    requestDraw()
+  }, [scene, selected, requestDraw])
+
+  const size = () => ({ w: canvasRef.current?.clientWidth ?? 0, h: canvasRef.current?.clientHeight ?? 0 })
   const resetView = () => {
-    const { cx, cy } = center()
-    setView({ x: cx, y: cy, k: 1 })
+    const { w, h } = size()
+    fitView(view, sceneRef.current, w, h)
+    requestDraw()
   }
   useLayoutEffect(resetView, [])
 
-  const zoomAt = (px: number, py: number, factor: number) =>
-    setView((v) => {
-      const k = Math.min(4, Math.max(0.1, v.k * factor))
-      return { k, x: px - ((px - v.x) * k) / v.k, y: py - ((py - v.y) * k) / v.k }
-    })
+  const zoom = (factor: number) => {
+    const { w, h } = size()
+    zoomAt(view, w / 2, h / 2, factor)
+    requestDraw()
+  }
 
   useEffect(() => {
-    const svg = svgRef.current
-    if (!svg) return
+    const canvas = canvasRef.current
+    if (!canvas) return
     const onWheel = (e: WheelEvent) => {
       e.preventDefault()
-      const r = svg.getBoundingClientRect()
-      zoomAt(e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.002))
+      const r = canvas.getBoundingClientRect()
+      zoomAt(view, e.clientX - r.left, e.clientY - r.top, Math.exp(-e.deltaY * 0.002))
+      requestDraw()
     }
-    svg.addEventListener('wheel', onWheel, { passive: false })
-    return () => svg.removeEventListener('wheel', onWheel)
-  }, [])
+    canvas.addEventListener('wheel', onWheel, { passive: false })
+    return () => canvas.removeEventListener('wheel', onWheel)
+  }, [view, requestDraw])
 
   useEffect(() => {
     if (exportOpen) return
@@ -119,53 +165,63 @@ export function GraphView({ onClose }: { onClose: () => void }) {
     setExtra([])
     setSelected(null)
   }
-  const reveal = (ids: string[]) => setExtra((prev) => [...new Set([...prev, ...ids])])
+  const reveal = (ids: string[]) => {
+    const add = ids.filter((id) => !scene.indexOf.has(id))
+    if (add.length > 0) setExtra((prev) => [...prev, ...add])
+  }
   const focusNode = (id: string) => {
     reveal([id])
     setSelected(id)
-    const p = sim.get(id)
-    if (p?.x !== undefined) {
-      const { cx, cy } = center()
-      setView((v) => ({ ...v, x: cx - p.x! * v.k, y: cy - p.y! * v.k }))
-    }
+    const i = scene.indexOf.get(id)
+    if (i === undefined || Number.isNaN(scene.xs[i])) return
+    const { w, h } = size()
+    view.x = w / 2 - scene.xs[i] * view.k
+    view.y = h / 2 - scene.ys[i] * view.k
+    requestDraw()
   }
-  const idAt = (target: EventTarget) => (target as Element).closest?.('[data-id]')?.getAttribute('data-id') ?? null
+  const toWorld = (e: { clientX: number; clientY: number }) => {
+    const r = canvasRef.current!.getBoundingClientRect()
+    return [(e.clientX - r.left - view.x) / view.k, (e.clientY - r.top - view.y) / view.k] as const
+  }
+  const nodeAt = (e: { clientX: number; clientY: number }) => hitTest(scene, ...toWorld(e), view.k)
 
-  const onPointerDown = (e: PointerEvent<SVGSVGElement>) => {
-    drag.current = { id: idAt(e.target), x: e.clientX, y: e.clientY, moved: false }
+  const onPointerDown = (e: PointerEvent<HTMLCanvasElement>) => {
+    drag.current = { i: nodeAt(e), x: e.clientX, y: e.clientY, moved: false }
     e.currentTarget.setPointerCapture?.(e.pointerId)
   }
-  const onPointerMove = (e: PointerEvent<SVGSVGElement>) => {
+  const onPointerMove = (e: PointerEvent<HTMLCanvasElement>) => {
     const d = drag.current
-    if (!d) return
+    if (!d) {
+      const n = index.byId.get(scene.ids[nodeAt(e)])
+      const title = n ? `${t(`graphView.type.${n.type}` as const)}: ${n.label}` : ''
+      if (e.currentTarget.title !== title) e.currentTarget.title = title
+      return
+    }
     const dx = e.clientX - d.x
     const dy = e.clientY - d.y
     if (!d.moved && Math.hypot(dx, dy) < 4) return
     d.moved = true
-    const n = d.id ? sim.get(d.id) : undefined
-    if (n) {
-      const r = e.currentTarget.getBoundingClientRect()
-      n.fx = (e.clientX - r.left - view.x) / view.k
-      n.fy = (e.clientY - r.top - view.y) / view.k
-      simRef.current?.alphaTarget(0.3).restart()
+    if (d.i >= 0) {
+      const [wx, wy] = toWorld(e)
+      scene.xs[d.i] = wx
+      scene.ys[d.i] = wy
+      scene.version++
+      layout.current({ type: 'drag', i: d.i, x: wx, y: wy })
     } else {
-      setView((v) => ({ ...v, x: v.x + dx, y: v.y + dy }))
+      view.x += dx
+      view.y += dy
       d.x = e.clientX
       d.y = e.clientY
     }
+    requestDraw()
   }
   const onPointerUp = () => {
     const d = drag.current
     drag.current = null
-    const n = d?.id ? sim.get(d.id) : undefined
-    if (!d?.id || !n) return
-    if (!d.moved) setSelected(d.id)
-    n.fx = null
-    n.fy = null
-    simRef.current?.alphaTarget(0)
+    if (!d || d.i < 0) return
+    if (!d.moved) setSelected(scene.ids[d.i])
+    else layout.current({ type: 'release', i: d.i })
   }
-
-  const pos = (id: string) => sim.get(id) ?? { x: 0, y: 0 }
 
   return (
     <>
@@ -207,10 +263,10 @@ export function GraphView({ onClose }: { onClose: () => void }) {
             </label>
           )}
           <div className="graph-zoom" role="group" aria-label={t('graphView.zoom')}>
-            <button type="button" onClick={() => zoomAt(center().cx, center().cy, 1.25)} aria-label={t('graphView.zoomIn')} title={t('graphView.zoomIn')}>
+            <button type="button" onClick={() => zoom(1.25)} aria-label={t('graphView.zoomIn')} title={t('graphView.zoomIn')}>
               +
             </button>
-            <button type="button" onClick={() => zoomAt(center().cx, center().cy, 0.8)} aria-label={t('graphView.zoomOut')} title={t('graphView.zoomOut')}>
+            <button type="button" onClick={() => zoom(0.8)} aria-label={t('graphView.zoomOut')} title={t('graphView.zoomOut')}>
               −
             </button>
             <button type="button" onClick={resetView}>
@@ -222,15 +278,11 @@ export function GraphView({ onClose }: { onClose: () => void }) {
           {t('graphView.help')}
         </p>
         <p className="graph-hint" role="status">
-          {sub.nodes.length === 0
-            ? t('graphView.empty')
-            : sub.total > LIMIT
-              ? t('graphView.truncated', { shown: LIMIT, total: sub.total })
-              : t('graphView.count', { nodes: sub.nodes.length, edges: sub.edges.length })}
+          {sub.nodes.length === 0 ? t('graphView.empty') : t('graphView.count', { nodes: sub.nodes.length, edges: sub.edges.length })}
         </p>
         <div className="graph-body">
-          <svg
-            ref={svgRef}
+          <canvas
+            ref={canvasRef}
             className="graph-canvas"
             role="img"
             aria-label={t('graphView.count', { nodes: sub.nodes.length, edges: sub.edges.length })}
@@ -239,35 +291,10 @@ export function GraphView({ onClose }: { onClose: () => void }) {
             onPointerUp={onPointerUp}
             onPointerCancel={onPointerUp}
             onDoubleClick={(e) => {
-              const id = idAt(e.target)
-              if (id) reveal(neighbours(index, id))
+              const i = nodeAt(e)
+              if (i >= 0) reveal(neighbours(index, scene.ids[i]))
             }}
-          >
-            <g transform={`translate(${view.x},${view.y}) scale(${view.k})`}>
-              {sub.edges.map((e, i) => {
-                const a = pos(e.source)
-                const b = pos(e.target)
-                return (
-                  <line key={i} className="graph-edge" x1={a.x} y1={a.y} x2={b.x} y2={b.y}>
-                    <title>{e.field ?? e.type}</title>
-                  </line>
-                )
-              })}
-              {sub.nodes.map((n) => {
-                const p = pos(n.id)
-                const cls = `graph-node graph-node-${n.type.toLowerCase()}${sub.seeds.has(n.id) && query.terms.length > 0 ? ' is-match' : ''}${selected === n.id ? ' is-selected' : ''}`
-                return (
-                  <g key={n.id} data-id={n.id} className={cls} transform={`translate(${p.x ?? 0},${p.y ?? 0})`}>
-                    <circle r={n.type === 'Paper' ? 9 : 6} />
-                    <text y={-12} textAnchor="middle">
-                      {short(n.label)}
-                    </text>
-                    <title>{`${t(`graphView.type.${n.type}` as const)}: ${n.label}`}</title>
-                  </g>
-                )
-              })}
-            </g>
-          </svg>
+          />
           <aside className="graph-side">
             {node ? (
               <section aria-labelledby="graph-detail-title">
@@ -302,8 +329,10 @@ export function GraphView({ onClose }: { onClose: () => void }) {
                   {t('graphView.expand')}
                 </button>
                 <h4>{t('graphView.neighbours')}</h4>
-                <ul className="graph-list">
-                  {(index.adjacent.get(node.id) ?? []).map((e, i) => {
+                <PagedList
+                  key={node.id}
+                  items={index.adjacent.get(node.id) ?? []}
+                  render={(e, i) => {
                     const other = e.source === node.id ? e.target : e.source
                     return (
                       <li key={i}>
@@ -313,23 +342,24 @@ export function GraphView({ onClose }: { onClose: () => void }) {
                         </button>
                       </li>
                     )
-                  })}
-                </ul>
+                  }}
+                />
               </section>
             ) : (
               <p className="graph-hint">{t('graphView.noSelection')}</p>
             )}
             <h3>{t('graphView.nodes')}</h3>
-            <ul className="graph-list">
-              {sub.nodes.map((n) => (
+            <PagedList
+              items={sub.nodes}
+              render={(n) => (
                 <li key={n.id}>
                   <button type="button" aria-pressed={selected === n.id} onClick={() => focusNode(n.id)}>
                     <span className="graph-hint">{t(`graphView.type.${n.type}` as const)} </span>
                     <span dir="auto">{n.label}</span>
                   </button>
                 </li>
-              ))}
-            </ul>
+              )}
+            />
           </aside>
         </div>
       </Modal>

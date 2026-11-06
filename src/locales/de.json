@@ -159,7 +159,7 @@
   "graphView.run": "Anzeigen",
   "graphView.help": "Wörter suchen in allen Texten. Filtern mit type:paper, author:name, field:Name oder Name=Wert. Ein - vor einem Begriff schließt ihn aus. Phrasen in Anführungszeichen setzen. depth:N fügt N Schritte Nachbarn hinzu (Standard 1, höchstens 3).",
   "graphView.count": "{nodes} Knoten, {edges} Kanten",
-  "graphView.truncated": "{shown} von {total} Knoten werden angezeigt. Verfeinern Sie die Abfrage, um die anderen zu sehen.",
+  "graphView.more": "Mehr anzeigen ({shown} von {total} aufgelistet)",
   "graphView.empty": "Kein Knoten passt zur Abfrage.",
   "graphView.zoom": "Zoom",
   "graphView.zoomIn": "Vergrößern",

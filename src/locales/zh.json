@@ -159,7 +159,7 @@
   "graphView.run": "显示",
   "graphView.help": "词语匹配任意文本。可用 type:paper、author:name、field:Name 或 Name=Value 过滤。在词前加 - 表示排除。短语请加引号。depth:N 添加 N 层邻居（默认 1，最多 3）。",
   "graphView.count": "{nodes} 个节点，{edges} 条边",
-  "graphView.truncated": "显示 {total} 个节点中的 {shown} 个。请细化查询以查看其余节点。",
+  "graphView.more": "显示更多（已列出 {total} 个中的 {shown} 个）",
   "graphView.empty": "没有节点匹配该查询。",
   "graphView.zoom": "缩放",
   "graphView.zoomIn": "放大",

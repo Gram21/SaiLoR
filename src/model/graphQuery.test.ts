@@ -36,8 +36,8 @@ const GRAPH: Graph = {
 }
 
 const INDEX = indexGraph(GRAPH)
-const ids = (q: string, limit = 100) => selectSubgraph(INDEX, parseQuery(q), limit).nodes.map((n) => n.id).sort()
-const seeds = (q: string) => [...selectSubgraph(INDEX, parseQuery(q), 100).seeds].sort()
+const ids = (q: string) => selectSubgraph(INDEX, parseQuery(q)).nodes.map((n) => n.id).sort()
+const seeds = (q: string) => [...selectSubgraph(INDEX, parseQuery(q)).seeds].sort()
 
 // [utest->req~ui-200~1]
 describe('parseQuery', () => {
@@ -95,10 +95,9 @@ describe('query matching', () => {
 // [utest->req~ui-210~1]
 describe('selectSubgraph', () => {
   it('returns the whole graph for an empty query', () => {
-    const sub = selectSubgraph(INDEX, parseQuery(''), 100)
+    const sub = selectSubgraph(INDEX, parseQuery(''))
     expect(sub.nodes).toHaveLength(GRAPH.nodes.length)
     expect(sub.edges).toHaveLength(GRAPH.edges.length)
-    expect(sub.total).toBe(GRAPH.nodes.length)
   })
 
   it('adds neighbours up to the depth in both edge directions', () => {
@@ -108,19 +107,12 @@ describe('selectSubgraph', () => {
   })
 
   it('keeps only the edges between kept nodes', () => {
-    const sub = selectSubgraph(INDEX, parseQuery('author:alan'), 100)
+    const sub = selectSubgraph(INDEX, parseQuery('author:alan'))
     expect(sub.edges).toEqual([{ source: 'paper:p2', target: 'author:alan', type: 'authoredBy' }])
   })
 
-  it('cuts at the limit, keeps the best connected matches first and reports the total', () => {
-    const sub = selectSubgraph(INDEX, parseQuery('type:paper depth:0'), 1)
-    expect(sub.nodes.map((n) => n.id)).toEqual(['paper:p1'])
-    expect(sub.total).toBe(2)
-    expect(selectSubgraph(INDEX, parseQuery('author:alan'), 1).nodes.map((n) => n.id)).toEqual(['author:alan'])
-  })
-
-  it('adds expanded nodes beyond the limit and ignores unknown ids', () => {
-    const sub = selectSubgraph(INDEX, parseQuery('author:alan depth:0'), 1, ['paper:p2', 'nope'])
+  it('adds expanded nodes beyond the depth and ignores unknown ids', () => {
+    const sub = selectSubgraph(INDEX, parseQuery('author:alan depth:0'), ['paper:p2', 'nope'])
     expect(sub.nodes.map((n) => n.id)).toEqual(['author:alan', 'paper:p2'])
     expect(sub.seeds).toEqual(new Set(['author:alan']))
   })

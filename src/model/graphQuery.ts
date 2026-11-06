@@ -113,38 +113,29 @@ export function neighbours(index: GraphIndex, id: string): string[] {
 
 export interface SubGraph extends Graph {
   seeds: Set<string>
-  total: number
 }
 
 // [impl->req~ui-210~1]
-export function selectSubgraph(index: GraphIndex, query: GraphQuery, limit: number, extra: Iterable<string> = []): SubGraph {
-  const degree = (id: string) => index.adjacent.get(id)?.length ?? 0
-  const seeds = index.graph.nodes
-    .filter((n) => query.terms.every((t) => termMatches(index, n, t)))
-    .map((n) => n.id)
-    .sort((a, b) => degree(b) - degree(a))
-  const order = [...seeds]
-  const seen = new Set(order)
+export function selectSubgraph(index: GraphIndex, query: GraphQuery, extra: Iterable<string> = []): SubGraph {
+  const seeds = index.graph.nodes.filter((n) => query.terms.every((t) => termMatches(index, n, t))).map((n) => n.id)
+  const keep = new Set(seeds)
   let frontier = seeds
   for (let d = 0; d < query.depth; d++) {
     const next: string[] = []
     for (const id of frontier) {
       for (const n of neighbours(index, id)) {
-        if (!seen.has(n)) {
-          seen.add(n)
+        if (!keep.has(n)) {
+          keep.add(n)
           next.push(n)
         }
       }
     }
-    order.push(...next)
     frontier = next
   }
-  const keep = new Set(order.slice(0, limit))
   for (const id of extra) if (index.byId.has(id)) keep.add(id)
   return {
     nodes: index.graph.nodes.filter((n) => keep.has(n.id)),
     edges: index.graph.edges.filter((e) => keep.has(e.source) && keep.has(e.target)),
-    seeds: new Set(seeds.filter((id) => keep.has(id))),
-    total: order.length,
+    seeds: new Set(seeds),
   }
 }

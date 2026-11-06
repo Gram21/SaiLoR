@@ -159,7 +159,7 @@
   "graphView.run": "Show",
   "graphView.help": "Words match any text. Filter with type:paper, author:name, field:Name or Name=Value. Put - before a term to exclude it. Put phrases in quotes. depth:N adds N steps of neighbours (default 1, maximum 3).",
   "graphView.count": "{nodes} nodes, {edges} edges",
-  "graphView.truncated": "Showing {shown} of {total} nodes. Refine the query to see the others.",
+  "graphView.more": "Show more ({shown} of {total} listed)",
   "graphView.empty": "No node matches the query.",
   "graphView.zoom": "Zoom",
   "graphView.zoomIn": "Zoom in",

@@ -2776,46 +2776,6 @@ button.validation-search-case:hover {
   cursor: grab;
   user-select: none;
 }
-.graph-edge {
-  stroke: var(--muted);
-  stroke-opacity: 0.5;
-  stroke-width: 1;
-}
-.graph-node {
-  cursor: pointer;
-}
-.graph-node circle {
-  fill: var(--muted);
-  stroke: var(--panel-bg);
-  stroke-width: 1.5;
-}
-.graph-node text {
-  fill: var(--text);
-  font-size: 10px;
-  pointer-events: none;
-}
-.graph-node-paper circle {
-  fill: var(--accent);
-}
-.graph-node-author circle {
-  fill: var(--ok);
-}
-.graph-node-venue circle,
-.graph-node-keyword circle {
-  fill: var(--progress);
-}
-.graph-node-choice circle,
-.graph-node-answer circle {
-  fill: var(--ai-mark);
-}
-.graph-node.is-match circle {
-  stroke: var(--text);
-  stroke-width: 2;
-}
-.graph-node.is-selected circle {
-  stroke: var(--danger);
-  stroke-width: 3;
-}
 .graph-side {
   width: 300px;
   flex-shrink: 0;

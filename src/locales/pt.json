@@ -159,7 +159,7 @@
   "graphView.run": "Mostrar",
   "graphView.help": "As palavras correspondem a qualquer texto. Filtre com type:paper, author:nome, field:Nome ou Nome=Valor. Coloque - antes de um termo para excluí-lo. Coloque frases entre aspas. depth:N adiciona N níveis de vizinhos (padrão 1, máximo 3).",
   "graphView.count": "{nodes} nós, {edges} arestas",
-  "graphView.truncated": "Mostrando {shown} de {total} nós. Refine a consulta para ver os outros.",
+  "graphView.more": "Mostrar mais ({shown} de {total} listados)",
   "graphView.empty": "Nenhum nó corresponde à consulta.",
   "graphView.zoom": "Zoom",
   "graphView.zoomIn": "Ampliar",

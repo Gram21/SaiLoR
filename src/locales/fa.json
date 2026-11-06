@@ -159,7 +159,7 @@
   "graphView.run": "نمایش",
   "graphView.help": "واژه‌ها با هر متنی تطبیق داده می‌شوند. با type:paper، author:name، field:Name یا Name=Value فیلتر کنید. برای حذف یک عبارت، - را پیش از آن بگذارید. عبارت‌های چندواژه‌ای را در گیومه بگذارید. depth:N همسایه‌ها را تا N گام اضافه می‌کند (پیش‌فرض ۱، حداکثر ۳).",
   "graphView.count": "{nodes} گره، {edges} یال",
-  "graphView.truncated": "نمایش {shown} از {total} گره. برای دیدن بقیه، پرس‌وجو را دقیق‌تر کنید.",
+  "graphView.more": "نمایش بیشتر ({shown} از {total} فهرست شده)",
   "graphView.empty": "هیچ گرهی با پرس‌وجو تطبیق ندارد.",
   "graphView.zoom": "بزرگ‌نمایی",
   "graphView.zoomIn": "بزرگ‌تر",

@@ -159,7 +159,7 @@
   "graphView.run": "Mostra",
   "graphView.help": "Le parole corrispondono a qualsiasi testo. Filtra con type:paper, author:nome, field:Nome o Nome=Valore. Metti - davanti a un termine per escluderlo. Metti le frasi tra virgolette. depth:N aggiunge N livelli di vicini (predefinito 1, massimo 3).",
   "graphView.count": "{nodes} nodi, {edges} archi",
-  "graphView.truncated": "Mostrati {shown} di {total} nodi. Affina la query per vedere gli altri.",
+  "graphView.more": "Mostra altri ({shown} di {total} elencati)",
   "graphView.empty": "Nessun nodo corrisponde alla query.",
   "graphView.zoom": "Zoom",
   "graphView.zoomIn": "Ingrandisci",

@@ -159,7 +159,7 @@
   "graphView.run": "Afficher",
   "graphView.help": "Les mots correspondent à tout texte. Filtrez avec type:paper, author:nom, field:Nom ou Nom=Valeur. Placez - devant un terme pour l'exclure. Mettez les expressions entre guillemets. depth:N ajoute N niveaux de voisins (1 par défaut, 3 au maximum).",
   "graphView.count": "{nodes} nœuds, {edges} arêtes",
-  "graphView.truncated": "Affichage de {shown} nœuds sur {total}. Affinez la requête pour voir les autres.",
+  "graphView.more": "Afficher plus ({shown} sur {total} listés)",
   "graphView.empty": "Aucun nœud ne correspond à la requête.",
   "graphView.zoom": "Zoom",
   "graphView.zoomIn": "Zoom avant",

@@ -159,7 +159,7 @@
   "graphView.run": "Mostrar",
   "graphView.help": "Las palabras coinciden con cualquier texto. Filtre con type:paper, author:nombre, field:Nombre o Nombre=Valor. Ponga - delante de un término para excluirlo. Ponga las frases entre comillas. depth:N añade N pasos de vecinos (por defecto 1, máximo 3).",
   "graphView.count": "{nodes} nodos, {edges} aristas",
-  "graphView.truncated": "Se muestran {shown} de {total} nodos. Refine la consulta para ver los demás.",
+  "graphView.more": "Mostrar más ({shown} de {total} en la lista)",
   "graphView.empty": "Ningún nodo coincide con la consulta.",
   "graphView.zoom": "Zoom",
   "graphView.zoomIn": "Acercar",

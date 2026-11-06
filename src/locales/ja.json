@@ -159,7 +159,7 @@
   "graphView.run": "表示",
   "graphView.help": "単語は任意のテキストに一致します。type:paper、author:名前、field:名前、名前=値 で絞り込めます。語の前に - を付けると除外します。フレーズは引用符で囲みます。depth:N は N 段階の隣接ノードを追加します（既定 1、最大 3）。",
   "graphView.count": "ノード {nodes} 件、エッジ {edges} 件",
-  "graphView.truncated": "{total} 件中 {shown} 件のノードを表示しています。他のノードを見るにはクエリを絞り込んでください。",
+  "graphView.more": "さらに表示（{total} 件中 {shown} 件を表示中）",
   "graphView.empty": "クエリに一致するノードはありません。",
   "graphView.zoom": "ズーム",
   "graphView.zoomIn": "拡大",
