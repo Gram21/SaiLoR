@@ -3,19 +3,21 @@ import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, typ
 import { useStore } from '../state/store'
 import { seatLabel } from '../model/project'
 import { buildGraph, graphSource, graphTrees } from '../model/graph'
-import { indexGraph, neighbours, parseQuery, selectSubgraph } from '../model/graphQuery'
+import { indexGraph, neighbours, parseQuery, selectSubgraph, type GraphQuery } from '../model/graphQuery'
+import { CypherError, MAX_ROWS, cypherSubgraph, formatValue, isCypher, parseCypher, runCypher, type CypherQuery } from '../model/graphCypher'
 import { layoutHost, type LayoutFrame, type LayoutMessage } from '../model/graphLayout'
-import { buildScene, drawScene, fitView, hitTest, zoomAt, type Palette, type Scene } from './graphCanvas'
+import { buildScene, drawScene, EDGE_DASH, EDGE_TYPES, edgeAt, fitView, hitTest, selectNode, zoomAt, type Palette, type Scene } from './graphCanvas'
 import { useT } from '../i18n'
 import { Modal } from './Modal'
 import { ExportGraphDialog } from './ExportGraphDialog'
 
 const LIST_PAGE = 200
+const EDGE_VARS = ['--graph-answer', '--graph-authored', '--graph-venue', '--graph-keyword', '--graph-cites']
 
 function readPalette(el: Element): Palette {
   const css = getComputedStyle(el)
   const v = (name: string) => css.getPropertyValue(name).trim()
-  return { edge: v('--muted'), text: v('--text'), selected: v('--danger'), groups: [v('--accent'), v('--ok'), v('--progress'), v('--ai-mark')] }
+  return { edges: EDGE_VARS.map(v), text: v('--text'), selected: v('--danger'), groups: [v('--accent'), v('--ok'), v('--progress'), v('--ai-mark')] }
 }
 
 /** Renders LIST_PAGE items at a time, so the accessible lists stay fast for huge graphs. */
@@ -39,9 +41,11 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   const t = useT()
   const [seat, setSeat] = useState('1')
   const [input, setInput] = useState('')
-  const [query, setQuery] = useState(() => parseQuery(''))
+  const [query, setQuery] = useState<GraphQuery | CypherQuery>(() => parseQuery(''))
+  const [error, setError] = useState<CypherError | null>(null)
   const [extra, setExtra] = useState<string[]>([])
   const [selected, setSelected] = useState<string | null>(null)
+  const [hidden, setHidden] = useState(0)
   const [exportOpen, setExportOpen] = useState(false)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const view = useRef({ x: 0, y: 0, k: 1 }).current
@@ -56,9 +60,13 @@ export function GraphView({ onClose }: { onClose: () => void }) {
     () => indexGraph(project ? buildGraph(project, graphTrees(project, seat)) : { nodes: [], edges: [] }),
     [project, seat],
   )
-  const sub = useMemo(() => selectSubgraph(index, query, extra), [index, query, extra])
+  const cypher = useMemo(() => ('chains' in query ? runCypher(index, query) : null), [index, query])
+  const sub = useMemo(
+    () => (cypher ? cypherSubgraph(index, cypher, extra) : selectSubgraph(index, query as GraphQuery, extra)),
+    [index, query, cypher, extra],
+  )
   const scene = useMemo(
-    () => buildScene(sub, query.terms.length > 0, sceneRef.current, (id) => neighbours(index, id)),
+    () => buildScene(sub, 'chains' in query || query.terms.length > 0, sceneRef.current, (id) => neighbours(index, id)),
     [sub, query, index],
   )
 
@@ -115,9 +123,11 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   }, [scene, requestDraw])
 
   useEffect(() => {
-    scene.selected = selected === null ? -1 : (scene.indexOf.get(selected) ?? -1)
+    scene.hidden = hidden
+    scene.hover = -1
+    selectNode(scene, selected === null ? -1 : (scene.indexOf.get(selected) ?? -1))
     requestDraw()
-  }, [scene, selected, requestDraw])
+  }, [scene, selected, hidden, requestDraw])
 
   const size = () => ({ w: canvasRef.current?.clientWidth ?? 0, h: canvasRef.current?.clientHeight ?? 0 })
   const resetView = () => {
@@ -161,7 +171,14 @@ export function GraphView({ onClose }: { onClose: () => void }) {
 
   const run = (e: FormEvent) => {
     e.preventDefault()
-    setQuery(parseQuery(input))
+    try {
+      setQuery(isCypher(input) ? parseCypher(input) : parseQuery(input))
+    } catch (err) {
+      if (!(err instanceof CypherError)) throw err
+      setError(err)
+      return
+    }
+    setError(null)
     setExtra([])
     setSelected(null)
   }
@@ -193,8 +210,22 @@ export function GraphView({ onClose }: { onClose: () => void }) {
     const d = drag.current
     if (!d) {
       const n = index.byId.get(scene.ids[nodeAt(e)])
-      const title = n ? `${t(`graphView.type.${n.type}` as const)}: ${n.label}` : ''
+      const hover = n ? -1 : edgeAt(scene, ...toWorld(e), view.k)
+      const edge = scene.edgeList[hover]
+      const title = n
+        ? `${t(`graphView.type.${n.type}` as const)}: ${n.label}`
+        : edge
+          ? t('graphView.edgeTitle', {
+              type: t(`graphView.edge.${edge.type}` as const) + (edge.field ? ` (${edge.field})` : ''),
+              source: index.byId.get(edge.source)?.label ?? '',
+              target: index.byId.get(edge.target)?.label ?? '',
+            })
+          : ''
       if (e.currentTarget.title !== title) e.currentTarget.title = title
+      if (scene.hover !== hover) {
+        scene.hover = hover
+        requestDraw()
+      }
       return
     }
     const dx = e.clientX - d.x
@@ -274,9 +305,27 @@ export function GraphView({ onClose }: { onClose: () => void }) {
             </button>
           </div>
         </div>
+        {/* [impl->req~ui-220~1] */}
+        <fieldset className="graph-legend">
+          <legend>{t('graphView.relations')}</legend>
+          {EDGE_TYPES.map((type, i) => (
+            <label key={type}>
+              <input type="checkbox" checked={!(hidden & (1 << i))} onChange={() => setHidden((h) => h ^ (1 << i))} />
+              <svg width="28" height="8" aria-hidden="true">
+                <line x1="0" y1="4" x2="28" y2="4" style={{ stroke: `var(${EDGE_VARS[i]})` }} strokeWidth="2" strokeDasharray={EDGE_DASH[i].join(' ') || undefined} />
+              </svg>
+              {t(`graphView.edge.${type}` as const)}
+            </label>
+          ))}
+        </fieldset>
         <p id="graph-query-help" className="graph-hint">
-          {t('graphView.help')}
+          {t('graphView.help')} {t('graphView.cypherHelp')}
         </p>
+        {error && (
+          <p className="graph-hint graph-error" role="alert">
+            {t('graphView.cypher.error', { message: t(error.key, error.params) })}
+          </p>
+        )}
         <p className="graph-hint" role="status">
           {sub.nodes.length === 0 ? t('graphView.empty') : t('graphView.count', { nodes: sub.nodes.length, edges: sub.edges.length })}
         </p>
@@ -296,6 +345,37 @@ export function GraphView({ onClose }: { onClose: () => void }) {
             }}
           />
           <aside className="graph-side">
+            {cypher && (
+              <section aria-labelledby="graph-results-title">
+                <h3 id="graph-results-title">{t('graphView.cypher.results', { count: cypher.rows.length })}</h3>
+                {cypher.truncated && <p className="graph-hint">{t('graphView.cypher.truncated', { max: MAX_ROWS })}</p>}
+                {cypher.rows.length > LIST_PAGE && <p className="graph-hint">{t('graphView.cypher.shown', { shown: LIST_PAGE })}</p>}
+                <div className="graph-results">
+                  <table>
+                    <thead>
+                      <tr>
+                        {cypher.columns.map((c, i) => (
+                          <th key={i} scope="col" dir="auto">
+                            {c}
+                          </th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {cypher.rows.slice(0, LIST_PAGE).map((row, r) => (
+                        <tr key={r}>
+                          {row.map((v, c) => (
+                            <td key={c} dir="auto">
+                              {formatValue(v)}
+                            </td>
+                          ))}
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </section>
+            )}
             {node ? (
               <section aria-labelledby="graph-detail-title">
                 <h3 id="graph-detail-title" dir="auto">

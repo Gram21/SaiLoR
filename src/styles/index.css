@@ -19,6 +19,12 @@
   /* Fields the AI filled, until the reviewer looks at them. Deeper than the dark
      theme's tint so it still reads as blue against a white input. */
   --ai-mark: #3d9ad9;
+  /* Knowledge graph edge types (Okabe-Ito, colour-blind safe); each also has its own dash. */
+  --graph-answer: #0072b2;
+  --graph-authored: #009e73;
+  --graph-venue: #e69f00;
+  --graph-keyword: #cc79a7;
+  --graph-cites: #d55e00;
   --toolbar-h: 44px;
 
   /* App-wide font scaling (Ctrl +/-). Base is 14px at scale 1. */
@@ -40,6 +46,7 @@
   --ok: #4ade80;
   --progress: #fbbf24;
   --ai-mark: #7cc4e8;
+  --graph-answer: #56b4e9;
   color-scheme: dark;
 }
 
@@ -2756,6 +2763,26 @@ button.validation-search-case:hover {
   display: flex;
   gap: 4px;
 }
+.graph-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 12px;
+  margin: 4px 16px 0;
+  padding: 0;
+  border: none;
+  font-size: 0.8rem;
+}
+.graph-legend legend {
+  float: inline-start;
+  margin-inline-end: 4px;
+  color: var(--muted);
+}
+.graph-legend label {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
 .graph-hint {
   color: var(--muted);
   font-size: 0.8rem;
@@ -2818,6 +2845,24 @@ button.validation-search-case:hover {
 }
 .graph-list button[aria-pressed='true'] {
   background: var(--accent-weak);
+}
+.graph-error {
+  color: var(--danger);
+}
+.graph-results {
+  overflow-x: auto;
+  margin-bottom: 8px;
+}
+.graph-results table {
+  border-collapse: collapse;
+  font-size: 0.8rem;
+}
+.graph-results th,
+.graph-results td {
+  border: 1px solid var(--border);
+  padding: 2px 4px;
+  text-align: start;
+  vertical-align: top;
 }
 
 .help-keys {
