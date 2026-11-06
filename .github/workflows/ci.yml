@@ -98,7 +98,7 @@ jobs:
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
-      - run: npm audit --omit=dev --audit-level=high
+      - run: scripts/ci/audit.sh npm
 
   # Known advisories in Rust dependencies. Allowed to fail until the first run shows its findings.
   cargo-audit:
@@ -112,7 +112,7 @@ jobs:
         with:
           tool: cargo-audit@0.22.2
 
-      - run: cargo audit --file src-tauri/Cargo.lock
+      - run: scripts/ci/audit.sh cargo
 
   # Requirement trace links (OpenFastTrace). Allowed to fail until the trace tags are in the sources.
   trace:
