@@ -1054,3 +1054,33 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Usability, Performance_Efficiency
+
+### REQ-UI-230: Knowledge graph Cypher query
+`req~ui-230~1`
+
+A query that starts with `MATCH` in any letter case shall run as a read-only Cypher query. All other queries shall run as REQ-UI-200 queries. A Cypher query shall have one or more `MATCH` clauses, each with an optional `WHERE`, then one `RETURN` and an optional `LIMIT`. A `MATCH` pattern shall support node variables, the node labels `Paper`, `Author`, `Venue`, `Keyword`, `Choice` and `Answer`, inline properties `{key: value}`, the relationship types `authoredBy`, `publishedIn`, `hasKeyword`, `cites` and `hasAnswer` with `|` alternatives, the directions `->`, `<-` and `-`, and variable lengths `*`, `*N`, `*N..M` and `*..M`. Labels and types shall ignore letter case and underscores. One match shall use each relationship at most once. `WHERE` shall support `=`, `<>`, `<`, `<=`, `>`, `>=`, `CONTAINS`, `STARTS WITH`, `ENDS WITH`, `IN`, `IS NULL`, `IS NOT NULL`, `AND`, `OR`, `NOT`, parentheses, strings, numbers, lists, `true`, `false` and `null`, with Cypher null logic. A node shall have the properties `id`, `type`, `label`, `field`, `doi`, `year`, `abstract` and its answer values by field name. A relationship shall have the properties `type` and `field`. `RETURN` shall support variables, properties, literals, `count(*)`, `DISTINCT` and `AS`. `count(*)` shall group the rows by the other columns. The view shall show the nodes and relationships of all matches and mark the returned nodes. The side panel shall show the row count and a table of the first 200 rows. If the query has an error, the view shall show the reason and the position of the error and keep the previous result. The view shall show an example query below the query box.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/model/graphCypher.ts` (`isCypher`, `parseCypher`, `runCypher`, `cypherSubgraph`, `formatValue`), `src/components/GraphView.tsx` (`GraphView`), `src/styles/index.css` (`.graph-results`, `.graph-error`)
+- **Verified by:** `src/model/graphCypher.test.ts`, `src/components/GraphView.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Usability
+
+### REQ-UI-240: Knowledge graph Cypher limits and safety
+`req~ui-240~1`
+
+A Cypher query shall only read the graph. `CREATE`, `MERGE`, `DELETE`, `DETACH`, `SET`, `REMOVE`, `OPTIONAL`, `WITH`, `UNWIND`, `CALL`, `ORDER`, `SKIP`, `UNION`, `LOAD` and `FOREACH` shall give the error "is not supported". Functions other than `count(*)` shall give an error. Unknown labels, relationship types and variables shall give an error. A query shall have at most 4000 characters. A query shall nest at most 32 expressions and have at most 32 patterns and relationships. A variable-length relationship shall have at most 3 steps. A bare `*` shall mean 1 to 3 steps. A result shall have at most 10 000 rows. A query shall stop after 2 000 000 steps of work. A query that stops at a row or work limit shall show that the result is incomplete. The lexer shall run in linear time. Property names such as `__proto__` and `constructor` shall read only the own answer values of a node. The automated benchmarks shall use a generated graph with 150 000 nodes and 600 000 relationships. On this graph, they shall run a label filter in less than 1 second, a one-step join in less than 3 seconds, a count grouped by year in less than 5 seconds and a query that reaches the work limit in less than 5 seconds.
+
+Comment:
+- **Type:** Non-functional (ISO 25010: Security, Performance Efficiency)
+- **Evidence:** `src/model/graphCypher.ts` (`parseCypher`, `runCypher`, `MAX_INPUT`, `MAX_NESTING`, `MAX_HOPS`, `MAX_ROWS`, `MAX_WORK`)
+- **Verified by:** `src/model/graphCypher.test.ts`, `src/components/GraphView.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: NonFunctional, Security, Performance_Efficiency
