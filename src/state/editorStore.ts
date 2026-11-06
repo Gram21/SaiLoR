@@ -51,6 +51,7 @@ import {
 import { useStore } from './store'
 import { bulkAssign, parseStrictConfig, strictConfigJson, type StrictConfig } from '../model/strict'
 import { cleanPromptOverrides, parsePromptOverrides, type PromptOverrides } from '../model/promptOverrides'
+import { HISTORY_LIMIT, pushPast } from './history'
 
 /**
  * Draft state for the project editor: build or edit a project JSON before/
@@ -151,8 +152,6 @@ interface EditorSnapshot {
   strict: StrictConfig | null
   promptOverrides: PromptOverrides
 }
-
-const HISTORY_LIMIT = 100
 
 /** Last edited field: lets consecutive edits to the same input collapse into
  *  one undo step instead of one per keystroke. Mirrors the annotation store. */
@@ -1270,13 +1269,6 @@ function applySnapshot(s: EditorState, snap: EditorSnapshot): void {
   s.schemaInfo = snap.schemaInfo
   s.strict = snap.strict
   s.promptOverrides = snap.promptOverrides
-}
-
-/** Push a pre-mutation snapshot onto the undo stack and drop the redo stack. */
-function pushPast(s: EditorState, snap: EditorSnapshot): void {
-  s.past.push(snap)
-  if (s.past.length > HISTORY_LIMIT) s.past.shift()
-  s.future = []
 }
 
 /** The editor fields an opened project populates, before it is committed to state. */

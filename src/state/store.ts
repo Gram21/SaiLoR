@@ -105,6 +105,7 @@ import {
   loadAutosaveEnabled,
   saveAutosaveEnabled,
 } from './settings'
+import { HISTORY_LIMIT, pushPast } from './history'
 
 /** Injected from package.json by vite.config.ts; falls back for non-Vite runners (tests). */
 const APP_VERSION = typeof __APP_VERSION__ === 'string' ? __APP_VERSION__ : '0.0.0'
@@ -628,8 +629,6 @@ interface HistoryEntry {
   project: Project
   paperId: string | null
 }
-
-const HISTORY_LIMIT = 100
 
 // PDF zoom bounds (multiplier applied to the fit-to-width base size).
 export const PDF_ZOOM_MIN = 0.4
@@ -4229,13 +4228,6 @@ export function peekValue(
     if (!tree) return undefined
   }
   return tree[name]?.[index]?.value
-}
-
-/** Push a pre-mutation snapshot onto the undo stack and clear the redo stack. */
-function pushPast(s: AppState, snap: HistoryEntry): void {
-  s.past.push(snap)
-  if (s.past.length > HISTORY_LIMIT) s.past.shift()
-  s.future = []
 }
 
 /**
