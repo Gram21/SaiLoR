@@ -102,6 +102,18 @@ describe('parseMarks', () => {
     expect(parseMarks([raw])[0].linkedFields).toEqual([{ path: 'Good', label: 'Good' }])
   })
 
+  it('drops null, non-string-path, empty-path and non-string-label linked fields', () => {
+    const raw = {
+      ...mark(),
+      linkedFields: [null, { path: 5, label: 'x' }, { path: '', label: 'x' }, { path: 'p', label: 7 }, { path: 'q', label: '' }],
+    }
+    expect(parseMarks([raw])[0].linkedFields).toEqual([{ path: 'q', label: '' }])
+  })
+
+  it('drops a mark whose rects contain null', () => {
+    expect(parseMarks([{ ...mark(), rects: [null] }])).toEqual([])
+  })
+
   it('defaults linkedFields to undefined when it is not an array', () => {
     expect(parseMarks([{ ...mark(), linkedFields: 'nope' }])[0].linkedFields).toBeUndefined()
   })
@@ -118,6 +130,11 @@ describe('parseReviewMarks', () => {
   it('keeps only reviewer-number-shaped keys with at least one mark', () => {
     const m = mark()
     expect(parseReviewMarks({ '1': [m], '2': [], notANumber: [m], '0': [m] })).toEqual({ '1': [m] })
+  })
+
+  it('keeps multi-digit reviewer numbers', () => {
+    const m = mark()
+    expect(parseReviewMarks({ '12': [m], '1a': [m] })).toEqual({ '12': [m] })
   })
 
   it('is {} for non-object input', () => {
@@ -145,6 +162,12 @@ describe('mergeMarksList', () => {
     const ours = mark({ id: 'x', comment: 'mine', updatedAt: '2026-01-01T00:00:00.000Z' })
     const theirs = mark({ id: 'x', comment: 'theirs', updatedAt: '2026-01-02T00:00:00.000Z' })
     expect(mergeMarksList([ours], [theirs])).toEqual([theirs])
+  })
+
+  it('keeps ours on an updatedAt tie', () => {
+    const ours = mark({ id: 'x', comment: 'mine' })
+    const theirs = mark({ id: 'x', comment: 'theirs' })
+    expect(mergeMarksList([ours], [theirs])).toEqual([ours])
   })
 
   it('never drops a mark — the union is at least as large as either side', () => {
@@ -202,6 +225,12 @@ describe('sortMarksForCycling', () => {
       'leftBottom',
       'right',
     ])
+  })
+
+  it('puts a rect starting exactly at the page midpoint in the right column', () => {
+    const mid = mark({ id: 'mid', rects: [{ x: 0.5, y: 0.1, width: 0.1, height: 0.1 }] })
+    const left = mark({ id: 'left', rects: [{ x: 0.2, y: 0.9, width: 0.1, height: 0.1 }] })
+    expect(sortMarksForCycling([mid, left]).map((m) => m.id)).toEqual(['left', 'mid'])
   })
 
   it('is stable for exact ties', () => {
@@ -289,6 +318,16 @@ describe('orderMarksForLinking', () => {
       'b',
       'a',
     ])
+  })
+
+  it('leaves unpinned session marks in page order, not createdAt order', () => {
+    const a = mark({ id: 'a', createdAt: '2026-01-01T00:00:00.000Z', page: 1 })
+    const b = mark({ id: 'b', createdAt: '2026-01-02T00:00:00.000Z', page: 2 })
+    const c = mark({ id: 'c', createdAt: '2026-01-03T00:00:00.000Z', page: 3 })
+    const d = mark({ id: 'd', createdAt: '2026-01-04T00:00:00.000Z', page: 4 })
+    const e = mark({ id: 'e', createdAt: '2026-01-05T00:00:00.000Z', page: 5 })
+    const session = new Set(['a', 'b', 'c', 'd', 'e'])
+    expect(orderMarksForLinking([a, b, c, d, e], session).map((m) => m.id)).toEqual(['e', 'd', 'c', 'a', 'b'])
   })
 
   it('does not mutate the input array', () => {
