@@ -2,6 +2,8 @@ import type { PlatformAdapter } from './adapter'
 import { isTauri } from './adapter'
 import { TauriAdapter } from './tauri'
 import { createUnsupportedAdapter } from './unsupported'
+import { createDemoAdapter } from './demoAdapter'
+import { DEMO_MODE } from '../demo/mode'
 
 // [impl->req~plt-10~1]
 let cached: PlatformAdapter | null = null
@@ -14,11 +16,11 @@ let cached: PlatformAdapter | null = null
  * so the non-desktop case only needs to exist at all because store.ts reads
  * `getPlatform().getRecents()` at module load, before `App` ever renders.
  * `createUnsupportedAdapter` answers that safely; nothing else should ever
- * reach it.
+ * reach it. The online demo build gets `createDemoAdapter` instead.
  */
 export function getPlatform(): PlatformAdapter {
   if (!cached) {
-    cached = isTauri() ? new TauriAdapter() : createUnsupportedAdapter()
+    cached = isTauri() ? new TauriAdapter() : DEMO_MODE ? createDemoAdapter() : createUnsupportedAdapter()
   }
   return cached
 }

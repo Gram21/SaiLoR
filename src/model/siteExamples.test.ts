@@ -13,7 +13,7 @@ const examples = [...page.matchAll(/<pre><code>([\s\S]*?)<\/code><\/pre>/g)].map
     .replace(/&amp;/g, '&'),
 )
 
-// [utest->req~plt-444~1]
+// [utest->req~plt-451~1]
 describe('project examples in the project site walkthrough', () => {
   it('contains the minimal and the extended example', () => {
     expect(examples).toHaveLength(2)

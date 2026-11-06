@@ -1,0 +1,77 @@
+{
+  "annotations": {
+    "Relevant": [
+      {
+        "value": true
+      }
+    ],
+    "Study Type": [
+      {
+        "value": "Systematic review"
+      }
+    ],
+    "Year": [
+      {
+        "value": 2025
+      }
+    ],
+    "Findings": [
+      {
+        "children": {
+          "Claim": [
+            {
+              "value": "LLMs are applied to many software architecture tasks and often outperform baselines."
+            }
+          ],
+          "Evidence": [
+            {
+              "children": {
+                "Evaluation Type": [
+                  {
+                    "value": "Literature review"
+                  }
+                ]
+              }
+            }
+          ],
+          "Confidence": [
+            {
+              "value": 4
+            }
+          ]
+        }
+      },
+      {
+        "children": {
+          "Claim": [
+            {
+              "value": "Generating code from architectural design and checking conformance are underexplored."
+            }
+          ],
+          "Evidence": [
+            {
+              "children": {
+                "Evaluation Type": [
+                  {
+                    "value": "Literature review"
+                  }
+                ]
+              }
+            }
+          ],
+          "Confidence": [
+            {
+              "value": 4
+            }
+          ]
+        }
+      }
+    ],
+    "Notes": [
+      {
+        "value": "Scope match. 18 research articles analysed, according to the abstract."
+      }
+    ]
+  },
+  "finished": true
+}

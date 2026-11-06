@@ -246,3 +246,6 @@ _site/
 src-tauri/target
 src-tauri/gen
 dist-probe
+
+# Online demo build output (npm run build:demo)
+dist-demo

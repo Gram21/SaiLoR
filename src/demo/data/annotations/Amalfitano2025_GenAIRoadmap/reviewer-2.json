@@ -1,0 +1,52 @@
+{
+  "annotations": {
+    "Relevant": [
+      {
+        "value": false
+      }
+    ],
+    "Study Type": [
+      {
+        "value": "Vision or roadmap"
+      }
+    ],
+    "Year": [
+      {
+        "value": 2025
+      }
+    ],
+    "Findings": [
+      {
+        "children": {
+          "Claim": [
+            {
+              "value": "Identifies four forms of GenAI augmentation in software engineering."
+            }
+          ],
+          "Evidence": [
+            {
+              "children": {
+                "Evaluation Type": [
+                  {
+                    "value": "None"
+                  }
+                ]
+              }
+            }
+          ],
+          "Confidence": [
+            {
+              "value": 3
+            }
+          ]
+        }
+      }
+    ],
+    "Notes": [
+      {
+        "value": "Too broad for an architecture review."
+      }
+    ]
+  },
+  "finished": true
+}

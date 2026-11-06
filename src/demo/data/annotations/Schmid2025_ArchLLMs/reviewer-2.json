@@ -1,0 +1,51 @@
+{
+  "annotations": {
+    "Relevant": [
+      {
+        "value": true
+      }
+    ],
+    "Study Type": [
+      {
+        "value": "Systematic review"
+      }
+    ],
+    "Year": [
+      {
+        "value": 2025
+      }
+    ],
+    "Findings": [
+      {
+        "children": {
+          "Claim": [
+            {
+              "value": "Most LLM-based approaches in software architecture use simple prompting techniques."
+            }
+          ],
+          "Evidence": [
+            {
+              "children": {
+                "Evaluation Type": [
+                  {
+                    "value": "Literature review"
+                  }
+                ]
+              }
+            }
+          ],
+          "Confidence": [
+            {
+              "value": 3
+            }
+          ]
+        }
+      }
+    ],
+    "Notes": [
+      {
+        "value": "Scope match. Useful baseline for RQ1."
+      }
+    ]
+  }
+}

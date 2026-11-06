@@ -24,6 +24,7 @@
     "vite.probe.config.ts",
     "vitest.integration.config.ts",
     "vitest.mutation.config.ts",
-    "samples/git-scenarios/**/*.ts"
+    "samples/git-scenarios/**/*.ts",
+    "src/vite-env.d.ts"
   ]
 }

@@ -1,0 +1,52 @@
+{
+  "annotations": {
+    "Relevant": [
+      {
+        "value": false
+      }
+    ],
+    "Study Type": [
+      {
+        "value": "Technique or approach"
+      }
+    ],
+    "Year": [
+      {
+        "value": 2025
+      }
+    ],
+    "Findings": [
+      {
+        "children": {
+          "Claim": [
+            {
+              "value": "Proposes a domain-specific language that structures LLM interactions as analyzable programs."
+            }
+          ],
+          "Evidence": [
+            {
+              "children": {
+                "Evaluation Type": [
+                  {
+                    "value": "None"
+                  }
+                ]
+              }
+            }
+          ],
+          "Confidence": [
+            {
+              "value": 2
+            }
+          ]
+        }
+      }
+    ],
+    "Notes": [
+      {
+        "value": "Prompt programming DSL. Not about architecture knowledge or traceability."
+      }
+    ]
+  },
+  "finished": true
+}

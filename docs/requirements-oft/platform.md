@@ -9,7 +9,7 @@ self-update, and build targets. See the [index](../requirements/index.md) for th
 ### REQ-PLT-10: Desktop-only operation
 `req~plt-10~1`
 
-When the application runs outside the Tauri desktop shell, the system shall present a notice that the web variant is discontinued and shall reject every project-opening action.
+When the application runs outside the Tauri desktop shell, the system shall present a notice that the web variant is discontinued and shall reject every project-opening action. The online demo build (REQ-PLT-444) is the exception.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
@@ -818,8 +818,112 @@ Needs: impl, utest
 
 Tags: Functional, Usability, Reliability
 
-### REQ-PLT-444: Publish the project website and the demo with GitHub Pages
+### REQ-PLT-444: Build an online demo with its own command
 `req~plt-444~1`
+
+The system shall build the online demo with the command `npm run build:demo`. The demo build shall write its files to `dist-demo/` and shall use relative asset paths, so the demo runs from any subpath of a web server.
+
+Comment:
+- **Type:** Non-functional (ISO 25010: Portability, Maintainability)
+- **Evidence:** `vite.config.ts` (`isDemo`, `outDir`, `base`), `package.json` (`build:demo`), `src/vite-env.d.ts` (`__DEMO__`)
+- **Verified by:** `src/platform/index.demo.test.ts` (`returns the demo adapter, once, for the whole visit`)
+- **Status:** Implemented. A headless browser loaded the built demo from a subpath without console errors.
+
+Needs: impl, utest
+
+Tags: NonFunctional, Portability, Maintainability
+
+### REQ-PLT-445: Open a bundled demo project at start
+`req~plt-445~1`
+
+When the demo starts, the system shall open a bundled example project without a file dialog. The example project shall hold seven papers and two reviewer seats. Each open of the demo shall start from the bundled project. The demo shall show no recent projects.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/platform/demoAdapter.ts` (`createDemoAdapter`, `openProject`, `getRecents`), `src/demo/project.ts` (`demoProjectText`), `src/demo/data/project.json`, `src/App.tsx` (demo open effect)
+- **Verified by:** `src/platform/demoAdapter.test.ts` (`opens the bundled project without a file dialog`, `starts again from the bundled project on every open`), `src/demo/demoSession.test.ts` (`opens the bundled project into the store`), `src/demo/demoProject.test.ts` (`passes the app schema and loads through the app parser`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Usability
+
+### REQ-PLT-446: Keep demo edits in memory and refuse saving
+`req~plt-446~1`
+
+The demo shall keep every edit in memory only. The demo shall refuse each save with a message that says nothing is saved. The demo shall write no project data to local storage, to session storage or to a file. A reload shall discard all edits.
+
+Comment:
+- **Type:** Functional (ISO 25010: Security, Reliability)
+- **Evidence:** `src/platform/demoAdapter.ts` (`saveProject`, `moveAnnotationsDir`, `writeTextFile`, `embedPdfAnnotations`), `src/components/Toolbar.tsx` (`saveItems`), `src/demo/text.ts` (`DEMO_NOT_SAVED`)
+- **Verified by:** `src/platform/demoAdapter.test.ts` (`refuses every save and writes no storage`, `keeps the feedback and PDF folder lists empty`), `src/demo/demoSession.test.ts` (`keeps an edit in memory, refuses to save it, and drops it on reopen`)
+- **Status:** Implemented. The demo keeps UI settings such as theme, font size and language in local storage. These settings hold no project data.
+
+Needs: impl, utest
+
+Tags: Functional, Security, Reliability
+
+### REQ-PLT-447: Disable desktop-only operations in the demo
+`req~plt-447~1`
+
+The demo shall disable save, save as, autosave, Git, file dialogs, the PDF folder, the update check and the AI network calls. Each disabled control shall tell the user why. The demo shall not read the release feed and shall not call an AI provider.
+
+Comment:
+- **Type:** Functional (ISO 25010: Security, Functional Suitability)
+- **Evidence:** `src/platform/demoAdapter.ts` (`getGit`, `checkForNativeUpdate`, `callLlm`, `pickPdfs`, `scanPdfFolder`), `src/components/Toolbar.tsx` (`saveItems`), `src/App.tsx` (update check effect), `src/demo/text.ts` (`DEMO_NOT_AVAILABLE`)
+- **Verified by:** `src/platform/demoAdapter.test.ts` (`has no git, no update and no local AI runtime`, `refuses network AI and web fetches`, `cancels every file dialog`), `src/platform/index.demo.test.ts` (`returns the demo adapter, once, for the whole visit`)
+- **Status:** Implemented. The AI button stays hidden, because the demo project does not set `config.ai`.
+
+Needs: impl, utest
+
+Tags: Functional, Security, Functional_Suitability
+
+### REQ-PLT-448: Show a demo notice with a download link
+`req~plt-448~1`
+
+The demo shall show this notice on every screen: "Demo: nothing is saved. Download the app to keep your work." The notice shall link to the releases page. The user shall be able to hide the notice. While the notice is hidden, the demo shall show a small "Demo" button. A click on that button shall show the notice again.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/DemoBanner.tsx`, `src/App.tsx` (`DemoBanner` in the app shell), `src/demo/text.ts` (`DEMO_RELEASES_URL`), `src/styles/index.css` (`.demo-banner`, `.demo-chip`)
+- **Verified by:** `src/components/DemoBanner.test.tsx` (`says nothing is saved and links to the releases page`, `folds into a chip when hidden, and the chip brings the notice back`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Usability
+
+### REQ-PLT-449: Keep demo code out of the desktop build
+`req~plt-449~1`
+
+The normal build shall not contain the demo data, the demo PDF or the demo notice text. The demo code shall run only in a build that defines `__DEMO__` as true.
+
+Comment:
+- **Type:** Non-functional (ISO 25010: Maintainability, Security)
+- **Evidence:** `vite.config.ts` (`__DEMO__`, `demoPdf` plugin), `src/demo/mode.ts` (`DEMO_MODE`), `src/platform/index.ts` (`getPlatform`)
+- **Verified by:** `src/demo/demoProject.test.ts` (`is off in the test run, so the normal build keeps its behaviour`)
+- **Status:** Implemented. The absence of demo strings and of the demo PDF in `dist/` was checked after `npm run build`.
+
+Needs: impl, utest
+
+Tags: NonFunctional, Maintainability, Security
+
+### REQ-PLT-450: Open the demo in English
+`req~plt-450~1`
+
+When the visitor has not chosen a language, the demo shall use English, whatever the browser language. A language that the visitor chose shall stay in use.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/state/settings.ts` (`loadLanguage`), `src/demo/text.ts`
+- **Verified by:** `src/demo/language.test.ts` (`opens in English whatever the browser language`, `keeps the language the visitor chose`)
+
+Needs: impl, utest
+
+Tags: Functional, Usability
+
+### REQ-PLT-451: Publish the project website and the demo with GitHub Pages
+`req~plt-451~1`
 
 When a commit reaches `main`, the Pages workflow shall build the online demo, copy it under `demo/` next to the files of `site/`, and check every relative link and image of the site pages. The workflow shall deploy the result to GitHub Pages only after the check passes. The site pages shall use relative links, so that the site works under the project path. The site pages shall load no script, style, font or image from another host. The walkthrough on the site shall contain project files that the project loader accepts.
 

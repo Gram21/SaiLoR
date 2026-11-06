@@ -1,0 +1,51 @@
+{
+  "annotations": {
+    "Relevant": [
+      {
+        "value": true
+      }
+    ],
+    "Study Type": [
+      {
+        "value": "Vision or roadmap"
+      }
+    ],
+    "Year": [
+      {
+        "value": 2026
+      }
+    ],
+    "Findings": [
+      {
+        "children": {
+          "Claim": [
+            {
+              "value": "Plans extractors, a knowledge schema, consistency checks and retrieval-augmented question answering."
+            }
+          ],
+          "Evidence": [
+            {
+              "children": {
+                "Evaluation Type": [
+                  {
+                    "value": "None"
+                  }
+                ]
+              }
+            }
+          ],
+          "Confidence": [
+            {
+              "value": 3
+            }
+          ]
+        }
+      }
+    ],
+    "Notes": [
+      {
+        "value": "The plan is concrete. No results yet."
+      }
+    ]
+  }
+}

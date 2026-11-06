@@ -1,0 +1,52 @@
+{
+  "annotations": {
+    "Relevant": [
+      {
+        "value": true
+      }
+    ],
+    "Study Type": [
+      {
+        "value": "Vision or roadmap"
+      }
+    ],
+    "Year": [
+      {
+        "value": 2026
+      }
+    ],
+    "Findings": [
+      {
+        "children": {
+          "Claim": [
+            {
+              "value": "Proposes an automated pipeline that extracts architectural knowledge, links it and resolves inconsistencies."
+            }
+          ],
+          "Evidence": [
+            {
+              "children": {
+                "Evaluation Type": [
+                  {
+                    "value": "None"
+                  }
+                ]
+              }
+            }
+          ],
+          "Confidence": [
+            {
+              "value": 2
+            }
+          ]
+        }
+      }
+    ],
+    "Notes": [
+      {
+        "value": "Evidence quote: \"where we will empirically evaluate each step to ensure effectiveness and practicality\". Evidence quote: \"The expected outcome is a prototype system that democratizes access to architectural knowledge across development teams.\""
+      }
+    ]
+  },
+  "finished": true
+}

@@ -1,0 +1,212 @@
+{
+  "version": 1,
+  "title": "Demo review: LLMs for software architecture knowledge",
+  "protocol": {
+    "researchQuestions": [
+      "RQ1: Which software architecture tasks do LLM-based approaches support?",
+      "RQ2: How well do LLM-based approaches recover architecture traceability links?"
+    ],
+    "notes": "Demo only. The reviewers are simulated, and the decisions are not a real review."
+  },
+  "config": {
+    "schema": [
+      {
+        "name": "Relevant",
+        "type": "boolean",
+        "description": "Is this paper relevant to the review?"
+      },
+      {
+        "name": "Study Type",
+        "type": "string",
+        "options": [
+          "Systematic review",
+          "Technique or approach",
+          "Tool",
+          "Dataset",
+          "Vision or roadmap",
+          "Empirical study"
+        ],
+        "description": "The kind of contribution"
+      },
+      {
+        "name": "Year",
+        "type": "number",
+        "description": "Year of publication"
+      },
+      {
+        "name": "Findings",
+        "min": 1,
+        "max": null,
+        "description": "Key findings with their evidence.",
+        "children": [
+          {
+            "name": "Claim",
+            "type": "string",
+            "required": true
+          },
+          {
+            "name": "Evidence",
+            "children": [
+              {
+                "name": "Metric",
+                "type": "string",
+                "description": "e.g. F1, MRR"
+              },
+              {
+                "name": "Evaluation Type",
+                "type": "string",
+                "options": [
+                  "Controlled experiment",
+                  "Case study",
+                  "Benchmark",
+                  "User study",
+                  "Survey",
+                  "Literature review",
+                  "None"
+                ],
+                "description": "How the evidence was obtained"
+              }
+            ]
+          },
+          {
+            "name": "Confidence",
+            "type": "number",
+            "description": "1 (low) to 5 (high)"
+          }
+        ]
+      },
+      {
+        "name": "Notes",
+        "type": "string",
+        "description": "Free text, including verbatim evidence quotes."
+      }
+    ],
+    "reviewers": 2
+  },
+  "papers": [
+    {
+      "id": "Schmid2025_ArchLLMs",
+      "title": "Software Architecture Meets LLMs: A Systematic Literature Review",
+      "authors": [
+        "Larissa Schmid",
+        "Tobias Hey",
+        "Martin Armbruster",
+        "Sophie Corallo",
+        "Dominik Fuchß",
+        "Jan Keim",
+        "Haoyu Liu",
+        "Anne Koziolek"
+      ],
+      "doi": "10.48550/arXiv.2505.16697",
+      "year": 2025,
+      "venue": "arXiv preprint: https://arxiv.org/abs/2505.16697",
+      "abstract": "Large Language Models (LLMs) are used for many different software engineering tasks. In software architecture, they have been applied to tasks such as classification of design decisions, detection of design patterns, and generation of software architecture design from requirements. However, there is little overview on how well they work, what challenges exist, and what open problems remain. In this paper, we present a systematic literature review on the use of LLMs in software architecture. We analyze 18 research articles to answer five research questions, such as which software architecture tasks LLMs are used for, how much automation they provide, which models and techniques are used, and how these approaches are evaluated. Our findings show that while LLMs are increasingly applied to a variety of software architecture tasks and often outperform baselines, some areas, such as generating source code from architectural design, cloud-native computing and architecture, and checking conformance remain underexplored. Although current approaches mostly use simple prompting techniques, we identify a growing research interest in refining LLM-based approaches by integrating advanced techniques.",
+      "pdf": "pdfs/2505.16697.pdf"
+    },
+    {
+      "id": "Scotti2025_TamedInteractions",
+      "title": "A Roadmap for Tamed Interactions with Large Language Models",
+      "authors": [
+        "Vincenzo Scotti",
+        "Jan Keim",
+        "Tobias Hey",
+        "Andreas Metzger",
+        "Anne Koziolek",
+        "Raffaela Mirandola"
+      ],
+      "doi": "10.1145/3832776",
+      "year": 2025,
+      "venue": "arXiv preprint: https://arxiv.org/abs/2510.24819",
+      "abstract": "Large Language Models (LLMs) are increasingly embedded in software systems ( GenAIware), enabling new forms of automation and interaction However, their probabilistic nature and reliance on prompt programming challenge reliability, robustness, and maintainability In current practice, prompt-related concerns (e.g., context management, interaction logic, output validation) are embedded in general-purpose code, leading to implicit, hard-to-analyze systems We argue that prompt programming should be treated as a first-class Software Engineering (SE ) concern and propose LLM Scripting Language (LSL ), a Domain Specific Language ( DSL) for structuring LLM interactions as analyzable programs LSL introduces abstractions for interaction blocks, context scopes, output constraints, and control flow, separating deterministic logic from probabilistic model behavior while ensuring syntactic compliance From an SE perspective, LSL supports disciplined development by making interaction logic explicit, analyzable, and amenable to verification and validation It also acts as cognitive scaffolding, externalizing prompt design into programmable artifacts that reduce implicit reasoning and support systematic debugging, evolution, and reuse We illustrate these properties in a structured generation scenario, showing improved failure localization and interaction transparency While LSL does not guarantee semantic correctness or factual accuracy, it provides a principled foundation for more analyzable and maintainable prompt-based systems.",
+      "pdf": "pdfs/2510.24819.pdf"
+    },
+    {
+      "id": "Amalfitano2025_GenAIRoadmap",
+      "title": "A Research Roadmap for Augmenting Software Engineering Processes and Software Products with Generative AI",
+      "authors": [
+        "Domenico Amalfitano",
+        "Andreas Metzger",
+        "Marco Autili",
+        "Tommaso Fulcini",
+        "Tobias Hey",
+        "Jan Keim",
+        "Patrizio Pelliccione",
+        "Vincenzo Scotti",
+        "Anne Koziolek",
+        "Raffaela Mirandola",
+        "Andreas Vogelsang"
+      ],
+      "doi": "10.1145/3788879",
+      "year": 2025,
+      "venue": "arXiv preprint: https://arxiv.org/abs/2510.26275",
+      "abstract": "Generative AI (GenAI) is rapidly transforming software engineering (SE) practices, influencing how SE processes are executed, as well as how software systems are developed, operated, and evolved. This paper applies design science research to build a roadmap for GenAI-augmented SE. The process consists of three cycles that incrementally integrate multiple sources of evidence, including collaborative discussions from the FSE 2025 \"Software Engineering 2030\" workshop, rapid literature reviews, and external feedback sessions involving peers. McLuhan's tetrads were used as a conceptual instrument to systematically capture the transforming effects of GenAI on SE processes and software products. The resulting roadmap identifies four fundamental forms of GenAI augmentation in SE and systematically characterizes their related research challenges and opportunities. These insights are then consolidated into a set of future research directions. By grounding the roadmap in a rigorous multi-cycle process and cross-validating it among independent author teams and peers, the study provides a transparent and reproducible foundation for analyzing how GenAI affects SE processes, methods and tools, and for framing future research within this rapidly evolving area.",
+      "pdf": "pdfs/2510.26275.pdf"
+    },
+    {
+      "id": "Fuchss2025_WhosWho",
+      "title": "Who's Who? LLM-assisted Software Traceability with Architecture Entity Recognition",
+      "authors": [
+        "Dominik Fuchß",
+        "Haoyu Liu",
+        "Sophie Corallo",
+        "Tobias Hey",
+        "Jan Keim",
+        "Johannes von Geisau",
+        "Anne Koziolek"
+      ],
+      "doi": "10.1145/3807453",
+      "year": 2025,
+      "venue": "arXiv preprint: https://arxiv.org/abs/2511.02434",
+      "abstract": "Identifying architecturally relevant entities in textual artifacts is crucial for Traceability Link Recovery (TLR) between Software Architecture Documentation (SAD) and source code. While Software Architecture Models (SAMs) can bridge the semantic gap between these artifacts, their manual creation is time-consuming. LLMs offer new capabilities for extracting architectural entities from SAD and source code to construct SAMs automatically or establish direct trace links. This paper extends our ICSA 2025 paper [19], which introduced Extracting Architecture (ExArch) for LLM-based architecture component name extraction. The extension contributes the novel Architecture Traceability with Entity Matching via Semantic inference (ArTEMiS) approach, an extended evaluation with additional LLMs, configurations, a revised benchmark, and a combined evaluation of both approaches. Specifically, this paper presents the following approaches: ExArch extracts component names as simple SAMs from SAD and source code to eliminate the need for manual SAM creation, while ArTEMiS identifies architectural entities in documentation and matches them with (manually or automatically generated) SAM entities. Our evaluation compares against state-of-the-art approaches SWATTR, TransArC and ArDoCode. TransArC achieves strong performance (F1: 0.87) but requires manually created SAMs; ExArch achieves comparable results (F1: 0.86) using only SAD and code. ArTEMiS is on par with the traditional heuristic-based SWATTR (F1: 0.81) and can successfully replace it when integrated with TransArC. The combination of ArTEMiS and ExArch outperforms ArDoCode, the best baseline without manual SAMs. Our results demonstrate that LLMs can effectively identify architectural entities in textual artifacts, enabling automated SAM generation and TLR, making architecture-code traceability more practical and accessible.",
+      "pdf": "pdfs/2511.02434.pdf"
+    },
+    {
+      "id": "Corallo2026_EVerestDataset",
+      "title": "The EVerest Dataset for Secure Software Engineering",
+      "authors": [
+        "Sophie Corallo",
+        "Debora Grupp",
+        "Dominik Fuchß",
+        "Jan Keim",
+        "Frederik Reiche",
+        "Tobias Hey",
+        "Anne Koziolek"
+      ],
+      "doi": "10.48550/arXiv.2606.23197",
+      "year": 2026,
+      "venue": "arXiv preprint: https://arxiv.org/abs/2606.23197",
+      "abstract": "End-to-end security verification, from requirements through architecture to code, requires datasets that span all three artifact types with fine-grained security labels. No existing dataset provides this combination. We present the EVerest dataset, a multi-artifact resource based on EVerest, an industry-driven open-source software stack for electric vehicle charging stations. The dataset includes 84 manually elicited security requirements annotated with security objectives, 1,445 fine-grained security elements (components, entities, data, data flows, states, etc.), acceptance windows, coreferences, and architectural trace links, as well as the EVerest software architecture model, source code, and natural language documentation. It enables research on security requirements classification, named entity recognition, architectural trace linking, and design-time or code-level security verification. During dataset creation, a real security weakness (CWE-1295) was identified, disclosed to the project maintainers, and subsequently fixed. The dataset is publicly available. A short video is available at https://youtu.be/pnn1uqpomvQ.",
+      "pdf": "pdfs/2606.23197.pdf"
+    },
+    {
+      "id": "Keim2026_ARDoCoTools",
+      "title": "The ARDoCo Tool Landscape: REST API, TraceView, and TraceViz for Architecture Traceability",
+      "authors": [
+        "Jan Keim",
+        "Dominik Fuchß",
+        "Sophie Corallo",
+        "Tobias Hey",
+        "Julian Winter",
+        "Kevin Feichtinger"
+      ],
+      "doi": "10.1145/3832783.3834621",
+      "year": 2026,
+      "venue": "arXiv preprint: https://arxiv.org/abs/2606.28064",
+      "abstract": "Context and Problem. Software development produces interrelated artifacts like software architecture documentation (SAD), software architecture models (SAMs), and source code, whose relationships are essential for maintenance and consistency checking. However, automatically recovering links between these artifacts (traceability link recovery (TLR)) remains difficult to deploy in practice. Method and Aim. We present an accessible tool landscape for ARDoCo's TLR approaches: the ARDoCo REST API exposes four TLR pipelines (SAD-SAM, SAM-Code, SAD-Code, and SAD-SAM-Code) via HTTP endpoints with asynchronous execution and caching; TraceView is a browser-based frontend with a guided wizard and interactive multi-panel exploration of recovered links and inconsistencies; and TraceViz, which is a VS Code extension that overlays trace links directly onto documentation in the IDE. Results and Conclusion. All three components are publicly deployed and usable. A preliminary study for TraceViz's in-IDE visualization confirmed that it improves developer comprehension during software understanding tasks. The tool landscape makes state-of-the-art TLR accessible to architects, developers, and tool integrators. Video. We provide a screencast of our ARDoCo Tool Landscape and how it is used here: https://youtu.be/IOTEPZQ3tVs",
+      "pdf": "pdfs/2606.28064.pdf"
+    },
+    {
+      "id": "KeimKaplan2026_ICSEBoF",
+      "title": "From Scattered to Structured: A Vision for Automating Architectural Knowledge Management",
+      "authors": [
+        "Jan Keim",
+        "Angelika Kaplan"
+      ],
+      "doi": "10.1145/3774748.3795871",
+      "year": 2026,
+      "venue": "ICSE-Companion '26 (arXiv: https://arxiv.org/abs/2601.19548)",
+      "abstract": "Software architecture is inherently knowledge-centric. The architectural knowledge is distributed across heterogeneous software artifacts such as requirements documents, design diagrams, code, and documentation, making it difficult for developers to access and utilize this knowledge effectively. Moreover, as systems evolve, inconsistencies frequently emerge between these artifacts, leading to architectural erosion and impeding maintenance activities. We envision an automated pipeline that systematically extracts architectural knowledge from diverse artifacts, links them, identifies and resolves inconsistencies, and consolidates this knowledge into a structured knowledge base. This knowledge base enables critical activities such as architecture conformance checking and change impact analysis, while supporting natural language question-answering to improve access to architectural knowledge. To realize this vision, we plan to develop specialized extractors for different artifact types, design a unified knowledge representation schema, implement consistency checking mechanisms, and integrate retrieval-augmented generation techniques for conversational knowledge access.",
+      "pdf": "pdfs/KeimKaplan_FromScatteredToStructured.pdf"
+    }
+  ]
+}

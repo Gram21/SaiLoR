@@ -1,0 +1,57 @@
+{
+  "annotations": {
+    "Relevant": [
+      {
+        "value": true
+      }
+    ],
+    "Study Type": [
+      {
+        "value": "Empirical study"
+      }
+    ],
+    "Year": [
+      {
+        "value": 2025
+      }
+    ],
+    "Findings": [
+      {
+        "children": {
+          "Claim": [
+            {
+              "value": "LLMs can identify architectural entities in textual artifacts."
+            }
+          ],
+          "Evidence": [
+            {
+              "children": {
+                "Metric": [
+                  {
+                    "value": "F1 = 0.86"
+                  }
+                ],
+                "Evaluation Type": [
+                  {
+                    "value": "Benchmark"
+                  }
+                ]
+              }
+            }
+          ],
+          "Confidence": [
+            {
+              "value": 4
+            }
+          ]
+        }
+      }
+    ],
+    "Notes": [
+      {
+        "value": "Evaluation paper. Scope match."
+      }
+    ]
+  },
+  "finished": true
+}

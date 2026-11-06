@@ -3536,3 +3536,29 @@ kbd {
 .anno-leaf:has(.field-dup-hint) > .field-row {
   flex-basis: 0;
 }
+
+/* Online demo notice (src/components/DemoBanner.tsx). */
+.demo-banner {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  padding: 6px 12px;
+  border-bottom: 1px solid var(--accent);
+  background: var(--accent-weak);
+  color: var(--text);
+  font-size: 0.85rem;
+}
+.demo-banner a {
+  color: var(--text);
+  font-weight: 600;
+}
+.demo-banner-hide,
+.demo-chip {
+  margin-left: 8px;
+}
+.demo-chip {
+  align-self: flex-end;
+  margin: 4px 8px 0 auto;
+  font-size: 0.75rem;
+}
