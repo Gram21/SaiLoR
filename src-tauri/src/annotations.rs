@@ -4,7 +4,7 @@
 
 use crate::authz::{assert_not_symlink, err, lock, stamp, within, ListedSplit, Session};
 use crate::git::truthy;
-use crate::paths::{dir_of, normalize, resolve};
+use crate::paths::{dir_of, normalize, resolve, write_atomic};
 use crate::project::{
     annotations_dir_for, annotations_dir_of, annotations_dir_ok, paper_ids, projects_using_folder,
     read_lossy, safe_read, FileText, FEEDBACK_DIR,
@@ -141,7 +141,7 @@ pub fn move_dir(session: &Mutex<Session>, project_path: &str, folder: &str) -> R
         let _ = fs::remove_dir(&to);
         fs::rename(&from, &to).map_err(err)?;
     }
-    if let Err(e) = assert_not_symlink(&key).and_then(|_| fs::write(&key, text).map_err(err)) {
+    if let Err(e) = assert_not_symlink(&key).and_then(|_| write_atomic(&key, text).map_err(err)) {
         if moved {
             let _ = fs::rename(&to, &from);
         }
@@ -374,13 +374,13 @@ pub fn split(session: &Mutex<Session>, project_path: &str, plan: &SplitPlan) -> 
                     r.rel_path
                 ));
             }
-            fs::write(&dest, text).map_err(err)?;
+            write_atomic(&dest, text).map_err(err)?;
         }
     }
     for (p, folder) in &plan.folders {
         let file = inside(&base_name(p))?;
         let text = with_folder(read_json(&file)?, folder)?;
-        fs::write(&file, text).map_err(err)?;
+        write_atomic(&file, text).map_err(err)?;
     }
     for r in &moved {
         fs::remove_file(inside(&format!("{}/{}", listed.folder, r.rel_path))?).map_err(err)?;

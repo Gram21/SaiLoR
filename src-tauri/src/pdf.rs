@@ -2,7 +2,7 @@
 //! protocol shares.
 
 use crate::authz::{assert_not_symlink, err, lock, within, Session};
-use crate::paths::{normalize, resolve};
+use crate::paths::{normalize, resolve, write_atomic};
 use crate::project::save_dialog;
 use lopdf::{dictionary, Dictionary, Document, Object, ObjectId, StringFormat};
 use ring::digest::{Context, SHA256};
@@ -338,7 +338,7 @@ fn export_target(session: &Mutex<Session>, dest: &str) -> Result<(), String> {
 // [impl->req~plt-260~1]
 fn write_file(dest: &str, bytes: &[u8]) -> Result<String, String> {
     assert_not_symlink(Path::new(dest))?;
-    fs::write(dest, bytes).map_err(err)?;
+    write_atomic(Path::new(dest), bytes).map_err(err)?;
     Ok(dest.to_string())
 }
 

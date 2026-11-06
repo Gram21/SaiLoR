@@ -2,7 +2,7 @@
 //! layout into one project stays in TypeScript (src/model/project.ts).
 
 use crate::authz::{assert_not_symlink, changed, err, lock, within, Session};
-use crate::paths::{dir_of, normalize, resolve};
+use crate::paths::{dir_of, normalize, resolve, write_atomic};
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 use std::collections::HashSet;
@@ -347,7 +347,7 @@ pub fn write_project_files(
 ) -> Result<(), String> {
     if let Some(meta) = meta_text {
         assert_not_symlink(file)?;
-        fs::write(file, meta).map_err(err)?;
+        write_atomic(file, meta).map_err(err)?;
         lock(session).remember(file, file);
     }
     let base = annotations_dir_for(file, &meta_of(file, meta_text)?)?;
@@ -391,7 +391,7 @@ pub fn write_project_files(
             return Err(outside());
         }
         assert_not_symlink(&target)?;
-        fs::write(&target, text).map_err(err)?;
+        write_atomic(&target, text).map_err(err)?;
         lock(session).remember(file, &target);
     }
     Ok(())
