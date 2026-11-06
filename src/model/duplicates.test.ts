@@ -43,6 +43,17 @@ describe('normalizeDoi', () => {
   it('is empty for an absent DOI', () => {
     expect(normalizeDoi(undefined)).toBe('')
   })
+
+  it('strips a prefix only at the start, never inside the DOI', () => {
+    expect(normalizeDoi('10.1000/doi:x')).toBe('10.1000/doi:x')
+    expect(normalizeDoi('10.1000/https://doi.org/x')).toBe('10.1000/https://doi.org/x')
+  })
+})
+
+describe('normalizeTitleForMatch — spacing', () => {
+  it('collapses the double space a stripped dash leaves behind', () => {
+    expect(normalizeTitleForMatch('A - B')).toBe('a b')
+  })
 })
 
 describe('classifyImport — certain (DOI)', () => {
@@ -311,6 +322,150 @@ describe('author surname matching (exercised through the base-title rule)', () =
 
   it('different authors entirely', () => {
     expect(baseTitlePair(['Jane Doe'], ['John Smith']).kind).toBe('new')
+  })
+
+  it('names with no letters give no surname, so they never corroborate', () => {
+    expect(baseTitlePair([''], ['  ']).kind).toBe('new')
+    expect(baseTitlePair(['123'], ['4.5']).kind).toBe('new')
+  })
+
+  it('tidies the surname before the comma', () => {
+    expect(baseTitlePair(['Doe , Jane'], ['Jane Doe']).kind).toBe('probable')
+    expect(baseTitlePair(['Doe  Smith, Jane'], ['Doe Smith, J.']).kind).toBe('probable')
+  })
+
+  it('turns punctuation into a word break, not into nothing', () => {
+    expect(baseTitlePair(['J.Doe'], ['Jane Doe']).kind).toBe('probable')
+    expect(baseTitlePair(['Jane Doe.'], ['Jane Doe']).kind).toBe('probable')
+  })
+
+  it('keeps a multi-word surname before the comma whole', () => {
+    expect(baseTitlePair(['Berg Lee, Ann'], ['Ann Lee']).kind).toBe('new')
+  })
+
+  it('a base-title match with matching authors is still vetoed by a large year gap', () => {
+    const v = classifyOne(
+      rec('Software Testing Methods: A Survey', { authors: ['Jane Doe'], year: 2010 }),
+      rec('Software Testing Methods: An Introduction', { authors: ['Jane Doe'], year: 2015 }),
+    )
+    expect(v).toEqual({ kind: 'new' })
+  })
+
+  it('a title without a colon is its own base title, all of it', () => {
+    const v = classifyOne(
+      rec('Graph: A Survey of Approaches', { authors: ['Jane Doe'] }),
+      rec('Graph', { authors: ['Jane Doe'] }),
+    )
+    expect(v).toEqual({
+      kind: 'probable',
+      target: { where: 'existing', index: 0 },
+      reason: { via: 'base-title', score: 1, authors: 1 },
+    })
+  })
+
+  it('an empty base title (title starts with a colon) never matches', () => {
+    const v = classifyOne(rec(': Alpha Study', { authors: ['Jane Doe'] }), rec(': Beta Thing', { authors: ['Jane Doe'] }))
+    expect(v).toEqual({ kind: 'new' })
+  })
+})
+
+describe('classifyImport — one-sided evidence on an exact title', () => {
+  it('a DOI on only one side is no conflict, in either direction', () => {
+    expect(classifyOne(rec('Same Title Here', { doi: '10.1/a' }), rec('Same Title Here')).kind).toBe('certain')
+    expect(classifyOne(rec('Same Title Here'), rec('Same Title Here', { doi: '10.1/a' })).kind).toBe('certain')
+  })
+
+  it('authors on only the existing side abstain', () => {
+    expect(classifyOne(rec('Same Title Here', { authors: ['Jane Doe'] }), rec('Same Title Here')).kind).toBe('certain')
+  })
+})
+
+describe('fuzzy title score at the threshold edges', () => {
+  function verdict(a: string, b: string): DupVerdict {
+    return classifyOne(rec(a), rec(b))
+  }
+  const probable = (score: number): DupVerdict => ({
+    kind: 'probable',
+    target: { where: 'existing', index: 0 },
+    reason: { via: 'title', score },
+  })
+
+  it('two substituted letters still pass the histogram bound', () => {
+    expect(verdict('Continuous Integration Practices', 'Continuous Integrution Practicos')).toEqual(probable(0.9375))
+  })
+
+  it('a length difference is measured against the longer title', () => {
+    expect(verdict('Continuous Integration Best Practices', 'Continuous Integration Best Practicesabcd')).toEqual(
+      probable(1 - 4 / 41),
+    )
+  })
+
+  it('a pair exactly at 0.90 by length counts', () => {
+    expect(verdict('Continuous Integration Methods', 'Continuous Integration Meth')).toEqual(probable(0.9))
+  })
+
+  it('a pair exactly at 0.90 by letter counts counts', () => {
+    expect(verdict('Continuous Integration Methods', 'Continuous Integration Mexhqzs')).toEqual(probable(0.9))
+  })
+
+  it('same letters and length but a low edit similarity is new', () => {
+    expect(verdict('Stressed Methods', 'Desserts Methods')).toEqual({ kind: 'new' })
+  })
+
+  it('still computes the edit distance for titles of exactly 256 characters', () => {
+    const long = `${'a'.repeat(127)} ${'b'.repeat(128)}`
+    const shorter = `${'a'.repeat(127)} ${'b'.repeat(127)}`
+    expect(verdict(long, shorter)).toEqual(probable(1 - 1 / 256))
+    expect(verdict(shorter, long)).toEqual(probable(1 - 1 / 256))
+  })
+})
+
+describe('classifyImport — picking the best of several matches', () => {
+  it('prefers a certain match over an earlier probable one', () => {
+    const v = classifyImport(
+      [rec('Continuous Integraton Best Practices'), rec('Continuous Integration Best Practices')],
+      [rec('Continuous Integration Best Practices')],
+    )[0]
+    expect(v).toEqual({ kind: 'certain', target: { where: 'existing', index: 1 }, reason: { via: 'title', score: 1 } })
+  })
+
+  it('prefers a DOI match over an earlier exact-title match', () => {
+    const v = classifyImport(
+      [rec('Same Title Here'), rec('Other Paper Entirely', { doi: '10.1/x' })],
+      [rec('Same Title Here', { doi: '10.1/x' })],
+    )[0]
+    expect(v).toEqual({ kind: 'certain', target: { where: 'existing', index: 1 }, reason: { via: 'doi' } })
+  })
+
+  it('a DOI match in the batch beats an exact-title match among existing papers', () => {
+    const v = classifyImport(
+      [rec('Same Title Here')],
+      [rec('Other Paper Entirely', { doi: '10.1/x' }), rec('Same Title Here', { doi: '10.1/x' })],
+    )[1]
+    expect(v).toEqual({ kind: 'certain', target: { where: 'batch', index: 0 }, reason: { via: 'doi' } })
+  })
+
+  it('a later DOI match in the batch beats an earlier exact-title one', () => {
+    const v = classifyImport(
+      [],
+      [rec('Same Title Here'), rec('Other Paper Entirely', { doi: '10.1/x' }), rec('Same Title Here', { doi: '10.1/x' })],
+    )[2]
+    expect(v).toEqual({ kind: 'certain', target: { where: 'batch', index: 1 }, reason: { via: 'doi' } })
+  })
+
+  it('keeps an earlier certain match over a later probable one, and the first of tied existing papers', () => {
+    const exactFirst = classifyImport(
+      [rec('Continuous Integration Best Practices'), rec('Continuous Integraton Best Practices')],
+      [rec('Continuous Integration Best Practices')],
+    )[0]
+    expect(exactFirst).toEqual({ kind: 'certain', target: { where: 'existing', index: 0 }, reason: { via: 'title', score: 1 } })
+    const tie = classifyImport([rec('Same Title Here'), rec('Same Title Here')], [rec('Same Title Here')])[0]
+    expect(tie.kind !== 'new' && tie.target).toEqual({ where: 'existing', index: 0 })
+  })
+
+  it('on a tie in the batch the first match wins', () => {
+    const v = classifyImport([], [rec('Same Title Here'), rec('Same Title Here'), rec('Same Title Here')])[2]
+    expect(v.kind !== 'new' && v.target).toEqual({ where: 'batch', index: 0 })
   })
 })
 

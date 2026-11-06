@@ -1,13 +1,17 @@
 import { describe, it, expect } from 'vitest'
 import {
   amendVersion,
+  ancestorsOf,
+  moveInDefs,
   moveInMarks,
   moveInTree,
   parseSchemaHistory,
+  parseSchemaVersion,
   pendingMoves,
   type SchemaHistoryEntry,
 } from './schemaVersion'
 import type { PdfMark } from './pdfMarks'
+import type { ResolvedDef } from './schema'
 import { loadProject, serializeProject, splitProjectFiles, projectFromFiles } from './project'
 
 const entry = (id: string, parents: string[], moves: SchemaHistoryEntry['moves'] = []): SchemaHistoryEntry => ({
@@ -24,6 +28,8 @@ describe('pendingMoves', () => {
 
   it('gives a file at the current version nothing, and one before versions everything', () => {
     expect(pendingMoves(history, 'b', 'b')).toEqual([])
+    expect(pendingMoves(history, undefined, 'b')).toEqual([])
+    expect(pendingMoves(history, 'x', 'x')).toEqual([])
     expect(pendingMoves(history, null, 'b')).toEqual([mv('X', 'Y'), mv('Y', 'Z')])
   })
 
@@ -55,6 +61,71 @@ describe('pendingMoves', () => {
     // …and the fold survives a save and reload of the history.
     expect(parseSchemaHistory(JSON.parse(JSON.stringify(amended.history)))).toEqual(amended.history)
   })
+
+  // [utest->req~edt-42~1]
+  it('gives a file stamped with a folded-in version the moves of later versions too', () => {
+    const amended = amendVersion(history, 'b', [mv('Z', 'W')], '2026-09-23T10:05:00.000Z')!
+    const later = [...amended.history, entry('d', [amended.id], [mv('W', 'V')])]
+    expect(pendingMoves(later, 'b', 'd')).toEqual([mv('Z', 'W'), mv('W', 'V')])
+  })
+
+  it('cannot amend a version the history does not have', () => {
+    expect(amendVersion(history, 'nope', [mv('Z', 'W')], '2026-09-23T10:05:00.000Z')).toBeNull()
+  })
+})
+
+// [utest->req~dat-166~1]
+describe('ancestorsOf', () => {
+  const sorted = (s: Set<string>) => [...s].sort()
+
+  it('includes the folded-in versions and tolerates unknown ids', () => {
+    const amended = amendVersion([entry('a', []), entry('b', ['a'])], 'b', [], '2026-09-23T10:05:00.000Z')!
+    expect(sorted(ancestorsOf(amended.history, amended.id))).toEqual(['a', 'b', amended.id].sort())
+    expect(sorted(ancestorsOf([entry('a', ['gone'])], 'a'))).toEqual(['a', 'gone'])
+    expect(sorted(ancestorsOf([], 'x'))).toEqual(['x'])
+  })
+
+  it('stops on a cycle in a damaged history', () => {
+    expect(sorted(ancestorsOf([entry('a', ['b']), entry('b', ['a'])], 'a'))).toEqual(['a', 'b'])
+  })
+})
+
+describe('parsing the stored history', () => {
+  it('drops the entries, moves and folds it cannot read', () => {
+    const raw = [
+      null,
+      'x',
+      { id: '' },
+      { id: 7 },
+      {
+        id: 'a',
+        parents: ['p', 3],
+        at: 5,
+        moves: [
+          { from: ['A'], to: ['B'] },
+          { from: [], to: ['B'] },
+          { from: ['A', ''], to: ['B'] },
+          { from: ['A', 1], to: ['B'] },
+          { from: 'A', to: ['B'] },
+          { from: ['A'] },
+          null,
+        ],
+        absorbed: [{ id: 'x', moves: 2.7 }, { id: 'y', moves: -1 }, { id: 3, moves: 1 }, { id: 'z', moves: '1' }, null],
+      },
+      { id: 'b', parents: 'a', at: '2026-09-23', moves: 'no', absorbed: [{ id: 3, moves: 1 }] },
+    ]
+    expect(parseSchemaHistory(raw)).toStrictEqual([
+      { id: 'a', absorbed: [{ id: 'x', moves: 2 }], parents: ['p'], at: '', moves: [{ from: ['A'], to: ['B'] }] },
+      { id: 'b', parents: [], at: '2026-09-23', moves: [] },
+    ])
+    expect(parseSchemaHistory({})).toEqual([])
+  })
+
+  it('reads a version id only from a non-empty string', () => {
+    expect(parseSchemaVersion('v1')).toBe('v1')
+    expect(parseSchemaVersion('')).toBeNull()
+    expect(parseSchemaVersion(3)).toBeNull()
+  })
 })
 
 // [utest->req~dat-167~1]
@@ -82,14 +153,94 @@ describe('moveInTree', () => {
   it('does not overwrite answers already at the destination', () => {
     const tree = { Old: [{ value: 'a' }], New: [{ value: 'b' }] }
     expect(moveInTree(tree, mv('Old', 'New'))).toEqual(tree)
+    const repeated = { Old: [{ value: 'a' }], New: [{ value: '' }, { value: 'b' }] }
+    expect(moveInTree(repeated, mv('Old', 'New'))).toEqual(repeated)
+  })
+
+  it('leaves a missing tree or a missing source as it is', () => {
+    expect(moveInTree(undefined, mv('Old', 'New'))).toBeUndefined()
+    expect(moveInTree({}, mv('R/G', 'R/H'))).toEqual({})
+    expect(moveInTree({ x: [{ value: 1 }] }, mv('G/f', 'H/f'))).toEqual({ x: [{ value: 1 }] })
+    expect(moveInTree({ x: [{ value: 1 }] }, mv('Old', 'New'))).toStrictEqual({ x: [{ value: 1 }] })
+    const noField = { G: [{ children: { g: [{ value: 'y' }] } }] }
+    expect(moveInTree(noField, mv('G/f', 'f'))).toEqual(noField)
+  })
+
+  it('moves a field out of a single group, keeping its siblings', () => {
+    expect(moveInTree({ G: [{ children: { f: [{ value: 'x' }], g: [{ value: 'y' }] } }] }, mv('G/f', 'f'))).toEqual({
+      G: [{ children: { g: [{ value: 'y' }] } }],
+      f: [{ value: 'x' }],
+    })
+  })
+
+  it('moves a field from one group to another', () => {
+    expect(moveInTree({ A: [{ children: { f: [{ value: 'x' }] } }] }, mv('A/f', 'B/f'))).toEqual({
+      A: [{ children: {} }],
+      B: [{ children: { f: [{ value: 'x' }] } }],
+    })
+  })
+
+  it('moves a field into an existing single group, or creates it when the group has no entry', () => {
+    expect(moveInTree({ f: [{ value: 'x' }], G: [{ children: { g: [{ value: 'y' }] } }] }, mv('f', 'G/f'))).toEqual({
+      G: [{ children: { g: [{ value: 'y' }], f: [{ value: 'x' }] } }],
+    })
+    expect(moveInTree({ f: [{ value: 'x' }], G: [] }, mv('f', 'G/f'))).toEqual({ G: [{ children: { f: [{ value: 'x' }] } }] })
+    const repeated = { f: [{ value: 'x' }], G: [{ children: {} }, { children: {} }] }
+    expect(moveInTree(repeated, mv('f', 'G/f'))).toEqual(repeated)
+  })
+
+  it('turns a field into a group of the same name and back', () => {
+    expect(moveInTree({ x: [{ value: 1 }] }, mv('x', 'x/y'))).toEqual({ x: [{ children: { y: [{ value: 1 }] } }] })
+    expect(moveInTree({ x: [{ children: { y: [{ value: 1 }] } }] }, mv('x/y', 'x'))).toEqual({ x: [{ value: 1 }] })
   })
 })
 
 describe('moveInMarks', () => {
+  const marks = (...paths: string[]) => [
+    { id: 'plain' },
+    { id: 'm', linkedFields: paths.map((path) => ({ path, label: 'L' })) },
+  ] as unknown as PdfMark[]
+  const paths = (list: PdfMark[]) => list.flatMap((m) => (m.linkedFields ?? []).map((l) => l.path))
+
   it('rewrites a linked field path, keeping the entry index', () => {
     const mark = { id: 'm', linkedFields: [{ path: 'Findings[2]/Claim', label: 'Claim' }] } as unknown as PdfMark
     const [moved] = moveInMarks([mark], mv('Findings/Claim', 'Findings/Statement'))
     expect(moved.linkedFields![0].path).toBe('Findings[2]/Statement')
+  })
+
+  it('leaves unrelated, shorter and unreadable paths, and returns the same list when nothing moved', () => {
+    const list = marks('Other/Claim', 'Findings', '')
+    expect(paths(moveInMarks(list, mv('Findings/Claim', 'Findings/Statement')))).toEqual(['Other/Claim', 'Findings', ''])
+    expect(moveInMarks(list, mv('Findings/Claim', 'Findings/Statement'))).toBe(list)
+  })
+
+  it('moves only links through the first entry of a group, keeping the final index', () => {
+    expect(paths(moveInMarks(marks('G/f[2]', 'G[1]/f'), mv('G/f', 'f')))).toEqual(['f[2]', 'G[1]/f'])
+    expect(paths(moveInMarks(marks('f[2]'), mv('f', 'G/f')))).toEqual(['G/f[2]'])
+  })
+})
+
+describe('moveInDefs', () => {
+  const def = (name: string, children: ResolvedDef[] = []) =>
+    ({ id: name, name, min: 0, max: 1, required: false, children }) as ResolvedDef
+  const names = (list: ResolvedDef[]): unknown[] => list.map((d) => (d.children.length ? [d.name, names(d.children)] : d.name))
+
+  it('renames a top-level node, appending it', () => {
+    expect(names(moveInDefs([def('A'), def('B')], mv('A', 'C')))).toEqual(['B', 'C'])
+  })
+
+  it('moves a nested node into another group', () => {
+    const defs = [def('G', [def('f'), def('g')]), def('H', [def('h')]), def('K', [def('f')])]
+    expect(names(moveInDefs(defs, mv('G/f', 'H/f')))).toEqual([['G', ['g']], ['H', ['h', 'f']], ['K', ['f']]])
+  })
+
+  it('leaves the schema alone when the source is missing, the target exists or has no parent', () => {
+    const defs = [def('G', [def('f')]), def('H', [def('f')])]
+    expect(moveInDefs(defs, mv('G/x', 'H/x'))).toBe(defs)
+    expect(moveInDefs(defs, mv('G/f', 'H/f'))).toBe(defs)
+    expect(moveInDefs(defs, mv('X/f', 'H/y'))).toBe(defs)
+    expect(moveInDefs(defs, mv('G/f', 'X/f'))).toBe(defs)
+    expect(moveInDefs(defs, mv('G/f', 'H/X/f'))).toBe(defs)
   })
 })
 
@@ -113,6 +264,24 @@ describe('loading files written under an older schema version', () => {
   it('treats a file with no version as older than every recorded move', () => {
     const project = projectFromFiles(meta([mv('Old', 'New')]), [['p/reviewer-1.json', file(undefined, 'old')]])
     expect(project.papers[0].reviews['1'].New).toEqual([{ value: 'old' }])
+  })
+
+  it('treats an empty or non-string file version as no version', () => {
+    for (const v of ['', 42]) {
+      const text = JSON.stringify({ schemaVersion: v, annotations: { Old: [{ value: 'old' }] } })
+      const project = projectFromFiles(meta([mv('Old', 'New')]), [['p/reviewer-1.json', text]])
+      expect(project.papers[0].reviews['1'].New).toEqual([{ value: 'old' }])
+      expect(project.papers[0].unknownSchemaFiles).toBeUndefined()
+    }
+  })
+
+  it('reads a paper whose schemaVersions record is null or an array as having no versions', () => {
+    for (const schemaVersions of [null, ['v1']]) {
+      const raw = meta([mv('Old', 'New')])
+      const paper = { ...raw.papers[0], reviews: { '1': { Old: [{ value: 'old' }] } }, schemaVersions }
+      const project = loadProject({ ...raw, papers: [paper] })
+      expect(project.papers[0].reviews['1'].New).toEqual([{ value: 'old' }])
+    }
   })
 
   // [utest->req~dat-168~1]

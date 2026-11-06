@@ -20,9 +20,13 @@ import {
   makeInstance,
   annotationText,
   isFieldVisible,
+  isRecordedAnswer,
+  instanceHoldsAnswer,
+  hasAnnotations,
+  orphanedNodePaths,
   type AnnotationValueTree,
 } from './annotations'
-import { loadProject, serializeProject, ProjectLoadError, aiSeatId, seatLabel } from './project'
+import { loadProject, serializeProject, ProjectLoadError, aiSeatId, seatLabel, deepEqualJson } from './project'
 
 const sampleSchema: AnnotationDef[] = [
   { name: 'Relevant', type: 'boolean' },
@@ -632,6 +636,109 @@ describe('schema resolution', () => {
     }
     expect(compactVisibleIf(group)).toEqual(group)
   })
+
+  it('compactVisibleIf keeps the spec for a value condition or several conditions', () => {
+    const valued = { mode: 'all' as const, conditions: [{ field: 'Relevant', equals: [true] }] }
+    expect(compactVisibleIf(valued)).toBe(valued)
+    expect(compactVisibleIf({ mode: 'all', conditions: [{ field: 'Relevant', equals: [] }] })).toBe('Relevant')
+    const two = { mode: 'all' as const, conditions: [{ field: 'Relevant' }, { field: 'Kind' }] }
+    expect(compactVisibleIf(two)).toBe(two)
+  })
+
+  it('drops a bare name below a field when it is neither a sibling, an ancestor nor a path', () => {
+    const resolved = resolveSchema([
+      { name: 'Field A', type: 'boolean', children: [{ name: 'Field B', type: 'string', visibleIf: 'Nope' }] },
+    ])
+    expect(resolved[0].children[0].visibleIf).toBeUndefined()
+  })
+
+  function loadDetails(schema: unknown, papers: unknown[] = []): string[] {
+    try {
+      loadProject(JSON.stringify({ config: { schema }, papers }))
+    } catch (err) {
+      if (err instanceof ProjectLoadError) return err.details
+      throw err
+    }
+    throw new Error('loaded')
+  }
+
+  it('names the node and the broken rule in each structural load error', () => {
+    expect(loadDetails([{ name: 'X', type: 'string', min: 3, max: 2 }])).toEqual([
+      'config.schema.0: "X": max (2) must be >= min (3)',
+    ])
+    expect(loadDetails([{ name: 'Bad' }])).toEqual([
+      'config.schema.0: "Bad": a node must have a "type" or non-empty "children"',
+    ])
+    expect(loadDetails([{ name: 'N', type: 'number', options: ['1'] }])).toEqual([
+      'config.schema.0: "N": "options" (enum) is only allowed on a string field (set "type": "string")',
+    ])
+    expect(
+      loadDetails([{ name: 'G', required: true, children: [{ name: 'C', type: 'string' }] }]),
+    ).toEqual(['config.schema.0: "G": "required" is only allowed on a field (set a "type")'])
+    expect(
+      loadDetails([{ name: 'C', type: 'string', visibleIf: { mode: 'all', conditions: [{ field: '' }] } }]),
+    ).toEqual(['config.schema.0.visibleIf.conditions.0.field: "visibleIf" condition needs a field name'])
+  })
+
+  it('accepts an empty options list on a non-string field', () => {
+    const project = loadProject(
+      JSON.stringify({
+        config: { schema: [{ name: 'N', type: 'number', options: [] }] },
+        papers: [],
+      }),
+    )
+    expect(project.schema[0].type).toBe('number')
+  })
+
+  it('points a missing schema and a missing pdf at their paths', () => {
+    expect(loadDetails([])).toEqual(['config.schema: config.schema must have at least one node'])
+    expect(
+      loadDetails([{ name: 'C', type: 'string' }], [{ id: 'p1', title: 'T', authors: [] }]),
+    ).toEqual(['papers.0.pdf: Each paper needs a "pdf" path'])
+  })
+
+  it('names the place of a duplicate, a whitespace clash and a __proto__ name', () => {
+    expect(() => resolveSchema([{ name: 'X', type: 'string' }, { name: 'X', type: 'string' }])).toThrow(
+      'Duplicate sibling annotation name "X" at the top level. Sibling names must be unique.',
+    )
+    expect(() =>
+      resolveSchema([
+        { name: 'G', children: [{ name: 'X', type: 'string' }, { name: 'X', type: 'string' }] },
+      ]),
+    ).toThrow('Duplicate sibling annotation name "X" under "G". Sibling names must be unique.')
+    expect(() =>
+      resolveSchema([
+        { name: 'G', children: [{ name: 'Claim', type: 'string' }, { name: 'Claim ', type: 'string' }] },
+      ]),
+    ).toThrow(
+      'Annotation names "Claim" and "Claim " under "G" differ only by surrounding spaces, which makes answers to them indistinguishable. Rename one of them.',
+    )
+    expect(() => resolveSchema([{ name: '__proto__', type: 'string' }])).toThrow(
+      'Annotation name "__proto__" is not allowed: answers stored under it cannot be saved. Rename the field.',
+    )
+    expect(() =>
+      resolveSchema([{ name: 'G', children: [{ name: '__proto__', type: 'string' }] }]),
+    ).toThrow(
+      'Annotation name "__proto__" is not allowed (under "G"): answers stored under it cannot be saved. Rename the field.',
+    )
+  })
+
+  it('lists every unknown uniqueBy name, and states the instance budget', () => {
+    expect(() =>
+      resolveSchema([
+        {
+          name: 'G',
+          max: null,
+          unique: true,
+          uniqueBy: ['A', 'B'],
+          children: [{ name: 'C', type: 'string' }],
+        },
+      ]),
+    ).toThrow('"G": "uniqueBy" names unknown child field(s): "A", "B".')
+    expect(() => resolveSchema([{ name: 'X', type: 'string', min: 100_001, max: null }])).toThrow(
+      'This schema would create at least 100000 empty entries before anything is filled in. Lower the "min" values, or nest fewer repeated groups inside each other.',
+    )
+  })
 })
 
 describe('loadProject: input validation', () => {
@@ -680,6 +787,60 @@ describe('loadProject: input validation', () => {
       expect((err as ProjectLoadError).details.join(' ')).toMatch(/"p1" appears more than once/)
     }
   })
+
+  const loadError = (input: unknown): ProjectLoadError => {
+    try {
+      loadProject(input)
+    } catch (err) {
+      expect(err).toBeInstanceOf(ProjectLoadError)
+      return err as ProjectLoadError
+    }
+    throw new Error('expected loadProject to throw')
+  }
+  const withConfig = (config: Record<string, unknown>, papers: unknown[] = []) =>
+    JSON.stringify({ version: 1, config: { schema: sampleSchema, ...config }, papers })
+
+  it('names each kind of load failure with its own message and details', () => {
+    const notJson = loadError('{ not json')
+    expect(notJson.details).toHaveLength(1)
+    expect(notJson.details[0]).toMatch(/SyntaxError/)
+
+    let deep: unknown = 1
+    for (let i = 0; i < 250; i++) deep = [deep]
+    const tooDeep = loadError(deep)
+    expect(tooDeep.message).toBe('The project file is nested too deeply.')
+    expect(tooDeep.details).toEqual(['Nesting deeper than 200 levels is not supported.'])
+
+    const root = loadError('5')
+    expect(root.message).toBe('The project file does not match the expected structure.')
+    expect(root.details[0]).toMatch(/^\(root\): /)
+
+    const schema = loadError(withConfig({ schema: [{ name: 'A', type: 'string' }, { name: 'A', type: 'string' }] }))
+    expect(schema.message).toBe('The annotation schema is invalid.')
+    expect(schema.details).toHaveLength(1)
+    expect(schema.details[0]).not.toBe('')
+
+    const paper = { id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', annotations: {} }
+    expect(loadError(withConfig({}, [paper, paper])).message).toBe('Duplicate paper id.')
+    expect(loadError(withConfig({ strict: 'yes' })).message).toBe('The strict mode settings are invalid.')
+    expect(loadError(withConfig({ promptOverrides: { outputFormat: 'free text' } })).message).toBe(
+      'The prompt overrides are invalid.',
+    )
+  })
+
+  it('rejects a screening config whose reasons are all blank', () => {
+    for (const reasons of [['  '], ['', ' ']]) {
+      const err = loadError(JSON.stringify({ version: 1, config: { screening: { reasons } }, papers: [] }))
+      expect(err.message).toBe('The screening configuration is invalid.')
+      expect(err.details).toEqual(['config.screening.reasons must list at least one exclusion reason'])
+    }
+  })
+
+  it('remembers no refused annotations folder when the name is accepted or absent', () => {
+    const ok = loadProject(JSON.stringify({ version: 1, annotationsDir: 'notes', config: { schema: sampleSchema }, papers: [] }))
+    expect('refusedAnnotationsDir' in ok).toBe(false)
+    expect('refusedAnnotationsDir' in loadProject(withConfig({}))).toBe(false)
+  })
 })
 
 describe('Paper.finished (a human declaration, not derived)', () => {
@@ -710,6 +871,87 @@ describe('Paper.finished (a human declaration, not derived)', () => {
     const untouched = JSON.parse(serializeProject(loadProject(projectJson({}))))
     expect('finished' in untouched.papers[0]).toBe(false)
   })
+
+  it('keeps only whole reviewer-number keys in reviewsFinished and reviewsLock, and tolerates null', () => {
+    const lock = { finishedAt: 't' }
+    const p = loadProject(projectJson({
+      reviewsFinished: { '1a': true, a1: true, '01': true, '12': true },
+      reviewsLock: { '1a': lock, a1: lock, '2': null, '3': 'str', '12': lock },
+    })).papers[0]
+    expect(p.reviewsFinished).toEqual({ '12': true })
+    expect(p.reviewsLock).toEqual({ '12': lock })
+    const nulls = loadProject(projectJson({ reviewsFinished: null, reviewsLock: null })).papers[0]
+    expect(nulls.reviewsFinished).toEqual({})
+    expect('reviewsLock' in nulls).toBe(false)
+  })
+})
+
+describe('serializeProject: optional paper fields', () => {
+  const MARK = {
+    id: 'm1', page: 1, kind: 'highlight' as const, rects: [{ x: 0.1, y: 0.1, width: 0.1, height: 0.05 }],
+    color: '#ffe066', comment: '', createdAt: '', updatedAt: '',
+  }
+  const load = (paper: Record<string, unknown>, root: Record<string, unknown> = {}) =>
+    loadProject(JSON.stringify({
+      version: 1,
+      ...root,
+      config: { schema: [{ name: 'Claim', type: 'string' }] },
+      papers: [{ id: 'p1', title: 'T', authors: [], pdf: 'a.pdf', ...paper }],
+    }))
+  const saved = (project: ReturnType<typeof loadProject>) => JSON.parse(serializeProject(project)).papers[0]
+
+  it('writes year, venue, doi and a non-empty abstract, and nothing for absent ones', () => {
+    const full = saved(load({ year: 2020, venue: 'ICSE', doi: '10.1/x', abstract: 'A.' }))
+    expect(full).toMatchObject({ year: 2020, venue: 'ICSE', doi: '10.1/x', abstract: 'A.' })
+    const bare = saved(load({ abstract: '' }))
+    for (const key of ['year', 'venue', 'doi', 'abstract']) expect(key in bare).toBe(false)
+  })
+
+  it('writes alignment, consolidationSync, marks and reviewMarks only when they hold something', () => {
+    const project = load({
+      alignment: { Claim: [{}] },
+      consolidationSync: 'sync-1',
+      marks: [MARK],
+      reviewMarks: { '1': [MARK] },
+    })
+    const out = saved(project)
+    expect(out.alignment).toEqual(project.papers[0].alignment)
+    expect(out.consolidationSync).toBe('sync-1')
+    expect(out.marks).toEqual([MARK])
+    expect(out.reviewMarks).toEqual({ '1': [MARK] })
+
+    project.papers[0].reviewMarks = { '1': [], '2': [MARK] }
+    project.papers[0].reviewsFinished = { '1': false, '2': true }
+    const filtered = saved(project)
+    expect(filtered.reviewMarks).toEqual({ '2': [MARK] })
+    expect(filtered.reviewsFinished).toEqual({ '2': true })
+
+    const bare = saved(load({}))
+    for (const key of ['alignment', 'consolidationSync', 'marks', 'reviewMarks', 'reviewsFinished']) {
+      expect(key in bare).toBe(false)
+    }
+  })
+
+  it('stamps every per-reviewer tree and mark list with the project schema version', () => {
+    const project = load(
+      { reviews: { '1': {} }, reviewMarks: { '2': [MARK] } },
+      { schemaVersion: 'v1', schemaHistory: [{ id: 'v1', parents: [], at: '2026-01-01T00:00:00.000Z', moves: [] }] },
+    )
+    expect(saved(project).schemaVersions).toEqual({
+      consolidated: 'v1',
+      'marks-consolidated': 'v1',
+      'review-1': 'v1',
+      'marks-2': 'v1',
+    })
+    expect('schemaVersions' in saved(load({}))).toBe(false)
+  })
+
+  it('writes the screening reasons, and no schemaHistory key when there is none', () => {
+    const screening = loadProject(JSON.stringify({ version: 1, config: { screening: { reasons: ['off-topic'] } }, papers: [] }))
+    const out = JSON.parse(serializeProject(screening))
+    expect(out.config.screening).toEqual({ reasons: ['off-topic'] })
+    expect('schemaHistory' in out).toBe(false)
+  })
 })
 
 describe('annotation tree init', () => {
@@ -733,6 +975,22 @@ describe('annotation tree init', () => {
 })
 
 describe('isFieldVisible', () => {
+  const gatedBy = (conditions: unknown[]) =>
+    ({ ...resolveSchema([{ name: 'X', type: 'string' }])[0], visibleIf: { mode: 'all', conditions } }) as never
+
+  it('treats an empty equals list as the answered test', () => {
+    expect(isFieldVisible(gatedBy([{ field: 'K', equals: [] }]), { K: [{ value: 'a' }] })).toBe(true)
+    expect(isFieldVisible(gatedBy([{ field: 'K', equals: [] }]), { K: [{ value: '' }] })).toBe(false)
+  })
+
+  it('hides behind a gate instance that has no value', () => {
+    expect(isFieldVisible(gatedBy([{ field: 'K' }]), { K: [{}] })).toBe(false)
+  })
+
+  it('fails open when a path segment has no children', () => {
+    expect(isFieldVisible(gatedBy([{ field: 'A/B' }]), {}, {}, { A: [{ value: 1 }] })).toBe(true)
+  })
+
   it('is always true when the def has no visibleIf', () => {
     const [relevant] = resolveSchema([{ name: 'Relevant', type: 'boolean' }])
     expect(isFieldVisible(relevant, {})).toBe(true)
@@ -1050,6 +1308,11 @@ describe('add/remove guards', () => {
     expect(canRemove(resolved[3], 1)).toBe(false)
     expect(canRemove(resolved[3], 2)).toBe(true)
   })
+
+  it('canRemove keeps the floor of 1 when min is 0', () => {
+    const [def] = resolveSchema([{ name: 'X', type: 'string', min: 0 }])
+    expect(canRemove(def, 1)).toBe(false)
+  })
 })
 
 // [utest->req~dat-160~1]
@@ -1072,6 +1335,89 @@ describe('normalize', () => {
     const resolved = resolveSchema(sampleSchema)
     const tree = normalizeTree(resolved, { Bogus: [{ value: 'x' }] } as never)
     expect(tree['Bogus']).toEqual([{ value: 'x' }])
+  })
+
+  it('clamps a list longer than max', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const tree = normalizeTree(resolved, { 'Study Type': [{ value: 'a' }, { value: 'b' }] })
+    expect(tree['Study Type']).toEqual([{ value: 'a' }])
+  })
+
+  it('keeps a removed key when any one of its entries holds an answer', () => {
+    const resolved = resolveSchema(sampleSchema)
+    expect(normalizeTree(resolved, { Gone: [{}, { value: 'x' }] })['Gone']).toEqual([{}, { value: 'x' }])
+    expect(normalizeTree(resolved, { Gone: [{}, null] } as never)).not.toHaveProperty('Gone')
+  })
+
+  it('keeps a null entry of a field as a null value', () => {
+    const resolved = resolveSchema([{ name: 'X', type: 'string' }])
+    expect(normalizeTree(resolved, { X: [null] } as never)).toEqual({ X: [{ value: null }] })
+  })
+})
+
+describe('isRecordedAnswer / instanceHoldsAnswer', () => {
+  it('an object or array is not a recorded answer', () => {
+    expect(isRecordedAnswer({})).toBe(false)
+    expect(isRecordedAnswer([])).toBe(false)
+  })
+
+  it('looks through every child list, tolerating malformed ones', () => {
+    expect(instanceHoldsAnswer(null)).toBe(false)
+    expect(instanceHoldsAnswer({ children: null })).toBe(false)
+    expect(instanceHoldsAnswer({ children: { a: [{}] } })).toBe(false)
+    expect(instanceHoldsAnswer({ children: { a: [{}, { value: 'x' }] } })).toBe(true)
+    expect(instanceHoldsAnswer({ children: { a: 'x', b: [{ value: 1 }] } })).toBe(true)
+  })
+})
+
+describe('hasAnnotations', () => {
+  it('ignores empty values and finds a filled one anywhere in a list', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const tree = initTree(resolved)
+    expect(hasAnnotations(resolved, tree)).toBe(false)
+    tree['Study Type'][0].value = ''
+    expect(hasAnnotations(resolved, tree)).toBe(false)
+    tree['Findings'][0].children!['Claim'] = [{ value: null }, { value: 'x' }]
+    expect(hasAnnotations(resolved, tree)).toBe(true)
+  })
+
+  it('counts a real 0', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const tree = initTree(resolved)
+    tree['Year'][0].value = 0
+    expect(hasAnnotations(resolved, tree)).toBe(true)
+  })
+
+  it('treats a missing value, a stray group value and a group without children as empty', () => {
+    const resolved = resolveSchema(sampleSchema)
+    expect(hasAnnotations(resolved, { 'Study Type': [{}] })).toBe(false)
+    expect(hasAnnotations(resolved, { Findings: [{ value: 'x' } as never] })).toBe(false)
+    expect(hasAnnotations(resolved, { Findings: [{}] })).toBe(false)
+  })
+})
+
+// [utest->req~dat-215~1]
+describe('orphanedNodePaths', () => {
+  it('names every orphan with its full path, at any depth, once', () => {
+    const resolved = resolveSchema([
+      { name: 'Year', type: 'number' },
+      { name: 'Outer', children: [{ name: 'Inner', children: [{ name: 'Leaf', type: 'string' }] }] },
+    ])
+    const tree = {
+      Gone: [{ value: 'x' }],
+      Year: [{ value: 1, children: { Old: [{ value: 'o' }] } }],
+      Outer: [
+        {
+          children: {
+            Stray: [{ value: 's' }],
+            Inner: [{ children: { Leaf: [{ value: null }], Lost: [{ value: 'l' }] } }],
+          },
+        },
+        {},
+        null,
+      ],
+    } as unknown as AnnotationValueTree
+    expect(orphanedNodePaths(resolved, tree)).toEqual(['Gone', 'Year › Old', 'Outer › Stray', 'Outer › Inner › Lost'])
   })
 })
 
@@ -1127,6 +1473,29 @@ describe('prune', () => {
     const pruned = pruneTree(resolved, tree)
     expect(pruned['Findings']).toHaveLength(1)
   })
+
+  it('keeps empty instances up to a min above 1', () => {
+    const resolved = resolveSchema([{ name: 'Pair', type: 'string', min: 2 }])
+    const pruned = pruneTree(resolved, { Pair: [{ value: null }, { value: null }, { value: null }] })
+    expect(pruned['Pair']).toHaveLength(2)
+  })
+
+  it('writes an absent key as an empty list', () => {
+    const resolved = resolveSchema([{ name: 'Year', type: 'number' }])
+    expect(pruneTree(resolved, {})).toEqual({ Year: [] })
+  })
+
+  it('gives a group instance no value of its own', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const pruned = pruneTree(resolved, initTree(resolved))
+    expect(pruned['Findings'][0]).not.toHaveProperty('value')
+  })
+
+  it('keeps orphaned children under a leaf field', () => {
+    const resolved = resolveSchema([{ name: 'Year', type: 'number' }])
+    const pruned = pruneTree(resolved, { Year: [{ value: 1, children: { Gone: [{ value: 'x' }] } }] })
+    expect(pruned['Year']).toEqual([{ value: 1, children: { Gone: [{ value: 'x' }] } }])
+  })
 })
 
 describe('annotationText (annotation-mode search haystack)', () => {
@@ -1177,6 +1546,19 @@ describe('annotationText (annotation-mode search haystack)', () => {
   it('returns an empty string for a paper with no annotations at all', () => {
     const resolved = resolveSchema(sampleSchema)
     expect(annotationText(resolved, {})).toBe('')
+  })
+
+  it('skips an empty string and a stray value on a group instance', () => {
+    const resolved = resolveSchema(sampleSchema)
+    const tree = initTree(resolved)
+    tree['Study Type'][0].value = ''
+    tree['Year'][0].value = 2021
+    tree['Findings'][0].value = 'stray'
+    expect(annotationText(resolved, tree)).toBe('2021')
+  })
+
+  it('returns an empty string for a missing tree', () => {
+    expect(annotationText(resolveSchema(sampleSchema), undefined as unknown as AnnotationValueTree)).toBe('')
   })
 
   it('keeps original case when caseSensitive is true', () => {
@@ -1331,6 +1713,18 @@ describe('Paper.aiUsage (AI-use disclosure)', () => {
     expect(loadProject(withUsage([{ ...base, reviewer: 42 }])).papers[0].aiUsage).toEqual([base])
     expect(loadProject(withUsage([{ ...base, promptVersion: 42 }])).papers[0].aiUsage).toEqual([base])
     expect(loadProject(withUsage([{ ...base, promptVersion: '' }])).papers[0].aiUsage).toEqual([base])
+  })
+
+  it('drops a null or non-numeric judge or verdicts record on its own', () => {
+    const base = { provider: 'openai', model: 'gpt-5.5', appliedAt: '2026-07-15T10:00:00.000Z' }
+    expect(loadProject(withUsage([{ ...base, judge: null, verdicts: null }])).papers[0].aiUsage).toEqual([base])
+    expect(loadProject(withUsage([{ ...base, judge: { model: 'm' } }])).papers[0].aiUsage).toEqual([base])
+    expect(
+      loadProject(withUsage([{ ...base, verdicts: { accept: 1, revise: '1', reject: 0 } }])).papers[0].aiUsage,
+    ).toEqual([base])
+    const infinite = JSON.parse(withUsage([{ ...base, verdicts: { accept: 1, revise: 1, reject: 0 } }]))
+    infinite.papers[0].aiUsage[0].verdicts.reject = Infinity
+    expect(loadProject(infinite).papers[0].aiUsage).toEqual([base])
   })
 
   // [utest->req~llm-780~1]
@@ -1849,6 +2243,21 @@ describe('Project.provenance (where an imported project came from)', () => {
   it('a source with no title loads fine — title is optional, unlike file', () => {
     const noTitle = { ...VALID_PROVENANCE, source: { file: 'screening.json' } }
     expect(loadProject(withProvenance(noTitle)).provenance).toEqual(noTitle)
+    expect('title' in loadProject(withProvenance(noTitle)).provenance!.source).toBe(false)
+  })
+
+  it('drops a record with a null part, a non-string title or a non-finite count', () => {
+    const cases: unknown[] = [
+      null,
+      { ...VALID_PROVENANCE, source: null },
+      { ...VALID_PROVENANCE, source: 'screening.json' },
+      { ...VALID_PROVENANCE, source: { file: 'screening.json', title: 5 } },
+      { ...VALID_PROVENANCE, counts: null },
+    ]
+    for (const bad of cases) expect(loadProject(withProvenance(bad)).provenance).toBeNull()
+    const infinite = JSON.parse(withProvenance(VALID_PROVENANCE))
+    infinite.provenance.counts.carried = Infinity
+    expect(loadProject(infinite).provenance).toBeNull()
   })
 
   it('round-trips through load -> serialize -> reload', () => {
@@ -1990,6 +2399,9 @@ describe('Project.protocol (the review protocol)', () => {
   it('drops blank entries and whitespace, and an all-empty protocol becomes null', () => {
     const blanks = { researchQuestions: ['  ', ''], searchStrings: [], notes: '   ' }
     expect(loadProject(withProtocol(blanks)).protocol).toBeNull()
+    expect(loadProject(withProtocol({ researchQuestions: [1, 'Q'], searchDate: '  ' })).protocol).toEqual({
+      researchQuestions: ['Q'],
+    })
     const out = JSON.parse(serializeProject(loadProject(withProtocol(blanks))))
     expect('protocol' in out).toBe(false)
   })
@@ -2132,5 +2544,13 @@ describe('hand-edited value tree with primitive instances does not crash the loa
       const p = loadProject(withInstances(anno as Record<string, unknown>))
       expect(p.papers[0].annotations['Study Type'][0].value).toBeNull()
     }
+  })
+})
+
+describe('deepEqualJson', () => {
+  it('never equates an array with a plain object', () => {
+    expect(deepEqualJson([], {})).toBe(false)
+    expect(deepEqualJson({ 0: 'a' }, ['a'])).toBe(false)
+    expect(deepEqualJson({ a: [1] }, { a: [1] })).toBe(true)
   })
 })

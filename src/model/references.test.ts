@@ -649,4 +649,331 @@ describe('malformed files must not take the rest of the file with them', () => {
     const bib = '@article{k1, title={Only}, year={2020}}'
     expect(parseReferences(bib, 'x.bib').map((e) => e.title)).toEqual(['Only'])
   })
+
+  it('stops at an unbalanced final entry and keeps the entries before it', () => {
+    const bib = '@article{a, title={A}}\n@article{b, title={B'
+    expect(parseReferences(bib, 'x.bib').map((e) => e.title)).toEqual(['A'])
+  })
+
+  it('does not read a mid-line @ inside a broken entry as a new entry', () => {
+    const bib = [
+      '@article{k1, title={Broken}, note={mail me@example.org or see @misc{x, title={Inner}}',
+      '@article{k2, title={Next}}',
+    ].join('\n')
+    expect(parseReferences(bib, 'x.bib').map((e) => e.title)).toEqual(['Next'])
+  })
+
+  it('ignores a trailing @word with no body at the end of the file', () => {
+    const bib = '@article{k1, title={Only}}\n@misc'
+    expect(parseReferences(bib, 'x.bib').map((e) => e.title)).toEqual(['Only'])
+  })
+
+  it('skips a stray @ in free text between entries without ending the scan', () => {
+    const bib = '@article{a, title={A}} contact me@example.org @article{b, title={B}}'
+    expect(parseReferences(bib, 'x.bib').map((e) => e.title)).toEqual(['A', 'B'])
+  })
+})
+
+describe('parseReferences: format detection', () => {
+  it('trusts the .bib extension even when the content does not start with @', () => {
+    const bib = '% exported by a reference manager\n@article{k1, title={T}}'
+    expect(parseReferences(bib, 'refs.bib').map((e) => e.title)).toEqual(['T'])
+    expect(parseReferences(bib, 'REFS.BIB').map((e) => e.title)).toEqual(['T'])
+    expect(parseReferences(bib, 'refs.txt')).toEqual([])
+  })
+
+  it('only reads the extension at the end of the file name', () => {
+    const ris = ['TY  - JOUR', 'TI  - From RIS', 'ER  - '].join('\n')
+    expect(parseReferences(ris, 'refs.bib.txt').map((e) => e.title)).toEqual(['From RIS'])
+  })
+
+  it('sniffs BibTeX after leading blank lines', () => {
+    expect(parseReferences('\n\n  @article{k1, title={T}}', 'refs').map((e) => e.title)).toEqual(['T'])
+  })
+
+  it('sniffs RIS by a TY line with zero, one or two spaces before the dash', () => {
+    for (const ty of ['TY  - JOUR', 'TY - JOUR', 'TY- JOUR']) {
+      const ris = [ty, 'TI  - Sniffed RIS', 'ER  - '].join('\n')
+      expect(parseReferences(ris, 'refs.txt').map((e) => e.title)).toEqual(['Sniffed RIS'])
+    }
+  })
+
+  it('sniffs CSL-JSON as an array or as an object with items', () => {
+    expect(parseReferences('[{"title":"Array"}]', 'refs.txt').map((e) => e.title)).toEqual(['Array'])
+    expect(parseReferences('{"items":[{"title":"Object"}]}', 'refs.txt').map((e) => e.title)).toEqual([
+      'Object',
+    ])
+  })
+
+  it('does not sniff RIS from a "TY -" that is not at the start of a line', () => {
+    const json = '[{"title":"ATY - not a tag"}]'
+    expect(parseReferences(json, 'refs.txt').map((e) => e.title)).toEqual(['ATY - not a tag'])
+  })
+
+  it('strips a BOM that JSON.parse would reject', () => {
+    expect(parseReferences('\uFEFF[{"title":"T"}]', 'refs.json').map((e) => e.title)).toEqual(['T'])
+  })
+
+  it('returns [] for a JSON object without an items array', () => {
+    expect(parseReferences('{"foo":1}', 'refs.json')).toEqual([])
+  })
+})
+
+describe('parseReferences: BibTeX entry and field syntax', () => {
+  it('reads a parenthesized entry, closing it at the matching paren', () => {
+    const bib = '@article(k1, title = {Plain}, year = {2020})\n@misc(k2, title = {A (Short) Title})'
+    expect(parseReferences(bib, 'refs.bib')).toEqual([
+      { title: 'Plain', authors: [], year: 2020 },
+      { title: 'A (Short) Title', authors: [] },
+    ])
+  })
+
+  it('allows whitespace between the entry type and its opening brace', () => {
+    const bib = '@article {k1, title = {Spaced}}\n@book\n{k2, title = {Newline}}'
+    expect(parseReferences(bib, 'refs.bib').map((e) => e.title)).toEqual(['Spaced', 'Newline'])
+  })
+
+  it('skips @comment/@string/@preamble blocks in any case, even with a title field', () => {
+    const bib = [
+      '@comment{c, title = {Hidden comment}}',
+      '@Comment{c, title = {Hidden capital comment}}',
+      '@string{s, title = {Hidden string}}',
+      '@preamble{p, title = {Hidden preamble}}',
+      '@article{k1, title = {Real}}',
+    ].join('\n')
+    expect(parseReferences(bib, 'refs.bib').map((e) => e.title)).toEqual(['Real'])
+  })
+
+  it('reads a bare (unbraced, unquoted) year', () => {
+    expect(parseReferences('@article{k1, title = {T}, year = 2020}', 'refs.bib')[0].year).toBe(2020)
+  })
+
+  it('drops an entry with an empty quoted title', () => {
+    expect(parseReferences('@article{k1, title = ""}', 'refs.bib')).toEqual([])
+  })
+
+  it('keeps commas inside a quoted value and an escaped quote inside it', () => {
+    const bib = '@article{k1, title = "Apples, Pears", author = "M\\"uller, Hans"}'
+    expect(parseReferences(bib, 'refs.bib')).toEqual([
+      { title: 'Apples, Pears', authors: ['Hans Müller'] },
+    ])
+  })
+
+  it('does not treat a lone quote inside braces as the start of a quoted value', () => {
+    const bib = '@article{k1, title = {A 12" Record}, year = {1999}}'
+    expect(parseReferences(bib, 'refs.bib')).toEqual([{ title: 'A 12" Record', authors: [], year: 1999 }])
+  })
+
+  it('keeps a comma after a nested brace group inside the value', () => {
+    const bib = '@article{k1, title = {{DNA} sequencing, a survey}, year = {2001}}'
+    expect(parseReferences(bib, 'refs.bib')).toEqual([
+      { title: 'DNA sequencing, a survey', authors: [], year: 2001 },
+    ])
+  })
+
+  it('leaves out empty doi, venue, file and abstract fields', () => {
+    const bib = '@article{k1, title = {T}, doi = {}, journal = {}, booktitle = {Proc}, file = {}, abstract = {}}'
+    expect(parseReferences(bib, 'refs.bib')).toEqual([{ title: 'T', authors: [], venue: 'Proc' }])
+  })
+
+  it('drops an empty name from the author list', () => {
+    const bib = '@article{k1, title = {T}, author = {Smith and {} and Doe}}'
+    expect(parseReferences(bib, 'refs.bib')[0].authors).toEqual(['Smith', 'Doe'])
+  })
+
+  it('reads the file path from one segment, two segments and escaped characters', () => {
+    const hint = (file: string) =>
+      parseReferences(`@article{k1, title = {T}, file = {${file}}}`, 'refs.bib')[0].pdfHint
+    expect(hint('papers/a.pdf')).toBe('papers/a.pdf')
+    expect(hint('Full Text:papers/a.pdf')).toBe('papers/a.pdf')
+    expect(hint(':papers/{Smith}\\_v2~final\\ copy  x.pdf:PDF')).toBe('papers/Smith_v2 final copy x.pdf')
+    expect(hint(':papers/a.pdf:PDF;:papers/b.pdf:PDF')).toBe('papers/a.pdf')
+  })
+
+  it('unescapes \\o before a closing brace ({\\o})', () => {
+    const bib = '@article{k1, title = {T}, author = {Br{\\o}ndum, Ida}}'
+    expect(parseReferences(bib, 'refs.bib')[0].authors).toEqual(['Ida Brøndum'])
+  })
+})
+
+describe('parseReferences: BibTeX merged-author-name repair limits', () => {
+  const authors = (list: string) =>
+    parseReferences(`@article{k1, title = {T}, author = {${list}}}`, 'refs.bib')[0].authors
+
+  it('splits a seam with two-letter halves', () => {
+    expect(authors('Jane WuLi Chen')).toEqual(['Jane Wu', 'Li Chen'])
+  })
+
+  it('does not split a seam with a one-letter half', () => {
+    expect(authors('Jean dAlembert Smith')).toEqual(['Jean dAlembert Smith'])
+    expect(authors('Jane DoeX Smith')).toEqual(['Jane DoeX Smith'])
+  })
+
+  it('does not split an allowlisted prefix even when both sides have two tokens', () => {
+    expect(authors('Carla McDonald Smith')).toEqual(['Carla McDonald Smith'])
+    for (const name of ['MacLeod', 'DeSilva', 'DiCaprio', 'LaSalle', 'VanDyke', 'DuBois']) {
+      expect(authors(`Carla ${name} Smith`)).toEqual([`Carla ${name} Smith`])
+    }
+  })
+
+  it('does not split a seam when one side would be a single token', () => {
+    expect(authors('Mary LeBlanc')).toEqual(['Mary LeBlanc'])
+    expect(authors('LeBlanc, Mary')).toEqual(['Mary LeBlanc'])
+  })
+
+  it('does not split a long name with no seam or bare "and"', () => {
+    expect(authors('Anna Maria Garcia Lopez')).toEqual(['Anna Maria Garcia Lopez'])
+  })
+
+  it('does not split on "and" inside a token or with one name on the left', () => {
+    expect(authors('Erik Rolandsen Van Berg')).toEqual(['Erik Rolandsen Van Berg'])
+    expect(authors('Roland Smith')).toEqual(['Roland Smith'])
+  })
+})
+
+describe('parseReferences: RIS details', () => {
+  const ris = (...lines: string[]) => parseReferences(['TY  - JOUR', ...lines, 'ER  - '].join('\n'), 'refs.ris')
+
+  it('ranks venue JF over JO over T2, independent of tag order', () => {
+    expect(ris('TI  - T', 'T2  - Second', 'JO  - Abbrev', 'JF  - Full')[0].venue).toBe('Full')
+    expect(ris('TI  - T', 'T2  - Second', 'JO  - Abbrev')[0].venue).toBe('Abbrev')
+    expect(ris('TI  - T', 'T2  - Second')[0].venue).toBe('Second')
+    expect(ris('TI  - T', 'JF  - Full')[0].venue).toBe('Full')
+  })
+
+  it('ignores empty venue, abstract, author and DOI tags', () => {
+    expect(ris('TI  - T', 'JF  - ', 'JO  - Abbrev')[0].venue).toBe('Abbrev')
+    expect(ris('TI  - T', 'JO  - ', 'T2  - Second')[0].venue).toBe('Second')
+    expect(ris('TI  - T', 'AB  - ', 'N2  - From N2')[0].abstract).toBe('From N2')
+    expect(ris('TI  - T', 'T2  - ', 'AU  - ', 'DO  - ')).toEqual([{ title: 'T', authors: [] }])
+  })
+
+  it('keeps the first title, N2 abstract, year and L1 path', () => {
+    expect(
+      ris(
+        'T1  - First',
+        'TI  - Second',
+        'N2  - First N2',
+        'N2  - Second N2',
+        'PY  - 2001',
+        'Y1  - 2002',
+        'L1  - internal-pdf://1/first',
+        'L1  - internal-pdf://2/second',
+        'UR  - https://example.com/third.pdf',
+      ),
+    ).toEqual([
+      { title: 'First', authors: [], abstract: 'First N2', year: 2001, pdfHint: 'internal-pdf://1/first' },
+    ])
+  })
+
+  it('reads A1 as an author and trims a DOI', () => {
+    expect(ris('TI  - T', 'A1  - Doe, Jane', 'DO  - 10.1/x   ')).toEqual([
+      { title: 'T', authors: ['Jane Doe'], doi: '10.1/x' },
+    ])
+  })
+
+  it('takes a UR as PDF hint only when the URL ends in .pdf', () => {
+    expect(ris('TI  - T', 'UR  - https://example.com/paper.PDF')[0].pdfHint).toBe('https://example.com/paper.PDF')
+    expect(ris('TI  - T', 'UR  - https://example.com/paper.pdf?download=1')[0].pdfHint).toBeUndefined()
+  })
+
+  it('joins continuation lines of T1, AB and N2', () => {
+    expect(ris('T1  - Wrapped', '  title', 'AB  - First half', '  second half')).toEqual([
+      { title: 'Wrapped title', authors: [], abstract: 'First half second half' },
+    ])
+    expect(ris('TI  - T', 'N2  - N2 start', '  N2 end')[0].abstract).toBe('N2 start N2 end')
+  })
+
+  it('keeps a continuation line that contains "word - word" as prose', () => {
+    expect(ris('TI  - T', 'AB  - Scores rose', '  from pre - post test')[0].abstract).toBe(
+      'Scores rose from pre - post test',
+    )
+  })
+
+  it('drops a continuation line after a non-prose tag', () => {
+    expect(ris('TI  - T', 'AB  - Abs', 'DO  - 10.1/x', '  stray')).toEqual([
+      { title: 'T', authors: [], abstract: 'Abs', doi: '10.1/x' },
+    ])
+    expect(ris('TI  - T', 'N2  - Alt', 'DO  - 10.1/x', '  stray')).toEqual([
+      { title: 'T', authors: [], abstract: 'Alt', doi: '10.1/x' },
+    ])
+  })
+
+  it('ignores fields and wrapped lines outside a record', () => {
+    const text = [
+      'TI  - Stray before',
+      '  wrapped stray',
+      'TY  - JOUR',
+      'TI  - Real',
+      'ER  -',
+      'AU  - Stray, After',
+    ].join('\n')
+    expect(parseReferences(text, 'refs.ris')).toEqual([{ title: 'Real', authors: [] }])
+  })
+
+  it('drops a record with no title, whether ended by TY or by end of file', () => {
+    const text = ['TY  - JOUR', 'AU  - Doe, Jane', 'TY  - JOUR', 'TI  - Real', 'ER  - ', 'TY  - JOUR', 'AU  - X'].join(
+      '\n',
+    )
+    expect(parseReferences(text, 'refs.ris').map((e) => e.title)).toEqual(['Real'])
+  })
+})
+
+describe('parseReferences: CSL-JSON details', () => {
+  const csl = (item: Record<string, unknown>) => parseReferences(JSON.stringify([item]), 'refs.json')
+
+  it('collapses and trims whitespace in the title', () => {
+    expect(csl({ title: '  A   Title  ' })[0].title).toBe('A Title')
+  })
+
+  it('builds author names from given and family, skipping blank and malformed authors', () => {
+    expect(
+      csl({
+        title: 'T',
+        author: [null, { family: 'Doe' }, { given: 'Jane' }, {}, { literal: '  ', given: 'Ann', family: 'Lee' }],
+      })[0].authors,
+    ).toEqual(['Doe', 'Jane', 'Ann Lee'])
+  })
+
+  it('trims the DOI and ignores blank DOI and abstract', () => {
+    expect(csl({ title: 'T', DOI: ' 10.1/x ' })[0].doi).toBe('10.1/x')
+    expect(csl({ title: 'T', DOI: '   ', abstract: '   ' })).toEqual([{ title: 'T', authors: [] }])
+  })
+
+  it('takes the venue from container-title, then publisher', () => {
+    expect(csl({ title: 'T', 'container-title': 'Journal', publisher: 'Pub' })[0].venue).toBe('Journal')
+    expect(csl({ title: 'T', publisher: 'Pub' })[0].venue).toBe('Pub')
+    expect(csl({ title: 'T', 'container-title': '  ', publisher: 'Pub' })[0].venue).toBe('Pub')
+    expect(csl({ title: 'T' })[0].venue).toBeUndefined()
+  })
+})
+
+describe('parseReferences: LaTeX accent and letter tables', () => {
+  const risTitle = (title: string) => parseReferences(`TY  - JOUR\nT1  - ${title}\nER  - `, 'refs.ris')[0].title
+
+  const accents: Array<[string, string, string]> = [
+    ['"', 'aeiouyAEIOUY', 'äëïöüÿÄËÏÖÜŸ'],
+    ["'", 'aeiouyAEIOUY', 'áéíóúýÁÉÍÓÚÝ'],
+    ['`', 'aeiouAEIOU', 'àèìòùÀÈÌÒÙ'],
+    ['^', 'aeiouAEIOU', 'âêîôûÂÊÎÔÛ'],
+    ['~', 'anoANO', 'ãñõÃÑÕ'],
+    ['=', 'aeiouAEIOU', 'āēīōūĀĒĪŌŪ'],
+    ['.', 'cegzCEGZ', 'ċėġżĊĖĠŻ'],
+    ['c', 'csCS', 'çşÇŞ'],
+    ['v', 'cerszCERSZ', 'čěřšžČĚŘŠŽ'],
+    ['u', 'agAG', 'ăğĂĞ'],
+    ['H', 'ouOU', 'őűŐŰ'],
+    ['r', 'auAU', 'åůÅŮ'],
+    ['k', 'aeAE', 'ąęĄĘ'],
+  ]
+
+  it.each(accents)('maps every letter of the \\%s accent', (marker, bases, accented) => {
+    const input = [...bases].map((b) => `\\${marker}{${b}}`).join(' ')
+    expect(risTitle(input)).toBe([...accented].join(' '))
+  })
+
+  it('maps every standalone letter command', () => {
+    const input = ['ss', 'o', 'O', 'l', 'L', 'ae', 'AE', 'oe', 'OE', 'aa', 'AA', 'i', 'j'].map((c) => `\\${c}{}`).join(' ')
+    expect(risTitle(input)).toBe('ß ø Ø ł Ł æ Æ œ Œ å Å ı ȷ')
+  })
 })

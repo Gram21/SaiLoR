@@ -8,6 +8,8 @@ import {
   isLegacyProjectShape,
   isDeletableAnnotationText,
   assembleLegacyProjectJson,
+  parseMarksFileName,
+  projectFromFiles,
 } from './project'
 import { SCREENING_DECISION, DECISION_INCLUDE } from '../screening/schema'
 
@@ -47,6 +49,142 @@ describe('isLegacyProjectShape', () => {
   it('is false when papers is missing or not an array', () => {
     expect(isLegacyProjectShape({})).toBe(false)
     expect(isLegacyProjectShape({ papers: 'nope' })).toBe(false)
+  })
+
+  it('is false for a value that is not an object', () => {
+    expect(isLegacyProjectShape(null)).toBe(false)
+    expect(isLegacyProjectShape('papers')).toBe(false)
+  })
+
+  it('skips entries that are not objects', () => {
+    expect(isLegacyProjectShape({ papers: [null, 'x', { id: 'p' }] })).toBe(false)
+  })
+
+  it('needs only one paper in the old shape', () => {
+    expect(isLegacyProjectShape({ papers: [{ id: 'a' }, { id: 'b', annotations: {} }] })).toBe(true)
+    expect(isLegacyProjectShape({ papers: [{ id: 'a', reviews: {} }] })).toBe(true)
+  })
+})
+
+describe('splitProjectFiles: reviewer slots', () => {
+  const MARK = {
+    id: 'm1', page: 1, kind: 'highlight' as const, rects: [{ x: 0.1, y: 0.1, width: 0.1, height: 0.05 }],
+    color: '#ffe066', comment: '', createdAt: '', updatedAt: '',
+  }
+  const text = (files: { relPath: string; text: string | null }[], relPath: string) =>
+    files.find((f) => f.relPath === relPath)?.text
+
+  it('keeps a slot for each configured reviewer even when nothing is held in memory for it', () => {
+    const project = loadProject(legacyJson({ reviewers: 3 }))
+    for (const p of project.papers) p.reviews = {}
+    const paths = splitProjectFiles(project).files.map((f) => f.relPath)
+    for (const k of [1, 2, 3]) expect(paths).toContain(`p1/reviewer-${k}.json`)
+    expect(paths).not.toContain('p1/reviewer-4.json')
+  })
+
+  it('writes a reviewer file from any one per-reviewer record alone', () => {
+    const cases: [string, (p: ReturnType<typeof loadProject>['papers'][number]) => void, string][] = [
+      ['reviews', (p) => { p.reviews = { '2': { Relevant: [{ value: true }] } } }, 'p1/reviewer-2.json'],
+      ['reviewMarks', (p) => { p.reviewMarks = { '1': [MARK] } }, 'p1/marks-1.json'],
+      ['reviewsFinished', (p) => { p.reviewsFinished = { '1': true } }, 'p1/reviewer-1.json'],
+      ['reviewsLock', (p) => { p.reviewsLock = { '1': { finishedAt: 't' } } }, 'p1/reviewer-1.json'],
+    ]
+    for (const [label, edit, relPath] of cases) {
+      const project = loadProject(legacyJson())
+      edit(project.papers[0])
+      expect(text(splitProjectFiles(project).files, relPath), label).toBeTruthy()
+    }
+  })
+
+  it('marks an empty consolidated highlight file for deletion', () => {
+    const { files } = splitProjectFiles(loadProject(legacyJson()))
+    expect(text(files, 'p1/marks-consolidated.json')).toBeNull()
+  })
+})
+
+describe('parseMarksFileName', () => {
+  it('reads a multi-digit seat', () => {
+    expect(parseMarksFileName('marks-12.json', false)).toEqual({ seat: '12', legacy: false })
+    expect(parseMarksFileName('screening-marks-12.json', true)).toEqual({ seat: '12', legacy: false })
+    expect(parseMarksFileName('marks-12.json', true)).toEqual({ seat: '12', legacy: true })
+  })
+
+  it('matches the whole name only', () => {
+    for (const screening of [false, true]) {
+      expect(parseMarksFileName('xmarks-1.json', screening)).toBeNull()
+      expect(parseMarksFileName('marks-1.json.bak', screening)).toBeNull()
+    }
+    expect(parseMarksFileName('xscreening-marks-1.json', true)).toBeNull()
+    expect(parseMarksFileName('screening-marks-1.json.bak', true)).toBeNull()
+  })
+})
+
+describe('projectFromFiles: consolidated highlights', () => {
+  it('reads marks-consolidated.json into the paper marks, not a reviewer seat', () => {
+    const MARK = {
+      id: 'm1', page: 1, kind: 'highlight', rects: [{ x: 0.1, y: 0.1, width: 0.1, height: 0.05 }],
+      color: '#ffe066', comment: '', createdAt: '', updatedAt: '',
+    }
+    const meta = { version: 1, config: { schema: sampleSchema }, papers: [{ id: 'p1', title: 'T', authors: [], pdf: 'p1.pdf' }] }
+    const project = projectFromFiles(meta, [['p1/marks-consolidated.json', JSON.stringify({ marks: [MARK] })]])
+    expect(project.papers[0].marks.map((m) => m.id)).toEqual(['m1'])
+    expect(project.papers[0].reviewMarks).toEqual({})
+  })
+})
+
+describe('assembleLegacyProjectJson: direct', () => {
+  type Entry = { consolidated?: unknown; reviewers: Map<string, unknown>; marksConsolidated?: unknown; reviewMarks: Map<string, unknown> }
+  const entry = (e: Partial<Entry> = {}): Entry => ({ reviewers: new Map(), reviewMarks: new Map(), ...e })
+  const one = (e: Entry | undefined) => {
+    const files = new Map<string, Entry>(e ? [['p', e]] : [])
+    return (assembleLegacyProjectJson({ papers: [{ id: 'p' }] }, files) as { papers: Record<string, unknown>[] }).papers[0]
+  }
+
+  it('gives an empty papers list when meta has none', () => {
+    expect(assembleLegacyProjectJson({ version: 1 }, new Map())).toEqual({ version: 1, papers: [] })
+  })
+
+  it('passes papers without a string id through unchanged', () => {
+    const papers = [null, 'x', { title: 'no id' }, { id: 5 }]
+    expect((assembleLegacyProjectJson({ papers }, new Map()) as { papers: unknown[] }).papers).toEqual(papers)
+  })
+
+  it('adds only annotations to a paper with no files', () => {
+    expect(Object.keys(one(undefined))).toEqual(['id', 'annotations'])
+    expect(Object.keys(one(entry({ reviewers: new Map([['1', {}]]) })))).toEqual(['id', 'annotations', 'reviews', 'schemaVersions'])
+  })
+
+  it('reads a null reviewer or highlight file as empty', () => {
+    const p = one(entry({ reviewers: new Map([['1', null]]), reviewMarks: new Map([['1', null]]) }))
+    expect(p.reviews).toEqual({ '1': {} })
+    expect(p.reviewMarks).toEqual({ '1': [] })
+    expect(p.schemaVersions).toEqual({ 'review-1': null, 'marks-1': null })
+  })
+
+  it('reads a highlight file without marks as no marks', () => {
+    expect(one(entry({ reviewMarks: new Map([['2', {}]]) })).reviewMarks).toEqual({ '2': [] })
+  })
+
+  it('records the version of each file under its own key', () => {
+    const p = one(entry({
+      consolidated: { schemaVersion: 'c' },
+      marksConsolidated: { schemaVersion: 'mc' },
+      reviewers: new Map([['1', { schemaVersion: 'r' }]]),
+      reviewMarks: new Map([['2', {}]]),
+    }))
+    expect(p.schemaVersions).toEqual({ consolidated: 'c', 'marks-consolidated': 'mc', 'review-1': 'r', 'marks-2': null })
+  })
+
+  it('lifts finished only when it is literally true', () => {
+    expect(one(entry({ reviewers: new Map([['1', { finished: false }]]) }))).not.toHaveProperty('reviewsFinished')
+    expect(one(entry({ reviewers: new Map([['1', { finished: true }]]) })).reviewsFinished).toEqual({ '1': true })
+  })
+
+  it('lifts metadata and lock from either field alone', () => {
+    const ignored = one(entry({ reviewers: new Map([['1', { metadataIgnored: ['doi'] }]]) }))
+    expect(ignored.reviewMetadata).toEqual({ '1': { overrides: undefined, ignored: ['doi'] } })
+    expect(one(entry({ reviewers: new Map([['1', { finishedAt: 't' }]]) })).reviewsLock).toEqual({ '1': { finishedAt: 't', reopenedAt: undefined } })
+    expect(one(entry({ reviewers: new Map([['1', { reopenedAt: 'u' }]]) })).reviewsLock).toEqual({ '1': { finishedAt: undefined, reopenedAt: 'u' } })
   })
 })
 
