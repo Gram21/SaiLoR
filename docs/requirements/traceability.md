@@ -575,6 +575,13 @@ inspection only.
 | REQ-PLT-441 | Read paper batches only for an opened project | Functional · Security | `src-tauri/src/project.rs` | `src-tauri/src/project.rs` | — | — |
 | REQ-PLT-442 | Do not save a project that is still loading | Functional · Reliability | `src/platform/desktop.ts`<br>`src/state/store.ts` | `src/state/progressiveLoad.test.ts`<br>`src/platform/desktop.test.ts` | — | — |
 | REQ-PLT-443 | Show the load progress and wait with whole-project features | Functional · Usability | `src/state/store.ts`<br>`src/components/Toolbar.tsx`<br>`src/components/PaperList.tsx`<br>`src/components/AnnotationPanel.tsx`<br>`src/components/ScreeningPanel.tsx` | `src/state/progressiveLoad.test.ts`<br>`src/components/PaperList.test.tsx`<br>`src/components/Toolbar.test.tsx` | — | — |
+| REQ-PLT-444 | Build an online demo with its own command | Non-functional · Portability | `vite.config.ts`<br>`package.json`<br>`src/vite-env.d.ts` | `src/platform/index.demo.test.ts` | — | — |
+| REQ-PLT-445 | Open a bundled demo project at start | Functional · Usability | `src/platform/demoAdapter.ts`<br>`src/demo/project.ts`<br>`src/App.tsx` | `src/platform/demoAdapter.test.ts`<br>`src/demo/demoSession.test.ts`<br>`src/demo/demoProject.test.ts` | — | — |
+| REQ-PLT-446 | Keep demo edits in memory and refuse saving | Functional · Reliability | `src/platform/demoAdapter.ts`<br>`src/components/Toolbar.tsx`<br>`src/demo/text.ts` | `src/platform/demoAdapter.test.ts`<br>`src/demo/demoSession.test.ts` | — | — |
+| REQ-PLT-447 | Disable desktop-only operations in the demo | Functional · Security | `src/platform/demoAdapter.ts`<br>`src/components/Toolbar.tsx`<br>`src/App.tsx` | `src/platform/demoAdapter.test.ts`<br>`src/platform/index.demo.test.ts` | — | — |
+| REQ-PLT-448 | Show a demo notice with a download link | Functional · Usability | `src/components/DemoBanner.tsx`<br>`src/App.tsx`<br>`src/styles/index.css` | `src/components/DemoBanner.test.tsx` | — | — |
+| REQ-PLT-449 | Keep demo code out of the desktop build | Non-functional · Maintainability | `vite.config.ts`<br>`src/demo/mode.ts`<br>`src/platform/index.ts` | `src/demo/demoProject.test.ts` | — | — |
+| REQ-PLT-450 | Open the demo in English | Functional · Usability | `src/state/settings.ts`<br>`src/demo/text.ts` | `src/demo/language.test.ts` | — | — |
 
 ## Coverage statistics
 

@@ -29,6 +29,18 @@ Find installers in `src-tauri/target/release/bundle/`.
 | Windows | NSIS `.exe` |
 | Linux | AppImage, `.deb`, `.rpm` |
 
+## Build the online demo
+
+The online demo runs in a browser. It needs no Rust and no Tauri toolchain.
+
+1. Run `npm ci`.
+2. Run `npm run build:demo`.
+3. Find the files in `dist-demo/`.
+
+Caution: The demo does not save. It opens a bundled example project. Serve `dist-demo/` from a web server, for example under `/SaiLoR/demo/`.
+
+The demo build uses the same code as the desktop app. It adds the demo platform and the demo notice. The normal `npm run build` output does not contain them. See REQ-PLT-444 and REQ-PLT-449 in [requirements/platform.md](requirements/platform.md).
+
 ## Build in Docker (Linux only)
 
 Run `make docker-linux`. The command builds the Linux bundles in an Ubuntu 22.04 container.
