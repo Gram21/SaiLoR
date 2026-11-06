@@ -448,6 +448,7 @@ Status: Done. See section 18.
 | `macos-15` | `x86_64-apple-darwin` | `.dmg`, `.app.tar.gz` and `.sig` |
 | `windows-latest` | `x86_64-pc-windows-msvc` | NSIS `.exe` and `.sig` |
 | `ubuntu-22.04` | `x86_64-unknown-linux-gnu` | `.AppImage`, `.deb`, `.rpm` and `.sig` |
+| `ubuntu-22.04-arm` | `aarch64-unknown-linux-gnu` | `.AppImage`, `.deb`, `.rpm` and `.sig` |
 
 - Each build job merges its platform into `latest.json` on the release.
 - The `check-updater-json` job fails if `latest.json` misses a platform. If this occurs, run the failed build job again.

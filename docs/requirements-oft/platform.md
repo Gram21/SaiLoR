@@ -610,7 +610,7 @@ Tags: Functional, Functional_Suitability
 ### REQ-PLT-320: Build targets
 `req~plt-320~1`
 
-The system shall build the macOS app and dmg (arm64 and x64), the Windows NSIS installer (x64), and the Linux AppImage, deb and rpm packages (x64). The files shall use the Tauri default names, for example `SaiLoR_<version>_aarch64.dmg`, `SaiLoR_<version>_x64-setup.exe` and `SaiLoR_<version>_amd64.AppImage`. The macOS builds shall require macOS 15 or later. Each build shall include a signed updater artifact, and one `latest.json` feed shall list every platform. The release workflow shall attach these files to a draft release tagged `v<version>`. Only the AppImage, Windows and macOS builds shall update in-app. Users shall update the deb and rpm packages by hand.
+The system shall build the macOS app and dmg (arm64 and x64), the Windows NSIS installer (x64), and the Linux AppImage, deb and rpm packages (x64 and arm64). The files shall use the Tauri default names, for example `SaiLoR_<version>_aarch64.dmg`, `SaiLoR_<version>_x64-setup.exe` and `SaiLoR_<version>_amd64.AppImage`. The macOS builds shall require macOS 15 or later. Each build shall include a signed updater artifact, and one `latest.json` feed shall list every platform. The release workflow shall attach these files to a draft release tagged `v<version>`. Only the AppImage, Windows and macOS builds shall update in-app. Users shall update the deb and rpm packages by hand.
 
 Comment:
 - **Type:** Non-functional, design constraint (ISO 25010: Portability: Adaptability)
