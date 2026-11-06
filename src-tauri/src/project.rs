@@ -298,7 +298,11 @@ pub fn read_papers(
     }
     let dir = annotations_dir_for(file, &raw)?;
     let listed: HashSet<String> = paper_ids(&raw).into_iter().collect();
-    let ids: Vec<String> = ids.iter().filter(|id| listed.contains(*id)).cloned().collect();
+    let ids: Vec<String> = ids
+        .iter()
+        .filter(|id| listed.contains(*id))
+        .cloned()
+        .collect();
     Ok(read_paper_files(session, file, &dir, &ids))
 }
 
@@ -971,7 +975,10 @@ pub mod tests {
             rels(read_project(&s, &proj).unwrap().files),
             ["p1/consolidated.json", "p2/consolidated.json"]
         );
-        let stamps = lock(&s).stamps.get(&normalize(&proj)).map_or(0, |m| m.len());
+        let stamps = lock(&s)
+            .stamps
+            .get(&normalize(&proj))
+            .map_or(0, |m| m.len());
         assert_eq!(stamps, 3);
     }
 
