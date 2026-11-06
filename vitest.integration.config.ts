@@ -13,6 +13,7 @@ import react from '@vitejs/plugin-react'
 // files into this run too.
 export default defineConfig({
   plugins: [react()],
+  define: { __DEMO__: false },
   test: {
     environment: 'jsdom',
     globals: true,
