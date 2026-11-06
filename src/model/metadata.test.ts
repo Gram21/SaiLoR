@@ -12,12 +12,17 @@ import {
   canUpdateProject,
   editedFields,
   effectiveMetadata,
+  humanSeats,
   mergeSeatMetadata,
   metadataFingerprint,
   metadataSeatKey,
+  paperMetadata,
   parseMetadataEditMode,
+  parseMetadataValues,
+  parseReviewMetadata,
   proposeFromPdf,
   recordIgnored,
+  sameValue,
 } from './metadata'
 
 function project(config: Record<string, unknown> = {}): Project {
@@ -70,6 +75,77 @@ describe('metadata edit mode', () => {
     expect(canUpdateProject(multi, '1')).toBe(false)
     expect(canUpdateProject(multi, 'consolidation')).toBe(true)
   })
+
+  it('lists the human seats, without the AI seat', () => {
+    expect(humanSeats(project({ reviewers: 3 }))).toEqual(['1', '2', '3'])
+    expect(humanSeats(project({ reviewers: 3, ai: true, aiSeat: true }))).toEqual(['1', '2'])
+  })
+})
+
+describe('parsing stored metadata', () => {
+  it('keeps the readable values and drops blank or malformed ones', () => {
+    expect(parseMetadataValues({ title: 'T', authors: ['A'], year: '2020', doi: '10.1/x' })).toEqual({
+      title: 'T',
+      authors: ['A'],
+      year: 2020,
+      doi: '10.1/x',
+    })
+    expect(parseMetadataValues({ title: '  ', authors: ['A', 1], year: 'n/a', doi: ' ' })).toBeUndefined()
+    expect(parseMetadataValues({})).toBeUndefined()
+    expect(parseMetadataValues(null)).toBeUndefined()
+    expect(parseMetadataValues(Object.assign([], { title: 'T' }))).toBeUndefined()
+  })
+
+  it('keeps only seat keys 1..N that hold some values', () => {
+    const raw = {
+      '1': { overrides: { title: 'A' } },
+      '12': { ignored: { doi: '10.1/x' } },
+      '0': { overrides: { title: 'A' } },
+      x1: { overrides: { title: 'A' } },
+      '1x': { overrides: { title: 'A' } },
+      '3': null,
+      '5': { overrides: { title: ' ' } },
+    }
+    expect(parseReviewMetadata(raw)).toEqual({ '1': { overrides: { title: 'A' } }, '12': { ignored: { doi: '10.1/x' } } })
+    expect(parseReviewMetadata(null)).toEqual({})
+    expect(parseReviewMetadata([{ overrides: { title: 'A' } }])).toEqual({})
+  })
+})
+
+describe('paperMetadata', () => {
+  it('leaves out a missing year and an empty DOI', () => {
+    expect(paperMetadata({ title: 'T', authors: [], year: 2020, doi: '10.1/x' })).toEqual({
+      title: 'T',
+      authors: [],
+      year: 2020,
+      doi: '10.1/x',
+    })
+    expect(Object.keys(paperMetadata({ title: 'T', authors: [], year: undefined, doi: '' }))).toEqual(['title', 'authors'])
+  })
+})
+
+describe('sameValue', () => {
+  it('treats a missing value like an empty one', () => {
+    expect(sameValue('title', undefined, null)).toBe(true)
+    expect(sameValue('title', null, undefined)).toBe(true)
+    expect(sameValue('authors', null, undefined)).toBe(true)
+    expect(sameValue('authors', [], undefined)).toBe(true)
+    expect(sameValue('authors', ['--'], [])).toBe(true)
+    expect(sameValue('doi', undefined, '')).toBe(true)
+  })
+
+  it('ignores spaces in titles and the split of author names, but not the words', () => {
+    expect(sameValue('title', 'A B', 'AB')).toBe(true)
+    expect(sameValue('authors', ['Ada', 'Lovelace'], ['Lovelace Ada'])).toBe(true)
+    expect(sameValue('authors', ['ab'], ['ba'])).toBe(false)
+    expect(sameValue('authors', ['Ada Lovelace'], ['Adalovelace'])).toBe(false)
+  })
+
+  it('compares DOIs by value and years exactly', () => {
+    expect(sameValue('doi', '10.1/a', '10.1/b')).toBe(false)
+    expect(sameValue('year', 2020, 2020)).toBe(true)
+    expect(sameValue('year', 2020, '2020')).toBe(false)
+  })
 })
 
 describe('applyProjectEdit', () => {
@@ -90,7 +166,36 @@ describe('applyProjectEdit', () => {
   it('never sets an empty title', () => {
     const paper = project().papers[0]
     applyProjectEdit(paper, { title: '  ' })
+    applyProjectEdit(paper, { title: undefined })
     expect(paper.title).toBe('Orignal Title')
+  })
+
+  it('writes authors and year into their own fields', () => {
+    const paper = project().papers[0]
+    applyProjectEdit(paper, { authors: ['Ada King'], year: 2021 })
+    expect(paper).toMatchObject({ authors: ['Ada King'], year: 2021 })
+    expect(paper.doi).toBeUndefined()
+    expect(paper.extra.metadataOriginal).toEqual({ authors: ['Ada Lovelace'], year: 2020 })
+  })
+
+  it('clears authors to an empty list, and an empty original authors list counts as returned', () => {
+    const paper = project().papers[0]
+    paper.authors = []
+    applyProjectEdit(paper, { authors: ['X'] })
+    expect(paper.extra.metadataOriginal).toEqual({ authors: [] })
+    applyProjectEdit(paper, { authors: undefined })
+    expect(paper.authors).toEqual([])
+    expect(paper.extra).not.toHaveProperty('metadataOriginal')
+  })
+
+  it('replaces a damaged original record', () => {
+    const paper = project().papers[0]
+    paper.extra.metadataOriginal = 'junk'
+    expect(editedFields(paper, null)).toEqual([])
+    applyProjectEdit(paper, { title: 'New' })
+    expect(paper.extra.metadataOriginal).toEqual({ title: 'Orignal Title' })
+    paper.extra.metadataOriginal = null
+    expect(editedFields(paper, null)).toEqual([])
   })
 })
 
@@ -104,6 +209,21 @@ describe('applySeatEdit', () => {
     expect(effectiveMetadata(paper, '2').title).toBe('Orignal Title')
     applySeatEdit(paper, '1', { title: 'Orignal Title', year: undefined })
     expect(paper.reviewMetadata).toBeUndefined()
+  })
+
+  it('keeps earlier overrides of fields the edit does not name, and no empty author list', () => {
+    const paper = project({ metadataEdit: 'annotation', reviewers: 2 }).papers[0]
+    applySeatEdit(paper, '1', { title: 'X' })
+    applySeatEdit(paper, '1', { year: 2021, authors: [] })
+    expect(paper.reviewMetadata).toEqual({ '1': { overrides: { title: 'X', year: 2021 } } })
+  })
+
+  it('adds ignored values to the ones each seat ignored before', () => {
+    const paper = project({ metadataEdit: 'annotation', reviewers: 2 }).papers[0]
+    recordIgnored(paper, '1', { title: 'A' })
+    recordIgnored(paper, '2', { doi: 'd' })
+    recordIgnored(paper, '1', { doi: 'e' })
+    expect(paper.reviewMetadata).toEqual({ '1': { ignored: { title: 'A', doi: 'e' } }, '2': { ignored: { doi: 'd' } } })
   })
 })
 
@@ -154,6 +274,13 @@ describe('proposeFromPdf', () => {
     expect(proposeFromPdf(current, pdf, { title: 'ORIGINAL title' })).toEqual({ doi: '10.1/x' })
     expect(proposeFromPdf({ ...current, doi: 'https://doi.org/10.1/X' }, { doi: '10.1/x' })).toEqual({})
   })
+
+  it('proposes other authors, but never an empty author list or a value the PDF lacks', () => {
+    const current = { title: 'T', authors: ['Ada'] }
+    expect(proposeFromPdf(current, { authors: ['Bob'] })).toEqual({ authors: ['Bob'] })
+    expect(proposeFromPdf(current, { authors: [] })).toEqual({})
+    expect(Object.keys(proposeFromPdf(current, { title: 'Other' }))).toEqual(['title'])
+  })
 })
 
 describe('mergeSeatMetadata', () => {
@@ -182,6 +309,10 @@ describe('mergeSeatMetadata', () => {
     const before = metadataFingerprint(paper, ['1', '2'])
     applySeatEdit(paper, '2', { doi: '10.1/x' })
     expect(metadataFingerprint(paper, ['1', '2'])).not.toBe(before)
+  })
+
+  it('fingerprints a paper no seat corrected', () => {
+    expect(metadataFingerprint(project().papers[0], ['1'])).toBe('[["1",null]]')
   })
 })
 
