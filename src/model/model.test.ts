@@ -636,6 +636,109 @@ describe('schema resolution', () => {
     }
     expect(compactVisibleIf(group)).toEqual(group)
   })
+
+  it('compactVisibleIf keeps the spec for a value condition or several conditions', () => {
+    const valued = { mode: 'all' as const, conditions: [{ field: 'Relevant', equals: [true] }] }
+    expect(compactVisibleIf(valued)).toBe(valued)
+    expect(compactVisibleIf({ mode: 'all', conditions: [{ field: 'Relevant', equals: [] }] })).toBe('Relevant')
+    const two = { mode: 'all' as const, conditions: [{ field: 'Relevant' }, { field: 'Kind' }] }
+    expect(compactVisibleIf(two)).toBe(two)
+  })
+
+  it('drops a bare name below a field when it is neither a sibling, an ancestor nor a path', () => {
+    const resolved = resolveSchema([
+      { name: 'Field A', type: 'boolean', children: [{ name: 'Field B', type: 'string', visibleIf: 'Nope' }] },
+    ])
+    expect(resolved[0].children[0].visibleIf).toBeUndefined()
+  })
+
+  function loadDetails(schema: unknown, papers: unknown[] = []): string[] {
+    try {
+      loadProject(JSON.stringify({ config: { schema }, papers }))
+    } catch (err) {
+      if (err instanceof ProjectLoadError) return err.details
+      throw err
+    }
+    throw new Error('loaded')
+  }
+
+  it('names the node and the broken rule in each structural load error', () => {
+    expect(loadDetails([{ name: 'X', type: 'string', min: 3, max: 2 }])).toEqual([
+      'config.schema.0: "X": max (2) must be >= min (3)',
+    ])
+    expect(loadDetails([{ name: 'Bad' }])).toEqual([
+      'config.schema.0: "Bad": a node must have a "type" or non-empty "children"',
+    ])
+    expect(loadDetails([{ name: 'N', type: 'number', options: ['1'] }])).toEqual([
+      'config.schema.0: "N": "options" (enum) is only allowed on a string field (set "type": "string")',
+    ])
+    expect(
+      loadDetails([{ name: 'G', required: true, children: [{ name: 'C', type: 'string' }] }]),
+    ).toEqual(['config.schema.0: "G": "required" is only allowed on a field (set a "type")'])
+    expect(
+      loadDetails([{ name: 'C', type: 'string', visibleIf: { mode: 'all', conditions: [{ field: '' }] } }]),
+    ).toEqual(['config.schema.0.visibleIf.conditions.0.field: "visibleIf" condition needs a field name'])
+  })
+
+  it('accepts an empty options list on a non-string field', () => {
+    const project = loadProject(
+      JSON.stringify({
+        config: { schema: [{ name: 'N', type: 'number', options: [] }] },
+        papers: [],
+      }),
+    )
+    expect(project.schema[0].type).toBe('number')
+  })
+
+  it('points a missing schema and a missing pdf at their paths', () => {
+    expect(loadDetails([])).toEqual(['config.schema: config.schema must have at least one node'])
+    expect(
+      loadDetails([{ name: 'C', type: 'string' }], [{ id: 'p1', title: 'T', authors: [] }]),
+    ).toEqual(['papers.0.pdf: Each paper needs a "pdf" path'])
+  })
+
+  it('names the place of a duplicate, a whitespace clash and a __proto__ name', () => {
+    expect(() => resolveSchema([{ name: 'X', type: 'string' }, { name: 'X', type: 'string' }])).toThrow(
+      'Duplicate sibling annotation name "X" at the top level. Sibling names must be unique.',
+    )
+    expect(() =>
+      resolveSchema([
+        { name: 'G', children: [{ name: 'X', type: 'string' }, { name: 'X', type: 'string' }] },
+      ]),
+    ).toThrow('Duplicate sibling annotation name "X" under "G". Sibling names must be unique.')
+    expect(() =>
+      resolveSchema([
+        { name: 'G', children: [{ name: 'Claim', type: 'string' }, { name: 'Claim ', type: 'string' }] },
+      ]),
+    ).toThrow(
+      'Annotation names "Claim" and "Claim " under "G" differ only by surrounding spaces, which makes answers to them indistinguishable. Rename one of them.',
+    )
+    expect(() => resolveSchema([{ name: '__proto__', type: 'string' }])).toThrow(
+      'Annotation name "__proto__" is not allowed: answers stored under it cannot be saved. Rename the field.',
+    )
+    expect(() =>
+      resolveSchema([{ name: 'G', children: [{ name: '__proto__', type: 'string' }] }]),
+    ).toThrow(
+      'Annotation name "__proto__" is not allowed (under "G"): answers stored under it cannot be saved. Rename the field.',
+    )
+  })
+
+  it('lists every unknown uniqueBy name, and states the instance budget', () => {
+    expect(() =>
+      resolveSchema([
+        {
+          name: 'G',
+          max: null,
+          unique: true,
+          uniqueBy: ['A', 'B'],
+          children: [{ name: 'C', type: 'string' }],
+        },
+      ]),
+    ).toThrow('"G": "uniqueBy" names unknown child field(s): "A", "B".')
+    expect(() => resolveSchema([{ name: 'X', type: 'string', min: 100_001, max: null }])).toThrow(
+      'This schema would create at least 100000 empty entries before anything is filled in. Lower the "min" values, or nest fewer repeated groups inside each other.',
+    )
+  })
 })
 
 describe('loadProject: input validation', () => {
