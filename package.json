@@ -16,6 +16,7 @@
     "test:integration": "vitest run --config vitest.integration.config.ts",
     "typecheck": "tsc -b --noEmit",
     "check:wiki": "node scripts/check-wiki-links.js",
+    "check:site": "node scripts/check-site-links.js",
     "scenario": "vite-node samples/git-scenarios/cli.ts"
   },
   "dependencies": {

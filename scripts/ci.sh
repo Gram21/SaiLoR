@@ -41,6 +41,9 @@ npm run typecheck
 step "Checking wiki links (openwiki/, user-guide/)"
 npm run check:wiki
 
+step "Checking project site links (site/)"
+npm run check:site
+
 step "Running tests (vitest)"
 npm run test:coverage
 
