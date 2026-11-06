@@ -51,6 +51,17 @@ describe('relPathProblem', () => {
     expect(relPathProblem('.git /config')).toBe('dot-git')
     expect(relPathProblem(' .git/config')).toBe('dot-git')
     expect(relPathProblem('.GIT. ./config')).toBe('dot-git')
+    // NTFS short name and alternate data stream of the same folder.
+    expect(relPathProblem('GIT~1/config')).toBe('dot-git')
+    expect(relPathProblem('a/git~12/config')).toBe('dot-git')
+    expect(relPathProblem('.git::$INDEX_ALLOCATION/config')).toBe('dot-git')
+    expect(relPathProblem('gitx/config')).toBeNull()
+  })
+
+  it('rejects paths that only name the repository root', () => {
+    for (const p of ['.', './', './.', './/.']) {
+      expect(relPathProblem(p)).toBe('empty')
+    }
   })
 
   it('rejects the empty path', () => {

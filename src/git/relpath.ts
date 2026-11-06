@@ -34,6 +34,9 @@ export function relPathProblem(p: string): RelPathProblem | null {
   // the repository.
   const segments = p.split(/[\\/]/)
   if (segments.includes('..')) return 'traversal'
+  // A path naming only the repository root (`.`, `./`) would make
+  // `git checkout -- .` act on the whole tree.
+  if (segments.every((seg) => seg === '' || seg === '.')) return 'empty'
 
   // `.git` is a perfectly valid relative path that is never project data, and
   // writing into it — `config`, `hooks/pre-commit` — is a code-execution
@@ -41,7 +44,15 @@ export function relPathProblem(p: string): RelPathProblem | null {
   // Win32 strips them from path components itself, so `.git.\config` and
   // ` .git/config` both open `.git` while a literal comparison sees two names
   // that are not `.git` and lets them through.
-  if (segments.some((seg) => seg.trim().toLowerCase().replace(/[. ]+$/, '') === '.git')) {
+  // The same folder is also reachable as the NTFS short name `GIT~1` and as an
+  // alternate data stream (`.git::$INDEX_ALLOCATION`), so only the part before
+  // the first `:` is compared.
+  if (
+    segments.some((seg) => {
+      const name = seg.split(':')[0].trim().toLowerCase().replace(/[. ]+$/, '')
+      return name === '.git' || /^git~\d+$/.test(name)
+    })
+  ) {
     return 'dot-git'
   }
   return null

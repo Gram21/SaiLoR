@@ -336,10 +336,19 @@ pub fn rel_path_problem(p: &str) -> Option<&'static str> {
     if segments.contains(&"..") {
         return Some("traversal");
     }
-    if segments
-        .iter()
-        .any(|s| js_trim(s).to_lowercase().trim_end_matches(['.', ' ']) == ".git")
-    {
+    if segments.iter().all(|s| s.is_empty() || *s == ".") {
+        return Some("empty");
+    }
+    if segments.iter().any(|s| {
+        let name = js_trim(s.split(':').next().unwrap_or(""))
+            .to_lowercase()
+            .trim_end_matches(['.', ' '])
+            .to_string();
+        name == ".git"
+            || name
+                .strip_prefix("git~")
+                .is_some_and(|d| !d.is_empty() && d.bytes().all(|b| b.is_ascii_digit()))
+    }) {
         return Some("dot-git");
     }
     None
@@ -2745,6 +2754,11 @@ mod tests {
             (".git /config", "dot-git"),
             (" .git/config", "dot-git"),
             (".GIT. ./config", "dot-git"),
+            ("GIT~1/config", "dot-git"),
+            ("a/git~12/config", "dot-git"),
+            (".git::$INDEX_ALLOCATION/config", "dot-git"),
+            (".", "empty"),
+            ("./", "empty"),
             ("", "empty"),
         ];
         for (p, want) in cases {
