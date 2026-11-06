@@ -114,6 +114,20 @@ describe('duplicateIndexes', () => {
     expect(duplicateIndexes(schema[3], [entry('x', 'y'), entry('x', 'z')])).toEqual([])
     expect(duplicateIndexes(schema[3], [entry('x', 'y'), entry('X', 'y')])).toEqual([[1, 0]])
   })
+
+  it('keeps inner spaces, choice case and numbers apart', () => {
+    expect(duplicateIndexes(kw, [{ value: 'deep learning' }, { value: 'deeplearning' }])).toEqual([])
+    expect(duplicateIndexes(schema[1], [{ value: 'ICSE' }, { value: 'icse' }])).toEqual([])
+    const year = resolveSchema([{ name: 'Year', type: 'number', max: null, unique: true }])[0]
+    expect(duplicateIndexes(year, [{ value: 2020 }, { value: 2021 }, { value: 2020 }])).toEqual([[2, 0]])
+  })
+
+  it('skips group entries with no answer anywhere', () => {
+    expect(duplicateIndexes(schema[3], [{}, {}])).toEqual([])
+    expect(duplicateIndexes(schema[3], [{ children: { A: [{ value: '' }] } }, { children: {} }])).toEqual([])
+    const role = (r: string) => ({ children: { Name: [{ value: '' }], Role: [{ value: r }] } })
+    expect(duplicateIndexes(schema[2], [role('a'), role('b')])).toEqual([])
+  })
 })
 
 describe('duplicateOnWrite', () => {
@@ -160,6 +174,42 @@ describe('duplicateOnWrite', () => {
       ),
     ).not.toBeNull()
   })
+
+  // [utest->req~dat-410~1]
+  it('checks a new group entry against its siblings, field by field', () => {
+    const pair = (a: string, b: string) => ({ children: { A: [{ value: a }], B: [{ value: b }] } })
+    const one = tree({ Pairs: [pair('x', 'y')] })
+    expect(duplicateOnWrite(schema, one, [{ name: 'Pairs', index: 1 }, { name: 'A', index: 0 }], 'x')).toBeNull()
+    const two = tree({ Pairs: [pair('x', 'y'), pair('x', '')] })
+    expect(duplicateOnWrite(schema, two, [{ name: 'Pairs', index: 1 }, { name: 'B', index: 0 }], 'Y')).toBe(
+      '"Pairs" already has this entry (#1). Each entry is allowed once.',
+    )
+    const authors = tree({ Authors: [{ children: { Name: [{ value: 'Ada' }] } }] })
+    expect(
+      duplicateOnWrite(schema, authors, [{ name: 'Authors', index: 1 }, { name: 'Name', index: 0 }], 'ada'),
+    ).not.toBeNull()
+  })
+
+  it('allows clearing an entry while another entry is empty', () => {
+    const withEmpty = tree({ Keywords: [{ value: 'NLP' }, { value: 'ML' }, { value: '' }] })
+    expect(duplicateOnWrite(schema, withEmpty, [{ name: 'Keywords', index: 1 }], '')).toBeNull()
+  })
+
+  it('gives no hint for an unknown field or an entry past the maximum', () => {
+    expect(duplicateOnWrite(schema, tree(), [{ name: 'Nope', index: 0 }], 'x')).toBeNull()
+    const capped = resolveSchema([{ name: 'K', type: 'string', min: 0, max: 2, unique: true }])
+    const full = { K: [{ value: 'a' }, { value: 'b' }] }
+    expect(duplicateOnWrite(capped, full, [{ name: 'K', index: 2 }], 'a')).toBeNull()
+  })
+
+  it('checks only the unique levels of a path', () => {
+    const nested = resolveSchema([
+      { name: 'G', min: 0, max: null, children: [{ name: 'Items', type: 'string', min: 0, max: null, unique: true }] },
+    ])
+    const t2 = { G: [{ children: { Items: [{ value: 'a' }] } }] }
+    expect(duplicateOnWrite(nested, t2, [{ name: 'G', index: 1 }, { name: 'Items', index: 0 }], 'a')).toBeNull()
+    expect(duplicateOnWrite(nested, t2, [{ name: 'G', index: 0 }, { name: 'Items', index: 1 }], 'A')).not.toBeNull()
+  })
 })
 
 // [utest->req~dat-410~1]
@@ -175,6 +225,13 @@ describe('dropDuplicateSuggestions', () => {
     ])
     expect(kept.map((k) => k.value)).toEqual(['ML', 'x'])
     expect(dropped.map((d) => d.suggestion.path)).toEqual(['Keywords[1]', 'Keywords[2]'])
+  })
+
+  it('keeps suggestions whose path does not resolve', () => {
+    const t = tree({ Keywords: [{ value: 'NLP' }] })
+    const far = { path: 'Keywords[10001]', value: 'nlp' }
+    const { kept } = dropDuplicateSuggestions(schema, t, [{ path: 'Nope[0]', value: 'x' }, far])
+    expect(kept.map((k) => k.path)).toEqual(['Nope[0]', 'Keywords[10001]'])
   })
 })
 
