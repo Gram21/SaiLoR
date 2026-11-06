@@ -971,6 +971,10 @@ copy‑paste runnable: save it as `project.json`, put the two PDFs under `pdfs/`
 recent projects. SaiLoR is a desktop (Tauri) app — see the [README](../README.md#deployment) for
 building installers.
 
+A project in the split layout opens in two steps. SaiLoR shows the papers first and then reads
+their annotation files in batches. Save, validation and the other whole-project features wait until
+every paper has loaded. See [Opening a large project](../README.md#opening-a-large-project).
+
 ---
 
 ## 8. Validation & common mistakes

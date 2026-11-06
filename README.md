@@ -9,10 +9,10 @@
 </p>
 
 A tool to assist reviewers during **Systematic Literature Reviews (SLR)** — the letters are in the
-name: **S**ai**L**o**R**. Open a single JSON "project" file that holds both an annotation schema
+name: **S**ai**L**o**R**. Open a project file (`project.json`) that holds both an annotation schema
 (a nested, cardinality-controlled taxonomy) and the papers to annotate. Read each paper's PDF, fill in typed
 annotation fields — optionally grabbing values straight from selected PDF text — and save the
-annotations back into the JSON.
+annotations into the `annotations/` folder next to the project file.
 
 SaiLoR is a **desktop app** ([Tauri](https://v2.tauri.app/)) — fully local, opens local PDF files, native Open/Save
 dialogs.
@@ -588,6 +588,42 @@ query…". A new query or closing the view stops the running query.
 
 If a query stops at the row limit or the work limit, the view tells you that the result is not
 complete. If a query runs longer than 20 seconds, SaiLoR stops it and shows an error.
+
+## Opening a large project
+
+SaiLoR opens a project in the split layout (`project.json` and `annotations/`) in two steps:
+
+1. SaiLoR reads `project.json` and shows all papers with their metadata.
+2. SaiLoR reads the files under `annotations/` in batches of 2000 papers.
+
+While the papers load, the paper list shows the progress, for example
+`Loading papers: 12,000 / 50,000`. Open and annotate each paper that has loaded. If the project
+opens on its first unfinished paper, SaiLoR selects that paper when its batch has loaded.
+
+These features read all papers. They stay disabled until the last paper has loaded:
+
+- **Save** and **Save as…**
+- **Validate** and **AI**
+- both items of the **Export ▾** menu
+- **Rescan** (the PDF folder scan) and **Git**
+- **☰ Overview** and **⚠ Disagreements** in the annotation panel
+- **◧ Summary**, **⚖ Agreement**, **⚠ Disagreements** and **Adopt all** in a screening project
+
+Each disabled control tells you why in its tooltip. SaiLoR also refuses the automatic save and
+the save on close until the last paper has loaded.
+
+If a batch cannot be read, the project stays open with the papers that have loaded and with your
+edits. SaiLoR shows the error. The paper list shows where the load stopped and a **Retry** button.
+Click **Retry** to read the failed batch again.
+
+**Warning:** Saving stays blocked until every paper has loaded. If you close the project before
+then, you lose your unsaved edits.
+
+If you close the project during the load, SaiLoR stops the load.
+
+A project in the legacy single-file layout opens in one step. SaiLoR must read and parse that file
+as a whole, so batches do not make the first view faster. To open a large legacy project in
+batches, save it once. The save writes the split layout.
 
 ## Saving
 
