@@ -1,7 +1,7 @@
 // [utest->req~ui-190~1]
 import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 vi.mock('../platform', () => ({
@@ -167,6 +167,17 @@ describe('GraphView', () => {
     await query('author:alan')
     expect(screen.queryByRole('table')).toBeNull()
     expect(listed().sort()).toEqual(['Author Alan Turing', 'Paper Testing Things'])
+  })
+
+  // [utest->req~ui-220~1]
+  it('reads the relation colours again when the theme changes', async () => {
+    open()
+    render(<GraphView onClose={() => {}} />)
+    await waitForLabel('Alan Turing')
+    const style = vi.spyOn(window, 'getComputedStyle')
+    act(() => useStore.getState().setTheme('dark'))
+    await waitFor(() => expect(style.mock.calls.some(([el]) => el === canvas())).toBe(true))
+    act(() => useStore.getState().setTheme('light'))
   })
 
   it('shows details and neighbours of a selected node and expands them', async () => {

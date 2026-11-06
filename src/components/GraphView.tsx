@@ -38,6 +38,7 @@ function PagedList<T>({ items, render }: { items: T[]; render: (item: T, i: numb
 
 export function GraphView({ onClose }: { onClose: () => void }) {
   const project = useStore((s) => s.project)
+  const theme = useStore((s) => s.theme)
   const t = useT()
   const [seat, setSeat] = useState('1')
   const [input, setInput] = useState('')
@@ -113,6 +114,12 @@ export function GraphView({ onClose }: { onClose: () => void }) {
       frame.current = 0
     }
   }, [requestDraw])
+
+  // [impl->req~ui-220~1]
+  useEffect(() => {
+    palette.current = null
+    requestDraw()
+  }, [theme, requestDraw])
 
   useEffect(() => {
     sceneRef.current = scene
