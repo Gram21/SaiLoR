@@ -7,6 +7,7 @@ import {
   assignedSeat,
   personPapers,
   missingFinishers,
+  liveAssignments,
   personCounts,
   bulkAssign,
   seatLocked,
@@ -101,6 +102,64 @@ describe('strict config on load', () => {
     expect(strictConfigJson(undefined)).toEqual({})
     expect(strictConfigJson({ enabled: false, persons: [], assignments: { a: [] } })).toEqual({})
   })
+
+  it('names the entry, paper and person in each problem and returns no config', () => {
+    const parse = (config: unknown) => parseStrictConfig(config, new Set(['a']))
+    expect(parse({ persons: {} })).toEqual({ problems: ['config.persons must be a list.'] })
+    expect(parse({ persons: [persons[0], { id: '', name: 'X' }] }).problems).toEqual([
+      'config.persons[1] needs a non-empty "id" and "name".',
+    ])
+    for (const bad of ['x', { id: 5, name: 'X' }, { id: 'p9', name: 5 }]) {
+      expect(parse({ persons: [bad] }).problems).toEqual(['config.persons[0] needs a non-empty "id" and "name".'])
+    }
+    expect(parse({ persons, assignments: [] }).problems).toEqual(['config.assignments must be an object.'])
+    expect(parse({ persons, assignments: { a: 'x' } }).problems).toEqual(['config.assignments["a"] must be a list.'])
+    expect(parse({ persons, assignments: { a: [{ person: 'zz', seat: 1 }] } }).problems).toEqual([
+      'Paper "a" is assigned to unknown person "zz".',
+    ])
+    for (const bad of [{ person: 5, seat: 1 }, { seat: 1 }]) {
+      expect(parse({ persons, assignments: { a: [bad] } }).problems).toEqual(['Paper "a" is assigned to unknown person "".'])
+    }
+    for (const seat of ['1', 1.5, 0]) {
+      expect(parse({ persons, assignments: { a: [{ person: 'p1', seat }] } })).toEqual({
+        problems: ['Paper "a" has an assignment whose seat is not a positive whole number.'],
+      })
+    }
+  })
+
+  it('reads persons alone, trims them, and ignores a config that is not an object', () => {
+    expect(parseStrictConfig('x', new Set())).toEqual({ problems: [] })
+    expect(parseStrictConfig(null, new Set())).toEqual({ problems: [] })
+    expect(parseStrictConfig({ assignments: { a: [{ person: 'p1', seat: 1 }] } }, new Set(['a'])).problems).toEqual([
+      'Paper "a" is assigned to unknown person "p1".',
+    ])
+    expect(parseStrictConfig({ persons: [{ id: ' p1 ', name: ' Ann ' }] }, new Set(['a']))).toEqual({
+      strict: { enabled: false, persons: [{ id: 'p1', name: 'Ann' }], assignments: {} },
+      problems: [],
+    })
+    expect(parseStrictConfig({ persons, assignments: { a: [] } }, new Set(['a'])).strict?.assignments).toEqual({})
+  })
+
+  it('writes papers in id order and their assignments in seat order', () => {
+    const out = strictConfigJson({
+      enabled: false,
+      persons: [],
+      assignments: {
+        b: [{ person: 'p1', seat: 1 }],
+        a: [
+          { person: 'p3', seat: 3 },
+          { person: 'p1', seat: 1 },
+          { person: 'p2', seat: 2 },
+        ],
+      },
+    }) as { assignments: Record<string, unknown> }
+    expect(Object.keys(out.assignments)).toEqual(['a', 'b'])
+    expect(out.assignments.a).toEqual([
+      { person: 'p1', seat: 1 },
+      { person: 'p2', seat: 2 },
+      { person: 'p3', seat: 3 },
+    ])
+  })
 })
 
 describe('strict helpers', () => {
@@ -142,6 +201,14 @@ describe('strict helpers', () => {
     expect(missingFinishers(project, { id: 'c', reviewsFinished: {} })).toEqual([])
   })
 
+  it('skips unknown persons and copes with a project without strict config', () => {
+    const stray = { ...project, strict: { ...strict, assignments: { a: [{ person: 'zz', seat: 1 }] } } }
+    expect(missingFinishers(stray, { id: 'a', reviewsFinished: {} })).toEqual([])
+    const plain = { ...project, strict: undefined }
+    expect(missingFinishers(plain, { id: 'a', reviewsFinished: {} })).toEqual([])
+    expect(liveAssignments(plain, 'a')).toEqual([])
+  })
+
   it('counts assigned and finished papers per person', () => {
     const counts = personCounts(strict, 2, (key, seat) => key === 'a' && seat === 1)
     expect(counts).toEqual({ p1: { assigned: 2, finished: 1 }, p2: { assigned: 1, finished: 0 }, p3: { assigned: 0, finished: 0 } })
@@ -156,6 +223,7 @@ describe('strict helpers', () => {
       d: [{ person: 'p2', seat: 1 }, { person: 'p3', seat: 2 }],
     })
     expect(bulkAssign(persons, ['a'], {}, 5, [1])).toEqual({ a: [{ person: 'p1', seat: 1 }] })
+    expect(bulkAssign([persons[0]], ['a'], {}, 2, [1, 2])).toEqual({ a: [{ person: 'p1', seat: 1 }] })
     expect(bulkAssign([], ['a'], {}, 2, [1, 2])).toEqual({})
   })
 })
@@ -200,6 +268,7 @@ describe('edit lock record', () => {
     expect(seatLocked(on, 'a', '1')).toBe(true)
     expect(seatLocked(on, 'a', '2')).toBe(false)
     expect(seatLocked(on, 'b', '1')).toBe(false)
+    expect(seatLocked(on, 'zz', '1')).toBe(false)
     expect(seatLocked(on, null, '1')).toBe(false)
     expect(seatLocked(loadProject(lockedFile(false)), 'a', '1')).toBe(false)
     expect(serializeProject(loadProject(file({})))).not.toContain('reviewsLock')
