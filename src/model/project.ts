@@ -938,13 +938,9 @@ function promptOverridesField(o: PromptOverrides | undefined): { promptOverrides
   return clean ? { promptOverrides: clean } : {}
 }
 
-/**
- * Serialize a Project back to the on-disk JSON shape. `config` is written from
- * the resolved schema, annotations are pruned of trailing empties, and any
- * preserved `extra` fields are re-emitted.
- */
-export function serializeProject(project: Project): string {
-  const out: Record<string, unknown> = {
+/** The project fields up to and including `config`, shared by the single-file and split writers. */
+function projectHead(project: Project): Record<string, unknown> {
+  return {
     version: project.version,
     ...(project.title ? { title: project.title } : {}),
     // Only written when this project was actually imported from another —
@@ -972,22 +968,39 @@ export function serializeProject(project: Project): string {
       ...pdfFolderFields(project.pdfFolder, project.crossrefLookup),
       ...promptOverridesField(project.promptOverrides),
     },
+  }
+}
+
+/** The citation fields of a paper, in file order, shared by the single-file and split writers. */
+function paperHead(p: Paper): Record<string, unknown> {
+  const paper: Record<string, unknown> = {
+    id: p.id,
+    title: p.title,
+    authors: p.authors,
+  }
+  // Placed after authors, before doi, so a hand-read file reads like a
+  // citation: who, when, where, then the identifiers.
+  if (p.year !== undefined) paper.year = p.year
+  if (p.venue) paper.venue = p.venue
+  if (p.doi !== undefined) paper.doi = p.doi
+  if (p.abstract !== undefined && p.abstract !== '') paper.abstract = p.abstract
+  // Only written alongside a real abstract and only when true, so a typed
+  // or imported abstract stays as clean as before this field existed.
+  if (p.abstractFromPdf && p.abstract) paper.abstractFromPdf = true
+  paper.pdf = p.pdf
+  return paper
+}
+
+/**
+ * Serialize a Project back to the on-disk JSON shape. `config` is written from
+ * the resolved schema, annotations are pruned of trailing empties, and any
+ * preserved `extra` fields are re-emitted.
+ */
+export function serializeProject(project: Project): string {
+  const out: Record<string, unknown> = {
+    ...projectHead(project),
     papers: [...project.papers].sort(comparePapers).map((p) => {
-      const paper: Record<string, unknown> = {
-        id: p.id,
-        title: p.title,
-        authors: p.authors,
-      }
-      // Placed after authors, before doi, so a hand-read file reads like a
-      // citation: who, when, where, then the identifiers.
-      if (p.year !== undefined) paper.year = p.year
-      if (p.venue) paper.venue = p.venue
-      if (p.doi !== undefined) paper.doi = p.doi
-      if (p.abstract !== undefined && p.abstract !== '') paper.abstract = p.abstract
-      // Only written alongside a real abstract and only when true, so a typed
-      // or imported abstract stays as clean as before this field existed.
-      if (p.abstractFromPdf && p.abstract) paper.abstractFromPdf = true
-      paper.pdf = p.pdf
+      const paper = paperHead(p)
       paper.annotations = serializedTree(project.schema, p.annotations)
       // Single-reviewer papers have no reviewer trees, so `reviews` stays empty
       // and is omitted below; `normalizeReviews` gives multi-reviewer papers a
@@ -1104,13 +1117,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
   const reviewerName = project.screening ? 'screening' : 'reviewer'
   const consolidatedName = project.screening ? 'screening-consolidated' : 'consolidated'
   const metaPapers = [...project.papers].sort(comparePapers).map((p) => {
-    const paper: Record<string, unknown> = { id: p.id, title: p.title, authors: p.authors }
-    if (p.year !== undefined) paper.year = p.year
-    if (p.venue) paper.venue = p.venue
-    if (p.doi !== undefined) paper.doi = p.doi
-    if (p.abstract !== undefined && p.abstract !== '') paper.abstract = p.abstract
-    if (p.abstractFromPdf && p.abstract) paper.abstractFromPdf = true
-    paper.pdf = p.pdf
+    const paper = paperHead(p)
 
     // Configured range plus any reviewer number already kept despite falling
     // outside it — lowering `config.reviewers` must not be what deletes that
@@ -1189,24 +1196,7 @@ export function splitProjectFiles(project: Project): { meta: unknown; files: Pro
   })
 
   const meta = {
-    version: project.version,
-    ...(project.title ? { title: project.title } : {}),
-    ...(project.provenance ? { provenance: project.provenance } : {}),
-    ...(project.protocol ? { protocol: project.protocol } : {}),
-    ...(project.schemaInfo ? { schemaInfo: project.schemaInfo } : {}),
-    ...schemaVersionKeys(project),
-    config: {
-      schema: dehydrateSchema(project.schema),
-      ...(project.aiEnabled ? { ai: true } : {}),
-      ...(project.finishCheckbox ? {} : { finishCheckbox: false }),
-      ...(project.reviewers > 1 ? { reviewers: project.reviewers } : {}),
-      ...(project.aiSeat ? { aiSeat: true } : {}),
-      ...(project.screening ? { screening: { reasons: project.screening.reasons } } : {}),
-      ...strictConfigJson(project.strict),
-      ...metadataEditField(project.metadataEdit),
-      ...pdfFolderFields(project.pdfFolder, project.crossrefLookup),
-      ...promptOverridesField(project.promptOverrides),
-    },
+    ...projectHead(project),
     papers: metaPapers,
     ...project.extra,
   }
