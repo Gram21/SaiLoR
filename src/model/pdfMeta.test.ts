@@ -77,6 +77,29 @@ describe('parseAuthorList', () => {
     ])
   })
 
+  it('strips affiliation digits only at the start or end of a name', () => {
+    expect(parseAuthorList('Jane Doe, 1 John Smith')).toEqual(['Jane Doe', 'John Smith'])
+    expect(parseAuthorList('12 Jane Doe')).toEqual(['Jane Doe'])
+    expect(parseAuthorList('1Jane Doe')).toEqual(['Jane Doe'])
+    expect(parseAuthorList('Jane Doe1')).toEqual(['Jane Doe'])
+    expect(parseAuthorList('Jane Doe 12')).toEqual(['Jane Doe'])
+    expect(parseAuthorList('Jane 2 Doe')).toEqual(['Jane 2 Doe'])
+    expect(parseAuthorList('Jane   Doe')).toEqual(['Jane Doe'])
+  })
+
+  it('keeps names of 3 to 60 characters that contain a letter', () => {
+    expect(parseAuthorList('Al, Ann')).toEqual(['Ann'])
+    expect(parseAuthorList(`${'x'.repeat(56)} Doe, ${'x'.repeat(57)} Doe`)).toEqual([`${'x'.repeat(56)} Doe`])
+    expect(parseAuthorList('Jane Doe, ...')).toEqual(['Jane Doe'])
+  })
+
+  it('in strict mode, takes 2 to 5 tokens that each start upper-case or are a particle', () => {
+    expect(parseAuthorList('Jane Mary Ann van Berg', true)).toEqual(['Jane Mary Ann van Berg'])
+    expect(parseAuthorList('Jane Mary Ann Lee Van Berg', true)).toEqual([])
+    expect(parseAuthorList('Jane doe', true)).toEqual([])
+    expect(parseAuthorList('Jane deVries', true)).toEqual([])
+  })
+
   it('is lenient by default so metadata forms like "Doe, Jane" survive', () => {
     expect(parseAuthorList('Doe, Jane')).toEqual(['Doe', 'Jane'])
   })
@@ -105,6 +128,22 @@ describe('isPlausibleTitle', () => {
     expect(isPlausibleTitle('Paper')).toBe(false)
     expect(isPlausibleTitle('12345')).toBe(false)
     expect(isPlausibleTitle('short')).toBe(false)
+  })
+
+  it('measures 6 to 300 characters after trimming', () => {
+    expect(isPlausibleTitle('ab cd')).toBe(false)
+    expect(isPlausibleTitle('ab cde')).toBe(true)
+    expect(isPlausibleTitle('   ab c')).toBe(false)
+    expect(isPlausibleTitle(`${'a'.repeat(297)} bc`)).toBe(true)
+    expect(isPlausibleTitle(`${'a'.repeat(298)} bc`)).toBe(false)
+  })
+
+  it('rejects a junk prefix, a trailing file extension and a single word on their own', () => {
+    expect(isPlausibleTitle('Untitled Draft Copy')).toBe(false)
+    expect(isPlausibleTitle('final paper.doc')).toBe(false)
+    expect(isPlausibleTitle('Reading .pdf Files Safely')).toBe(true)
+    expect(isPlausibleTitle('Introductions')).toBe(false)
+    expect(isPlausibleTitle('Deep Learning')).toBe(true)
   })
 })
 
@@ -139,6 +178,41 @@ describe('toLines', () => {
     expect(lines).toHaveLength(1)
     expect(lines[0].text).toBe('Caf\u00e9')
     expect(lines[0].segments).toEqual([{ x: 0, text: 'Caf\u00e9' }])
+  })
+
+  const at = (str: string, x: number, width?: number, size = 10, y = 100) => ({
+    str,
+    transform: [0, 0, 0, size, x, y],
+    width,
+  })
+
+  it('splits a line at a gap wider than 1.5 times the font size, and joins the columns with a space', () => {
+    const lines = toLines([at('Jan  Keim ', 50, 40), at('Angelika Kaplan', 300, 70)])
+    expect(lines).toStrictEqual([
+      {
+        y: 100,
+        size: 10,
+        text: 'Jan Keim Angelika Kaplan',
+        segments: [
+          { x: 50, text: 'Jan Keim' },
+          { x: 300, text: 'Angelika Kaplan' },
+        ],
+      },
+    ])
+  })
+
+  it('does not split at a gap of exactly 1.5 times the font size', () => {
+    expect(toLines([at('A', 0, 10), at('B', 25, 10)])[0].segments).toEqual([{ x: 0, text: 'AB' }])
+  })
+
+  it('never splits after a run of zero width', () => {
+    expect(toLines([at('Foo', 0, 0), at('Bar', 100, 0)])[0].segments).toEqual([{ x: 0, text: 'FooBar' }])
+  })
+
+  it('ignores a whitespace-only item, even for the font size', () => {
+    expect(toLines([at('Title', 0, 20), at('  ', 30, 5, 30)])).toStrictEqual([
+      { y: 100, size: 10, text: 'Title', segments: [{ x: 0, text: 'Title' }] },
+    ])
   })
 })
 
@@ -342,6 +416,104 @@ describe('titleAndAuthorsFromLines', () => {
     )
     expect(meta.authors).toEqual(['Jane Doe', 'John Smith'])
   })
+
+  it('reads only lines strictly above 45% of the page height', () => {
+    expect(titleAndAuthorsFromLines([line(450, 20, 'Footer Text Here')], 1000)).toEqual({})
+  })
+
+  it('takes title lines within 0.5pt of the largest size, up to the last line', () => {
+    const meta = titleAndAuthorsFromLines(
+      [line(720, 17.5, 'Deep Learning'), line(700, 18, 'for Code'), line(680, 17.5, 'Search Today')],
+      page,
+    )
+    expect(meta).toStrictEqual({ title: 'Deep Learning for Code Search Today' })
+  })
+
+  it('ends the title at a title-sized Abstract heading', () => {
+    const meta = titleAndAuthorsFromLines(
+      [line(700, 18, 'A Title That Is Long Enough'), line(680, 18, 'Abstract')],
+      page,
+    )
+    expect(meta).toStrictEqual({ title: 'A Title That Is Long Enough' })
+  })
+
+  it('looks for the author line only in the 4 lines below the title', () => {
+    const filler = ['Institute of Testing', 'University of Examples', 'jane@example.edu']
+    const lines = (extra: string[]) => [
+      line(700, 18, 'A Title That Is Long Enough'),
+      ...[...filler, ...extra, 'Jane Doe'].map((text, n) => line(680 - n * 12, 11, text)),
+    ]
+    expect(titleAndAuthorsFromLines(lines([]), page).authors).toEqual(['Jane Doe'])
+    expect(titleAndAuthorsFromLines(lines(['Department of Samples']), page).authors).toBeUndefined()
+  })
+
+  it('takes no author line below a smaller Abstract heading', () => {
+    const meta = titleAndAuthorsFromLines(
+      [line(700, 18, 'A Title That Is Long Enough'), line(670, 11, 'Abstract'), line(650, 11, 'Jane Doe')],
+      page,
+    )
+    expect(meta.authors).toBeUndefined()
+  })
+
+  it('looks for a wrapped list up to 3 lines below the author line', () => {
+    const lines = (superscripts: number) => [
+      line(700, 18, 'A Title That Is Long Enough'),
+      line(670, 11, 'Jane Doe, John Smith, Ada'),
+      ...Array.from({ length: superscripts }, (_, n) => line(664 - n * 2, 7, '1 2')),
+      line(650, 11, 'Lovelace'),
+    ]
+    expect(titleAndAuthorsFromLines(lines(2), page).authors).toEqual(['Jane Doe', 'John Smith', 'Ada Lovelace'])
+    expect(titleAndAuthorsFromLines(lines(3), page).authors).toEqual(['Jane Doe', 'John Smith'])
+  })
+
+  it('does not join an Abstract heading onto a wrapped list', () => {
+    const meta = titleAndAuthorsFromLines(
+      [line(700, 18, 'A Title That Is Long Enough'), line(670, 11, 'Jane Doe, John Smith, Ada'), line(658, 11, 'Abstract')],
+      page,
+    )
+    expect(meta.authors).toEqual(['Jane Doe', 'John Smith'])
+  })
+
+  it('treats a line at exactly 85% of the author size as part of the list, not a superscript', () => {
+    const meta = titleAndAuthorsFromLines(
+      [line(700, 18, 'A Title That Is Long Enough'), line(670, 10, 'Jane Doe, John Smith, Ada'), line(660, 8.5, 'Lovelace')],
+      page,
+    )
+    expect(meta.authors).toEqual(['Jane Doe', 'John Smith', 'Ada Lovelace'])
+  })
+
+  it('keeps a following line only when it adds a name', () => {
+    const meta = titleAndAuthorsFromLines(
+      [line(700, 18, 'A Title That Is Long Enough'), line(670, 11, 'Jane Doe, John Smith'), line(658, 11, 'Senior Member')],
+      page,
+    )
+    expect(meta.authors).toEqual(['Jane Doe', 'John Smith'])
+  })
+
+  it('grows a wrapped list over several lines', () => {
+    const meta = titleAndAuthorsFromLines(
+      [
+        line(700, 18, 'A Title That Is Long Enough'),
+        line(670, 11, 'Jane Doe, John Smith, Ada'),
+        line(658, 11, 'Lovelace, and Alan'),
+        line(646, 11, 'Turing'),
+      ],
+      page,
+    )
+    expect(meta.authors).toEqual(['Jane Doe', 'John Smith', 'Ada Lovelace', 'Alan Turing'])
+  })
+
+  it('continues a column within 12pt, and skips a line with nothing in that column', () => {
+    const meta = titleAndAuthorsFromLines(
+      [
+        line(700, 18, 'A Title That Is Long Enough'),
+        columns(670, 11, ['Jan Keim, Ada', 'Angelika Kaplan']),
+        { y: 658, size: 11, text: 'Lovelace', segments: [{ x: LEFT_X + 12, text: 'Lovelace' }] },
+      ],
+      page,
+    )
+    expect(meta.authors).toEqual(['Jan Keim', 'Ada Lovelace', 'Angelika Kaplan'])
+  })
 })
 
 describe('abstractFromLines', () => {
@@ -486,6 +658,47 @@ describe('abstractFromLines', () => {
   it('rejects a match that is implausibly short', () => {
     expect(abstractFromLines([...FRONT_MATTER, line(600, 10, 'Abstract'), line(585, 10, 'Too short.')])).toBeUndefined()
   })
+
+  it('accepts 150 to 4000 characters', () => {
+    const of = (length: number) => abstractFromLines([...FRONT_MATTER, line(600, 10, 'Abstract'), line(585, 10, 'x'.repeat(length))])
+    expect(of(149)).toBeUndefined()
+    expect(of(150)).toBe('x'.repeat(150))
+    expect(of(4000)).toBe('x'.repeat(4000))
+    expect(of(4001)).toBeUndefined()
+  })
+
+  it('skips an Abstract heading set within 0.5pt of the largest size, so a long body under it is not read', () => {
+    const body = [line(650, 10, SENTENCE_1), line(635, 10, SENTENCE_2)]
+    expect(abstractFromLines([line(700, 18, 'Abstract Interpretation of Concurrent Programs'), ...body])).toBeUndefined()
+    expect(abstractFromLines([line(700, 18, 'A Title'), line(670, 17.5, 'Abstract'), ...body])).toBeUndefined()
+  })
+
+  it('reads at most 40 lines after the heading', () => {
+    const body = Array.from({ length: 45 }, (_, n) => line(580 - n * 10, 10, `Line ${n + 1} of the abstract.`))
+    const abstract = abstractFromLines([...FRONT_MATTER, line(600, 10, 'Abstract'), ...body])
+    expect(abstract).toMatch(/^Line 1 of the abstract\..* Line 40 of the abstract\.$/)
+  })
+
+  it('follows a column segment that starts 12pt off the heading', () => {
+    const shifted = (y: number, text: string) => ({ y, size: 10, text, segments: [{ x: LEFT_X + 12, text }] })
+    const abstract = abstractFromLines([
+      ...FRONT_MATTER,
+      line(600, 10, 'Abstract'),
+      shifted(585, SENTENCE_1),
+      shifted(570, SENTENCE_2),
+    ])
+    expect(abstract).toBe(`${SENTENCE_1} ${SENTENCE_2}`)
+  })
+
+  it('does not heal a hyphen when the next line starts upper-case', () => {
+    const abstract = abstractFromLines([
+      ...FRONT_MATTER,
+      line(600, 10, 'Abstract'),
+      line(585, 10, `${SENTENCE_1} Case-`),
+      line(570, 10, `Based reasoning. ${SENTENCE_2}`),
+    ])
+    expect(abstract).toContain('Case- Based reasoning.')
+  })
 })
 
 /**
@@ -583,5 +796,80 @@ describe('extractPdfMeta against real PDFs', () => {
   it('returns no abstract for a PDF that has none, rather than guessing', async () => {
     const meta = await extractPdfMeta(loadPdf('samples/pdfs/multipage.pdf'))
     expect(meta.abstract).toBeUndefined()
+  })
+
+  it('returns nothing for data that is not a PDF', async () => {
+    expect(await extractPdfMeta(new Uint8Array(Buffer.from('not a pdf')).buffer)).toStrictEqual({})
+  })
+
+  /** A one-page US Letter PDF: `info` is the Info dictionary, each line is Helvetica text at y. */
+  const buildPdf = (info: Record<string, string>, lines: { y: number; size: number; text: string }[]): ArrayBuffer => {
+    const content = lines.map((l) => `BT /F1 ${l.size} Tf 72 ${l.y} Td (${l.text}) Tj ET`).join('\n')
+    const objects = [
+      '<< /Type /Catalog /Pages 2 0 R >>',
+      '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+      '<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>',
+      `<< /Length ${content.length} >>\nstream\n${content}\nendstream`,
+      '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>',
+      `<< ${Object.entries(info)
+        .map(([key, value]) => `/${key} (${value})`)
+        .join(' ')} >>`,
+    ]
+    let pdf = '%PDF-1.4\n'
+    const offsets = objects.map((body, n) => {
+      const offset = pdf.length
+      pdf += `${n + 1} 0 obj\n${body}\nendobj\n`
+      return offset
+    })
+    const xref = pdf.length
+    pdf += `xref\n0 ${objects.length + 1}\n0000000000 65535 f \n`
+    pdf += offsets.map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`).join('')
+    pdf += `trailer\n<< /Size ${objects.length + 1} /Root 1 0 R /Info 6 0 R >>\nstartxref\n${xref}\n%%EOF\n`
+    return new Uint8Array(Buffer.from(pdf, 'latin1')).buffer
+  }
+
+  const PAGE = [
+    { y: 700, size: 18, text: 'Layout Title of the Paper' },
+    { y: 670, size: 11, text: 'Ada Lovelace, Alan Turing' },
+    { y: 650, size: 10, text: 'DOI 10.9999/page.1' },
+    { y: 640, size: 10, text: 'Karlsruhe Institute of Technology' },
+  ]
+
+  it('prefers the metadata title, authors and DOI over the page', async () => {
+    const meta = await extractPdfMeta(
+      buildPdf(
+        { Title: 'Metadata Title of the Paper', Author: 'Jane Doe; John Smith', Subject: 'doi:10.1234/meta.5', Keywords: 'code search' },
+        PAGE,
+      ),
+    )
+    expect(meta).toStrictEqual({
+      title: 'Metadata Title of the Paper',
+      authors: ['Jane Doe', 'John Smith'],
+      doi: '10.1234/meta.5',
+    })
+  })
+
+  it('falls back to the page for an implausible title and a missing author', async () => {
+    const meta = await extractPdfMeta(buildPdf({ Title: 'untitled' }, PAGE))
+    expect(meta).toStrictEqual({
+      title: 'Layout Title of the Paper',
+      authors: ['Ada Lovelace', 'Alan Turing'],
+      doi: '10.9999/page.1',
+    })
+  })
+
+  it('takes from the page only the field the metadata lacks', async () => {
+    const authorsFromPage = await extractPdfMeta(buildPdf({ Title: 'Metadata Title of the Paper' }, PAGE))
+    expect(authorsFromPage.title).toBe('Metadata Title of the Paper')
+    expect(authorsFromPage.authors).toEqual(['Ada Lovelace', 'Alan Turing'])
+
+    const titleFromPage = await extractPdfMeta(buildPdf({ Author: 'Jane Doe' }, PAGE))
+    expect(titleFromPage.title).toBe('Layout Title of the Paper')
+    expect(titleFromPage.authors).toEqual(['Jane Doe'])
+  })
+
+  it('reads the page authors when no metadata author is a person', async () => {
+    const meta = await extractPdfMeta(buildPdf({ Author: 'Department of Computer Science' }, PAGE))
+    expect(meta.authors).toEqual(['Ada Lovelace', 'Alan Turing'])
   })
 })
