@@ -220,6 +220,7 @@ inspection only.
 | REQ-UI-190 | Knowledge graph view | Functional · Usability | `src/components/GraphView.tsx` (`GraphView`)<br>`src/components/Toolbar.tsx` (`Toolbar`)<br>`src/styles/index.css` (`.graph-view`) | `src/components/GraphView.test.tsx`<br>`src/components/Toolbar.test.tsx` | — | — |
 | REQ-UI-200 | Knowledge graph query | Functional · Functional Suitability, Usability | `src/model/graphQuery.ts` (`parseQuery`, `indexGraph`)<br>`src/components/GraphView.tsx` (`GraphView`) | `src/model/graphQuery.test.ts`<br>`src/components/GraphView.test.tsx` | — | — |
 | REQ-UI-210 | Knowledge graph sub-graph and performance | Functional · Functional Suitability, Performance Efficiency | `src/model/graphQuery.ts` (`selectSubgraph`, `neighbours`)<br>`src/model/graphLayout.ts` (`createLayout`, `layoutHost`, `layoutSettings`)<br>`src/model/graphLayout.worker.ts`<br>`src/components/graphCanvas.ts` (`cull`, `drawScene`, `hitTest`)<br>`src/components/GraphView.tsx` (`GraphView`) | `src/model/graphQuery.test.ts`<br>`src/model/graphLayout.test.ts`<br>`src/components/graphCanvas.test.ts`<br>`src/components/GraphView.test.tsx` | — | — |
+| REQ-UI-220 | Knowledge graph relations | Functional · Usability, Performance Efficiency | `src/components/graphCanvas.ts` (`buildScene`, `drawScene`, `selectNode`, `edgeAt`)<br>`src/components/GraphView.tsx` (`GraphView`)<br>`src/styles/index.css` (`.graph-legend`) | `src/components/graphCanvas.test.ts`<br>`src/components/GraphView.test.tsx` | — | — |
 
 ## Screening ([screening.md](screening.md))
 

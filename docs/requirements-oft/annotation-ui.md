@@ -1039,3 +1039,18 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Functional_Suitability, Performance_Efficiency
+
+### REQ-UI-220: Knowledge graph relations
+`req~ui-220~1`
+
+The knowledge graph view shall draw each edge type with its own colour and line style: answer (solid), authored by (dashed), published in (dotted), keyword (dash-dot) and cites (long dash). The view shall draw solid lines at a zoom below 0.3. At a zoom of 0.8 or more, the view shall draw an arrowhead at the target end of each visible edge. When the pointer is on an edge and not on a node, the canvas shall show the edge type, the source label and the target label as a tooltip. When a node is selected, the view shall draw its edges and its neighbours strong and dim the other nodes and edges. The view shall have a "Relations" legend with one checkbox per edge type. A cleared checkbox shall hide the edges of that type. Hidden edges shall not show a tooltip and shall not count for the selection highlight. The view shall draw all edges of one type in one path. The automated benchmarks of REQ-UI-210 shall use all edge types. For 50 000 nodes, they shall draw a zoomed-in frame with arrowheads and a selection in less than 500 milliseconds, select a node in less than 100 milliseconds and find the edge at the pointer in less than 25 milliseconds on average.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability, Performance Efficiency)
+- **Evidence:** `src/components/graphCanvas.ts` (`buildScene`, `drawScene`, `selectNode`, `edgeAt`), `src/components/GraphView.tsx` (`GraphView`), `src/styles/index.css` (`.graph-legend`)
+- **Verified by:** `src/components/graphCanvas.test.ts`, `src/components/GraphView.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Usability, Performance_Efficiency

@@ -159,3 +159,5 @@ per category so requirements can be inserted without renumbering.
   draws on a canvas, culls to the visible area, and calculates the layout in a background worker.
   REQ-UI-190 revised for "Reset view", the node tooltip and the "Show more" button of the lists.
   The requirement count did not change.
+- **Knowledge graph relations (2026-11-06).** REQ-UI-220 added for the edge colours and line styles per type,
+  the arrowheads, the edge tooltip, the selection highlight and the edge-type legend. The coverage counts above were not recounted.
