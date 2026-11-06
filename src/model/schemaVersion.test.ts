@@ -266,6 +266,24 @@ describe('loading files written under an older schema version', () => {
     expect(project.papers[0].reviews['1'].New).toEqual([{ value: 'old' }])
   })
 
+  it('treats an empty or non-string file version as no version', () => {
+    for (const v of ['', 42]) {
+      const text = JSON.stringify({ schemaVersion: v, annotations: { Old: [{ value: 'old' }] } })
+      const project = projectFromFiles(meta([mv('Old', 'New')]), [['p/reviewer-1.json', text]])
+      expect(project.papers[0].reviews['1'].New).toEqual([{ value: 'old' }])
+      expect(project.papers[0].unknownSchemaFiles).toBeUndefined()
+    }
+  })
+
+  it('reads a paper whose schemaVersions record is null or an array as having no versions', () => {
+    for (const schemaVersions of [null, ['v1']]) {
+      const raw = meta([mv('Old', 'New')])
+      const paper = { ...raw.papers[0], reviews: { '1': { Old: [{ value: 'old' }] } }, schemaVersions }
+      const project = loadProject({ ...raw, papers: [paper] })
+      expect(project.papers[0].reviews['1'].New).toEqual([{ value: 'old' }])
+    }
+  })
+
   // [utest->req~dat-168~1]
   it('leaves a file of an unknown version alone, and says so', () => {
     const project = projectFromFiles(meta([mv('Old', 'New')]), [['p/reviewer-1.json', file('stranger', 'x')]])
