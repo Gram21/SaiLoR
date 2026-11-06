@@ -1,0 +1,51 @@
+{
+  "annotations": {
+    "Relevant": [
+      {
+        "value": true
+      }
+    ],
+    "Study Type": [
+      {
+        "value": "Technique or approach"
+      }
+    ],
+    "Year": [
+      {
+        "value": 2025
+      }
+    ],
+    "Findings": [
+      {
+        "children": {
+          "Claim": [
+            {
+              "value": "Makes prompt-related concerns explicit and analyzable in LLM-based systems."
+            }
+          ],
+          "Evidence": [
+            {
+              "children": {
+                "Evaluation Type": [
+                  {
+                    "value": "Case study"
+                  }
+                ]
+              }
+            }
+          ],
+          "Confidence": [
+            {
+              "value": 3
+            }
+          ]
+        }
+      }
+    ],
+    "Notes": [
+      {
+        "value": "Treats LLM interactions as an architecture concern (GenAIware). Borderline include."
+      }
+    ]
+  }
+}

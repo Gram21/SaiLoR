@@ -1,0 +1,52 @@
+{
+  "annotations": {
+    "Relevant": [
+      {
+        "value": false
+      }
+    ],
+    "Study Type": [
+      {
+        "value": "Vision or roadmap"
+      }
+    ],
+    "Year": [
+      {
+        "value": 2025
+      }
+    ],
+    "Findings": [
+      {
+        "children": {
+          "Claim": [
+            {
+              "value": "Generative AI transforms software engineering processes and software products."
+            }
+          ],
+          "Evidence": [
+            {
+              "children": {
+                "Evaluation Type": [
+                  {
+                    "value": "None"
+                  }
+                ]
+              }
+            }
+          ],
+          "Confidence": [
+            {
+              "value": 2
+            }
+          ]
+        }
+      }
+    ],
+    "Notes": [
+      {
+        "value": "General SE roadmap. Software architecture is not covered."
+      }
+    ]
+  },
+  "finished": true
+}

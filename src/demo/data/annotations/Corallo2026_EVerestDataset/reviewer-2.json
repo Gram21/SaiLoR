@@ -1,0 +1,52 @@
+{
+  "annotations": {
+    "Relevant": [
+      {
+        "value": false
+      }
+    ],
+    "Study Type": [
+      {
+        "value": "Dataset"
+      }
+    ],
+    "Year": [
+      {
+        "value": 2026
+      }
+    ],
+    "Findings": [
+      {
+        "children": {
+          "Claim": [
+            {
+              "value": "Focuses on security verification rather than architecture knowledge."
+            }
+          ],
+          "Evidence": [
+            {
+              "children": {
+                "Evaluation Type": [
+                  {
+                    "value": "None"
+                  }
+                ]
+              }
+            }
+          ],
+          "Confidence": [
+            {
+              "value": 2
+            }
+          ]
+        }
+      }
+    ],
+    "Notes": [
+      {
+        "value": "Security focus. Outside this review."
+      }
+    ]
+  },
+  "finished": true
+}
