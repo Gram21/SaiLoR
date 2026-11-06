@@ -1,7 +1,9 @@
+import { DEMO_MODE } from '../demo/mode'
 // [impl->req~plt-340~1]
 // [impl->req~ui-40~1]
 // [impl->req~ui-90~1]
 // [impl->req~plt-170~1]
+
 /**
  * App appearance settings (theme + font scaling), persisted to localStorage and
  * applied to the document root. These affect the app chrome only — the PDF is
@@ -117,6 +119,8 @@ function isLanguage(value: unknown): value is Language {
 export function loadLanguage(): Language {
   const stored = safeGet(LANGUAGE_KEY)
   if (isLanguage(stored)) return stored
+  // [impl->req~plt-450~1]
+  if (DEMO_MODE) return 'en'
   const browser = typeof navigator !== 'undefined' ? navigator.language?.split('-')[0]?.toLowerCase() : undefined
   return isLanguage(browser) ? browser : 'en'
 }
