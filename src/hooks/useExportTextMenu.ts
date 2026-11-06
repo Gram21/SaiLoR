@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import { getPlatform } from '../platform'
 import { copyText } from '../clipboard'
 import type { MenuItem } from '../components/Dropdown'
@@ -21,9 +21,12 @@ export function useExportTextMenu(getText: () => string, suggestedFileName: stri
   const [status, setStatus] = useState<string | null>(null)
   const t = useT()
 
+  const timer = useRef<number>()
+  useEffect(() => () => window.clearTimeout(timer.current), [])
   const announce = (message: string) => {
     setStatus(message)
-    window.setTimeout(() => setStatus(null), 3000)
+    window.clearTimeout(timer.current)
+    timer.current = window.setTimeout(() => setStatus(null), 3000)
   }
 
   const items: MenuItem[] = [

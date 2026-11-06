@@ -266,8 +266,10 @@ function FieldLinkPopover({ path, name, index, triggerRef, onClose }: FieldLinkP
   // Auto-link the mark the reviewer just made, once — see `lastCreatedMarkId`.
   // `linkMarkToField` already no-ops on an unknown id or existing link.
   useEffect(() => {
-    if (willAutoLink) linkMark(lastCreatedMarkId!, path, name, index)
-    setLastCreatedMarkId(null)
+    if (willAutoLink) {
+      linkMark(lastCreatedMarkId!, path, name, index)
+      setLastCreatedMarkId(null)
+    }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
