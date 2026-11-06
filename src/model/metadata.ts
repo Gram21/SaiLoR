@@ -1,6 +1,7 @@
 import type { PdfMeta } from './pdfMeta'
 import { aiSeatId, deepEqualJson, type Paper, type Project } from './project'
 import { parseYear } from './year'
+import { normalizeDoi, normalizeTitleForMatch } from './duplicates'
 
 export type MetadataEditMode = 'off' | 'annotation'
 
@@ -78,13 +79,13 @@ export function editedFields(paper: Paper, seat: string | null): MetadataField[]
 
 function normalized(field: MetadataField, v: unknown): unknown {
   if (v === undefined || v === null) return null
-  if (field === 'title') return String(v).toLowerCase().replace(/[^\p{L}\p{N}]/gu, '')
+  if (field === 'title') return normalizeTitleForMatch(String(v)).replace(/ /g, '')
   if (field === 'authors') {
     const words = (v as string[]).join(' ').toLowerCase().match(/[\p{L}\p{N}]+/gu) ?? []
     return words.length > 0 ? words.sort().join(' ') : null
   }
   if (field === 'doi') {
-    return String(v).trim().toLowerCase().replace(/^(https?:\/\/(dx\.)?doi\.org\/|doi:\s*)/, '') || null
+    return normalizeDoi(String(v)) || null
   }
   return v
 }
