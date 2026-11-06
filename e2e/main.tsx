@@ -38,6 +38,11 @@ function App() {
         const res = await fetch(target(rel)).catch((e) => ({ status: `ERR ${e}` }))
         say(`probe ${rel} -> ${(res as Response).status}`)
       }
+      try {
+        await invoke('project_save', { filePath: r.path, metaText: r.text, files: [] })
+        const again = await invoke<Opened | null>('project_open_path', { filePath: r.path })
+        say(again?.text === r.text ? 'SAVE OK' : 'SAVE ERROR round trip differs')
+      } catch (e) { say(`SAVE ERROR ${e}`) }
       if (list[0]) setPdf(target(list[0]))
     })()
   }, [])

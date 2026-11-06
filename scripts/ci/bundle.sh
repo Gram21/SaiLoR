@@ -22,7 +22,7 @@ find src-tauri/target/release/bundle -type f \( -name '*.dmg' -o -name '*.msi' -
 step "Build probe"
 npx tauri build --no-bundle --features probe --config src-tauri/tauri.probe.conf.json
 
-step "Run probe (open project, traversal check, render PDF)"
+step "Run probe (open project, traversal check, save round trip, render PDF)"
 export SAILOR_PROBE_PROJECT="$PWD/samples/project.example.json"
 export SAILOR_PROBE_REPORT="${REPORT:-${TMPDIR:-/tmp}/probe-report.txt}"
 rm -f "$SAILOR_PROBE_REPORT"
@@ -43,4 +43,5 @@ echo "---- report ----"
 cat "$SAILOR_PROBE_REPORT" || true
 grep -q "RENDER OK" "$SAILOR_PROBE_REPORT"
 grep -q -- "-> 403" "$SAILOR_PROBE_REPORT"
+grep -q "SAVE OK" "$SAILOR_PROBE_REPORT"
 step "Bundle and probe passed"
