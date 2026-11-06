@@ -53,6 +53,41 @@ describe('parsePromptOverrides', () => {
     ).toHaveLength(1)
     expect(parsePromptOverrides({ role: 'r'.repeat(PROMPT_OVERRIDE_LIMITS.role) }).problems).toEqual([])
   })
+
+  // [utest->req~llm-791~1]
+  it('says what is wrong and returns no overrides alongside problems', () => {
+    expect(parsePromptOverrides('x')).toEqual({ problems: ['promptOverrides must be an object.'] })
+    expect(parsePromptOverrides(null)).toEqual({ problems: ['promptOverrides must be an object.'] })
+    expect(parsePromptOverrides(['x'])).toEqual({ problems: ['promptOverrides must be an object.'] })
+    expect(parsePromptOverrides({ role: 'Role.', rules: 'x' })).toEqual({
+      problems: ['Unknown key "rules". Allowed keys: role, fieldHelp, examples.'],
+    })
+    expect(parsePromptOverrides({ examples: 3 }).problems).toEqual(['"examples" must be text.'])
+    expect(parsePromptOverrides({ role: 'r'.repeat(PROMPT_OVERRIDE_LIMITS.role + 1) }).problems).toEqual([
+      '"role" is longer than 1000 characters.',
+    ])
+    expect(parsePromptOverrides({ fieldHelp: 'x' }).problems).toEqual(['fieldHelp must map field paths to text.'])
+    expect(parsePromptOverrides({ fieldHelp: { ' ': 'x' } }).problems).toEqual(['The field path " " is empty or too long.'])
+    expect(parsePromptOverrides({ fieldHelp: { Year: 1 } }).problems).toEqual(['"fieldHelp.Year" must be text.'])
+    expect(
+      parsePromptOverrides({ fieldHelp: { Year: 'h'.repeat(PROMPT_OVERRIDE_LIMITS.fieldHelp + 1) } }).problems,
+    ).toEqual(['"fieldHelp.Year" is longer than 2000 characters.'])
+  })
+
+  // [utest->req~llm-791~1]
+  it('accepts field help and paths exactly at the limits', () => {
+    const atLimit = 'p'.repeat(PROMPT_OVERRIDE_LIMITS.fieldHelpKey)
+    expect(parsePromptOverrides({ fieldHelp: { [atLimit]: 'h'.repeat(PROMPT_OVERRIDE_LIMITS.fieldHelp) } }).problems).toEqual([])
+    expect(parsePromptOverrides({ fieldHelp: { [`${atLimit}p`]: 'x' } }).problems).toHaveLength(1)
+  })
+})
+
+describe('cleanPromptOverrides', () => {
+  // [utest->req~llm-790~1]
+  it('trims examples and field help', () => {
+    expect(cleanPromptOverrides({ examples: ' E ' })).toEqual({ examples: 'E' })
+    expect(cleanPromptOverrides({ fieldHelp: { Year: ' Help. ' } })).toEqual({ fieldHelp: { Year: 'Help.' } })
+  })
 })
 
 describe('project file', () => {
@@ -84,6 +119,13 @@ describe('promptOverridesTag', () => {
     expect(a).toMatch(/^overrides-[0-9a-z]+$/)
     expect(promptOverridesTag({ role: 'B' })).not.toBe(a)
     expect(promptOverridesTag({ fieldHelp: { x: '1', y: '2' } })).toBe(promptOverridesTag({ fieldHelp: { y: '2', x: '1' } }))
+  })
+
+  // [utest->req~llm-793~1]
+  it('stays the same tag across releases for the same overrides', () => {
+    expect(promptOverridesTag({ role: 'A' })).toBe('overrides-6a2shw')
+    expect(promptOverridesTag({ examples: 'E' })).toBe('overrides-j7cokg')
+    expect(promptOverridesTag({ fieldHelp: { x: '1' } })).toBe('overrides-x2oydi')
   })
 })
 
@@ -143,6 +185,7 @@ describe('prompt builders with overrides', () => {
   // [utest->req~llm-792~1]
   it('applyFieldHelp keeps the schema when no help is set', () => {
     expect(applyFieldHelp(schema, undefined)).toBe(schema)
+    expect(applyFieldHelp(schema, {})).toBe(schema)
     expect(applyFieldHelp(schema, { Year: 'New.' })[0].description).toBe('New.')
     expect(schema[0].description).toBe('Year of publication.')
   })

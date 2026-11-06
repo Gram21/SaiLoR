@@ -1,7 +1,7 @@
 // [utest->req~llm-600~1]
 import { describe, it, expect } from 'vitest'
-import { resolveSchema } from '../model/schema'
-import { parseAnswer } from './parse'
+import { resolveSchema, type ResolvedDef } from '../model/schema'
+import { parseAnswer, validateAnswerObject } from './parse'
 import { MAX_UNBOUNDED_INDEX } from './paths'
 import type { LlmAnswer } from './types'
 
@@ -85,6 +85,33 @@ describe('JSON extraction', () => {
     const answer = parseAnswer(schema, one('Year', 2021, { evidence }))
     expect(answer.fields[0].evidence).toBe(evidence)
   })
+
+  it('does not count an unbalanced brace inside a string value', () => {
+    for (const evidence of ['the set {a was cut', 'b} was cut', 'they wrote "{" here']) {
+      const answer = parseAnswer(schema, `Sure!\n${one('Year', 2021, { evidence })}`)
+      expect(answer.fields[0]?.evidence, evidence).toBe(evidence)
+    }
+  })
+
+  it('prefers the fenced object over an object in the prose before it', () => {
+    const raw = ['Format: {"fields": []}', '```json', one('Year', 2021), 'All fields done.', '```'].join('\n')
+    expect(parseAnswer(schema, raw).fields[0]?.value).toBe(2021)
+    const unclosed = ['Format: {"fields": []}', '```json', one('Year', 2021)].join('\n')
+    expect(parseAnswer(schema, unclosed).fields[0]?.value).toBe(2021)
+  })
+
+  it('falls back to the whole text when the fence holds no object', () => {
+    const raw = ['```', 'no json here', '```', one('Year', 2021)].join('\n')
+    expect(parseAnswer(schema, raw).fields[0]?.value).toBe(2021)
+  })
+
+  it('tries at most 8 brace spans before it gives up', () => {
+    const prose = (n: number) => `${'{x} '.repeat(n)}\n${one('Year', 2021)}`
+    expect(parseAnswer(schema, prose(7)).fields).toHaveLength(1)
+    expect(parseAnswer(schema, prose(8)).fields).toEqual([])
+    // A brace that never closes is not a candidate and does not use up a try.
+    expect(parseAnswer(schema, `${'{x} '.repeat(7)}{ ${one('Year', 2021)}`).fields).toHaveLength(1)
+  })
 })
 
 describe('unparseable input', () => {
@@ -158,12 +185,30 @@ describe('path validation', () => {
 
   it('rejects a missing or non-string path', () => {
     const raw = JSON.stringify({ fields: [{ value: 2021 }, { path: 7, value: 2021 }] })
-    expect(reasons(parseAnswer(schema, raw))).toEqual(['unknown field', 'unknown field'])
+    expect(parseAnswer(schema, raw).rejected).toEqual([
+      { path: '', raw: 2021, reason: 'unknown field' },
+      { path: '', raw: 2021, reason: 'unknown field' },
+    ])
+  })
+
+  it('trims the path it accepts and the path it rejects', () => {
+    const raw = JSON.stringify({ fields: [{ path: ' Year ', value: 2021 }, { path: ' Nope ', value: 1 }] })
+    const answer = parseAnswer(schema, raw)
+    expect(answer.fields[0]?.path).toBe('Year')
+    expect(answer.rejected).toEqual([{ path: 'Nope', raw: 1, reason: 'unknown field' }])
   })
 
   it('rejects an entry that is not an object', () => {
     const raw = JSON.stringify({ fields: ['Year', null] })
-    expect(reasons(parseAnswer(schema, raw))).toEqual(['malformed entry', 'malformed entry'])
+    expect(parseAnswer(schema, raw).rejected).toEqual([
+      { path: '', raw: 'Year', reason: 'malformed entry' },
+      { path: '', raw: null, reason: 'malformed entry' },
+    ])
+  })
+
+  it('rejects every path when the schema is not an array', () => {
+    const answer = parseAnswer(undefined as unknown as ResolvedDef[], one('Year', 2021))
+    expect(reasons(answer)).toEqual(['unknown field'])
   })
 })
 
@@ -215,6 +260,29 @@ describe('type checking', () => {
     const raw = JSON.stringify({ fields: [{ path: 'Year', evidence: 'p. 3' }] })
     expect(reasons(parseAnswer(schema, raw))).toEqual(['missing value'])
   })
+
+  it('treats an explicit undefined value from a tool call as missing', () => {
+    const answer = validateAnswerObject(schema, { fields: [{ path: 'Year', value: undefined }] })
+    expect(reasons(answer)).toEqual(['missing value'])
+  })
+
+  it('rejects a non-finite number from a tool call', () => {
+    for (const value of [NaN, Infinity]) {
+      const answer = validateAnswerObject(schema, { fields: [{ path: 'Year', value }] })
+      expect(reasons(answer), String(value)).toEqual(['not a number'])
+    }
+  })
+
+  it('accepts a padded boolean spelling', () => {
+    expect(parseAnswer(schema, one('Relevant', ' true ')).fields[0]?.value).toBe(true)
+  })
+
+  it('checks a year field for a plausible publication year', () => {
+    const years = resolveSchema([{ name: 'Published', type: 'year' }])
+    expect(parseAnswer(years, one('Published', '2021')).fields[0]?.value).toBe(2021)
+    expect(reasons(parseAnswer(years, one('Published', 55)))).toEqual(['not a plausible publication year'])
+    expect(reasons(parseAnswer(years, one('Published', 'about 2021')))).toEqual(['not a number'])
+  })
 })
 
 describe('enums', () => {
@@ -235,6 +303,21 @@ describe('enums', () => {
       { path: 'Study Type', raw: 'Cohort', reason: 'not an allowed value' },
     ])
   })
+
+  it('prefers an exact option over one that only matches after case folding', () => {
+    const s = resolveSchema([{ name: 'Scan', type: 'string', options: ['MRI', 'mri'] }])
+    expect(parseAnswer(s, one('Scan', 'mri')).fields[0]?.value).toBe('mri')
+  })
+
+  it('snaps onto an option that carries stray whitespace', () => {
+    const s = resolveSchema([{ name: 'Phase', type: 'string', options: ['Pilot '] }])
+    expect(parseAnswer(s, one('Phase', 'pilot')).fields[0]?.value).toBe('Pilot ')
+  })
+
+  it('treats an empty options list as free text', () => {
+    const s = resolveSchema([{ name: 'Note', type: 'string', options: [] }])
+    expect(parseAnswer(s, one('Note', 'anything')).fields[0]?.value).toBe('anything')
+  })
 })
 
 describe('evidence and confidence', () => {
@@ -247,6 +330,12 @@ describe('evidence and confidence', () => {
   it('trims and caps evidence at 500 characters', () => {
     const evidence = ` ${'q'.repeat(600)} `
     expect(parseAnswer(schema, one('Year', 2021, { evidence })).fields[0].evidence).toHaveLength(500)
+    expect(parseAnswer(schema, one('Year', 2021, { evidence: ' p. 3 ' })).fields[0].evidence).toBe('p. 3')
+  })
+
+  it('stringifies a number or boolean evidence', () => {
+    expect(parseAnswer(schema, one('Year', 2021, { evidence: 42 })).fields[0].evidence).toBe('42')
+    expect(parseAnswer(schema, one('Year', 2021, { evidence: false })).fields[0].evidence).toBe('false')
   })
 
   it('keeps a confidence inside 0..1', () => {
@@ -254,6 +343,8 @@ describe('evidence and confidence', () => {
     expect(parseAnswer(schema, one('Year', 2021, { confidence: 0.75 })).fields[0].confidence).toBe(
       0.75,
     )
+    expect(parseAnswer(schema, one('Year', 2021, { confidence: 1 })).fields[0].confidence).toBe(1)
+    expect(parseAnswer(schema, one('Year', 2021, { confidence: '0.5' })).fields[0].confidence).toBe(0.5)
   })
 
   it('nulls a confidence out of range or of the wrong shape', () => {
@@ -316,11 +407,26 @@ describe('skipped', () => {
         { path: 'Summary' },
         { path: '', reason: 'no path' },
         { path: 'Findings[1]/Claim', reason: 7 },
+        { path: 7, reason: 'not a path' },
         'nonsense',
+        null,
       ],
     })
 
     expect(parseAnswer(schema, raw).skipped).toEqual([{ path: 'Year', reason: 'not stated' }])
+  })
+
+  it('trims path and reason and caps the reason at 500 characters', () => {
+    const raw = JSON.stringify({
+      fields: [],
+      skipped: [
+        { path: ' Year ', reason: ' not stated ' },
+        { path: 'Summary', reason: 'r'.repeat(600) },
+      ],
+    })
+    const skipped = parseAnswer(schema, raw).skipped
+    expect(skipped[0]).toEqual({ path: 'Year', reason: 'not stated' })
+    expect(skipped[1].reason).toHaveLength(500)
   })
 })
 
@@ -370,7 +476,7 @@ describe('coercion does not invent values the model never sent', () => {
     // A paper does not write a sample size in hexadecimal. `Number()` alone
     // reads all of these as numbers, which would silently record a value
     // nobody wrote; rejecting puts a visible row in front of the reviewer.
-    for (const raw of ['0x20', '0b101', '0o17', '1_000', '   ', '', 'Infinity', '12px']) {
+    for (const raw of ['0x20', '0b101', '0o17', '1_000', '   ', '', 'Infinity', '12px', '1e999']) {
       const out = parseAnswer(schema, one('Count', raw))
       expect(out.fields.length, `${JSON.stringify(raw)} accepted`).toBe(0)
       expect(out.rejected.length, `${JSON.stringify(raw)} not reported`).toBe(1)
@@ -383,7 +489,10 @@ describe('coercion does not invent values the model never sent', () => {
       ['-7', -7],
       ['3.5', 3.5],
       ['.5', 0.5],
+      ['12.25', 12.25],
+      ['.25', 0.25],
       ['1e3', 1000],
+      ['1e10', 1e10],
       ['2.5E-2', 0.025],
       [' 42 ', 42],
     ] as const) {
@@ -426,5 +535,33 @@ describe('schema_remarks', () => {
     const many = Array.from({ length: 9 }, () => ({ path: 'Year', issue: 'i' }))
     expect(answer(many).schemaRemarks).toHaveLength(5)
     expect(answer('oops').schemaRemarks).toBeUndefined()
+  })
+
+  it('accepts a nested field name on its own', () => {
+    const r = answer([
+      { path: 'Claim', issue: 'i' },
+      { path: 'Metric', issue: 'j' },
+    ]).schemaRemarks
+    expect(r?.map((x) => x.path)).toEqual(['Claim', 'Metric'])
+  })
+
+  it('drops remarks with a wrong shape or a blank issue, and trims and caps the rest', () => {
+    const r = answer([
+      null,
+      { path: 7, issue: 'i' },
+      { path: 'Year', issue: 7 },
+      { path: 'Year', issue: '   ' },
+      { path: ' Year ', issue: 'y'.repeat(400) },
+    ]).schemaRemarks
+    expect(r).toHaveLength(1)
+    expect(r?.[0].path).toBe('Year')
+    expect(r?.[0].issue).toHaveLength(300)
+  })
+
+  it('caps the index of an unbounded node in a remark path', () => {
+    const unbounded = resolveSchema([{ name: 'Tags', max: null, children: [{ name: 'Tag', type: 'string' }] }])
+    const raw = (path: string) => JSON.stringify({ fields: [], schema_remarks: [{ path, issue: 'i' }] })
+    expect(parseAnswer(unbounded, raw(`Tags[${MAX_UNBOUNDED_INDEX}]/Tag`)).schemaRemarks).toBeUndefined()
+    expect(parseAnswer(unbounded, raw('Tags[1]/Tag')).schemaRemarks).toHaveLength(1)
   })
 })

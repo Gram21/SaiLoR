@@ -21,6 +21,7 @@ describe('costOf', () => {
   it('is null when either price is unset', () => {
     expect(costOf({ inputTokens: 1000, outputTokens: 1000 }, cfg())).toBeNull()
     expect(costOf({ inputTokens: 1000, outputTokens: 1000 }, cfg({ inputPrice: 1 }))).toBeNull()
+    expect(costOf({ inputTokens: 1000, outputTokens: 1000 }, cfg({ outputPrice: 1 }))).toBeNull()
   })
 
   it('computes USD from per-1M prices', () => {
@@ -102,6 +103,52 @@ describe('estimateRun', () => {
     })
     expect(withFewShot.low.inputTokens).toBe(base.low.inputTokens + 1000)
     expect(withFewShot.high.inputTokens).toBe(base.high.inputTokens + 1000)
+  })
+
+  it('prompt mode: exact tokens from overhead, pages and fields', () => {
+    const est = estimateRun({ papers: [{ pages: 10 }], fieldsPerPaper: 5, mode: 'prompt', delivery: 'text' })
+    expect(est.low).toEqual({ inputTokens: 2000 + 10 * 600, outputTokens: 5 * 60 })
+    expect(est.high).toEqual({ inputTokens: 4000 + 10 * 900, outputTokens: 5 * 150 })
+  })
+
+  it('classify mode: exact tokens per request and field, pages ignored', () => {
+    const est = estimateRun({
+      papers: [{ pages: 10 }],
+      fieldsPerPaper: 4,
+      mode: 'classify',
+      delivery: 'text',
+      systemOneRequests: 2,
+    })
+    expect(est.low).toEqual({ inputTokens: 2 * 100, outputTokens: 4 * 10 })
+    expect(est.high).toEqual({ inputTokens: 2 * 300, outputTokens: 4 * 25 })
+    expect(est.requests).toEqual({ low: 2, high: 2 })
+    expect(est.judge.high).toEqual({ inputTokens: 0, outputTokens: 0 })
+  })
+
+  it('agent mode: exact agent rounds and judge share', () => {
+    const est = estimateRun({ papers: [{ pages: 10 }], fieldsPerPaper: 5, mode: 'agent', delivery: 'text' })
+    // Paper prefix: 2000 + 10 * 600 = 8000 (low), 4000 + 10 * 900 = 13000 (high).
+    const judge = {
+      low: { inputTokens: 8000 * 2, outputTokens: 2 * 200 },
+      high: { inputTokens: 13000 * 4, outputTokens: 4 * 400 },
+    }
+    expect(est.judge).toEqual(judge)
+    expect(est.low).toEqual({ inputTokens: 8000 + 4 * 300 + 16000, outputTokens: 5 * 60 + 400 })
+    expect(est.high).toEqual({ inputTokens: 13000 * 15 + 52000, outputTokens: 5 * 150 + 1600 })
+    expect(est.requests).toEqual({ low: 5 + 2, high: 15 + 4 })
+  })
+
+  it('agent mode with web search scales agent input and adds search requests', () => {
+    const est = estimateRun({
+      papers: [{ pages: 10 }],
+      fieldsPerPaper: 5,
+      mode: 'agent',
+      delivery: 'text',
+      webSearch: true,
+    })
+    expect(est.low.inputTokens).toBe(Math.round((8000 + 4 * 300) * 1.1 + 8000 * 2))
+    expect(est.high.inputTokens).toBe(Math.round(13000 * 15 * 1.3 + 13000 * 4))
+    expect(est.requests).toEqual({ low: 5 + 1 + 2, high: 15 + 3 + 4 })
   })
 })
 

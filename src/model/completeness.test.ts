@@ -333,6 +333,38 @@ describe('completeness — fields hidden by visibleIf', () => {
     expect(completeness(open.schema, open.papers[0].annotations)).toEqual({ filled: 0, total: 1 })
   })
 
+  it('resolves sibling and ancestor gates below the root level too', () => {
+    const IN_GROUP: AnnotationDef[] = [
+      {
+        name: 'Group',
+        children: [
+          { name: 'Excluded', type: 'boolean' },
+          { name: 'Reason', type: 'string', required: true, visibleIf: 'Excluded' },
+          {
+            name: 'Outer',
+            type: 'boolean',
+            children: [{ name: 'Detail', type: 'string', required: true, visibleIf: 'Outer' }],
+          },
+        ],
+      },
+    ]
+    const answers = (excluded: boolean, outer: boolean) => ({
+      Group: [
+        {
+          children: {
+            Excluded: [{ value: excluded }],
+            Reason: [{ value: null }],
+            Outer: [{ value: outer, children: { Detail: [{ value: null }] } }],
+          },
+        },
+      ],
+    })
+    const sibling = project(IN_GROUP, answers(true, false))
+    expect(completeness(sibling.schema, sibling.papers[0].annotations)).toEqual({ filled: 0, total: 1 })
+    const ancestor = project(IN_GROUP, answers(false, true))
+    expect(completeness(ancestor.schema, ancestor.papers[0].annotations)).toEqual({ filled: 0, total: 1 })
+  })
+
   it('resolves a gate pointing at another branch by absolute path', () => {
     // Neither a sibling nor an ancestor, so this one needs the root tree
     // `walk` threads through — without it `Study Type` would be counted.

@@ -615,6 +615,20 @@ Three layers of tests, by what each one can actually catch:
   on every OS, and drives it with `tauri-driver` (WebDriver) on Linux and Windows. Release builds do
   not contain the probe commands.
 
+### Mutation tests
+
+Mutation tests check that the unit tests find wrong code. StrykerJS changes the code in small ways
+(for example `<` to `<=`) and runs the unit tests. A change that no test finds is a "survived"
+mutant. `stryker.config.json` sets the files to change: `src/model/` and the pure `src/llm/` modules.
+
+1. Run `npm run test:mutation`. A full run takes more than one hour.
+2. Open `.cache/stryker/mutation.html` to see the survived mutants.
+3. Add a test that fails for each important survived mutant.
+
+To check one file, run `npx stryker run --mutate src/model/year.ts`. Later runs only test changed
+code (incremental mode). CI does not run mutation tests. To run them on GitHub, start the manual
+workflow `.github/workflows/mutation.yml`.
+
 ## Deployment
 
 `make build` runs `tauri build` and writes native installers to `src-tauri/target/release/bundle/`.

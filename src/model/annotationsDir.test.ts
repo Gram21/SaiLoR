@@ -31,6 +31,12 @@ describe('annotations folder names', () => {
     expect(defaultSplitDirName('review.json')).toBe('review-annotations')
     expect(defaultSplitDirName('screening-annotation.json')).toBe('screening-annotations')
     expect(defaultSplitDirName('a:b.json')).toBe('project-annotations')
+    expect(defaultSplitDirName('my.json-notes.json')).toBe('my.json-notes-annotations')
+    expect(defaultSplitDirName('review-annotations-2026.json')).toBe('review-annotations-2026-annotations')
+  })
+
+  it('says why a name with a space at its edge is refused', () => {
+    expect(annotationsDirProblem(' x')).toBe('it starts or ends with a space')
   })
 })
 
@@ -69,6 +75,12 @@ describe('sharesPaper', () => {
     expect(sharesPaper(['smith2021'], raw)).toBe(true)
     expect(sharesPaper(['p1'], { papers: 'nope' })).toBe(false)
   })
+
+  it('skips malformed entries and tolerates a missing project', () => {
+    expect(sharesPaper(['p1'], null)).toBe(false)
+    expect(sharesPaper(['7'], { papers: [{ id: 7 }] })).toBe(false)
+    expect(sharesPaper(['p1'], { papers: [null, { id: 'p1' }] })).toBe(true)
+  })
 })
 
 // [utest->req~dat-172~1]
@@ -80,6 +92,8 @@ describe('filesCollide', () => {
     expect(filesCollide(['p1'], false, screening)).toBe(false)
     expect(filesCollide(['p1'], true, review)).toBe(false)
     expect(filesCollide(['p2'], false, review)).toBe(false)
+    expect(filesCollide(['p1'], false, null)).toBe(false)
+    expect(filesCollide(['p1'], false, {})).toBe(false)
   })
 })
 

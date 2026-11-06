@@ -15,6 +15,9 @@ CLAUDE-SECURITY-*
 scripts/oft/unresolved.txt
 __pycache__/
 
+# Stryker mutation testing (npm run test:mutation): sandbox; reports go to .cache/stryker/
+.stryker-tmp/
+
 # File created using '.gitignore Generator' for Visual Studio Code: https://bit.ly/vscode-gig
 # Created by https://www.toptal.com/developers/gitignore/api/linux,macos,node,windows
 # Edit at https://www.toptal.com/developers/gitignore?templates=linux,macos,node,windows

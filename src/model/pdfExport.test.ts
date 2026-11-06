@@ -69,4 +69,9 @@ describe('annotatedFileName', () => {
   it('handles a name with dots in the middle', () => {
     expect(annotatedFileName('my.paper.v2.pdf')).toBe('my.paper.v2-annotated.pdf')
   })
+
+  it('only treats .pdf and -annotated at the very end as such', () => {
+    expect(annotatedFileName('notes.pdf.txt')).toBe('notes.pdf.txt-annotated.pdf')
+    expect(annotatedFileName('paper-annotated-v2.pdf')).toBe('paper-annotated-v2-annotated.pdf')
+  })
 })

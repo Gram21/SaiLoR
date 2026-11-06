@@ -6,12 +6,16 @@
 // [utest->req~lst-90~1]
 import { describe, it, expect } from 'vitest'
 import {
+  ignoredPdfsOf,
   missingPaperIds,
   newPaper,
   newPdfFiles,
+  paperIdFromName,
   parseCrossrefWork,
+  parsePdfFolder,
   pdfFolderProblem,
   proposeNewPaper,
+  titleFromName,
 } from './pdfFolder'
 import { loadProject, serializeProject } from './project'
 
@@ -25,6 +29,31 @@ describe('pdfFolderProblem', () => {
     expect(pdfFolderProblem('/abs')).not.toBeNull()
     expect(pdfFolderProblem('a//b')).not.toBeNull()
     expect(pdfFolderProblem('.git')).not.toBeNull()
+  })
+
+  it('reads only a non-empty text as the folder', () => {
+    expect(parsePdfFolder('pdfs')).toBe('pdfs')
+    expect(parsePdfFolder('')).toBeUndefined()
+    expect(parsePdfFolder(3)).toBeUndefined()
+  })
+})
+
+describe('names from a PDF file name', () => {
+  it('makes a paper id from the name without the final .pdf', () => {
+    expect(paperIdFromName('My  Paper.PDF')).toBe('my-paper')
+    expect(paperIdFromName('a.pdf-x.pdf')).toBe('a-pdf-x')
+    expect(paperIdFromName('__a__.pdf')).toBe('a')
+    expect(paperIdFromName('!!!.pdf')).toBe('paper')
+  })
+
+  it('makes a title from the name without the final .pdf', () => {
+    expect(titleFromName('my.pdf notes.pdf')).toBe('my.pdf notes')
+    expect(titleFromName('_a__b-.pdf')).toBe('a b')
+  })
+
+  it('reads only text hashes from the ignored list', () => {
+    expect(ignoredPdfsOf({ extra: { ignoredPdfs: ['h', 3] } })).toEqual(['h'])
+    expect(ignoredPdfsOf({ extra: { ignoredPdfs: 'h' } })).toEqual([])
   })
 })
 
@@ -126,6 +155,21 @@ describe('parseCrossrefWork', () => {
     expect(parseCrossrefWork('<html>')).toEqual({})
     expect(parseCrossrefWork('{}')).toEqual({})
   })
+
+  it('skips blank or malformed values', () => {
+    const body = JSON.stringify({
+      message: { title: ['  '], author: [{}, { given: 3, family: 'Hopper' }, { given: '', family: 'Turing' }], DOI: ' ' },
+    })
+    expect(parseCrossrefWork(body)).toEqual({ authors: ['Hopper', 'Turing'] })
+    expect(parseCrossrefWork(JSON.stringify({ message: { author: [{}], DOI: 3 } }))).toEqual({})
+  })
+
+  it('takes the year from the first date that has one', () => {
+    const year = (message: Record<string, unknown>) => parseCrossrefWork(JSON.stringify({ message })).year
+    expect(year({ issued: { 'date-parts': [[2017]] }, published: { 'date-parts': [[2018]] } })).toBe(2017)
+    expect(year({ issued: {}, published: { 'date-parts': [[2018]] } })).toBe(2018)
+    expect(year({ issued: { 'date-parts': [] }, 'published-online': { 'date-parts': [[2016]] } })).toBe(2016)
+  })
 })
 
 describe('newPaper', () => {
@@ -142,5 +186,13 @@ describe('newPaper', () => {
     expect(p).toMatchObject({ title: 'T', doi: '10.1/x', pdf: 'pdfs/a.pdf', authors: [], finished: false })
     expect(p.extra).toEqual({ pdfSha256: 'h', metadataSource: { title: 'pdfinfo', doi: 'pdfinfo' } })
     expect(Object.keys(p.reviews)).toEqual(['1', '2'])
+  })
+
+  it('starts empty, with the year when known and no review seats for one reviewer', () => {
+    const bare = proposeNewPaper({ path: 'b.pdf', sha256: 'h' }, {})
+    const p = newPaper({ schema: [], reviewers: 1 }, { ...bare, values: { year: 2020 } }, new Set())
+    expect(p).toMatchObject({ title: '', year: 2020, aiUsage: [], equal: [], marks: [] })
+    expect(p.reviews).toEqual({})
+    expect(newPaper(project, bare, new Set())).not.toHaveProperty('year')
   })
 })

@@ -97,6 +97,23 @@ describe('countPapersUsingField', () => {
     expect(countPapersUsingField(papers, ['B', 'C'])).toBe(0)
     expect(countPapersUsingField(papers, ['A', 'B', 'C'])).toBe(1)
   })
+
+  it('counts a field when any one instance holds an answer', () => {
+    expect(countPapersUsingField([paper({ A: [{ value: null }, { value: 'x' }] })], ['A'])).toBe(1)
+    const nested = paper({ G: [{ children: {} }, { children: { C: [{ value: 'x' }] } }] })
+    expect(countPapersUsingField([nested], ['G', 'C'])).toBe(1)
+  })
+
+  it('a path with any blank segment matches nothing', () => {
+    expect(countPapersUsingField([paper({ A: [{ children: { ' ': [{ value: 'x' }] } }] })], ['A', ' '])).toBe(0)
+    expect(countPapersUsingField([paper({ undefined: [{ value: 'x' }] })], [])).toBe(0)
+  })
+
+  it('skips malformed instances, trees and reviewer entries in nested lookups', () => {
+    expect(countPapersUsingField([paper({ G: [null, { value: 'x' }, 'x'] })], ['G', 'C'])).toBe(0)
+    expect(countPapersUsingField([paper([[{ value: 'x' }]])], ['0'])).toBe(0)
+    expect(countPapersUsingField([paper({}, { '1': null, '2': { A: [{ value: 'x' }] } })], ['A'])).toBe(1)
+  })
 })
 
 function mark(overrides: Partial<PdfMark> = {}): PdfMark {
@@ -152,8 +169,18 @@ describe('countLinksUsingField', () => {
     ]
     expect(countLinksUsingField(papers, ['Findings', 'Claim'])).toBe(1)
     expect(countLinksUsingField(papers, ['Findings'])).toBe(0)
+    expect(countLinksUsingField(papers, ['Findings', 'Claim', 'Note'])).toBe(0)
+    expect(countLinksUsingField(papers, ['Findings', 'Other'])).toBe(0)
   })
 
+  it('counts a mark when any one of its links matches', () => {
+    const papers = [
+      paperWithMarks([
+        mark({ linkedFields: [{ path: 'Relevant', label: 'Relevant' }, { path: 'Study Type', label: 'Study Type' }] }),
+      ]),
+    ]
+    expect(countLinksUsingField(papers, ['Study Type'])).toBe(1)
+  })
   it('a blank or empty path matches nothing', () => {
     const papers = [paperWithMarks([mark({ linkedFields: [{ path: 'Study Type', label: 'Study Type' }] })])]
     expect(countLinksUsingField(papers, [''])).toBe(0)

@@ -40,6 +40,13 @@ describe('isNewerVersion', () => {
     expect(isNewerVersion('nightly', '0.1.0')).toBe(false)
     expect(isNewerVersion('', '0.1.0')).toBe(false)
     expect(isNewerVersion('0.2.0', 'unknown')).toBe(false)
+    expect(isNewerVersion('build 2.0.0', '1.0.0')).toBe(false)
+  })
+
+  it('reads multi-digit majors, extra components and surrounding spaces', () => {
+    expect(isNewerVersion('10.0.0', '9.0.0')).toBe(true)
+    expect(isNewerVersion('1.0.1', '1.0')).toBe(true)
+    expect(isNewerVersion(' 0.2.0 ', '0.1.0')).toBe(true)
   })
 })
 
@@ -79,6 +86,36 @@ describe('fetchLatestRelease', () => {
     const res = await fetchLatestRelease(null, async () => reply(200, { tag_name: '0.3.0' }))
     expect(res).toEqual({ latest: '0.3.0', url: RELEASES_URL })
   })
+
+  it('falls back to the releases page for a url that is not https', async () => {
+    for (const html_url of ['http://example.test/r', 'javascript:alert(1)', 'not a url']) {
+      const res = await fetchLatestRelease(null, async () => reply(200, { tag_name: '0.3.0', html_url }))
+      expect(res?.url).toBe(RELEASES_URL)
+    }
+  })
+
+  it('asks the latest-release API for GitHub JSON', async () => {
+    const calls: unknown[][] = []
+    await fetchLatestRelease(null, async (...args: unknown[]) => {
+      calls.push(args)
+      return reply(404, {})
+    })
+    expect(calls).toEqual([
+      [
+        'https://api.github.com/repos/Gram21/SaiLoR/releases/latest',
+        { headers: { Accept: 'application/vnd.github+json' } },
+      ],
+    ])
+  })
+
+  it('ignores the body of a failed response', async () => {
+    expect(await fetchLatestRelease(null, async () => reply(404, { tag_name: 'v9.9.9' }))).toBeNull()
+  })
+
+  it('strips only a leading v from the tag', async () => {
+    const res = await fetchLatestRelease(null, async () => reply(200, { tag_name: '1.0.0-dev' }))
+    expect(res?.latest).toBe('1.0.0-dev')
+  })
 })
 
 describe('pickInstaller', () => {
@@ -105,7 +142,24 @@ describe('pickInstaller', () => {
 
   it('picks the Windows and Linux installers', () => {
     expect(pickInstaller(assets, { platform: 'win32', arch: 'x64' })?.url).toBe('https://e.test/win')
+    expect(pickInstaller(assets, { platform: 'win32', arch: 'x64' })?.label).toBe('Windows')
     expect(pickInstaller(assets, { platform: 'linux', arch: 'x64' })?.url).toBe('https://e.test/linux')
+  })
+
+  it('skips signatures and other files that only start like an installer', () => {
+    const sigs = assets.map((a) => ({ name: `${a.name}.sig`, browser_download_url: 'https://e.test/sig' }))
+    const all = [...sigs, ...assets]
+    expect(pickInstaller(all, { platform: 'darwin', arch: 'arm64' })?.url).toBe('https://e.test/mac-arm')
+    expect(pickInstaller(all, { platform: 'darwin', arch: 'x64' })?.url).toBe('https://e.test/mac-intel')
+    expect(pickInstaller(all, { platform: 'win32', arch: 'x64' })?.url).toBe('https://e.test/win')
+    expect(pickInstaller(all, { platform: 'linux', arch: 'x64' })?.url).toBe('https://e.test/linux')
+  })
+
+  it('offers no download link that is not https', () => {
+    const linux = { platform: 'linux', arch: 'x64' }
+    for (const url of ['http://e.test/linux', 'javascript:alert(1)', 'not a url']) {
+      expect(pickInstaller([{ name: 'SaiLoR_0.2.0_amd64.AppImage', browser_download_url: url }], linux)).toBeUndefined()
+    }
   })
 
   it('offers nothing in the browser, which has no installer', () => {
@@ -159,5 +213,25 @@ describe('updateFrom', () => {
   it('treats a longer pre-release tag as newer than its own prefix', () => {
     expect(isNewerVersion('1.0.0-alpha.1', '1.0.0-alpha')).toBe(true)
     expect(isNewerVersion('1.0.0-alpha', '1.0.0-alpha.1')).toBe(false)
+  })
+
+  it('compares alphanumeric pre-release identifiers in ASCII order', () => {
+    expect(isNewerVersion('1.0.0-beta', '1.0.0-alpha')).toBe(true)
+    expect(isNewerVersion('1.0.0-alpha', '1.0.0-beta')).toBe(false)
+    // A hyphen sorts below digits in ASCII, yet any non-numeric identifier still beats a numeric one.
+    expect(isNewerVersion('1.0.0-a.--', '1.0.0-a.1')).toBe(true)
+  })
+
+  it('treats an identifier as numeric only when it is all digits', () => {
+    expect(isNewerVersion('1.0.0-rc.11', '1.0.0-rc.10')).toBe(true)
+    expect(isNewerVersion('1.0.0-rc.10', '1.0.0-rc.11')).toBe(false)
+    expect(isNewerVersion('1.0.0-c1', '1.0.0-b')).toBe(true)
+    expect(isNewerVersion('1.0.0-b', '1.0.0-c1')).toBe(false)
+    expect(isNewerVersion('1.0.0-2a', '1.0.0-1b')).toBe(true)
+    expect(isNewerVersion('1.0.0-1b', '1.0.0-2a')).toBe(false)
+  })
+
+  it('sees no update between numerically equal identifiers', () => {
+    expect(isNewerVersion('1.0.0-rc.01', '1.0.0-rc.1')).toBe(false)
   })
 })

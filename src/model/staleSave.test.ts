@@ -55,6 +55,16 @@ describe('resolveClash', () => {
     expect(resolveClash(b, m, d, ['review.json'], 'disk').title).toBe('Theirs')
     expect(resolveClash(b, m, d, ['review.json'], 'mine').title).toBe('Mine')
     expect(note(resolveClash(b, m, d, ['review.json'], 'disk'), 'a', '1')).toBe('mine')
+    expect(resolveClash(b, m, d, ['my-systematic-review.json'], 'disk').title).toBe('Theirs')
+  })
+
+  it('keeps a file I emptied deleted', () => {
+    const b = project([{ id: 'a', r1: 'old' }])
+    const m = project([{ id: 'a' }])
+    const d = project([{ id: 'a', r1: 'old', r2: 'theirs' }])
+    const out = resolveClash(b, m, d, ['review.json'], 'mine')
+    expect(note(out, 'a', '1')).toBeNull()
+    expect(note(out, 'a', '2')).toBe('theirs')
   })
 
   it('keeps a paper I removed removed, and one they added', () => {
