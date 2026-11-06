@@ -18,6 +18,7 @@ interface ModalProps {
   children: ReactNode
 }
 
+// [impl->req~ui-180~1]
 /** Overlay and dialog frame shared by all dialogs. Keeps Tab inside the dialog. */
 export function Modal({ onClose, overlayClassName, className, role = 'dialog', yieldsToHelp, children, ...aria }: ModalProps) {
   const ref = useRef<HTMLDivElement>(null)
