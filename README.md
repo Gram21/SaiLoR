@@ -757,7 +757,7 @@ Every CI job is a script, so you can run it locally or port it to another CI pro
 
 Three layers of tests, by what each one can actually catch:
 
-- **`npm test`** — plain vitest, no rendering. ~2800 tests of pure logic: schema resolution, project
+- **`npm test`** — plain vitest, no rendering. ~3400 tests of pure logic: schema resolution, project
   load/normalize/serialize, the three-way merge, git output parsing, and so on. Fast, runs on every
   PR via `scripts/ci.sh`.
 - **`npm run test:integration`** (`src/test/integration/`) — jsdom + React Testing Library. Each test
@@ -783,6 +783,8 @@ Three layers of tests, by what each one can actually catch:
   `headContent`/`workingContent` are real rather than stubbed to `null`, since that's what's needed
   to populate field review in the first place
   ([`discard.integration.test.tsx`](src/test/integration/discard.integration.test.tsx)).
+  More files cover the split of the shared annotations folder, the background fetch policy, the
+  `samples/git-scenarios` build, the PDF reading position and stash operations.
   Slower than the unit suite (real scratch repos per test). It runs in `scripts/ci.sh` on every
   push.
 - **`e2e/probe.test.mjs`** — the one thing jsdom structurally can't reach: the real Tauri app.
@@ -797,12 +799,15 @@ Mutation tests check that the unit tests find wrong code. StrykerJS changes the 
 mutant. `stryker.config.json` sets the files to change: `src/model/` and the pure `src/llm/` modules.
 
 1. Run `npm run test:mutation`. A full run takes more than one hour.
-2. Open `.cache/stryker/mutation.html` to see the survived mutants.
+2. Open `.cache/stryker/mutation.html` to see the survived mutants. The JSON report is
+   `.cache/stryker/mutation.json`.
 3. Add a test that fails for each important survived mutant.
 
 To check one file, run `npx stryker run --mutate src/model/year.ts`. Later runs only test changed
-code (incremental mode). CI does not run mutation tests. To run them on GitHub, start the manual
-workflow `.github/workflows/mutation.yml`.
+code (incremental mode). `vitest.mutation.config.ts` leaves out the performance tests
+(`*.perf.test.*`), because their time limits fail under Stryker. CI does not run mutation tests. To
+run them on GitHub, start the manual workflow `.github/workflows/mutation.yml`. The workflow uploads
+the reports as the artifact `mutation-report`.
 
 ## Deployment
 
