@@ -269,6 +269,15 @@ describe('adoptAllUnanimousAnnotations', () => {
     expect(consolidated[1]?.children?.['Method']?.[0]?.value ?? null).toBeNull()
   })
 
+  it('adoptUnanimousValues itself refuses a paper the consolidator has answered', () => {
+    st().loadFromText(trapProject(), null, 'test.json')
+    st().selectReviewer('consolidation')
+    st().setFieldValue([{ name: 'Findings', index: 0 }], 'Claim', 0, 'my own call')
+    const id = st().project!.papers[0].id
+
+    expect(st().adoptUnanimousValues(id, false)).toBe(0)
+  })
+
   it('the guard is per paper: a blocked paper does not stop the rest', async () => {
     st().loadFromText(swappedProject(2), null, 'test.json')
     st().selectReviewer('consolidation')

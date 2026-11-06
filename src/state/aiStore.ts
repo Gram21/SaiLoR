@@ -1026,7 +1026,8 @@ export const useAiStore = create<AiState>()(
                 paperCost = costOf(result.usage, config) ?? 0
                 // Confidence-aware default (REQ-LLM-580): a row with no
                 // confidence stays ticked, one below the threshold starts
-                // unticked for a closer look, same rule classify mode uses.
+                // unticked for a closer look. Classify mode is stricter: a row
+                // with no confidence starts unticked there.
                 // A quote missing from the paper starts unticked too (REQ-LLM-770).
                 rowChecked = (sug) =>
                   (sug.confidence === null || sug.confidence >= confidenceThreshold) && sug.evidenceCheck !== 'notFound'

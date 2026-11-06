@@ -3582,6 +3582,10 @@ export const useStore = create<AppState>()(
       if (!project || project.reviewers <= 1) return 0
       const paper = project.papers.find((p) => p.id === paperId)
       if (!paper) return 0
+      // A consolidator-answered repeatable node is never re-aligned, so its order is unvouched
+      // and reading across reviewers would invent agreement. Same rule as the batch run.
+      const alignable = alignableNodes(project.schema)
+      if (project.schema.some((d) => alignable.includes(d.name) && consolidatorHasAnswered(d, paper.annotations))) return 0
 
       // Every numbered reviewer, by number — `unanimousFills` decides "answered"
       // per field via `isUnanswered`, so an all-empty tree and an absent one
