@@ -3,6 +3,11 @@
 
 export const DEMO_RELEASES_URL = 'https://github.com/Gram21/SaiLoR/releases'
 
+/** The project page, one level above the demo folder. Relative, so it works under any subpath. */
+export const DEMO_BACK_URL = '../'
+
+export const DEMO_BACK_LABEL = '← Back to project page'
+
 export const DEMO_NOT_SAVED = 'Demo: nothing is saved. Download the app to keep your work.'
 
 export const DEMO_NOT_AVAILABLE = 'Not available in the demo. Download the app to use this.'

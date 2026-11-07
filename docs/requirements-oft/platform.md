@@ -981,3 +981,18 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Usability
+
+### REQ-PLT-455: Link the demo back to the project page
+`req~plt-455~1`
+
+The online demo shall show a link labelled "← Back to project page" on every screen. The link shall go to the parent folder of the demo, which is the project page, so that it works under any subpath of the web server. The link shall stay on screen when the user hides the demo notice.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/DemoBanner.tsx` (`DemoBanner`), `src/demo/text.ts` (`DEMO_BACK_URL`, `DEMO_BACK_LABEL`), `src/styles/index.css` (`.demo-folded`)
+- **Verified by:** `src/components/DemoBanner.test.tsx` (`links back to the project page from the notice and while the notice is folded`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Usability

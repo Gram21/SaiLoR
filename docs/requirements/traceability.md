@@ -586,6 +586,7 @@ inspection only.
 | REQ-PLT-452 | Start the demo on the paper with a PDF | Functional · Usability | `src/state/store.ts`<br>`src/demo/project.ts` | `src/demo/demoStart.test.ts` | — | — |
 | REQ-PLT-453 | Show a neutral notice for a demo paper without a PDF | Functional · Usability | `src/components/PdfViewer.tsx`<br>`src/demo/text.ts`<br>`src/styles/index.css` | `src/components/PdfViewer.demo.test.tsx`<br>`src/demo/demoStart.test.ts` | — | — |
 | REQ-PLT-454 | Bundle a PDF for every demo paper | Functional · Usability | `src/demo/project.ts` (`DEMO_PDF_FILES`, `demoPdfUrl`)<br>`src/platform/demoAdapter.ts` (`getPdfSource`)<br>`vite.config.ts` (`slr-demo-pdfs`)<br>`src/demo/papers/`<br>`src/demo/PDF-LICENSES.md` | `src/demo/demoProject.test.ts` (`bundles a PDF file for every paper`)<br>`src/platform/demoAdapter.test.ts` (`serves the bundled PDF of every demo paper and says why for any other path`) | — | `docs/building.md` §Build the online demo |
+| REQ-PLT-455 | Link the demo back to the project page | Functional · Usability | `src/components/DemoBanner.tsx`<br>`src/demo/text.ts` (`DEMO_BACK_URL`, `DEMO_BACK_LABEL`)<br>`src/styles/index.css` (`.demo-folded`) | `src/components/DemoBanner.test.tsx` (`links back to the project page from the notice and while the notice is folded`) | — | `docs/building.md` §Build the online demo |
 
 ## Coverage statistics
 

@@ -5,6 +5,7 @@ import userEvent from '@testing-library/user-event'
 import { DemoBanner } from './DemoBanner'
 
 // [utest->req~plt-448~1]
+// [utest->req~plt-455~1]
 describe('DemoBanner', () => {
   it('says nothing is saved and links to the releases page', () => {
     render(<DemoBanner />)
@@ -25,5 +26,14 @@ describe('DemoBanner', () => {
     const chip = screen.getByRole('button', { name: 'Demo' })
     await user.click(chip)
     expect(screen.getByRole('status')).toBeInTheDocument()
+  })
+
+  it('links back to the project page from the notice and while the notice is folded', async () => {
+    const user = userEvent.setup()
+    render(<DemoBanner />)
+    expect(screen.getByRole('link', { name: '← Back to project page' })).toHaveAttribute('href', '../')
+    await user.click(screen.getByRole('button', { name: 'Hide the demo notice' }))
+    expect(screen.getByRole('link', { name: '← Back to project page' })).toHaveAttribute('href', '../')
+    expect(screen.getByRole('button', { name: 'Demo' })).toBeInTheDocument()
   })
 })
