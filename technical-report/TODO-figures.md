@@ -73,7 +73,7 @@ Change the screenshot to match the caption.
 Must show:
 
 - The paper list on the left, with all five papers.
-- The PDF of "Deep Learning for Code Search: A Study" in the middle.
+- The PDF of "From Scattered to Structured: A Vision for Automating Architectural Knowledge Management" in the middle.
 - The extraction form on the right, for seat Reviewer 1.
 - At least one answered field and one Findings entry in the form.
 
@@ -85,7 +85,7 @@ Setup:
 
 1. Click "Open file…" and choose `~/sailor-captures/samples/project.example.json`.
 2. Select Reviewer 1 in the seat control of the toolbar.
-3. Select the paper "Deep Learning for Code Search: A Study".
+3. Select the paper "From Scattered to Structured: A Vision for Automating Architectural Knowledge Management".
 4. Enter a value for "Relevant", "Study Type", and "Year".
 5. Enter one Findings entry with a claim.
 6. Click "Save".
@@ -125,7 +125,7 @@ Must show:
 
 - The abstract of the selected paper.
 - The decision buttons, with no decision yet.
-- The progress line "0 of 8 screened".
+- The progress line "0 of 7 screened".
 
 Must not show:
 
@@ -135,7 +135,7 @@ Setup:
 
 1. Click "Open file…" and choose `~/sailor-captures/samples/screening.example.json`.
 2. Select Reviewer 1 in the seat control of the toolbar.
-3. Select "Deep Learning for Code Search: A Study".
+3. Select "Software Architecture Meets LLMs: A Systematic Literature Review".
 
 ### 3.4 `figures/consolidation-compare-popup.png`
 
@@ -148,7 +148,7 @@ Must show:
 Setup:
 
 1. Click "Open file…" and choose `~/sailor-captures/samples/project.example.json`.
-2. Select Reviewer 1 in the seat control. Select "Deep Learning for Code Search: A Study".
+2. Select Reviewer 1 in the seat control. Select "Software Architecture Meets LLMs: A Systematic Literature Review".
 3. Enter "Case study" in "Study Type". Click "Save".
 4. Select Reviewer 2 in the seat control. Select the same paper.
 5. Enter "Benchmark" in "Study Type". Click "Save".
@@ -210,7 +210,7 @@ Keep the title bar if you crop.
 
 Check each item on the screen and on the saved PNG.
 
-- [ ] The title bar reads "<project title> - SaiLoR". For example: "Example SLR: Code Search and Program Repair - SaiLoR".
+- [ ] The title bar reads "<project title> - SaiLoR". For example: "Example SLR: LLMs for Software Architecture Knowledge - SaiLoR".
 - [ ] The title bar has no leading "● ". The project has no unsaved changes.
 - [ ] The "Close project" button (X) is visible at the left of the toolbar.
 - [ ] The toolbar does not show the project name.

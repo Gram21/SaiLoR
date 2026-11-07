@@ -52,10 +52,10 @@ switch to **TAGS**, which searches the **annotation content** you've already rec
 for "which papers did I mark as X".
 
 <p align="center">
-  <img src="screenshots/paper-search.png" alt="Searching the paper list for 'A1-37', a PDF's file name, and finding the one matching paper" width="900">
+  <img src="screenshots/paper-search.png" alt="Searching the paper list for '2511.02434', a PDF's file name, and finding the one matching paper" width="900">
 </p>
 
-The search above matches `A1-37` — part of a PDF's *file name*, not its title or authors — and still
+The search above matches `2511.02434` — part of a PDF's *file name*, not its title or authors — and still
 finds the right paper. Searching by the paper's own id works the same way; both are useful once a
 project has more papers than you can recognize by title alone.
 
