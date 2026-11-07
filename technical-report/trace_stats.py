@@ -37,8 +37,8 @@ def main():
                 current = m.group(1)
                 ids[current] = m.group(2)
                 entries[current] = {}
-            elif current and (f := re.match(r"- \*\*(Type|Evidence|Verified by):\*\*(.*)", line)):
-                entries[current][f.group(1)] = f.group(2).strip()
+            elif current and (f := re.match(r"- \*\*(Type|Evidence|Verified by|Tests):\*\*(.*)", line)):
+                entries[current][f.group(1).replace("Tests", "Verified by")] = f.group(2).strip()
                 if f.group(1) == "Type":
                     kinds["functional" if f.group(2).strip().startswith("Functional") else "non-functional"] += 1
             elif current and line.startswith("- **Status:**"):
