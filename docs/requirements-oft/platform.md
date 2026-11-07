@@ -896,7 +896,7 @@ Tags: Functional, Usability
 ### REQ-PLT-449: Keep demo code out of the desktop build
 `req~plt-449~1`
 
-The normal build shall not contain the demo data, the demo PDF or the demo notice text. The demo code shall run only in a build that defines `__DEMO__` as true.
+The normal build shall not contain the demo data, the demo PDFs or the demo notice text. The demo code shall run only in a build that defines `__DEMO__` as true.
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Maintainability, Security)
@@ -940,7 +940,7 @@ Tags: NonFunctional, Portability, Reliability
 ### REQ-PLT-452: Start the demo on the paper with a PDF
 `req~plt-452~1`
 
-When the demo opens, the system shall select the paper that has the bundled PDF and shall select reviewer seat 1. The system shall not show the reviewer seat prompt at the start. The visitor shall be able to switch the seat from the toolbar.
+When the demo opens, the system shall select the demo's start paper, which has a bundled PDF, and shall select reviewer seat 1. The system shall not show the reviewer seat prompt at the start. The visitor shall be able to switch the seat from the toolbar.
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability)
@@ -966,3 +966,48 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Usability
+
+### REQ-PLT-454: Bundle a PDF for every demo paper
+`req~plt-454~1`
+
+The online demo shall bundle the PDF of every paper in the demo project, so that each paper opens in the PDF viewer. The demo build shall write these PDFs to `papers/` next to the demo's `index.html`. The repository shall record the source URL, the licence and the download date of each bundled PDF in `src/demo/PDF-LICENSES.md`.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/demo/project.ts` (`DEMO_PDF_FILES`, `demoPdfUrl`), `src/platform/demoAdapter.ts` (`getPdfSource`), `vite.config.ts` (`slr-demo-pdfs`), `src/demo/papers/` (the PDF files), `src/demo/PDF-LICENSES.md`
+- **Verified by:** `src/demo/demoProject.test.ts` (`bundles a PDF file for every paper`), `src/platform/demoAdapter.test.ts` (`serves the bundled PDF of every demo paper and says why for any other path`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Usability
+
+### REQ-PLT-455: Link the demo back to the project page
+`req~plt-455~1`
+
+The online demo shall show a link labelled "← Back to project page" on every screen. The link shall go to the parent folder of the demo, which is the project page, so that it works under any subpath of the web server. The link shall stay on screen when the user hides the demo notice.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/DemoBanner.tsx` (`DemoBanner`), `src/demo/text.ts` (`DEMO_BACK_URL`, `DEMO_BACK_LABEL`), `src/styles/index.css` (`.demo-folded`)
+- **Verified by:** `src/components/DemoBanner.test.tsx` (`links back to the project page from the notice and while the notice is folded`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Usability
+
+### REQ-PLT-456: Open a schema editor demo that saves by download
+`req~plt-456~1`
+
+When the online demo opens with the query `?mode=schema`, the system shall open the project editor on a new, empty project, without a file dialog. The editor shall let the visitor add and change schema fields. When the visitor saves, the system shall download the project as `project.json` and shall write nothing else. The demo notice shall say that save downloads `project.json`. The annotation demo shall keep its own start and its refusal to save. The project page and the create-project page shall link to both demos with relative links.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability, Security)
+- **Evidence:** `src/demo/schemaMode.ts` (`DEMO_SCHEMA_MODE`), `src/App.tsx` (demo start effect), `src/platform/demoAdapter.ts` (`pickProjectLocation`, `saveProject`, `download`), `src/components/DemoBanner.tsx`, `src/demo/text.ts` (`DEMO_SCHEMA_NOTICE`), `site/index.html`, `site/create-project.html`, `scripts/check-site-links.js`
+- **Verified by:** `src/demo/schemaDemo.test.ts` (`opens a new project in the editor, adds a field and saves it as a download`), `src/platform/demoSchemaAdapter.test.ts` (`downloads the saved text as project.json and writes nothing else`), `src/components/DemoBanner.schema.test.tsx` (`says that save downloads project.json and keeps the link back`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Usability, Security

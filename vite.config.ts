@@ -1,4 +1,4 @@
-import { readFileSync } from 'node:fs'
+import { readdirSync, readFileSync } from 'node:fs'
 import { defineConfig } from 'vitest/config'
 import react from '@vitejs/plugin-react'
 
@@ -11,16 +11,18 @@ export default defineConfig(({ mode }) => {
   // into dist-demo/. `__DEMO__` is a compile-time constant, so the normal build
   // drops every demo branch.
   const isDemo = mode === 'demo'
-  // The demo's one PDF is written as a plain file, not imported, so the normal
-  // build never contains it. The path must match DEMO_PDF_URL in src/demo/project.ts.
-  const demoPdf = {
-    name: 'slr-demo-pdf',
+  // The demo's PDFs are written as plain files, not imported, so the normal build
+  // never contains them. The file names must match DEMO_PDF_FILES in src/demo/project.ts.
+  const demoPdfs = {
+    name: 'slr-demo-pdfs',
     generateBundle(this: { emitFile: (file: { type: 'asset'; fileName: string; source: Buffer }) => void }) {
-      this.emitFile({
-        type: 'asset',
-        fileName: 'papers/KeimKaplan_FromScatteredToStructured.pdf',
-        source: readFileSync('./src/demo/papers/KeimKaplan_FromScatteredToStructured.pdf'),
-      })
+      for (const name of readdirSync('./src/demo/papers').filter((file) => file.endsWith('.pdf'))) {
+        this.emitFile({
+          type: 'asset',
+          fileName: `papers/${name}`,
+          source: readFileSync(`./src/demo/papers/${name}`),
+        })
+      }
     },
   }
   return {
@@ -30,7 +32,7 @@ export default defineConfig(({ mode }) => {
       __APP_VERSION__: JSON.stringify(version),
       __DEMO__: JSON.stringify(isDemo),
     },
-    plugins: [react(), ...(isDemo ? [demoPdf] : [])],
+    plugins: [react(), ...(isDemo ? [demoPdfs] : [])],
     server: {
       // `tauri dev` loads this fixed URL (devUrl in src-tauri/tauri.conf.json).
       port: 5173,

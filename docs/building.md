@@ -39,6 +39,10 @@ The online demo runs in a browser. It needs no Rust and no Tauri toolchain.
 
 Caution: The demo does not save. It opens a bundled example project. Serve `dist-demo/` from a web server, for example under `/SaiLoR/demo/`.
 
+The demo bundles the PDF of each demo paper from `src/demo/papers/`. The licence and source of each PDF are in [src/demo/PDF-LICENSES.md](../src/demo/PDF-LICENSES.md). To add a demo paper PDF, copy it to `src/demo/papers/`, add it to `DEMO_PDF_FILES` in `src/demo/project.ts`, and record its licence.
+
+The demo build also has a schema editor demo. Open `demo/?mode=schema` to start the project editor on a new project. Save downloads `project.json`. See REQ-PLT-456 in [requirements/platform.md](requirements/platform.md).
+
 The demo build uses the same code as the desktop app. It adds the demo platform and the demo notice. The normal `npm run build` output does not contain them. See REQ-PLT-444 and REQ-PLT-449 in [requirements/platform.md](requirements/platform.md).
 
 ## Preview the project website

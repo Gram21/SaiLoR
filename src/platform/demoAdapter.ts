@@ -1,8 +1,21 @@
 import type { PlatformAdapter, SaveHandle } from './adapter'
-import { DEMO_FILE_NAME, DEMO_PDF_PATH, DEMO_PDF_URL, demoProjectText } from '../demo/project'
+import { DEMO_FILE_NAME, demoPdfUrl, demoProjectText } from '../demo/project'
 import { DEMO_NOT_AVAILABLE, DEMO_NOT_SAVED, DEMO_NO_PDF } from '../demo/text'
+import { DEMO_SCHEMA_MODE } from '../demo/schemaMode'
 
 const DEMO_HANDLE: SaveHandle = { kind: 'download', name: DEMO_FILE_NAME }
+const SCHEMA_FILE_NAME = 'project.json'
+const SCHEMA_HANDLE: SaveHandle = { kind: 'download', name: SCHEMA_FILE_NAME }
+
+/** Hands the text to the visitor as a file, the way a browser download does. */
+function download(text: string, name: string): void {
+  const url = URL.createObjectURL(new Blob([text], { type: 'application/json' }))
+  const link = document.createElement('a')
+  link.href = url
+  link.download = name
+  link.click()
+  setTimeout(() => URL.revokeObjectURL(url), 0)
+}
 
 const refused = (): never => {
   throw new Error(DEMO_NOT_SAVED)
@@ -36,16 +49,21 @@ export function createDemoAdapter(): PlatformAdapter {
     // Every open starts again from the bundled project, so a visitor who
     // reopens the demo never sees an earlier visit's edits.
     openProject: async () => ({ text: demoProjectText(), handle: DEMO_HANDLE, name: DEMO_FILE_NAME }),
-    saveProject: async () => refused(),
+    saveProject: async (text) => {
+      if (!DEMO_SCHEMA_MODE) return refused()
+      download(text, SCHEMA_FILE_NAME)
+      return SCHEMA_HANDLE
+    },
     rebasePdfPaths: async (pdfPaths) => pdfPaths,
     getPdfSource: async (pdfPath) => {
-      if (pdfPath !== DEMO_PDF_PATH) throw new Error(DEMO_NO_PDF)
-      return { url: DEMO_PDF_URL }
+      const url = demoPdfUrl(pdfPath)
+      if (url === null) throw new Error(DEMO_NO_PDF)
+      return { url }
     },
     scanPdfFolder: async () => ({ files: [], known: [] }),
     needsPdfFolderGrant: () => false,
     grantPdfFolderAccess: async () => {},
-    pickProjectLocation: async () => null,
+    pickProjectLocation: async () => (DEMO_SCHEMA_MODE ? { handle: SCHEMA_HANDLE, name: SCHEMA_FILE_NAME } : null),
     annotationsDirUsers: async () => [],
     screeningSource: async () => null,
     writeFeedback: async () => null,

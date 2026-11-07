@@ -1,7 +1,6 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest'
 import { createDemoAdapter } from './demoAdapter'
 import { DEMO_NOT_AVAILABLE, DEMO_NOT_SAVED, DEMO_NO_PDF } from '../demo/text'
-import { DEMO_PDF_PATH } from '../demo/project'
 import { loadProject } from '../model/project'
 
 // [utest->req~plt-445~1]
@@ -85,10 +84,13 @@ describe('demo adapter: disabled desktop operations', () => {
     expect(await adapter.pickTextExportPath('x.txt')).toBeNull()
   })
 
-  it('serves only the bundled PDF and says why for every other paper', async () => {
+  it('serves the bundled PDF of every demo paper and says why for any other path', async () => {
     const adapter = createDemoAdapter()
-    const source = await adapter.getPdfSource(DEMO_PDF_PATH, { kind: 'download' })
-    expect(source.url).toEqual(expect.any(String))
-    await expect(adapter.getPdfSource('pdfs/2505.16697.pdf', { kind: 'download' })).rejects.toThrow(DEMO_NO_PDF)
+    const project = loadProject((await adapter.openProject())!.text)
+    for (const paper of project.papers) {
+      const source = await adapter.getPdfSource(paper.pdf, { kind: 'download' })
+      expect(source.url).toMatch(/papers\/[^/]+\.pdf$/)
+    }
+    await expect(adapter.getPdfSource('pdfs/missing.pdf', { kind: 'download' })).rejects.toThrow(DEMO_NO_PDF)
   })
 })

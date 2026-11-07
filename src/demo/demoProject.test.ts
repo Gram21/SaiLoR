@@ -1,8 +1,10 @@
+import { existsSync } from 'node:fs'
+import { join } from 'node:path'
 import { describe, expect, it } from 'vitest'
 import { loadProject } from '../model/project'
 import { projectSchema } from '../model/schema'
 import { DEMO_MODE } from './mode'
-import { demoProjectText } from './project'
+import { demoPdfUrl, demoProjectText } from './project'
 
 const project = loadProject(demoProjectText())
 // The parser fills an unannotated seat with blank defaults, so "not screened"
@@ -39,12 +41,6 @@ describe('demo project data', () => {
     }
   })
 
-  it('bundles a PDF for one paper only and leaves the others without one', () => {
-    const withPdf = project.papers.filter((p) => p.pdf === 'pdfs/KeimKaplan_FromScatteredToStructured.pdf')
-    expect(withPdf.map((p) => p.id)).toEqual(['KeimKaplan2026_ICSEBoF'])
-    expect(project.papers.filter((p) => p.pdf !== withPdf[0].pdf)).toHaveLength(6)
-  })
-
   it('shows included, excluded, undecided and disagreeing papers', () => {
     expect(relevantOf('Schmid2025_ArchLLMs', '1')).toBe(true)
     expect(relevantOf('Schmid2025_ArchLLMs', '2')).toBe(true)
@@ -63,5 +59,16 @@ describe('demo project data', () => {
     const notes = paper?.reviews['1']?.Notes?.[0]?.value
     expect(notes).toContain('"where we will empirically evaluate each step to ensure effectiveness and practicality"')
     expect(notes).toContain('"The expected outcome is a prototype system that democratizes access to architectural knowledge across development teams."')
+  })
+})
+
+// [utest->req~plt-454~1]
+describe('demo PDFs', () => {
+  it('bundles a PDF file for every paper', () => {
+    for (const paper of project.papers) {
+      expect(demoPdfUrl(paper.pdf), paper.id).not.toBeNull()
+      const file = paper.pdf.replace(/^pdfs\//, '')
+      expect(existsSync(join(process.cwd(), 'src', 'demo', 'papers', file)), paper.id).toBe(true)
+    }
   })
 })

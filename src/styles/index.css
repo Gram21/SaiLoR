@@ -3581,12 +3581,21 @@ kbd {
   color: var(--text);
   font-weight: 600;
 }
+.demo-banner a.demo-back {
+  margin-right: 12px;
+}
 .demo-banner-hide,
 .demo-chip {
   margin-left: 8px;
 }
-.demo-chip {
+.demo-folded {
+  display: flex;
+  align-items: center;
   align-self: flex-end;
   margin: 4px 8px 0 auto;
   font-size: 0.75rem;
+}
+.demo-folded a {
+  color: var(--text);
+  font-weight: 600;
 }

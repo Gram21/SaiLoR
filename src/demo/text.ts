@@ -3,6 +3,14 @@
 
 export const DEMO_RELEASES_URL = 'https://github.com/Gram21/SaiLoR/releases'
 
+/** The project page, one level above the demo folder. Relative, so it works under any subpath. */
+export const DEMO_BACK_URL = '../'
+
+export const DEMO_BACK_LABEL = '← Back to project page'
+
+/** The notice of the schema editor demo (`?mode=schema`), in place of the annotation demo's notice. */
+export const DEMO_SCHEMA_NOTICE = 'Schema demo: nothing is saved on this site. Save downloads project.json.'
+
 export const DEMO_NOT_SAVED = 'Demo: nothing is saved. Download the app to keep your work.'
 
 export const DEMO_NOT_AVAILABLE = 'Not available in the demo. Download the app to use this.'
@@ -11,7 +19,7 @@ export const DEMO_NO_PDF = 'The demo does not include a PDF for this paper.'
 
 export const DEMO_READ_ON_ARXIV = 'Read this paper on arXiv'
 
-/** The paper the demo opens on: the one paper with a bundled PDF. */
+/** The paper the demo opens on. */
 export const DEMO_START_PAPER_ID = 'KeimKaplan2026_ICSEBoF'
 
 /** The reviewer seat the demo opens in, so the seat prompt does not show. */
