@@ -309,6 +309,54 @@ Check and change the values. Then do one of these for each entry:
 SaiLoR adds only the files that you confirm. The paper list marks a paper whose PDF file is missing.
 SaiLoR does not send PDF files or text to Crossref. With the lookup on, it sends only the DOI.
 
+## Exploring the knowledge graph
+
+The knowledge graph shows papers, authors, venues, keywords and answers as nodes.
+Edges connect each paper to its authors, venue, keywords, answers and cited papers.
+
+To open the graph view, click **Export ▾** and then **Explore knowledge graph**.
+
+<p align="center">
+  <img src="screenshots/knowledge-graph-nodes.png" alt="The knowledge graph view with the Nodes drawer open on the left, one paper selected, and the side panel with its details and neighbours" width="900">
+</p>
+
+Use the view like this:
+
+- Drag the background to move the graph. Turn the mouse wheel to zoom.
+- Click a node to select it. The side panel shows its details and its neighbours.
+- Double-click a node, or click **Show neighbours**, to add its neighbours to the view.
+- Clear a checkbox under **Relations:** to hide the edges of that type.
+- Click **Nodes** to open the node list. The list is closed when the view opens.
+  The list is a keyboard alternative to the canvas. It shows 200 nodes; **Show more** adds 200 more.
+- Click **Export…** to save the graph as JSON-LD, RDF Turtle, GraphML or CSV.
+- Press Escape or click × to close the view.
+
+The view uses the consolidated answers if they exist.
+If no consolidated answers exist and the project has several reviewers, select the **Seat** in the view.
+
+### Graph queries
+
+Type a query into the query box. Then press Enter or click **Show**.
+
+| Query | Shows |
+| --- | --- |
+| `turing` | Nodes that contain the word, and their neighbours. |
+| `type:paper Method=Survey` | Papers with the answer *Survey* in the field *Method*. |
+| `author:smith` | Author nodes that contain *smith*, and their papers. |
+| `turing -type:author` | Nodes that contain *turing*, but no author nodes. A `-` removes the matches of a term. |
+| `type:paper depth:2` | Papers and the nodes up to 2 steps away. The default depth is 1. The maximum is 3. |
+
+A query that starts with `MATCH` is a read-only Cypher query:
+
+<p align="center">
+  <img src="screenshots/knowledge-graph-cypher.png" alt="A Cypher query that finds the papers of one author, with the matching nodes in the graph and a results table in the side panel" width="900">
+</p>
+
+The side panel shows the result rows. The graph marks the returned nodes.
+If the query has an error, the view shows the reason and the position.
+SaiLoR stops a query after 20 seconds.
+For the full query syntax, see [Knowledge graph](../README.md#knowledge-graph) in the main README.
+
 ## Keyboard shortcuts
 
 Press **F1** at any time for the full, current list for whichever screen you're on — it differs
