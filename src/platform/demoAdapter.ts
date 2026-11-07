@@ -1,5 +1,5 @@
 import type { PlatformAdapter, SaveHandle } from './adapter'
-import { DEMO_FILE_NAME, DEMO_PDF_PATH, DEMO_PDF_URL, demoProjectText } from '../demo/project'
+import { DEMO_FILE_NAME, demoPdfUrl, demoProjectText } from '../demo/project'
 import { DEMO_NOT_AVAILABLE, DEMO_NOT_SAVED, DEMO_NO_PDF } from '../demo/text'
 
 const DEMO_HANDLE: SaveHandle = { kind: 'download', name: DEMO_FILE_NAME }
@@ -39,8 +39,9 @@ export function createDemoAdapter(): PlatformAdapter {
     saveProject: async () => refused(),
     rebasePdfPaths: async (pdfPaths) => pdfPaths,
     getPdfSource: async (pdfPath) => {
-      if (pdfPath !== DEMO_PDF_PATH) throw new Error(DEMO_NO_PDF)
-      return { url: DEMO_PDF_URL }
+      const url = demoPdfUrl(pdfPath)
+      if (url === null) throw new Error(DEMO_NO_PDF)
+      return { url }
     },
     scanPdfFolder: async () => ({ files: [], known: [] }),
     needsPdfFolderGrant: () => false,

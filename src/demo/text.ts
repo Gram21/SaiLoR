@@ -11,7 +11,7 @@ export const DEMO_NO_PDF = 'The demo does not include a PDF for this paper.'
 
 export const DEMO_READ_ON_ARXIV = 'Read this paper on arXiv'
 
-/** The paper the demo opens on: the one paper with a bundled PDF. */
+/** The paper the demo opens on. */
 export const DEMO_START_PAPER_ID = 'KeimKaplan2026_ICSEBoF'
 
 /** The reviewer seat the demo opens in, so the seat prompt does not show. */

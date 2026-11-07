@@ -414,7 +414,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-449: Keep demo code out of the desktop build
-- **Description:** The normal build shall not contain the demo data, the demo PDF or the demo notice text. The demo code shall run only in a build that defines `__DEMO__` as true.
+- **Description:** The normal build shall not contain the demo data, the demo PDFs or the demo notice text. The demo code shall run only in a build that defines `__DEMO__` as true.
 - **Type:** Non-functional (ISO 25010: Maintainability, Security)
 - **Evidence:** `vite.config.ts` (`__DEMO__`, `demoPdf` plugin), `src/demo/mode.ts` (`DEMO_MODE`), `src/platform/index.ts` (`getPlatform`)
 - **Verified by:** `src/demo/demoProject.test.ts` (`is off in the test run, so the normal build keeps its behaviour`)
@@ -434,7 +434,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-452: Start the demo on the paper with a PDF
-- **Description:** When the demo opens, the system shall select the paper that has the bundled PDF and shall select reviewer seat 1. The system shall not show the reviewer seat prompt at the start. The visitor shall be able to switch the seat from the toolbar.
+- **Description:** When the demo opens, the system shall select the demo's start paper, which has a bundled PDF, and shall select reviewer seat 1. The system shall not show the reviewer seat prompt at the start. The visitor shall be able to switch the seat from the toolbar.
 - **Type:** Functional (ISO 25010: Usability)
 - **Evidence:** `src/state/store.ts` (`openProject`, demo landing paper and seat), `src/demo/project.ts` (`DEMO_START_PAPER_ID`, `DEMO_START_SEAT`)
 - **Verified by:** `src/demo/demoStart.test.ts` (`opens on the paper with the bundled PDF, in reviewer 1 seat, without the seat prompt`, `lets the visitor switch seats after the start`)
@@ -445,4 +445,11 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Type:** Functional (ISO 25010: Usability)
 - **Evidence:** `src/components/PdfViewer.tsx` (demo notice in the PDF pane), `src/demo/text.ts` (`DEMO_NO_PDF`, `demoArxivUrl`), `src/styles/index.css` (`.pdf-notice`)
 - **Verified by:** `src/components/PdfViewer.demo.test.tsx` (`shows a neutral notice and links to the arXiv page of the paper`, `shows the notice without a link when the paper names no arXiv page`), `src/demo/demoStart.test.ts` (`takes the arXiv abstract page from the venue text`, `returns null when the venue names no arXiv page`)
+- **Status:** Implemented
+
+### REQ-PLT-454: Bundle a PDF for every demo paper
+- **Description:** The online demo shall bundle the PDF of every paper in the demo project, so that each paper opens in the PDF viewer. The demo build shall write these PDFs to `papers/` next to the demo's `index.html`. The repository shall record the source URL, the licence and the download date of each bundled PDF in `src/demo/PDF-LICENSES.md`.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/demo/project.ts` (`DEMO_PDF_FILES`, `demoPdfUrl`), `src/platform/demoAdapter.ts` (`getPdfSource`), `vite.config.ts` (`slr-demo-pdfs`), `src/demo/papers/` (the PDF files), `src/demo/PDF-LICENSES.md`
+- **Verified by:** `src/demo/demoProject.test.ts` (`bundles a PDF file for every paper`), `src/platform/demoAdapter.test.ts` (`serves the bundled PDF of every demo paper and says why for any other path`)
 - **Status:** Implemented
