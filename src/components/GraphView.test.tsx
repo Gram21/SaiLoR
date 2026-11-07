@@ -1,7 +1,7 @@
 // [utest->req~ui-190~1]
 import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
-import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
+import { act, configure, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 const saved = vi.hoisted(() => ({ picks: [] as unknown[][], writes: [] as unknown[][] }))
@@ -115,7 +115,9 @@ function drawn(label: string) {
   const call = ctx.fillText.mock.calls.filter((c) => c[0] === label).at(-1)!
   return { clientX: (call[1] as number) * k + x, clientY: ((call[2] as number) + 12) * k + y }
 }
-const waitForLabel = (label: string) => waitFor(() => expect(ctx.fillText.mock.calls.some((c) => c[0] === label)).toBe(true), { timeout: 5000 })
+configure({ asyncUtilTimeout: 5000 })
+
+const waitForLabel = (label: string) => waitFor(() => expect(ctx.fillText.mock.calls.some((c) => c[0] === label)).toBe(true))
 
 /** Submits a query without userEvent, which treats `{` and `[` as key names. */
 function submit(text: string) {
