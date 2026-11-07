@@ -21,6 +21,29 @@ record and an Include/Exclude choice instead — see [Screening](screening.md). 
 **multiple reviewers**, you'll be asked which seat you are before you can annotate anything — see
 [Working with several reviewers](multi-reviewer.md).
 
+Tick **View only** in the toolbar to look at the annotations without the risk of a change.
+In view-only mode, SaiLoR does not change the project. Clear the checkbox to edit again.
+
+### Opening a large project
+
+SaiLoR opens a project in two steps. First it shows the paper list with the metadata of all papers.
+Then it reads the answers of the papers in batches.
+While SaiLoR reads, the paper list shows the progress, for example "Loading papers: 12,000 / 50,000".
+You can open and annotate each paper that has loaded.
+
+Some features need all papers. SaiLoR disables them until the last paper has loaded:
+
+- save, save as and autosave
+- validation and AI evaluation
+- the knowledge graph export and view
+- the PDF folder scan and the Git panel
+- the consolidation overview, the disagreement lists and the screening summary
+
+The tooltip of each disabled control gives the reason.
+If a batch cannot be read, the paper list shows where loading stopped. Click **Retry** to read the batch again.
+SaiLoR keeps saving blocked until every paper has loaded.
+A project in the old single-file layout opens in one step. Save it once to change it to the split layout.
+
 ## Finding a paper
 
 The box above the paper list searches **title, authors, DOI, abstract, the PDF's file name, and the
@@ -246,6 +269,32 @@ annotating:
 | Alt+↓ / `]` | Next paper |
 | Alt+↑ / `[` | Previous paper |
 | F1 | Open help |
+
+Focus stays inside an open dialog:
+
+- Tab on the last control moves to the first control.
+- Shift+Tab on the first control moves to the last control.
+- Most dialogs close with Escape or with a click outside the dialog.
+- A click inside the dialog does not close it.
+
+The knowledge graph view does not close on a click outside it. Use Escape or the × button.
+
+## Settings
+
+Open **Settings** with Ctrl/Cmd+, or click the SaiLoR title in the toolbar.
+
+<p align="center">
+  <img src="screenshots/settings-dialog.png" alt="The Settings dialog: the General section with theme, font size and autosave, and the Language section" width="680">
+</p>
+
+| Section | Content |
+| --- | --- |
+| **General** | Theme, app font size and **Autosave every 5 minutes**. |
+| **Language** | The language of the user interface. |
+| **AI** | **AI models…** opens the AI model library. SaiLoR shows this section only if the open project allows AI. |
+| **Git** | The git version that SaiLoR found, or the reason that git is not available. |
+
+SaiLoR stores these settings for your user account. Project settings stay in the project file.
 
 ## Changing the language
 
