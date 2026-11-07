@@ -148,8 +148,6 @@
   "exportGraph.csv": "CSV ノード／エッジ一覧 (.csv)",
   "exportGraph.csvHint": "CSV は 2 つのファイルを書き出します。先にノードファイル、次にエッジファイルを選択してください。",
   "exportGraph.notSaved": "{name} は保存されていません。エクスポートは不完全です。",
-  "exportGraph.consolidated": "エクスポートには統合済みの回答を使用します。",
-  "exportGraph.pickSeat": "統合済みの回答がありません。エクスポートする席を選択してください。",
   "exportGraph.seat": "席",
   "exportGraph.export": "エクスポート",
   "exportGraph.exporting": "エクスポート中…",
@@ -2205,5 +2203,16 @@
   "pdfFolder.source.manual": "手動",
   "pdfFolder.notFound": "PDF フォルダー「{folder}」が存在しません。",
   "pdfFolder.escapes": "PDF フォルダー「{folder}」はプロジェクトフォルダーの外にあります。",
-  "pdfFolder.scanFailed": "PDF フォルダーのスキャンに失敗しました: {error}"
+  "pdfFolder.scanFailed": "PDF フォルダーのスキャンに失敗しました: {error}",
+  "toolbar.graphMenu": "グラフ",
+  "exportGraph.consolidation": "統合",
+  "graphView.download": "ダウンロード",
+  "graphView.download.title": "グラフを画像として保存",
+  "graphView.download.format": "形式",
+  "graphView.download.svg": "SVG (.svg)",
+  "graphView.download.png": "PNG (.png)",
+  "graphView.download.area": "範囲",
+  "graphView.download.visible": "表示中の部分",
+  "graphView.download.all": "グラフ全体（表示されていない部分を含む）",
+  "graphView.download.filter": "画像には現在のフィルターが反映されます。"
 }

@@ -1,0 +1,87 @@
+{
+  "annotations": {
+    "Relevant": [
+      {
+        "value": true
+      }
+    ],
+    "Study Type": [
+      {
+        "value": "Technique or approach"
+      }
+    ],
+    "Year": [
+      {
+        "value": 2025
+      }
+    ],
+    "Findings": [
+      {
+        "children": {
+          "Claim": [
+            {
+              "value": "ExArch extracts architecture component names from documentation and code without manual models."
+            }
+          ],
+          "Evidence": [
+            {
+              "children": {
+                "Metric": [
+                  {
+                    "value": "F1 = 0.86"
+                  }
+                ],
+                "Evaluation Type": [
+                  {
+                    "value": "Benchmark"
+                  }
+                ]
+              }
+            }
+          ],
+          "Confidence": [
+            {
+              "value": 4
+            }
+          ]
+        }
+      },
+      {
+        "children": {
+          "Claim": [
+            {
+              "value": "ArTEMiS is on par with the heuristic SWATTR and can replace it with TransArC."
+            }
+          ],
+          "Evidence": [
+            {
+              "children": {
+                "Metric": [
+                  {
+                    "value": "F1 = 0.81 (SWATTR)"
+                  }
+                ],
+                "Evaluation Type": [
+                  {
+                    "value": "Benchmark"
+                  }
+                ]
+              }
+            }
+          ],
+          "Confidence": [
+            {
+              "value": 4
+            }
+          ]
+        }
+      }
+    ],
+    "Notes": [
+      {
+        "value": "Architecture traceability with LLMs, in scope. Figures from the abstract."
+      }
+    ]
+  },
+  "finished": true
+}

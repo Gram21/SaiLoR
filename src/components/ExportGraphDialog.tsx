@@ -2,11 +2,11 @@
 import { useEffect, useState } from 'react'
 import { useStore } from '../state/store'
 import { getPlatform } from '../platform'
-import { seatLabel } from '../model/project'
-import { buildGraph, graphSource, graphTrees, toCsvEdges, toCsvNodes, toGraphMl, toJsonLd, toTurtle } from '../model/graph'
+import { buildGraph, defaultGraphSeat, graphTrees, toCsvEdges, toCsvNodes, toGraphMl, toJsonLd, toTurtle } from '../model/graph'
 import { useT } from '../i18n'
 import '../styles/ai.css'
 import { Modal } from './Modal'
+import { GraphSeatSelect } from './GraphSeatSelect'
 
 type Format = 'jsonld' | 'ttl' | 'graphml' | 'csv'
 
@@ -16,7 +16,7 @@ export function ExportGraphDialog({ onClose }: { onClose: () => void }) {
   const project = useStore((s) => s.project)
   const t = useT()
   const [format, setFormat] = useState<Format>('jsonld')
-  const [seat, setSeat] = useState('1')
+  const [seat, setSeat] = useState(() => (project ? defaultGraphSeat(project) : '1'))
   const [busy, setBusy] = useState(false)
   const [messages, setMessages] = useState<{ ok: boolean; text: string }[]>([])
 
@@ -29,8 +29,6 @@ export function ExportGraphDialog({ onClose }: { onClose: () => void }) {
   }, [onClose])
 
   if (!project) return null
-  const source = graphSource(project)
-  const seats = Array.from({ length: project.reviewers }, (_, i) => String(i + 1))
 
   const runExport = async () => {
     setBusy(true)
@@ -93,22 +91,7 @@ export function ExportGraphDialog({ onClose }: { onClose: () => void }) {
           ))}
         </fieldset>
         {format === 'csv' && <p>{t('exportGraph.csvHint')}</p>}
-        {project.reviewers > 1 && source === 'consolidated' && <p>{t('exportGraph.consolidated')}</p>}
-        {source === 'seat' && (
-          <>
-            <p>{t('exportGraph.pickSeat')}</p>
-            <label>
-              <span>{t('exportGraph.seat')} </span>
-              <select value={seat} onChange={(e) => setSeat(e.target.value)} disabled={busy}>
-                {seats.map((s) => (
-                  <option key={s} value={s}>
-                    {seatLabel(project, s)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          </>
-        )}
+        <GraphSeatSelect project={project} value={seat} onChange={setSeat} disabled={busy} />
         {messages.map((m, i) => (
           <p key={i} className={m.ok ? undefined : 'ai-error'}>
             {m.text}

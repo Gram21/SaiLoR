@@ -322,6 +322,13 @@ export function Toolbar() {
       : [{ type: 'item', label: t('toolbar.recent.none'), disabled: true, onSelect: () => {} } as MenuItem]),
   ]
 
+  const graphExportItem: MenuItem = {
+    type: 'item',
+    label: t('toolbar.graph.label'),
+    hint: loading ? loadingHint : t('toolbar.graph.title'),
+    disabled: loading,
+    onSelect: () => setGraphOpen(true),
+  }
   // [impl->req~git-420~1]
   // [impl->req~git-430~1]
   // [impl->req~plt-62~1]
@@ -344,6 +351,8 @@ export function Toolbar() {
       onSelect: () => void saveAs(),
     },
     { type: 'separator' },
+    graphExportItem,
+    { type: 'separator' },
     {
       type: 'item',
       label: `${autosaveEnabled ? '✓ ' : ''}${t('toolbar.save.autosave')}`,
@@ -357,14 +366,7 @@ export function Toolbar() {
     },
   ]
 
-  const exportItems: MenuItem[] = [
-    {
-      type: 'item',
-      label: t('toolbar.graph.label'),
-      hint: loading ? loadingHint : t('toolbar.graph.title'),
-      disabled: loading,
-      onSelect: () => setGraphOpen(true),
-    },
+  const graphItems: MenuItem[] = [
     // [impl->req~ui-190~1]
     {
       type: 'item',
@@ -373,6 +375,7 @@ export function Toolbar() {
       disabled: loading,
       onSelect: () => setGraphViewOpen(true),
     },
+    graphExportItem,
   ]
 
   return (
@@ -415,7 +418,7 @@ export function Toolbar() {
           {project && (
             <>
               <Dropdown label={t('common.save')} title={t('toolbar.save.title')} disabled={busy} items={saveItems} />
-              <Dropdown label={t('consolidation.export')} disabled={busy || editorOpen} items={exportItems} />
+              <Dropdown label={t('toolbar.graphMenu')} disabled={busy || editorOpen} items={graphItems} />
               <span className="toolbar-sep" aria-hidden="true" />
               {/* Disabled with an honest reason when the browser has no local git,
                   the desktop has no git binary, or the project is outside a work

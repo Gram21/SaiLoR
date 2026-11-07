@@ -148,8 +148,6 @@
   "exportGraph.csv": "Listas CSV de nós e arestas (.csv)",
   "exportGraph.csvHint": "CSV grava dois arquivos. Selecione primeiro o arquivo de nós e depois o de arestas.",
   "exportGraph.notSaved": "{name} não foi salvo. A exportação está incompleta.",
-  "exportGraph.consolidated": "A exportação usa as respostas consolidadas.",
-  "exportGraph.pickSeat": "Não há respostas consolidadas. Selecione o assento a exportar.",
   "exportGraph.seat": "Assento",
   "exportGraph.export": "Exportar",
   "exportGraph.exporting": "Exportando…",
@@ -2205,5 +2203,16 @@
   "pdfFolder.source.manual": "manual",
   "pdfFolder.notFound": "A pasta de PDF \"{folder}\" não existe.",
   "pdfFolder.escapes": "A pasta de PDF \"{folder}\" está fora da pasta do projeto.",
-  "pdfFolder.scanFailed": "A verificação da pasta de PDF falhou: {error}"
+  "pdfFolder.scanFailed": "A verificação da pasta de PDF falhou: {error}",
+  "toolbar.graphMenu": "Grafo",
+  "exportGraph.consolidation": "Consolidação",
+  "graphView.download": "Transferir",
+  "graphView.download.title": "Guardar o grafo como imagem",
+  "graphView.download.format": "Formato",
+  "graphView.download.svg": "SVG (.svg)",
+  "graphView.download.png": "PNG (.png)",
+  "graphView.download.area": "Área",
+  "graphView.download.visible": "Secção visível",
+  "graphView.download.all": "Todo o grafo, incluindo a parte não visível",
+  "graphView.download.filter": "A imagem mostra o filtro atual."
 }

@@ -90,6 +90,8 @@ export interface SlrBridge {
   pickTextExportPath(suggestedName: string, extension?: string): Promise<string | null>
   /** Write `text` to `absPath`. */
   writeTextFile(absPath: string, text: string): Promise<{ ok: true; path: string } | { ok: false; error: string }>
+  /** Write `bytes` to `absPath`, a path from `pickTextExportPath`. */
+  writeBinaryFile(absPath: string, bytes: number[]): Promise<{ ok: true; path: string } | { ok: false; error: string }>
   /** For each project path: does it still exist, and what title does it now carry? */
   peekProjects(paths: string[]): Promise<{ exists: boolean; title?: string }[]>
   /** Paths of `toFiles` relative to `fromFile`'s directory, POSIX-separated. */

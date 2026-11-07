@@ -314,6 +314,9 @@ export interface PlatformAdapter {
   /** Write `text` to `absPath`. Never throws — failures come back as `{ ok: false, error }`. */
   writeTextFile(absPath: string, text: string): Promise<{ ok: true; path: string } | { ok: false; error: string }>
 
+  /** Write `bytes` to `absPath`, a path from `pickTextExportPath`. Never throws — failures come back as `{ ok: false, error }`. */
+  writeBinaryFile(absPath: string, bytes: Uint8Array): Promise<{ ok: true; path: string } | { ok: false; error: string }>
+
   // ---- Self-update ----
   // Where the bundle can self-update (see src-tauri/src/update.rs); other
   // bundles stay on the check-only banner. `supported: false` means don't offer the download/install UI.

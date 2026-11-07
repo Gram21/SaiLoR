@@ -1,8 +1,8 @@
 // [impl->req~ui-190~1]
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent, type ReactNode } from 'react'
 import { useStore } from '../state/store'
-import { seatLabel } from '../model/project'
-import { buildGraph, graphSource, graphTrees, type Graph } from '../model/graph'
+import { getPlatform } from '../platform'
+import { buildGraph, defaultGraphSeat, graphTrees, type Graph } from '../model/graph'
 import { indexGraph, neighbours, parseQuery, selectSubgraph, type GraphQuery, type SubGraph } from '../model/graphQuery'
 import {
   CypherError,
@@ -21,6 +21,9 @@ import { buildScene, drawScene, EDGE_DASH, EDGE_TYPES, edgeAt, fitView, hitTest,
 import { useT } from '../i18n'
 import { Modal } from './Modal'
 import { ExportGraphDialog } from './ExportGraphDialog'
+import { GraphSeatSelect } from './GraphSeatSelect'
+import { GraphDownload, type SaveResult } from './GraphDownload'
+import { imageFrame, sceneToPng, sceneToSvg, type ImageArea, type ImageFormat } from './graphImage'
 
 const LIST_PAGE = 200
 export const CYPHER_TIMEOUT_MS = 20_000
@@ -81,7 +84,7 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   const project = useStore((s) => s.project)
   const theme = useStore((s) => s.theme)
   const t = useT()
-  const [seat, setSeat] = useState('1')
+  const [seat, setSeat] = useState(() => (project ? defaultGraphSeat(project) : '1'))
   const [listOpen, setListOpen] = useState(false)
   const [input, setInput] = useState('')
   const [query, setQuery] = useState<GraphQuery | CypherQuery>(() => parseQuery(''))
@@ -274,7 +277,6 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   }, [onClose, exportOpen])
 
   if (!project) return null
-  const source = graphSource(project)
   const node = selected ? index.byId.get(selected) : undefined
 
   const run = (e: FormEvent) => {
@@ -313,6 +315,28 @@ export function GraphView({ onClose }: { onClose: () => void }) {
     return [(e.clientX - r.left - view.x) / view.k, (e.clientY - r.top - view.y) / view.k] as const
   }
   const nodeAt = (e: { clientX: number; clientY: number }) => hitTest(scene, ...toWorld(e), view.k)
+
+  // [impl->req~ui-260~1]
+  const saveImage = async (format: ImageFormat, area: ImageArea): Promise<SaveResult> => {
+    const canvas = canvasRef.current
+    const s = sceneRef.current
+    if (!canvas || !s) return null
+    try {
+      const platform = getPlatform()
+      const path = await platform.pickTextExportPath(`knowledge-graph.${format}`, format)
+      if (!path) return null
+      const frame = imageFrame(s, view, canvas.clientWidth, canvas.clientHeight, area)
+      palette.current ??= readPalette(canvas)
+      const background = getComputedStyle(canvas).getPropertyValue('--bg').trim() || '#ffffff'
+      const res =
+        format === 'svg'
+          ? await platform.writeTextFile(path, sceneToSvg(s, frame, palette.current, background))
+          : await platform.writeBinaryFile(path, await sceneToPng(s, frame, palette.current, background, window.devicePixelRatio || 1))
+      return res.ok ? { ok: true, text: t('app.export.saved', { path: res.path }) } : { ok: false, text: t('app.export.saveFailed', { error: res.error }) }
+    } catch (err) {
+      return { ok: false, text: t('app.export.saveFailed', { error: String(err) }) }
+    }
+  }
 
   const onPointerDown = (e: PointerEvent<HTMLCanvasElement>) => {
     drag.current = { i: nodeAt(e), x: e.clientX, y: e.clientY, moved: false }
@@ -393,18 +417,7 @@ export function GraphView({ onClose }: { onClose: () => void }) {
             />
             <button type="submit">{t('graphView.run')}</button>
           </form>
-          {source === 'seat' && (
-            <label>
-              <span>{t('exportGraph.seat')} </span>
-              <select value={seat} onChange={(e) => setSeat(e.target.value)}>
-                {Array.from({ length: project.reviewers }, (_, i) => String(i + 1)).map((s) => (
-                  <option key={s} value={s}>
-                    {seatLabel(project, s)}
-                  </option>
-                ))}
-              </select>
-            </label>
-          )}
+          <GraphSeatSelect project={project} value={seat} onChange={setSeat} />
           <div className="graph-zoom" role="group" aria-label={t('graphView.zoom')}>
             <button type="button" onClick={() => zoom(1.25)} aria-label={t('graphView.zoomIn')} title={t('graphView.zoomIn')}>
               +
@@ -446,20 +459,23 @@ export function GraphView({ onClose }: { onClose: () => void }) {
               : t('graphView.count', { nodes: sub.nodes.length, edges: sub.edges.length })}
         </p>
         <div className="graph-body">
-          <canvas
-            ref={canvasRef}
-            className="graph-canvas"
-            role="img"
-            aria-label={t('graphView.count', { nodes: sub.nodes.length, edges: sub.edges.length })}
-            onPointerDown={onPointerDown}
-            onPointerMove={onPointerMove}
-            onPointerUp={onPointerUp}
-            onPointerCancel={onPointerUp}
-            onDoubleClick={(e) => {
-              const i = nodeAt(e)
-              if (i >= 0) reveal(neighbours(index, scene.ids[i]))
-            }}
-          />
+          <div className="graph-stage">
+            <canvas
+              ref={canvasRef}
+              className="graph-canvas"
+              role="img"
+              aria-label={t('graphView.count', { nodes: sub.nodes.length, edges: sub.edges.length })}
+              onPointerDown={onPointerDown}
+              onPointerMove={onPointerMove}
+              onPointerUp={onPointerUp}
+              onPointerCancel={onPointerUp}
+              onDoubleClick={(e) => {
+                const i = nodeAt(e)
+                if (i >= 0) reveal(neighbours(index, scene.ids[i]))
+              }}
+            />
+            <GraphDownload disabled={sub.nodes.length === 0} onSave={saveImage} />
+          </div>
           <button
             type="button"
             className="graph-nodes-toggle"

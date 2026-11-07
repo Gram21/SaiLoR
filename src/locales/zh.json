@@ -148,8 +148,6 @@
   "exportGraph.csv": "CSV 节点和边列表 (.csv)",
   "exportGraph.csvHint": "CSV 会写入两个文件。请先选择节点文件，再选择边文件。",
   "exportGraph.notSaved": "{name} 未保存。导出不完整。",
-  "exportGraph.consolidated": "导出使用合并后的答案。",
-  "exportGraph.pickSeat": "没有合并后的答案。请选择要导出的席位。",
   "exportGraph.seat": "席位",
   "exportGraph.export": "导出",
   "exportGraph.exporting": "正在导出…",
@@ -2205,5 +2203,16 @@
   "pdfFolder.source.manual": "手动",
   "pdfFolder.notFound": "PDF 文件夹“{folder}”不存在。",
   "pdfFolder.escapes": "PDF 文件夹“{folder}”位于项目文件夹之外。",
-  "pdfFolder.scanFailed": "PDF 文件夹扫描失败:{error}"
+  "pdfFolder.scanFailed": "PDF 文件夹扫描失败:{error}",
+  "toolbar.graphMenu": "图",
+  "exportGraph.consolidation": "合并结果",
+  "graphView.download": "下载",
+  "graphView.download.title": "将图保存为图像",
+  "graphView.download.format": "格式",
+  "graphView.download.svg": "SVG (.svg)",
+  "graphView.download.png": "PNG (.png)",
+  "graphView.download.area": "范围",
+  "graphView.download.visible": "可见部分",
+  "graphView.download.all": "整个图，包括不可见部分",
+  "graphView.download.filter": "图像反映当前筛选。"
 }

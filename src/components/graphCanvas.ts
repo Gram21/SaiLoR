@@ -56,7 +56,7 @@ export const EDGE_DASH = [[], [6, 4], [2, 3], [8, 3, 2, 3], [12, 4]]
 const EDGE_INDEX = Object.fromEntries(EDGE_TYPES.map((t, i) => [t, i])) as Record<GraphEdgeType, number>
 const DIM = 0.12
 const HEAD = 6
-const RADIUS = [9, 6, 6, 6]
+export const RADIUS = [9, 6, 6, 6]
 const GROUP: Record<GraphNodeType, number> = { Paper: 0, Author: 1, Venue: 2, Keyword: 2, Choice: 3, Answer: 3 }
 
 const short = (s: string) => (s.length > 28 ? `${s.slice(0, 27)}…` : s)
@@ -144,7 +144,7 @@ const DASH = EDGE_DASH.map((d) => d.slice())
 const NO_DASH: number[] = []
 
 /** Adds edge e to the current path if its bounding box meets the box; with `head`, adds an arrowhead at a visible target instead. */
-function addEdge(ctx: CanvasRenderingContext2D, scene: Scene, e: number, head: boolean, minX: number, minY: number, maxX: number, maxY: number) {
+export function addEdge(ctx: Pick<CanvasRenderingContext2D, 'moveTo' | 'lineTo' | 'closePath'>, scene: Scene, e: number, head: boolean, minX: number, minY: number, maxX: number, maxY: number) {
   const { xs, ys, edges } = scene
   const a = edges[2 * e]
   const b = edges[2 * e + 1]

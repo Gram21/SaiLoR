@@ -148,8 +148,6 @@
   "exportGraph.csv": "Listes CSV des nœuds et des arêtes (.csv)",
   "exportGraph.csvHint": "CSV écrit deux fichiers. Sélectionnez d’abord le fichier des nœuds, puis celui des arêtes.",
   "exportGraph.notSaved": "{name} n’a pas été enregistré. L’export est incomplet.",
-  "exportGraph.consolidated": "L’export utilise les réponses consolidées.",
-  "exportGraph.pickSeat": "Aucune réponse consolidée n’existe. Sélectionnez le poste à exporter.",
   "exportGraph.seat": "Poste",
   "exportGraph.export": "Exporter",
   "exportGraph.exporting": "Export en cours…",
@@ -2205,5 +2203,16 @@
   "pdfFolder.source.manual": "manuel",
   "pdfFolder.notFound": "Le dossier PDF « {folder} » n’existe pas.",
   "pdfFolder.escapes": "Le dossier PDF « {folder} » est hors du dossier du projet.",
-  "pdfFolder.scanFailed": "L’analyse du dossier PDF a échoué : {error}"
+  "pdfFolder.scanFailed": "L’analyse du dossier PDF a échoué : {error}",
+  "toolbar.graphMenu": "Graphe",
+  "exportGraph.consolidation": "Consolidation",
+  "graphView.download": "Télécharger",
+  "graphView.download.title": "Enregistrer le graphe comme image",
+  "graphView.download.format": "Format",
+  "graphView.download.svg": "SVG (.svg)",
+  "graphView.download.png": "PNG (.png)",
+  "graphView.download.area": "Zone",
+  "graphView.download.visible": "Section visible",
+  "graphView.download.all": "Tout le graphe, y compris la partie non visible",
+  "graphView.download.filter": "L'image montre le filtre actuel."
 }

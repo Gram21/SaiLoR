@@ -30,6 +30,7 @@ fn main() {
         "text_pick_export_path",
         "pdf_embed_marks",
         "text_write",
+        "export_write_bytes",
         "paths_relative",
         "paths_rebase",
         "paths_absolute",

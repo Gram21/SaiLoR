@@ -288,7 +288,7 @@ pub async fn pdf_pick_export_path(
 // [impl->req~dat-520~1]
 fn text_export_extension(extension: Option<&str>) -> Result<&'static str, String> {
     let ext = extension.unwrap_or("txt");
-    ["txt", "jsonld", "ttl", "graphml", "csv"]
+    ["txt", "jsonld", "ttl", "graphml", "csv", "svg", "png"]
         .into_iter()
         .find(|known| *known == ext)
         .ok_or_else(|| format!("\"{ext}\" is not a known export file type."))
@@ -350,6 +350,21 @@ pub async fn text_write(
     text: String,
 ) -> Result<Value, String> {
     Ok(outcome(write_text(&session, &abs_path, &text)))
+}
+
+// [impl->req~plt-260~1]
+#[tauri::command]
+pub async fn export_write_bytes(
+    session: State<'_, Mutex<Session>>,
+    abs_path: String,
+    bytes: Vec<u8>,
+) -> Result<Value, String> {
+    Ok(outcome(write_bytes(&session, &abs_path, &bytes)))
+}
+
+fn write_bytes(session: &Mutex<Session>, abs_path: &str, bytes: &[u8]) -> Result<String, String> {
+    export_target(session, abs_path)?;
+    write_file(abs_path, bytes)
 }
 
 fn write_text(session: &Mutex<Session>, abs_path: &str, text: &str) -> Result<String, String> {
@@ -706,8 +721,23 @@ mod tests {
         assert_eq!(text_export_extension(None), Ok("txt"));
         assert_eq!(text_export_extension(Some("ttl")), Ok("ttl"));
         assert_eq!(text_export_extension(Some("graphml")), Ok("graphml"));
+        assert_eq!(text_export_extension(Some("svg")), Ok("svg"));
+        assert_eq!(text_export_extension(Some("png")), Ok("png"));
         assert!(text_export_extension(Some("exe")).is_err());
         assert!(text_export_extension(Some("csv;sh")).is_err());
+    }
+
+    // [utest->req~plt-260~1]
+    #[test]
+    fn export_write_bytes_needs_a_picked_path() {
+        let d = tmp("bytes");
+        let dest = d.join("graph.png");
+        let s = Mutex::new(Session::default());
+        assert!(write_bytes(&s, &dest.display().to_string(), &[1, 2]).is_err());
+        assert!(!dest.exists());
+        lock(&s).writable_exports.insert(normalize(&dest));
+        write_bytes(&s, &dest.display().to_string(), &[137, 80, 78, 71]).unwrap();
+        assert_eq!(fs::read(&dest).unwrap(), vec![137, 80, 78, 71]);
     }
 
     // [utest->req~plt-260~1]

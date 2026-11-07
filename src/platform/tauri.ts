@@ -187,6 +187,7 @@ export const tauriBridge: SlrBridge = {
   pickPdfExportPath: call('pdf:pickExportPath', 'suggestedName'),
   pickTextExportPath: call('text:pickExportPath', 'suggestedName', 'extension'),
   writeTextFile: call('text:write', 'absPath', 'text'),
+  writeBinaryFile: call('export:writeBytes', 'absPath', 'bytes'),
   peekProjects: call('project:peek', 'paths'),
   relativePaths: call('paths:relative', 'fromFile', 'toFiles'),
   rebasePaths: call('paths:rebase', 'fromFile', 'toFile', 'rels'),

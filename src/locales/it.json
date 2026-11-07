@@ -148,8 +148,6 @@
   "exportGraph.csv": "Elenchi CSV di nodi e archi (.csv)",
   "exportGraph.csvHint": "CSV scrive due file. Selezionare prima il file dei nodi, poi quello degli archi.",
   "exportGraph.notSaved": "{name} non è stato salvato. L’esportazione è incompleta.",
-  "exportGraph.consolidated": "L’esportazione usa le risposte consolidate.",
-  "exportGraph.pickSeat": "Non esistono risposte consolidate. Selezionare la postazione da esportare.",
   "exportGraph.seat": "Postazione",
   "exportGraph.export": "Esporta",
   "exportGraph.exporting": "Esportazione…",
@@ -2205,5 +2203,16 @@
   "pdfFolder.source.manual": "manuale",
   "pdfFolder.notFound": "La cartella PDF \"{folder}\" non esiste.",
   "pdfFolder.escapes": "La cartella PDF \"{folder}\" è fuori dalla cartella del progetto.",
-  "pdfFolder.scanFailed": "Scansione della cartella PDF non riuscita: {error}"
+  "pdfFolder.scanFailed": "Scansione della cartella PDF non riuscita: {error}",
+  "toolbar.graphMenu": "Grafo",
+  "exportGraph.consolidation": "Consolidamento",
+  "graphView.download": "Scarica",
+  "graphView.download.title": "Salva il grafo come immagine",
+  "graphView.download.format": "Formato",
+  "graphView.download.svg": "SVG (.svg)",
+  "graphView.download.png": "PNG (.png)",
+  "graphView.download.area": "Area",
+  "graphView.download.visible": "Sezione visibile",
+  "graphView.download.all": "Intero grafo, inclusa la parte non visibile",
+  "graphView.download.filter": "L'immagine mostra il filtro attuale."
 }

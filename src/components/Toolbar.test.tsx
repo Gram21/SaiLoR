@@ -144,7 +144,7 @@ describe('the AI button in the toolbar', () => {
 // [utest->req~ui-160~1]
 // [utest->req~ui-170~1]
 describe('toolbar entries that need a project or AI', () => {
-  const names = [/Validate/, /Git/, /^Save/, /^Export/]
+  const names = [/Validate/, /Git/, /^Save/, /^Graph/]
 
   it('hides project-only entries when no project is open', () => {
     render(<Toolbar />)
@@ -157,20 +157,31 @@ describe('toolbar entries that need a project or AI', () => {
     for (const name of names) expect(screen.getByRole('button', { name })).toBeInTheDocument()
   })
 
-  it('puts the knowledge graph export in the Export menu, not on the toolbar', async () => {
+  it('puts the knowledge graph export in the Graph and Save menus, not on the toolbar', async () => {
     st().loadFromText(annotationProjectJson({ ai: false }), null, 'test.json')
     render(<Toolbar />)
     expect(screen.queryByRole('button', { name: 'Knowledge graph' })).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /^Export/ }))
-    await userEvent.click(screen.getByRole('menuitem', { name: /Knowledge graph/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Graph/ }))
+    const items = screen.getAllByRole('menuitem').map((i) => i.textContent ?? '')
+    expect(items[0]).toMatch(/^Explore knowledge graph/)
+    expect(items[1]).toMatch(/^Knowledge graph/)
+    await userEvent.click(screen.getByRole('menuitem', { name: /^Knowledge graph/ }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+  })
+
+  it('offers the graph export in the Save menu too', async () => {
+    st().loadFromText(annotationProjectJson({ ai: false }), null, 'test.json')
+    render(<Toolbar />)
+    await userEvent.click(screen.getByRole('button', { name: /^Save/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /^Knowledge graph/ }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
 
   // [utest->req~ui-190~1]
-  it('opens the knowledge graph view from the Export menu', async () => {
+  it('opens the knowledge graph view from the Graph menu', async () => {
     st().loadFromText(annotationProjectJson({ ai: false }), null, 'test.json')
     render(<Toolbar />)
-    await userEvent.click(screen.getByRole('button', { name: /^Export/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Graph/ }))
     await userEvent.click(screen.getByRole('menuitem', { name: /Explore knowledge graph/ }))
     expect(screen.getByRole('dialog', { name: 'Knowledge graph' })).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Close' }))
@@ -347,7 +358,7 @@ describe('features over the whole project wait while it loads', () => {
       expect(item).toBeDisabled()
       expect(item).toHaveAttribute('title', hint)
     }
-    await userEvent.click(screen.getByRole('button', { name: /^Export/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Graph/ }))
     for (const name of [/Explore knowledge graph/, /^Knowledge graph/]) {
       const item = screen.getByRole('menuitem', { name })
       expect(item).toBeDisabled()

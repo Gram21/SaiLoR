@@ -148,8 +148,6 @@
   "exportGraph.csv": "CSV node and edge lists (.csv)",
   "exportGraph.csvHint": "CSV writes two files. Select the node file first, then the edge file.",
   "exportGraph.notSaved": "{name} was not saved. The export is incomplete.",
-  "exportGraph.consolidated": "The export uses the consolidated answers.",
-  "exportGraph.pickSeat": "No consolidated answers exist. Select the seat to export.",
   "exportGraph.seat": "Seat",
   "exportGraph.export": "Export",
   "exportGraph.exporting": "Exporting…",
@@ -2205,5 +2203,16 @@
   "pdfFolder.source.manual": "manual",
   "pdfFolder.notFound": "The PDF folder \"{folder}\" does not exist.",
   "pdfFolder.escapes": "The PDF folder \"{folder}\" is outside the project folder.",
-  "pdfFolder.scanFailed": "The PDF folder scan failed: {error}"
+  "pdfFolder.scanFailed": "The PDF folder scan failed: {error}",
+  "toolbar.graphMenu": "Graph",
+  "exportGraph.consolidation": "Consolidation",
+  "graphView.download": "Download",
+  "graphView.download.title": "Save the graph as an image",
+  "graphView.download.format": "Format",
+  "graphView.download.svg": "SVG (.svg)",
+  "graphView.download.png": "PNG (.png)",
+  "graphView.download.area": "Area",
+  "graphView.download.visible": "Visible section",
+  "graphView.download.all": "Whole graph, including the part not visible",
+  "graphView.download.filter": "The image shows the current filter."
 }

@@ -148,8 +148,6 @@
   "exportGraph.csv": "Listas CSV de nodos y aristas (.csv)",
   "exportGraph.csvHint": "CSV escribe dos archivos. Seleccione primero el archivo de nodos y después el de aristas.",
   "exportGraph.notSaved": "{name} no se guardó. La exportación está incompleta.",
-  "exportGraph.consolidated": "La exportación usa las respuestas consolidadas.",
-  "exportGraph.pickSeat": "No hay respuestas consolidadas. Seleccione el puesto que desea exportar.",
   "exportGraph.seat": "Puesto",
   "exportGraph.export": "Exportar",
   "exportGraph.exporting": "Exportando…",
@@ -2205,5 +2203,16 @@
   "pdfFolder.source.manual": "manual",
   "pdfFolder.notFound": "La carpeta de PDF \"{folder}\" no existe.",
   "pdfFolder.escapes": "La carpeta de PDF \"{folder}\" está fuera de la carpeta del proyecto.",
-  "pdfFolder.scanFailed": "Falló el escaneo de la carpeta de PDF: {error}"
+  "pdfFolder.scanFailed": "Falló el escaneo de la carpeta de PDF: {error}",
+  "toolbar.graphMenu": "Grafo",
+  "exportGraph.consolidation": "Consolidación",
+  "graphView.download": "Descargar",
+  "graphView.download.title": "Guardar el grafo como imagen",
+  "graphView.download.format": "Formato",
+  "graphView.download.svg": "SVG (.svg)",
+  "graphView.download.png": "PNG (.png)",
+  "graphView.download.area": "Área",
+  "graphView.download.visible": "Sección visible",
+  "graphView.download.all": "Todo el grafo, incluida la parte no visible",
+  "graphView.download.filter": "La imagen muestra el filtro actual."
 }

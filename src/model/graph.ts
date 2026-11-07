@@ -166,18 +166,34 @@ function paperProps(p: Paper): Partial<GraphNode> {
   return out
 }
 
+/** The seat value that selects the consolidated answers. */
+export const CONSOLIDATION = 'consolidation'
+
+type GraphProject = Pick<Project, 'reviewers' | 'schema' | 'papers'>
+
 // [impl->req~dat-490~1]
-export function graphSource(project: Pick<Project, 'reviewers' | 'schema' | 'papers'>): 'consolidated' | 'seat' {
-  if (project.reviewers <= 1) return 'consolidated'
-  return project.papers.some((p) => hasAnnotations(project.schema, p.annotations ?? {})) ? 'consolidated' : 'seat'
+export function hasConsolidation(project: GraphProject): boolean {
+  return project.reviewers > 1 && project.papers.some((p) => hasAnnotations(project.schema, p.annotations ?? {}))
 }
 
 // [impl->req~dat-490~1]
-export function graphTrees(
-  project: Pick<Project, 'reviewers' | 'schema' | 'papers'>,
-  seat: string,
-): Record<string, AnnotationValueTree> {
-  const consolidated = graphSource(project) === 'consolidated'
+/** The sources a user can pick: each reviewer seat, then the consolidation once one was saved. Empty with one reviewer. */
+export function graphSeats(project: GraphProject): string[] {
+  if (project.reviewers <= 1) return []
+  const seats = Array.from({ length: project.reviewers }, (_, i) => String(i + 1))
+  return hasConsolidation(project) ? [...seats, CONSOLIDATION] : seats
+}
+
+// [impl->req~dat-490~1]
+/** The consolidation when one was saved, else seat 1. */
+export function defaultGraphSeat(project: GraphProject): string {
+  return hasConsolidation(project) ? CONSOLIDATION : '1'
+}
+
+// [impl->req~dat-490~1]
+/** The answers of `seat` per paper. A project with one reviewer, or the seat `CONSOLIDATION`, reads the consolidated tree. */
+export function graphTrees(project: GraphProject, seat: string): Record<string, AnnotationValueTree> {
+  const consolidated = project.reviewers <= 1 || seat === CONSOLIDATION
   const out: Record<string, AnnotationValueTree> = {}
   for (const p of project.papers) out[p.id] = (consolidated ? p.annotations : p.reviews[seat]) ?? {}
   return out

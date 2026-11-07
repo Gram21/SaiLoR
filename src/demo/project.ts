@@ -30,12 +30,17 @@ const seatFiles = import.meta.glob<unknown>('./data/annotations/*/reviewer-*.jso
   import: 'default',
 })
 
+const consolidatedFiles = import.meta.glob<unknown>('./data/annotations/*/consolidated.json', {
+  eager: true,
+  import: 'default',
+})
+
 /**
  * The whole demo project as the text `loadProject` accepts: the project file
  * plus every reviewer file, assembled the way opening a saved project does.
  */
 export function demoProjectText(): string {
-  const papers = new Map<string, { reviewers: Map<string, unknown>; reviewMarks: Map<string, unknown> }>()
+  const papers = new Map<string, { consolidated?: unknown; reviewers: Map<string, unknown>; reviewMarks: Map<string, unknown> }>()
   for (const [path, value] of Object.entries(seatFiles)) {
     const match = /\/annotations\/([^/]+)\/reviewer-(\d+)\.json$/.exec(path)
     if (!match) continue
@@ -43,6 +48,11 @@ export function demoProjectText(): string {
     let entry = papers.get(paperId)
     if (!entry) papers.set(paperId, (entry = { reviewers: new Map(), reviewMarks: new Map() }))
     entry.reviewers.set(seat, value)
+  }
+  for (const [path, value] of Object.entries(consolidatedFiles)) {
+    const paperId = /\/annotations\/([^/]+)\/consolidated\.json$/.exec(path)?.[1]
+    const entry = paperId === undefined ? undefined : papers.get(paperId)
+    if (entry) entry.consolidated = value
   }
   return JSON.stringify(assembleLegacyProjectJson(meta, papers))
 }

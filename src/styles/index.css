@@ -2803,9 +2803,46 @@ button.validation-search-case:hover {
   min-height: 0;
   border-top: 1px solid var(--border);
 }
-.graph-canvas {
+.graph-stage {
+  position: relative;
   flex: 1;
   min-width: 0;
+  height: 100%;
+}
+.graph-download {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-end: 8px;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-end;
+  gap: 4px;
+}
+.graph-download-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 10px;
+  max-width: 280px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: var(--bg);
+}
+.graph-download-panel fieldset {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+.graph-download-panel legend {
+  font-weight: 600;
+  margin-block-end: 4px;
+}
+.graph-canvas {
+  width: 100%;
   height: 100%;
   background: var(--bg);
   touch-action: none;

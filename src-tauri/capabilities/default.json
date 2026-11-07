@@ -33,6 +33,7 @@
     "allow-text-pick-export-path",
     "allow-pdf-embed-marks",
     "allow-text-write",
+    "allow-export-write-bytes",
     "allow-paths-relative",
     "allow-paths-rebase",
     "allow-paths-absolute",

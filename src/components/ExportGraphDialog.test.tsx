@@ -106,12 +106,11 @@ describe('ExportGraphDialog', () => {
     expect(writes[0][1]).toContain('urn:sailor:choice:Method%3DExperiment')
   })
 
-  it('uses the consolidated answers and writes nothing when the save dialog is cancelled', async () => {
+  it('selects the consolidation by default once saved and writes nothing when the save dialog is cancelled', async () => {
     open(2, true)
     pickResult = null
     render(<ExportGraphDialog onClose={() => {}} />)
-    expect(screen.getByText('The export uses the consolidated answers.')).toBeInTheDocument()
-    expect(screen.queryByRole('combobox')).toBeNull()
+    expect(screen.getByRole('combobox', { name: 'Seat' })).toHaveValue('consolidation')
     await userEvent.click(screen.getByRole('button', { name: 'Export' }))
     expect(picks).toHaveLength(1)
     expect(writes).toHaveLength(0)

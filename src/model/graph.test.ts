@@ -5,7 +5,9 @@ import type { Paper } from './project'
 import {
   buildGraph,
   csvCell,
-  graphSource,
+  CONSOLIDATION,
+  defaultGraphSeat,
+  graphSeats,
   graphTrees,
   toCsvEdges,
   toCsvNodes,
@@ -221,37 +223,38 @@ describe('buildGraph — edge cases', () => {
   })
 })
 
-describe('graphSource — edge cases', () => {
+describe('graph source — edge cases', () => {
   // [utest->req~dat-490~1]
   it('uses the consolidated tree with zero reviewers and reads a missing tree as empty', () => {
     const p = { reviewers: 0, schema: SCHEMA, papers: [makePaper({ annotations: undefined as never })] }
-    expect(graphSource(p)).toBe('consolidated')
+    expect(graphSeats(p)).toEqual([])
     expect(graphTrees(p, '1')).toEqual({ p1: {} })
   })
 
   // [utest->req~dat-490~1]
-  it('uses the consolidated tree when any one of several papers has a consolidated answer', () => {
+  it('offers the consolidation when any one of several papers has a consolidated answer', () => {
     const papers = [makePaper({ id: 'p1', annotations: { Method: [{ value: 'Survey' }] } }), makePaper({ id: 'p2' })]
-    expect(graphSource({ reviewers: 2, schema: SCHEMA, papers })).toBe('consolidated')
+    expect(graphSeats({ reviewers: 2, schema: SCHEMA, papers })).toEqual(['1', '2', CONSOLIDATION])
   })
 })
 
-describe('graphSource', () => {
+describe('graph source', () => {
   const seatTrees = { '1': { Method: [{ value: 'Survey' }] }, '2': { Method: [{ value: 'Experiment' }] } }
 
   // [utest->req~dat-490~1]
-  it('uses the consolidated tree when one paper has a consolidated answer', () => {
-    const papers = [makePaper({ annotations: { Method: [{ value: 'Survey' }] }, reviews: seatTrees })]
+  it('reads the consolidated tree for the consolidation and the seat tree for a seat', () => {
+    const papers = [makePaper({ annotations: { Method: [{ value: 'Merged' }] }, reviews: seatTrees })]
     const p = { reviewers: 2, schema: SCHEMA, papers }
-    expect(graphSource(p)).toBe('consolidated')
-    expect(graphTrees(p, '2').p1).toEqual({ Method: [{ value: 'Survey' }] })
+    expect(defaultGraphSeat(p)).toBe(CONSOLIDATION)
+    expect(graphTrees(p, CONSOLIDATION).p1).toEqual({ Method: [{ value: 'Merged' }] })
+    expect(graphTrees(p, '2').p1).toEqual({ Method: [{ value: 'Experiment' }] })
   })
 
   // [utest->req~dat-490~1]
-  it('uses the selected seat when no consolidated answer exists', () => {
+  it('offers only the seats and defaults to seat 1 when no consolidated answer exists', () => {
     const p = { reviewers: 2, schema: SCHEMA, papers: [makePaper({ annotations: { Relevant: [{ value: false }] }, reviews: seatTrees })] }
-    expect(graphSource(p)).toBe('seat')
-    expect(graphTrees(p, '2').p1).toEqual({ Method: [{ value: 'Experiment' }] })
+    expect(graphSeats(p)).toEqual(['1', '2'])
+    expect(defaultGraphSeat(p)).toBe('1')
     expect(graphTrees(p, '3').p1).toEqual({})
   })
 
@@ -259,7 +262,7 @@ describe('graphSource', () => {
   it('uses the single tree with one reviewer and ignores seat metadata overrides', () => {
     const paper = makePaper({ title: 'Original', extra: { metadataOverrides: { title: 'Changed' } } })
     const p = { reviewers: 1, schema: SCHEMA, papers: [paper] }
-    expect(graphSource(p)).toBe('consolidated')
+    expect(graphSeats(p)).toEqual([])
     expect(buildGraph(p, graphTrees(p, '1')).nodes[0].label).toBe('Original')
   })
 })

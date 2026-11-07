@@ -4,8 +4,12 @@ import { describe, it, expect, beforeEach, afterEach, vi } from 'vitest'
 import { act, fireEvent, render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
+const saved = vi.hoisted(() => ({ picks: [] as unknown[][], writes: [] as unknown[][] }))
+
 vi.mock('../platform', () => ({
   getPlatform: () => ({
+    pickTextExportPath: async (...a: unknown[]) => (saved.picks.push(a), '/out/graph'),
+    writeTextFile: async (...a: unknown[]) => (saved.writes.push(a), { ok: true, path: '/out/graph' }),
     kind: 'electron',
     getRecents: () => [],
     rememberProject: () => {},
@@ -127,6 +131,7 @@ async function query(text: string) {
 }
 
 beforeEach(() => {
+  saved.picks.length = saved.writes.length = 0
   useStore.setState({ project: null })
   ctx = mockContext()
   vi.spyOn(HTMLCanvasElement.prototype, 'getContext').mockImplementation(() => ctx as unknown as CanvasRenderingContext2D)
@@ -425,8 +430,35 @@ describe('GraphView', () => {
     open(2)
     render(<GraphView onClose={() => {}} />)
     expect(listed()).not.toContain('Choice Survey')
+    expect(screen.queryByRole('option', { name: 'Consolidation' })).toBeNull()
     await userEvent.selectOptions(screen.getByRole('combobox'), '2')
     expect(listed()).toContain('Choice Survey')
+  })
+
+  it('offers the consolidation as a seat once one is saved', async () => {
+    open(2)
+    useStore.setState((s) => {
+      s.project!.papers[0].annotations = { Method: [{ value: 'Experiment' }] }
+    })
+    render(<GraphView onClose={() => {}} />)
+    const seat = screen.getByRole('combobox')
+    expect(seat).toHaveValue('consolidation')
+    await userEvent.selectOptions(seat, '2')
+    expect(listed()).toContain('Choice Survey')
+  })
+
+  // [utest->req~ui-260~1]
+  it('saves the graph as an SVG of the whole graph from the download button', async () => {
+    open()
+    render(<GraphView onClose={() => {}} />)
+    await waitForLabel('Alan Turing')
+    await userEvent.click(screen.getByRole('button', { name: /Download/ }))
+    await userEvent.click(screen.getByRole('radio', { name: /^Whole graph/ }))
+    await userEvent.click(screen.getByRole('button', { name: 'Export' }))
+    await waitFor(() => expect(saved.writes).toHaveLength(1))
+    expect(saved.picks[0]).toEqual(['knowledge-graph.svg', 'svg'])
+    expect(saved.writes[0][0]).toBe('/out/graph')
+    expect(String(saved.writes[0][1])).toMatch(/^<svg /)
   })
 
   it('opens the existing export dialog and closes with Escape', async () => {

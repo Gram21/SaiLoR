@@ -148,8 +148,6 @@
   "exportGraph.csv": "فهرست گره‌ها و یال‌ها به‌صورت CSV (.csv)",
   "exportGraph.csvHint": "CSV دو فایل می‌نویسد. ابتدا فایل گره‌ها و سپس فایل یال‌ها را انتخاب کنید.",
   "exportGraph.notSaved": "{name} ذخیره نشد. خروجی ناقص است.",
-  "exportGraph.consolidated": "صدور از پاسخ‌های تجمیع‌شده استفاده می‌کند.",
-  "exportGraph.pickSeat": "هیچ پاسخ تجمیع‌شده‌ای وجود ندارد. جایگاه مورد نظر برای صدور را انتخاب کنید.",
   "exportGraph.seat": "جایگاه",
   "exportGraph.export": "صدور",
   "exportGraph.exporting": "در حال صدور…",
@@ -2205,5 +2203,16 @@
   "pdfFolder.source.manual": "دستی",
   "pdfFolder.notFound": "پوشهٔ PDF «{folder}» وجود ندارد.",
   "pdfFolder.escapes": "پوشهٔ PDF «{folder}» بیرون از پوشهٔ پروژه است.",
-  "pdfFolder.scanFailed": "پویش پوشهٔ PDF ناموفق بود: {error}"
+  "pdfFolder.scanFailed": "پویش پوشهٔ PDF ناموفق بود: {error}",
+  "toolbar.graphMenu": "گراف",
+  "exportGraph.consolidation": "یکپارچه‌سازی",
+  "graphView.download": "دانلود",
+  "graphView.download.title": "ذخیرهٔ گراف به‌صورت تصویر",
+  "graphView.download.format": "قالب",
+  "graphView.download.svg": "SVG (.svg)",
+  "graphView.download.png": "PNG (.png)",
+  "graphView.download.area": "محدوده",
+  "graphView.download.visible": "بخش قابل‌مشاهده",
+  "graphView.download.all": "کل گراف، شامل بخش نامرئی",
+  "graphView.download.filter": "تصویر فیلتر فعلی را نشان می‌دهد."
 }

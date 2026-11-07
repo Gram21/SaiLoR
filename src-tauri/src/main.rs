@@ -137,6 +137,7 @@ fn main() {
             pdf::text_pick_export_path,
             pdf::pdf_embed_marks,
             pdf::text_write,
+            pdf::export_write_bytes,
             paths::paths_relative,
             paths::paths_rebase,
             paths::paths_absolute,

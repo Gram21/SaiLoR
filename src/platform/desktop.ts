@@ -566,6 +566,10 @@ export class DesktopAdapter implements PlatformAdapter {
     return bridge().writeTextFile(absPath, text)
   }
 
+  writeBinaryFile(absPath: string, bytes: Uint8Array): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
+    return bridge().writeBinaryFile(absPath, Array.from(bytes))
+  }
+
   // ---- Self-update ----
 
   checkForNativeUpdate(): Promise<{ supported: boolean }> {
