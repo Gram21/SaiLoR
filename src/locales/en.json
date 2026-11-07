@@ -2099,6 +2099,7 @@
   "store.loadError.loadFailed": "Failed to load the project.",
   "store.loadError.stillLoading": "The project is still loading. Save once every paper has loaded.",
   "store.loadError.stillLoadingRun": "The project is still loading. Try again once every paper has loaded.",
+  "store.loadError.resyncKeptEdits": "Git changed the project files while the project had unsaved edits. Your edits stay open, but the changed files were not loaded. Save to replace the files with your version, or reopen the project to discard your edits and load the files.",
   "store.loadError.batchFailed": "Some papers could not be read. The papers read so far stay open; saving waits until every paper has loaded.",
   "store.staleSave.unreadable": "The project file could not be read.",
   "store.staleSave.combinedRefused": "The combined project would not open again: {problem}",

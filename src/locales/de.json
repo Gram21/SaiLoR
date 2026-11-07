@@ -2099,6 +2099,7 @@
   "store.loadError.loadFailed": "Das Projekt konnte nicht geladen werden.",
   "store.loadError.stillLoading": "Das Projekt lädt noch. Speichern Sie, sobald alle Paper geladen sind.",
   "store.loadError.stillLoadingRun": "Das Projekt lädt noch. Versuchen Sie es erneut, sobald alle Paper geladen sind.",
+  "store.loadError.resyncKeptEdits": "Git hat die Projektdateien geändert, während das Projekt ungespeicherte Änderungen hatte. Ihre Änderungen bleiben offen, die geänderten Dateien wurden aber nicht geladen. Speichern Sie, um die Dateien durch Ihre Version zu ersetzen, oder öffnen Sie das Projekt erneut, um Ihre Änderungen zu verwerfen und die Dateien zu laden.",
   "store.loadError.batchFailed": "Einige Paper konnten nicht gelesen werden. Die bisher gelesenen Paper bleiben offen; Speichern wartet, bis alle Paper geladen sind.",
   "store.staleSave.unreadable": "Die Projektdatei konnte nicht gelesen werden.",
   "store.staleSave.combinedRefused": "Das zusammengeführte Projekt ließe sich nicht erneut öffnen: {problem}",

@@ -2000,6 +2000,14 @@ export const useStore = create<AppState>()(
       if (!handle?.path || get().loadState === 'loading') return
       const opened = await getPlatform().openRecent(handle.path)
       if (!opened) return
+      // [impl->req~git-610~1]
+      // An edit made while git rewrote the files: replacing the project would lose it.
+      if (get().dirty) {
+        set((s) => {
+          s.loadError = { message: t('store.loadError.resyncKeptEdits'), details: [] }
+        })
+        return
+      }
       try {
         const project = loadProject(opened.text)
         diskProject = project

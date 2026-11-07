@@ -438,3 +438,10 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/git/merge.ts` (`mergePapers`, `mergeProjects`)
 - **Verified by:** `src/git/merge.test.ts` (`mergeProjects — papers that share a PDF hash`)
 - **Status:** Implemented
+
+### REQ-GIT-610: Keep edits made while git rewrites the project files
+- **Description:** When a git operation rewrites the files of the open project and the project has unsaved edits when the system reloads it, the system shall keep the open project with the edits, shall not load the rewritten files, and shall tell the user that a save replaces the files with the open version and that a reopen discards the edits.
+- **Type:** Non-functional (ISO 25010: Reliability)
+- **Evidence:** `src/state/store.ts` (`resyncProjectFromDisk`), `src/state/gitStore.ts` (`runStashOperation`, `runStashRestore`, `runUndoMerge`)
+- **Verified by:** `src/state/store.resyncDirty.test.ts`
+- **Status:** Implemented

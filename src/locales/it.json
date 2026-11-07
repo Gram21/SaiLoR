@@ -2099,6 +2099,7 @@
   "store.loadError.loadFailed": "Impossibile caricare il progetto.",
   "store.loadError.stillLoading": "Il progetto è ancora in caricamento. Salva dopo il caricamento di tutti gli articoli.",
   "store.loadError.stillLoadingRun": "Il progetto è ancora in caricamento. Riprova dopo il caricamento di tutti gli articoli.",
+  "store.loadError.resyncKeptEdits": "Git ha modificato i file del progetto mentre il progetto aveva modifiche non salvate. Le tue modifiche restano aperte, ma i file modificati non sono stati caricati. Salva per sostituire i file con la tua versione, oppure riapri il progetto per scartare le modifiche e caricare i file.",
   "store.loadError.batchFailed": "Alcuni articoli non sono stati letti. Gli articoli già letti restano aperti; il salvataggio attende il caricamento di tutti.",
   "store.staleSave.unreadable": "Impossibile leggere il file del progetto.",
   "store.staleSave.combinedRefused": "Il progetto unito non si potrebbe riaprire: {problem}",

@@ -99,6 +99,8 @@ describe('resyncProjectFromDisk clears undo/redo history', () => {
     // history entry would bring back if past/future survived the resync.
     useStore.getState().setFieldValue([], 'Relevant', 0, true)
     expect(useStore.getState().past.length).toBeGreaterThan(0)
+    // Saved since: a resync never replaces unsaved edits.
+    useStore.setState({ dirty: false })
 
     // Simulate a field-level git commit/discard rewriting the file on disk
     // out from under the open project (see gitStore.ts's runCommit/runDiscard).

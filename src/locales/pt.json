@@ -2099,6 +2099,7 @@
   "store.loadError.loadFailed": "Falha ao carregar o projeto.",
   "store.loadError.stillLoading": "O projeto ainda está carregando. Salve quando todos os artigos forem carregados.",
   "store.loadError.stillLoadingRun": "O projeto ainda está carregando. Tente novamente quando todos os artigos forem carregados.",
+  "store.loadError.resyncKeptEdits": "O Git alterou os arquivos do projeto enquanto o projeto tinha alterações não salvas. Suas alterações continuam abertas, mas os arquivos alterados não foram carregados. Salve para substituir os arquivos pela sua versão ou reabra o projeto para descartar suas alterações e carregar os arquivos.",
   "store.loadError.batchFailed": "Alguns artigos não puderam ser lidos. Os artigos já lidos continuam abertos; o salvamento aguarda até que todos sejam carregados.",
   "store.staleSave.unreadable": "Não foi possível ler o arquivo do projeto.",
   "store.staleSave.combinedRefused": "O projeto combinado não abriria de novo: {problem}",

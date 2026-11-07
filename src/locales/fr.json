@@ -2099,6 +2099,7 @@
   "store.loadError.loadFailed": "Échec du chargement du projet.",
   "store.loadError.stillLoading": "Le projet est encore en cours de chargement. Enregistrez une fois tous les articles chargés.",
   "store.loadError.stillLoadingRun": "Le projet est encore en cours de chargement. Réessayez une fois tous les articles chargés.",
+  "store.loadError.resyncKeptEdits": "Git a modifié les fichiers du projet alors que le projet avait des modifications non enregistrées. Vos modifications restent ouvertes, mais les fichiers modifiés n'ont pas été chargés. Enregistrez pour remplacer les fichiers par votre version, ou rouvrez le projet pour abandonner vos modifications et charger les fichiers.",
   "store.loadError.batchFailed": "Certains articles n’ont pas pu être lus. Les articles déjà lus restent ouverts ; l’enregistrement attend que tous soient chargés.",
   "store.staleSave.unreadable": "Le fichier de projet n’a pas pu être lu.",
   "store.staleSave.combinedRefused": "Le projet combiné ne pourrait plus être ouvert : {problem}",
