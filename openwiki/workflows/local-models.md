@@ -6,6 +6,34 @@ tags: [local-models, llama-cpp, ollama, hardware-probing, downloads]
 verified:
   - by: openwiki/0.7.3
     at: 2026-11-02T08:58:22.323Z
+sources:
+  - id: openwiki-source-eff2494cbf13ba7f1289c9a7
+    resource: repo://src-tauri/src/hardware.rs
+  - id: openwiki-source-6d58635ffc22bea1e634f656
+    resource: repo://src-tauri/src/llm.rs
+  - id: openwiki-source-beb04ea3db5303116fdfe707
+    resource: repo://src-tauri/src/localruntime.rs
+  - id: openwiki-source-99b0214e9f2113a0f6a2cf92
+    resource: repo://src-tauri/src/main.rs
+  - id: openwiki-source-89057b79d5bc660ae4d44740
+    resource: repo://src-tauri/src/ollama.rs
+  - id: openwiki-source-7e556055e2aa90750bd37197
+    resource: repo://src/components/HostedSystemOnePanel.tsx
+  - id: openwiki-source-e076f898f6a4a0e1505e76de
+    resource: repo://src/components/LlmSettingsDialog.tsx
+  - id: openwiki-source-6034f77c01cdeb8d2d0ed48c
+    resource: repo://src/components/LocalChatPanel.tsx
+  - id: openwiki-source-6195c3e4672787fc497522e2
+    resource: repo://src/components/LocalSystemOnePanel.tsx
+  - id: openwiki-source-f923d252b4451ecc732cf986
+    resource: repo://src/llm/localCatalog.ts
+  - id: openwiki-source-aa402608fce4176cb00d9176
+    resource: repo://src/llm/modelProfiles.ts
+  - id: openwiki-source-a6058d61336acbf026c00c84
+    resource: repo://src/llm/ollama.ts
+  - id: openwiki-source-c1ab92e18d72fec6435ab66e
+    resource: repo://src/state/aiStore.ts
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
 ---
 
 # Local Models and Ollama
@@ -106,12 +134,13 @@ A managed model's path from probe to a stopped server. Each download needs a con
 
 `local_start` (also reached lazily via `localruntime::endpoint` from `llm.rs` for `llm_call`) runs one `llama-server` per model:
 
-- **Bind**: an OS-chosen free port on `127.0.0.1` (`TcpListener` bind to `:0`), plus a per-session random API key (`ring` SystemRandom, 24 bytes hex) passed as `--api-key`; `--no-webui` and `-lv 4` are always set. GPU starts add `-ngl 99`; CPU starts `-dev none -ngl 0`.
+- **Bind**: an OS-chosen free port on `127.0.0.1` (`TcpListener` bind to `:0`), plus a per-session random API key (`ring` SystemRandom, 24 bytes hex) passed in the `LLAMA_API_KEY` environment variable, so it never appears in the process argument list; `--no-webui` and `-lv 4` are always set. GPU starts add `-ngl 99`; CPU starts `-dev none -ngl 0`.
 - **Refuses to run as root** (unix) and refuses models not yet downloaded.
 - **Startup**: health-polls `GET /health` with a 120 s deadline (`HEALTH_TIMEOUT`); a GPU launch failure (driver/VRAM) is retried once on CPU with a note — except build/model incompatibility, which fails the same way on CPU and is not retried.
 - **The real backend is read from the startup log**, never from what was asked: `parse_server_log` scans a 2000-line ring buffer for `using device …` and the `offloaded N/M layers to GPU` summary; zero offloaded layers means `cpu`. Failure messages are translated by `explain_start_failure` (incompatible build/model vs. out-of-memory).
 - **Feature probe (commit gate)**: after start, `probe_route` posts a minimal decision request to `POST /v1/systemone`. 404/405 → "This llama.cpp build has no System One route (/v1/systemone). Install a newer runtime."; 501 → the model is not a decision model for this build. Any failure *stops the server* and fails the start — a managed model is never served without the route.
 - **Lifecycle**: concurrent starts are deduplicated by a global `START` mutex plus a `starting` set (`local_status` reports `starting`/`running` states). A 30 s loop kills servers idle for 10 minutes (`IDLE_STOP`); every `endpoint`/`running()` access resets the idle clock and prunes dead servers. `stop`/`kill` signal the whole process group (SIGTERM, then SIGKILL after 3 s, on unix; `taskkill /T /F` on Windows), and `stop_all` — wired to `tauri::RunEvent::Exit` in `main.rs` — kills every server's tree synchronously on app exit. `local_logs` returns the last ~200 lines per model.
+- **Stop aborts a start**: `llm_call` for a managed model runs `localruntime::endpoint` under the request's `Flight`, so the renderer's Stop (`llm_abort`) cancels a model that is still starting and the call fails with "This operation was aborted" (REQ-LLM-70).
 
 ## Local targets in LlmConfig
 
@@ -131,7 +160,7 @@ A managed model appears in the store as:
 
 ## User-run local servers (Ollama and friends)
 
-`src-tauri/src/ollama.rs` exposes the `ollama:*` commands and the `localserver:discover` probe; `src/llm/ollama.ts` holds the pure parsers the renderer reuses. **The renderer names the server URL, so it is checked in Rust**: `check_base_url` allows only `http`/`https`, no embedded credentials, and reduces the URL to its origin (the path is dropped — a path-prefixed reverse proxy is unreachable). Blocked-IP/hostname tests from `webfetch` decide `isLocal`, which the UI uses for the "papers would leave the local network" warning.
+`src-tauri/src/ollama.rs` exposes the `ollama:*` commands and the `localserver:discover` probe; `src/llm/ollama.ts` holds the pure parsers the renderer reuses. **The renderer names the server URL, so it is checked in Rust**: `check_base_url` allows only `http`/`https`, no embedded credentials, refuses link-local addresses (IPv4 `169.254/16`, IPv6 `fe80::/10`), and reduces the URL to its origin (the path is dropped — a path-prefixed reverse proxy is unreachable). Blocked-IP/hostname tests from `webfetch` decide `isLocal`, which the UI uses for the "papers would leave the local network" warning.
 
 ### Base-URL and tag validation
 

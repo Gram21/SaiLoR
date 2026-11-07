@@ -1,17 +1,17 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:20f2c38bc79ba143d1c0f8a93cfafd7f41bb3cd987780d99d75a213e8a913440",
+  "pageVersion": "sha256:5c398f61ba912e075b308778f484721e391f904b94321aff89a41b4f1d0cf2e8",
   "claims": [
     {
       "id": "claim_8e1b0de973ac4945a86e1a1a44c12f8a",
       "statement": "The renderer builds the entire LLM request but can only place the literal sentinel API_KEY_SENTINEL ('{{apiKey}}') where the key goes; the Rust shell substitutes the real key by replacing the sentinel across every header value (build_call_headers) just before sending, and a keyless (noKey) target instead drops every sentinel-bearing header and sends the rest.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/llm.rs#L101-L130",
-          "version": "repo-lines-v1:sha256:7457fa48a3b0026ac88914a5d2dc65a943f1a4adfa3ff8c6516174f365118202:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYzMzMxYzI4ZTgyNDFkYTljMzBkYjM3N2ZmMWI1YjMzNGZlNzUzY2JmNDgxZDZjZDNiMDZjZmM2NWViYmU3MjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM1NmM0YjAwNzI1MzAxOWQ0N2I1NThkZDhkZTVhMTVhMjhkNzczNjFhYWNjMzkxOTc0MDRhNTVmZWM2ZjkzZjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdiMmVjNWM4MTY1MjcwM2MzMzQ5MDdlN2RiMTA1MWVkOWU4MTcyYTAyMTI5NDYxMTFkZTIxNzk4NDJlYjBmZGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIzYzY4NmJiM2MyMzMxNzBkNTE3NzA2OTAyMWM3ZGUwOTZjZTQzZGNjNmFhN2FhMmQ3ZGZlMDNiNGJiZmZjOWMifQ"
+          "resource": "repo://src-tauri/src/llm.rs#L105-L137",
+          "version": "repo-lines-v1:sha256:5b8cfdf165fe15fefd5f180ff93b863847e0248db83492cc4aef2d10b67b4eab:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYzMzMxYzI4ZTgyNDFkYTljMzBkYjM3N2ZmMWI1YjMzNGZlNzUzY2JmNDgxZDZjZDNiMDZjZmM2NWViYmU3MjAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM1NmM0YjAwNzI1MzAxOWQ0N2I1NThkZDhkZTVhMTVhMjhkNzczNjFhYWNjMzkxOTc0MDRhNTVmZWM2ZjkzZjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdiMmVjNWM4MTY1MjcwM2MzMzQ5MDdlN2RiMTA1MWVkOWU4MTcyYTAyMTI5NDYxMTFkZTIxNzk4NDJlYjBmZGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIzYzY4NmJiM2MyMzMxNzBkNTE3NzA2OTAyMWM3ZGUwOTZjZTQzZGNjNmFhN2FhMmQ3ZGZlMDNiNGJiZmZjOWMifQ"
         },
         {
-          "resource": "repo://src/llm/providers.ts#L284-L286",
+          "resource": "repo://src/llm/providers.ts#L292-L294",
           "version": "repo-lines-v1:sha256:58600eb05cc3226e9f95c037e6fcd5c7d1e6c85ab0b8447879e35f232ab9e1ae:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDA5YTVhYjZlODM0ZGRjNWNhZTA4YjQ2MTI0YWZkZDYzZTVkZmZkYTg3MzUxN2Y1N2YwN2U2YjM0NDg2ZmE3OSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiM2I1MDRlYzgxMDA3NGM2YWRmYzM2OGJmNGI4ZDUyNTA3Yzc0Mzg3YTU0NmM0OWViZTJiNDRhZGUzMzMxZGZiMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDczNGY5OWRmZTNmNWY0YWZlNDMwM2M4N2I2OGNmN2UwNDFiN2Q2ZWJiMzY0YTdhMmE5MjBiOGJiNzQ3MDZkMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWQwYzkzZGVlYjMxNThmZTZjYjMzNzEwZGIwYWQ3MDE3MWIyZWFmNzZjZWU3ODRhNjcxMTAwYWY0ZjM1MDdkNCJ9"
         }
       ]
@@ -21,11 +21,11 @@
       "statement": "There are eleven providers (anthropic, openai, google, openrouter, groq, mistral, deepseek, xai, openai-compatible, systemone, ollama); openai-compatible, systemone (default https://api.typesafe.ai), and ollama (localhost:11434) have editable base URLs; supportsModelListing is false for openai-compatible and systemone (no safe endpoint/shape to assume for an arbitrary self-hosted server or a decision model).",
       "evidence": [
         {
-          "resource": "repo://src/llm/providers.ts#L52-L158",
-          "version": "repo-lines-v1:sha256:d350006662bb6bb82bbb5bade4b8b7030bc5030b9e1f3cd383441de6f3a6c28e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA3LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyOGUzNThkZGVkNDA0ZDBmZmYxYmU1NzQ4MmZmNTQ0ZjQ3MWZjMjVmMWRjOWE4ZWExMjFlNjM5Y2VhZTM0MzNjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIxOWU2NDMyNTA5YWI5Zjg5YTQ3NjQ4NzQ2ZGI5MWQ0OTA0YWVjNTAxYWI1ZDUwMzM0MjlkM2U2YWEzZWMzODAwIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlOGE3MjhlMjUyM2U1YjM4ZGFkN2FlOTlkZGVkZDZhY2NiMDg4NmFmNzhmNmRiNDY1Y2YxZjFhOTE2YzNjZDhmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJhMDFhMGJiZmYwYjA1ZTczNTUxZDA5NThmMzEzZjM5YmY0MmE5ZWQzODJjZWM2NjgxZDQ1Yzg2OGI3Y2UwMmUyIn0"
+          "resource": "repo://src/llm/providers.ts#L55-L164",
+          "version": "repo-lines-v1:sha256:7b72123fcb454529144297f58a9129be583d90234e19adb48ee8d8019999b7f2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxMjdlNTA1NjY2ZGY1NGY4OGE3OTM0ZmJjNzMyZjdlZjBjNDg1MWRmMDYyNmQ2ZmUwYTYxMjg5MjMxNzgyZDVkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIxOWU2NDMyNTA5YWI5Zjg5YTQ3NjQ4NzQ2ZGI5MWQ0OTA0YWVjNTAxYWI1ZDUwMzM0MjlkM2U2YWEzZWMzODAwIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlOGE3MjhlMjUyM2U1YjM4ZGFkN2FlOTlkZGVkZDZhY2NiMDg4NmFmNzhmNmRiNDY1Y2YxZjFhOTE2YzNjZDhmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJhMDFhMGJiZmYwYjA1ZTczNTUxZDA5NThmMzEzZjM5YmY0MmE5ZWQzODJjZWM2NjgxZDQ1Yzg2OGI3Y2UwMmUyIn0"
         },
         {
-          "resource": "repo://src/llm/types.ts#L12-L24",
+          "resource": "repo://src/llm/types.ts#L14-L26",
           "version": "repo-lines-v1:sha256:942372d3f70c35f3ba66b90c56aaf28767688c10ade57fb98e2a1751791ca502:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3YmIzN2VmNTAzMjJlZjdiZWE0ZmFmMDkxZWUwMjE5MjY0MGEzNmUxNWI4MjIwNDVhNWI3ZGIzZDUyMmUzNjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUzMzQyOTQ0OGQ2ODg5YjFiMDdiYjMyYmY5YTQ4N2U1ZjAzZmI0MDI3YzFlMTdjZGNmOWYxNTRjYjI2YWMwMTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA1ZjE2NTcxYmNlMTM2MzI1MGI4NTJkYjVhMGFjMWFiZTU0ODM5NjE5Nzk1YzQxZmNmNTUwZGRlYTYwYTgzNDEifQ"
         }
       ]
@@ -35,12 +35,12 @@
       "statement": "supportsPdf is false for groq, mistral, deepseek, xai, openai-compatible, systemone, and ollama (no single inline-attachment request), so a target set to send the PDF against them silently falls back to extracted text at run time; buildRequest throws on a PDF for ollama and the store always sends text.",
       "evidence": [
         {
-          "resource": "repo://src/llm/providers.ts#L316-L330",
-          "version": "repo-lines-v1:sha256:dee8067b501ce10af12edaa160ca12596a3b8af22d03112dce4ab9f2d8d5ca22:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFjMzliMWNkZDM0Nzg5NGExNWY3ODhlZTYwZTk0N2I5OTJlYjgzOTk3NTBhOTI0NWViMzhhN2E5NTA5NTc4MGYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZkMGQ3YjhiNjEwZDNlMzhmZjgwODJhZTc5NTU0NTVhYWJkNTA0ZjNhYWMxY2IxODVkOTAzYWIzYTQyYmQwMDAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdiZGQ0M2I3ZmY5MzQ5NTYxNTlhZTdiOTEyYWJlMzhmZjU5MTUwMDViYmRlNWFkZjhjOWY5YmRiNDUwZDg4MzEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM4MmVkZDFmYWU3NjAwYjQ3NmVlYzU2NGYzYjFkY2NhOTgwYzg5MDk1OTNiNDQ4N2ZiYjRhMTQ0NGJmOGFjNTQifQ"
+          "resource": "repo://src/llm/providers.ts#L324-L332",
+          "version": "repo-lines-v1:sha256:17773d6bc2f2bef57267b123d0420d030fe1f1858f77ac4db20ee7cb818ff314:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmU4ZjdjOGE2NjQ5M2QyNTBkMDNiMDgyZDhhNzAzYjYxYzU4YjA5YWY4NjUwNWNmNmExM2MxMmYxMDM0ZDYyMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZmQwZDdiOGI2MTBkM2UzOGZmODA4MmFlNzk1NTQ1NWFhYmQ1MDRmM2FhYzFjYjE4NWQ5MDNhYjNhNDJiZDAwMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2JkZDQzYjdmZjkzNDk1NjE1OWFlN2I5MTJhYmUzOGZmNTkxNTAwNWJiZGU1YWRmOGM5ZjliZGI0NTBkODgzMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzgyZWRkMWZhZTc2MDBiNDc2ZWVjNTY0ZjNiMWRjY2E5ODBjODkwOTU5M2I0NDg3ZmJiNGExNDQ0YmY4YWM1NCJ9"
         },
         {
-          "resource": "repo://src/llm/providers.ts#L52-L158",
-          "version": "repo-lines-v1:sha256:d350006662bb6bb82bbb5bade4b8b7030bc5030b9e1f3cd383441de6f3a6c28e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA3LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyOGUzNThkZGVkNDA0ZDBmZmYxYmU1NzQ4MmZmNTQ0ZjQ3MWZjMjVmMWRjOWE4ZWExMjFlNjM5Y2VhZTM0MzNjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIxOWU2NDMyNTA5YWI5Zjg5YTQ3NjQ4NzQ2ZGI5MWQ0OTA0YWVjNTAxYWI1ZDUwMzM0MjlkM2U2YWEzZWMzODAwIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlOGE3MjhlMjUyM2U1YjM4ZGFkN2FlOTlkZGVkZDZhY2NiMDg4NmFmNzhmNmRiNDY1Y2YxZjFhOTE2YzNjZDhmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJhMDFhMGJiZmYwYjA1ZTczNTUxZDA5NThmMzEzZjM5YmY0MmE5ZWQzODJjZWM2NjgxZDQ1Yzg2OGI3Y2UwMmUyIn0"
+          "resource": "repo://src/llm/providers.ts#L55-L164",
+          "version": "repo-lines-v1:sha256:7b72123fcb454529144297f58a9129be583d90234e19adb48ee8d8019999b7f2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxMjdlNTA1NjY2ZGY1NGY4OGE3OTM0ZmJjNzMyZjdlZjBjNDg1MWRmMDYyNmQ2ZmUwYTYxMjg5MjMxNzgyZDVkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIxOWU2NDMyNTA5YWI5Zjg5YTQ3NjQ4NzQ2ZGI5MWQ0OTA0YWVjNTAxYWI1ZDUwMzM0MjlkM2U2YWEzZWMzODAwIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlOGE3MjhlMjUyM2U1YjM4ZGFkN2FlOTlkZGVkZDZhY2NiMDg4NmFmNzhmNmRiNDY1Y2YxZjFhOTE2YzNjZDhmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJhMDFhMGJiZmYwYjA1ZTczNTUxZDA5NThmMzEzZjM5YmY0MmE5ZWQzODJjZWM2NjgxZDQ1Yzg2OGI3Y2UwMmUyIn0"
         }
       ]
     },
@@ -49,12 +49,12 @@
       "statement": "Each provider carries a tokenParam of 'max_tokens' or 'max_completion_tokens' to avoid the OpenAI-specific rename trap: OpenAI/Groq/xAI require max_completion_tokens on newer models while OpenRouter/Mistral/DeepSeek/self-hosted servers still use max_tokens; sending the wrong one fails the call.",
       "evidence": [
         {
-          "resource": "repo://src/llm/providers.ts#L41-L49",
+          "resource": "repo://src/llm/providers.ts#L44-L52",
           "version": "repo-lines-v1:sha256:9b832cfe8e2ac25ba1823b6f35011adb7225ce6e3845dad25a3e5b08f6df7a8f:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzlhMjYyZTMyMTNlNjg5ZjEzYzIyNzA2NzFhYzc0ZTAzYmE0N2JjOWMyZjdiMTExZTI4ZDRjYzgwM2MxMzFiNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjZlNTRkODUxYjE1YjQwMzRiZjViNWRkM2QxMTYyNDNiMDBkMDg4Mjc5NDgzYWZiZWI0OGE5MmMwODdiNzBlYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTUyMDE2YjE3OTEzOWZjNDM0N2ZmMzZmODRhNTIxYzU4MzgxNjkzMmE4MmMyOTk4NjYwMGM1ZjFhMmJiNTJlNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDMxMzAyNGVlNzc0MWM5MDgyYTdiYTQ1OGYzMGNlNGVjYmU4ZTAyZmNjZTMzMWQ5MGViY2E4YmU3OGFhYzZjMSJ9"
         },
         {
-          "resource": "repo://src/llm/providers.ts#L52-L158",
-          "version": "repo-lines-v1:sha256:d350006662bb6bb82bbb5bade4b8b7030bc5030b9e1f3cd383441de6f3a6c28e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA3LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIyOGUzNThkZGVkNDA0ZDBmZmYxYmU1NzQ4MmZmNTQ0ZjQ3MWZjMjVmMWRjOWE4ZWExMjFlNjM5Y2VhZTM0MzNjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIxOWU2NDMyNTA5YWI5Zjg5YTQ3NjQ4NzQ2ZGI5MWQ0OTA0YWVjNTAxYWI1ZDUwMzM0MjlkM2U2YWEzZWMzODAwIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlOGE3MjhlMjUyM2U1YjM4ZGFkN2FlOTlkZGVkZDZhY2NiMDg4NmFmNzhmNmRiNDY1Y2YxZjFhOTE2YzNjZDhmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJhMDFhMGJiZmYwYjA1ZTczNTUxZDA5NThmMzEzZjM5YmY0MmE5ZWQzODJjZWM2NjgxZDQ1Yzg2OGI3Y2UwMmUyIn0"
+          "resource": "repo://src/llm/providers.ts#L55-L164",
+          "version": "repo-lines-v1:sha256:7b72123fcb454529144297f58a9129be583d90234e19adb48ee8d8019999b7f2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxMjdlNTA1NjY2ZGY1NGY4OGE3OTM0ZmJjNzMyZjdlZjBjNDg1MWRmMDYyNmQ2ZmUwYTYxMjg5MjMxNzgyZDVkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIxOWU2NDMyNTA5YWI5Zjg5YTQ3NjQ4NzQ2ZGI5MWQ0OTA0YWVjNTAxYWI1ZDUwMzM0MjlkM2U2YWEzZWMzODAwIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlOGE3MjhlMjUyM2U1YjM4ZGFkN2FlOTlkZGVkZDZhY2NiMDg4NmFmNzhmNmRiNDY1Y2YxZjFhOTE2YzNjZDhmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJhMDFhMGJiZmYwYjA1ZTczNTUxZDA5NThmMzEzZjM5YmY0MmE5ZWQzODJjZWM2NjgxZDQ1Yzg2OGI3Y2UwMmUyIn0"
         }
       ]
     },
@@ -63,12 +63,12 @@
       "statement": "buildRequest produces four genuinely different request shapes: Anthropic (POST /v1/messages, x-api-key, body with max_tokens/system/messages, adaptive thinking + output_config.effort), Google (model in URL path, x-goog-api-key, generateContent body), Ollama (native POST /api/chat with options.num_ctx — never /v1/chat/completions, which cannot set the context window), and OpenAI-shaped (POST /v1/chat/completions, Bearer auth, the provider's tokenParam); systemone never goes through buildRequest at all.",
       "evidence": [
         {
-          "resource": "repo://src/llm/providers.ts#L282-L365",
-          "version": "repo-lines-v1:sha256:4fa6bcf2e7dc7868fe9ade67ca9b5a7c1aa691dad9f3b07bc88a1121ef40b068:eyJzZWxlY3RlZExpbmVDb3VudCI6ODQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2NzdkMmYwMzFlOThiNWU5MTFjNWFkNGZiOWIyMTg2YTkzMjUyMmU4ZjQ2ZWU0MGJhYmZhZTNkYTAwZmMxMjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIzOGQzMjk0MWM5YmE0NWMzZWJjZmYwYzkyNmQxZmQwMWFiYjliZDQ4MGNhYjc3Y2ZmY2ZhNGQ1MGU2MjQzMjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk3ZDg2MzJlNTRlOTI5OGFiYjk1ODcyN2UyZDUxNDA4YWJhZjEzNjYwMzUzNzkxMDE0MGFiZjY1YjMwYWI2MTMifQ"
+          "resource": "repo://src/llm/providers.ts",
+          "version": "repo-file-v1:sha256:d3e5a4cfa1771fbfbb239a8ae08646eb47b8d942c341e5ccff124000702079d0"
         },
         {
-          "resource": "repo://src/llm/systemone.ts#L79-L120",
-          "version": "repo-lines-v1:sha256:b44eb4a7f69f7dd31f30fb43dc3cc8d67320e36e658f9aad4ad2fb4b1ada5bfd:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU5OGFmNWFlZTU3YTkyYTllZGM0ZWQzZDk5ZTljY2YwYThkZWE0Nzg4ZDIwMjBlMzExMjdjODNiMzc5ODY1YzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ2N2FiODNjOWMwNTQ0ZjRkODk2ZTVmOGE0OTAzM2MzNGRlNDg4YzNhZDFmMDhhOGNlOWZiYWExYzIyMTU2NDMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY5NGUwYzZkMDFlZDM4MmViODcxMzRjZmFmODQ1YTMyODdjNGM5ZDQwNDYxMjk0YzE2YWQ0YzY0OTZiZmJjZTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBhZDY5YzIyYTIzN2QwOTE5ZDcxMWU3N2NkODYxZDYyMmIwMjBmMzE1NTI2MDViMzIzOGQ2ZjYyNzgxNTAyZTEifQ"
+          "resource": "repo://src/llm/systemone.ts",
+          "version": "repo-file-v1:sha256:c7f399b75d5fac4a6b6bd7b62faae435f59aec5adf76509950f0720e1fcf9d80"
         }
       ]
     },
@@ -77,7 +77,7 @@
       "statement": "For Google, reasoning effort switches between thinkingLevel (named, Gemini 3.x via googleThinkingMechanism) and thinkingBudget (a token count derived from the chosen level via GOOGLE_BUDGET_BY_LEVEL, Gemini 2.5.x); the two are mutually exclusive and sending both is an error.",
       "evidence": [
         {
-          "resource": "repo://src/llm/providers.ts#L271-L295",
+          "resource": "repo://src/llm/providers.ts#L279-L303",
           "version": "repo-lines-v1:sha256:fc3caad9e5facfe4dbfe80895c8eac57a1bd8c73c0619a5dafc350a8a5f567fc:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4MDMyNDU5ZDVlZDUyNjU1MTg3OWZmM2U1YjdkYjNiOTg4YTE5MjZmOTdjYzE0NTU0OWIxYzA4NTE1YWQzNDkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUyYTE5Y2YwMTBkYzczMmZiZTI0Yjc2OTBlMzQ0ODU0OTNmY2ZhMWM1ZTM5NWZkODAxODZlYTdlMmZmN2VlOTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4Y2YzMTJiZmI0ZjRmMTg5NWIwM2FhMjVlNmJjMDhmZjgzY2FmYTY4NmNmY2RjZWI2NzlhYzVhZjRjMTJjNzAifQ"
         }
       ]
@@ -87,7 +87,7 @@
       "statement": "Reasoning effort for OpenAI-shaped providers is sent as reasoning_effort (flat) for all except OpenRouter, which takes { reasoning: { effort } } (nested).",
       "evidence": [
         {
-          "resource": "repo://src/llm/providers.ts#L297-L301",
+          "resource": "repo://src/llm/providers.ts#L305-L309",
           "version": "repo-lines-v1:sha256:c20e2b171d189a2283df8b4ac821b1d0ffa007255f26b6cbf0cc768b10416466:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjU2NzkzNWUxYmMyNzM2M2FiNmVjNzFmOTg5YWZjMDQ1Y2UwZjFjNmIzOGUyYjQ3NjAzMzI1YmQzODZmYzgyOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMmNmNmFkNGI0NGQzNjJjZWE1MDE0ZDczOTM2NTYwNWJlNzQ2MDQyZWIwYzBhY2FkZGM2MGEzYjk1ZjkwNDQxYiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzE5MTZkNzI2N2Y5ZjQxNmQ4NmM2ZjYzYTRjODdlMjVmYjNjY2U5NWE1MzEyOTdiNzk0M2Q2YjJjZDVhNzQ2ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGZhMjU0MTIwYzYyMWU0YzkyNzk3MDBhY2JhMTYwY2Q3ZGIxMDIwYmU2ZTlhMmMyNmFhMjJiNjZhYTg5ZjY3ZSJ9"
         }
       ]
@@ -97,18 +97,18 @@
       "statement": "DEFAULT_MAX_TOKENS is deliberately generous (8192) because on reasoning-capable models the output budget is shared between hidden reasoning tokens and the visible answer; reasoning can exhaust the whole budget before any visible token is written, surfacing as a truncation flag with no usable text rather than an error.",
       "evidence": [
         {
-          "resource": "repo://src/llm/providers.ts#L204-L211",
-          "version": "repo-lines-v1:sha256:5cb97b47e8a68c095260f06b233d51a00406ad18e98520e18e76a8cfb703a992:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNmM1ZDE0YzNiM2E0YmFmOWYzZDYyMWRiNTk1MGRkNmEzODVlYWZhMTZlMTg5OWU5YzBmYTY5ZTU0MDU5YjkxNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGE4N2Q3NzFhZmY1YmFkNmM0ZTg0MmFkNjNmNTQ1MzUzNGYyYjI3NTM2YjI5NDFkYzgxN2ZiYmE2Yjg1NjhiMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjBhM2EyZjBhZGQwYjJiNDNlMjI5NDdkNjc4MDQ3ZGRjOTQyZTE2ZDZkNjk1NTM5MjE1Y2U0NGM3ZDgzMGMzOCJ9"
+          "resource": "repo://src/llm/providers.ts#L211-L218",
+          "version": "repo-lines-v1:sha256:349ec5d80a2e9ac60bbb1e0b16769968587a816f05b5eec687ffce4462a8db76:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDkxNmYzZDc1OGE4YzE5MWIzMzg5MjIzMDk0Yjc4N2FmYjk1NDRhZTRmZWEwMzQ1ZTk2ZTQyNzVhMTAwOWUxOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGE4N2Q3NzFhZmY1YmFkNmM0ZTg0MmFkNjNmNTQ1MzUzNGYyYjI3NTM2YjI5NDFkYzgxN2ZiYmE2Yjg1NjhiMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjBhM2EyZjBhZGQwYjJiNDNlMjI5NDdkNjc4MDQ3ZGRjOTQyZTE2ZDZkNjk1NTM5MjE1Y2U0NGM3ZDgzMGMzOCJ9"
         }
       ]
     },
     {
       "id": "claim_57b1c8e8854c4c918919e1326a6b3867",
-      "statement": "Provider response reading is deliberately tolerant: extractText degrades to '' and extractError always yields something readable (including the Ollama 404 'pull the model first' hint and the Cloudflare {success, errors[]} envelope); wasTruncated distinguishes a 2xx response cut off by the token budget from the model having nothing to say, letting the store give a targeted 'budget exhausted on reasoning' message instead of 'the reply was empty'.",
+      "statement": "Provider response reading is deliberately tolerant: extractText degrades to '' and extractError always yields something readable (including the Ollama 404 'pull the model first' hint and the Cloudflare {success, errors[]} envelope); wasTruncated distinguishes a 2xx response cut off by the token budget from the model having nothing to say.",
       "evidence": [
         {
-          "resource": "repo://src/llm/providers.ts#L337-L480",
-          "version": "repo-lines-v1:sha256:6f4e3eb5495f202280e9ccda8a9fc2184a605b2e838bea8482eb4a07bfea408b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQ0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxNTJlNTQ2MTg2NzZhN2VhMmI1ZmZlYmE3NmUzNTg3YTRlNTU2ZmVhMDgxNWExOWNmOThhNzJjNjFlYTE4NmE4IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI2OGRmNWVmYzY1MGQyOWQ3OTVhMmFhYjRkZGNmZTM1ZDY5MDVjMmE2YTYxMWI4N2FjNGJkNTc1MmQ4MTUxYTcyIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIwZjAxZGFkYTZmMzUxYzIyZWZiYjRlNzNiYjk0MmI2MmQ4YmMxMGQ3ZjVhMzY3ZTZlYTYxMWY5NzQxNDc4ODZlIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIzYmE4YTQ1ZTgzZDU0Zjk4MDM0YTRhYjA0YmMzOGIxNTU1N2U3MmZlZDBkNDM3YjlmYjJiZGFjZmJhYjhkOGI0In0"
+          "resource": "repo://src/llm/providers.ts",
+          "version": "repo-file-v1:sha256:d3e5a4cfa1771fbfbb239a8ae08646eb47b8d942c341e5ccff124000702079d0"
         }
       ]
     },
@@ -117,8 +117,8 @@
       "statement": "Model discovery resolves each provider's list-models endpoint into flat ModelInfo {id, label, reasoning}; reasoning is read from the response where the provider says so (Anthropic capabilities.effort, Google thinking flag, OpenRouter supported_efforts) and otherwise inferred from a model-ID pattern (OpenAI o[0-9]/gpt-5 excluding -chat, Groq gpt-oss, xAI grok-4.5, Mistral small/medium).",
       "evidence": [
         {
-          "resource": "repo://src/llm/models.ts#L15-L91",
-          "version": "repo-lines-v1:sha256:a084d0f68dc8c8bcace16ed44eb22bb9fdeea626ed02ef46f19e5aa3f853b3d9:eyJzZWxlY3RlZExpbmVDb3VudCI6NzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyM2NiNGMxM2Q2Nzc1OWQ1NGY3NjcxZDQ0MDM0OTcyZDA5MDNhMzlkMDhhZmFlNzNiYjk4MWViOWFiMGRjZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5MmY0OWY2NDgyMDEwYmExZDhkNWRjY2QzNzJiMWVhNzliNmVhMzUyMTA1NzkyN2RmMDkwNDdhMzVjMDUxMTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5ZTNmMjM4ZTk2NWQyMzMxNDJiZWIzMmNmNzM2NzIwNTMwYzM1MmFmZmI2N2FjMmVhYzAzNzk5NTk3OWZiN2MifQ"
+          "resource": "repo://src/llm/models.ts#L18-L91",
+          "version": "repo-lines-v1:sha256:201a7fce9ee8d136fe68f89c3807e3f04aadab87aaf34a545c1214a1abfb817c:eyJzZWxlY3RlZExpbmVDb3VudCI6NzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyM2NiNGMxM2Q2Nzc1OWQ1NGY3NjcxZDQ0MDM0OTcyZDA5MDNhMzlkMDhhZmFlNzNiYjk4MWViOWFiMGRjZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5MmY0OWY2NDgyMDEwYmExZDhkNWRjY2QzNzJiMWVhNzliNmVhMzUyMTA1NzkyN2RmMDkwNDdhMzVjMDUxMTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5ZTNmMjM4ZTk2NWQyMzMxNDJiZWIzMmNmNzM2NzIwNTMwYzM1MmFmZmI2N2FjMmVhYzAzNzk5NTk3OWZiN2MifQ"
         }
       ]
     },
@@ -127,8 +127,8 @@
       "statement": "DeepSeek and openai-compatible are deliberately left with no reasoning-effort control (DeepSeek's contract unconfirmed, self-hosted servers have no single shape), so the app never offers a control that silently does nothing on some servers.",
       "evidence": [
         {
-          "resource": "repo://src/llm/models.ts#L15-L91",
-          "version": "repo-lines-v1:sha256:a084d0f68dc8c8bcace16ed44eb22bb9fdeea626ed02ef46f19e5aa3f853b3d9:eyJzZWxlY3RlZExpbmVDb3VudCI6NzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyM2NiNGMxM2Q2Nzc1OWQ1NGY3NjcxZDQ0MDM0OTcyZDA5MDNhMzlkMDhhZmFlNzNiYjk4MWViOWFiMGRjZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5MmY0OWY2NDgyMDEwYmExZDhkNWRjY2QzNzJiMWVhNzliNmVhMzUyMTA1NzkyN2RmMDkwNDdhMzVjMDUxMTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5ZTNmMjM4ZTk2NWQyMzMxNDJiZWIzMmNmNzM2NzIwNTMwYzM1MmFmZmI2N2FjMmVhYzAzNzk5NTk3OWZiN2MifQ"
+          "resource": "repo://src/llm/models.ts#L18-L91",
+          "version": "repo-lines-v1:sha256:201a7fce9ee8d136fe68f89c3807e3f04aadab87aaf34a545c1214a1abfb817c:eyJzZWxlY3RlZExpbmVDb3VudCI6NzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYyM2NiNGMxM2Q2Nzc1OWQ1NGY3NjcxZDQ0MDM0OTcyZDA5MDNhMzlkMDhhZmFlNzNiYjk4MWViOWFiMGRjZjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5MmY0OWY2NDgyMDEwYmExZDhkNWRjY2QzNzJiMWVhNzliNmVhMzUyMTA1NzkyN2RmMDkwNDdhMzVjMDUxMTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE5ZTNmMjM4ZTk2NWQyMzMxNDJiZWIzMmNmNzM2NzIwNTMwYzM1MmFmZmI2N2FjMmVhYzAzNzk5NTk3OWZiN2MifQ"
         }
       ]
     },
@@ -137,7 +137,7 @@
       "statement": "The list-models pagination cursor is resolved as a URL against the base and rejected if it leaves the origin (resolveSameOrigin); this prevents a malicious cursor like '@evil.com/v1/models' parsing as userinfo and redirecting an API-key-bearing request to an attacker host.",
       "evidence": [
         {
-          "resource": "repo://src/llm/models.ts#L97-L158",
+          "resource": "repo://src/llm/models.ts#L98-L159",
           "version": "repo-lines-v1:sha256:4782cd5731850f272f7d1050ea2c3f47dcdc74284fd0ffed8b61728236f609a2:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFmZTM2MjI4Y2FkMjBkM2RiYmU0MDQxNjg3Zjc3MmY5ZmViYjFmNWEyZDI4MTVkZDQxNzk0MWUxMzA5MWY0NjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE0MDc4YjBjOTk0ZjA5ZjFkZTViZTQ3YTY3ZDIzMmQ4YzNiMmUyNDE1MzM4NTk0OTFjMTU1MjRhYTkxNTBkODkifQ"
         }
       ]
@@ -147,11 +147,11 @@
       "statement": "fetchModels is cached per config id for MODELS_TTL_MS (1 hour) to make reopening the settings dialog instant; an explicit force refresh bypasses it, it never attempts openai-compatible, and it walks at most MAX_MODEL_PAGES (10) pages as a backstop.",
       "evidence": [
         {
-          "resource": "repo://src/state/aiStore.ts#L1505-L1530",
+          "resource": "repo://src/state/aiStore.ts#L1653-L1678",
           "version": "repo-lines-v1:sha256:e2ffb171c978997a4c590cad1597624737c903628696177ec473e12bf49ebca9:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBiMWM4YzYyODRkYTE4ZWViY2YyZGE4NTYxNTA1MjRkMWU5OTFjNWNhMWZiZWM5YzgzYmY1ZWQ1ODhlM2RkZDkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1YWVhNGU4ODA2YTU3YjlhZGE3ZGVlYjcyNmRlMjhkMDU4NTFjZTRhMWNkYjUyZjIzMTNlZGVmNTExMGM1MjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY4MTZkY2YwOWNlYzBiZjA2YWIyYjRjNWJkMjI2ODFmYjk0MWQ3MWYwYWY3Y2Y0Zjk4YWU5YmE4MmM0ZjM2YWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjMwNjliZjkzMTNiYWJkNDI2OGUxMjJjYmFmMzY1MDE2ZDcwMmE4N2RhYThmYmUwZWZjNzg4Yjk3NzhiODRjMWYifQ"
         },
         {
-          "resource": "repo://src/state/aiStore.ts#L76-L76",
+          "resource": "repo://src/state/aiStore.ts#L101-L101",
           "version": "repo-lines-v1:sha256:d0bceefa423499d6b268e39051f870e13dd76df297de682a3c7cb6d3a36ef789:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDBiY2VlZmE0MjM0OTlkNmIyNjhlMzkwNTFmODcwZTEzZGQ3NmRmMjk3ZGU2ODJhM2M3Y2I2ZDNhMzZlZjc4OSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDBiY2VlZmE0MjM0OTlkNmIyNjhlMzkwNTFmODcwZTEzZGQ3NmRmMjk3ZGU2ODJhM2M3Y2I2ZDNhMzZlZjc4OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiY2JhMDJiN2ZjZmU1ODRhZDg1MjNkN2ZlYjY5MjBmNzFhY2MzZGUzNTE4ODRjZGIxZDljMmVhNmUyMDhmNTY1YiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWRiMTEwZWMwNThhMTM4N2JmYjU5OGFjZjYzMWVlNWQwY2M5YmEwNmJhM2Q2OTg2MTUxZDIxYzQ4NmFkZGExMSJ9"
         }
       ]
@@ -162,11 +162,11 @@
       "evidence": [
         {
           "resource": "repo://docs/annotation-schema.md",
-          "version": "repo-file-v1:sha256:d01c1c9db4de2f24d407053faf3c13c63c48c3635bf72761aaa729fc52142da7"
+          "version": "repo-file-v1:sha256:31cd3f139ffbae00e04c5aac1d8abdc3303c57bc956f68722a30779b6ec6d2bf"
         },
         {
-          "resource": "repo://src/llm/prompt.ts#L30-L47",
-          "version": "repo-lines-v1:sha256:bd732232e408aa138af2a3b878847a8d32e39c175dc0a72b32ddf82684e2601c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZlOThjMWY3YzI5YjcwZDk4MmJiN2FmODQ2M2YzMDAxYWYwMjIwYmMwNGYwMmVkMzlhNDNmM2U2YzVmN2ZjM2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE4NDc1ZDZlYjM2ZjczNTZlMDQwNjY0OGQ0YzNlZjRjYjg0MjViNDhiZDE1MzljMzIwZmJiNWYwN2Q2NGFkMTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIzNGNlM2FhMzNlZmQzZTdlNGUyY2JlYzQzZTA3YmUyNmQyYjAyZmY1YjFjYjVkOTFjZDA0YWFhZjJjOTY2MmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyYjRhMzk3YjkxNWFlOWM3NDUwMjdlZGUwNTg4NzBhOWIzNTdjZGE2ZTc0Njg1YjNiZWViNDU1NDRhZTYyYmYifQ"
+          "resource": "repo://src/llm/prompt.ts#L31-L52",
+          "version": "repo-lines-v1:sha256:f88e65549501c85b2ea9df750ec6481735a1c4e932d04a4b89fbd812df0d856e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZlOThjMWY3YzI5YjcwZDk4MmJiN2FmODQ2M2YzMDAxYWYwMjIwYmMwNGYwMmVkMzlhNDNmM2U2YzVmN2ZjM2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE4NDc1ZDZlYjM2ZjczNTZlMDQwNjY0OGQ0YzNlZjRjYjg0MjViNDhiZDE1MzljMzIwZmJiNWYwN2Q2NGFkMTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIzNGNlM2FhMzNlZmQzZTdlNGUyY2JlYzQzZTA3YmUyNmQyYjAyZmY1YjFjYjVkOTFjZDA0YWFhZjJjOTY2MmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyYjRhMzk3YjkxNWFlOWM3NDUwMjdlZGUwNTg4NzBhOWIzNTdjZGE2ZTc0Njg1YjNiZWViNDU1NDRhZTYyYmYifQ"
         }
       ]
     },
@@ -175,8 +175,8 @@
       "statement": "buildSystemPrompt is delivery-aware: when the paper arrives as extracted text it adds a rule warning the extraction is lossy (tables/figures/layout may be garbled, do not reconstruct illegible content), so the model does not confidently reconstruct a mangled table.",
       "evidence": [
         {
-          "resource": "repo://src/llm/prompt.ts#L116-L135",
-          "version": "repo-lines-v1:sha256:55545386dc4423f6adfd1edd65edb56479058dde62080349553b383092840f8f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAyM2VhNjRlYjlkOWFmYzA4YjAwM2RhYTIxMDM3MmQ1MTk4ODgzZjk0NGFlN2IzMjY2MmZiMTJlMTUzZmY2MjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZhNGU4ZjAwMmUxMTJiODM4ODNkZTA4MjVkMDQ2ZGZkMTA5YjgwMzVhMjlhNTBlMDg4MzUyMzBkNjQ3ZTliYTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQyZTQxYWM4ZTFjMmY2ODNkMjBkNjA5ZWVlNTgyM2Y2N2I0YWFmMzIyY2YwZTg4Njk4ZmE3ZTkxMmI0MTk1OWMifQ"
+          "resource": "repo://src/llm/prompt.ts#L126-L180",
+          "version": "repo-lines-v1:sha256:c5fec24332a8f5456ff0340d53f58e7d04763d38a83d0b86f91e19ab7d1943f6:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAyM2VhNjRlYjlkOWFmYzA4YjAwM2RhYTIxMDM3MmQ1MTk4ODgzZjk0NGFlN2IzMjY2MmZiMTJlMTUzZmY2MjEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZhNGU4ZjAwMmUxMTJiODM4ODNkZTA4MjVkMDQ2ZGZkMTA5YjgwMzVhMjlhNTBlMDg4MzUyMzBkNjQ3ZTliYTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQyZTQxYWM4ZTFjMmY2ODNkMjBkNjA5ZWVlNTgyM2Y2N2I0YWFmMzIyY2YwZTg4Njk4ZmE3ZTkxMmI0MTk1OWMifQ"
         }
       ]
     },
@@ -185,7 +185,7 @@
       "statement": "Every prompt rule pushes the model toward omitting a field rather than inventing one: ground values in the paper with no outside knowledge, omit fields the paper does not answer, quote a verbatim snippet of evidence for every value (or omit it), respect field types, and match enum options verbatim.",
       "evidence": [
         {
-          "resource": "repo://src/llm/prompt.ts#L157-L172",
+          "resource": "repo://src/llm/prompt.ts#L202-L217",
           "version": "repo-lines-v1:sha256:7f170cd2d35737a268dc0a45fb7dec14ac31854f8c6ecdae0579c069c6b2bec9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUyNGIwODdjNGMwNDIyZmE4NDQ1MTQ2ODA4OWE4YWM3M2MwZmIxYWM0Y2E4NzhmZTJlNDM1MDlmNDg2YWJiNjMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlmZWMwZmYyMDNhMTY3NDdkOWY4NDUzZDBjZmU0YTY4NDVhZTFmMjkxNzkwZDc1MjcyOTNiYmEyYTRmYWYxYWEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjZGFjNGQyNDQwNTdiODkyMTZhODQ3MTE1ZDA5MWU2ZmZhYWU4YjA1MzcxMDFjMzE1Y2JjMTMyMTQ5NTRjY2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdiNTIxNzFjOTY4NTk2MmUyZjI4ZmVlYWZhNDM5ZTgxMzcwOWZjM2U5MTBlNmQxNDhmODY0OTZiNTgyMjMwOGQifQ"
         }
       ]
@@ -196,7 +196,7 @@
       "evidence": [
         {
           "resource": "repo://src/model/pdfText.ts",
-          "version": "repo-file-v1:sha256:4b9aa6eac86decb13c74330b4caa1c70fec1551b00fa0df2452e6a987ae26fae"
+          "version": "repo-file-v1:sha256:2263ef6062e00ded12ccf39a1a8eb704c6451164f1b2d36adf83ee05a6067546"
         }
       ]
     },
@@ -205,7 +205,7 @@
       "statement": "parseAnswer is the trust boundary of the AI feature and never throws; it returns fields (accepted Suggestion[]), skipped (fields left empty with reasons), and rejected (refused suggestions kept and shown, because a silently dropped answer looks like the model said nothing).",
       "evidence": [
         {
-          "resource": "repo://src/llm/parse.ts#L373-L373",
+          "resource": "repo://src/llm/parse.ts#L388-L388",
           "version": "repo-lines-v1:sha256:d5d17c7cc2f70692bf81ab092e740643925ad35d5c9e5e3e5278ee8664c9f74a:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDVkMTdjN2NjMmY3MDY5MmJmODFhYjA5MmU3NDA2NDM5MjVhZDM1ZDVjOWU1ZTNlNTI3OGVlODY2NGM5Zjc0YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDVkMTdjN2NjMmY3MDY5MmJmODFhYjA5MmU3NDA2NDM5MjVhZDM1ZDVjOWU1ZTNlNTI3OGVlODY2NGM5Zjc0YSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDI2YmEyNTBiYTQyNTAyMGU3YzYwYjVjN2NiMThlNjdjMzkwYTVmNjZjYTZmZjJiZDliMTUzMzNmYzYyZjMxYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDMzM2RhMDdkOWE4MDcwNjU5ZjYyYjRkNzY3OTgzMTk4Nzk4NjRlNTc5ODdjOTc0M2MwN2NmNmVlZTdlM2QwNyJ9"
         }
       ]
@@ -216,7 +216,7 @@
       "evidence": [
         {
           "resource": "repo://src/llm/parse.ts",
-          "version": "repo-file-v1:sha256:45ee4ab5d28f094348cbdce96183e71c14b9f275749355b7c6cd4886427db825"
+          "version": "repo-file-v1:sha256:1f80fce418c727b7169f8cd5161a6f97b93d1f96175b0a3d9f3fab89adfe19e3"
         }
       ]
     },
@@ -225,7 +225,7 @@
       "statement": "Coercion bends only where there is exactly one honest reading: \"2021\" becomes number 2021, \"true\"/\"True\" becomes boolean, a case- or whitespace-off enum answer is snapped to its canonical option; everything else (\"about 20\", a value not in the enum, an empty string, a number for a string field) is rejected, never guessed.",
       "evidence": [
         {
-          "resource": "repo://src/llm/parse.ts#L201-L201",
+          "resource": "repo://src/llm/parse.ts#L205-L205",
           "version": "repo-lines-v1:sha256:2938b8da08019c19caea8730a2c03964dd98f5d3c50c5e6d28cfbc5b19ca5c95:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjkzOGI4ZGEwODAxOWMxOWNhZWE4NzMwYTJjMDM5NjRkZDk4ZjVkM2M1MGM1ZTZkMjhjZmJjNWIxOWNhNWM5NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjkzOGI4ZGEwODAxOWMxOWNhZWE4NzMwYTJjMDM5NjRkZDk4ZjVkM2M1MGM1ZTZkMjhjZmJjNWIxOWNhNWM5NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTNlZmVlNzExZjNmMDY1OTBkZDliMjQyZTkyNmE1Mjk4YjAzOGJkYTM5ODc3YjhjZTdlNDA0YjM1NGRmYWFiZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMGI1NjgwNWRjYTliYjQzZjE4NmQwNWIzYmZmMDI4NWEzZmFjOGJiZmEwMjVmYzkyYmI5ODBiYTZhZjZjZjJjMSJ9"
         }
       ]
@@ -235,7 +235,7 @@
       "statement": "Confidence outside 0..1 is dropped to null rather than clamped, because a model answering 95 may mean percent or a 1..100 scale; an empty string is not confidence 0 (Number('') is 0 inside the range).",
       "evidence": [
         {
-          "resource": "repo://src/llm/parse.ts#L228-L246",
+          "resource": "repo://src/llm/parse.ts#L232-L250",
           "version": "repo-lines-v1:sha256:c765d25cb4826f43ff79f7276f8ad40c9a2763306587620772ef17786fdab8d5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg2NjRhZTQ1ZWM0OGQ0ZDRhZDRiZjYyYWU2MWIyZTIzZjcwZjBjYTQzMWRlMzQzZDZiMjBkOTRiNGRmODkzYmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJiYjc0ODJlNTAxZjRlYzE3ZmE5YjY0Yjg1MDhkZjA4MzNhOTJmMjM3ZmJjNDU1ZWZkNWJmZmU2MjRjZmVhYTcifQ"
         }
       ]
@@ -245,7 +245,7 @@
       "statement": "resolvePath checks paths against the schema (not the current data) so the model may name an index that does not exist yet to record a further entry of a repeatable node; missing instances are created at apply time.",
       "evidence": [
         {
-          "resource": "repo://src/llm/paths.ts#L221-L266",
+          "resource": "repo://src/llm/paths.ts#L222-L267",
           "version": "repo-lines-v1:sha256:d2a8f3c14bd03b80fe8467c52296f2b3cdca72164f65ebdcabf73ff50e1327be:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1OWJiN2EwZGRkNDE0ZGMyNmFmNTVlYWFkNTQyNzkyMmZkNWFiNmU3ZjM1NTg4MmU3NThkNmQwZTVhMTVkODUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiYWY2NDEwMTUyYjdhOTY1NTI5YTRmNjExMWYzOTU5ODM3MjBjNzIwZGM2ODAwYWJlMTNkZDU3ZDNlMThlYjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
@@ -275,54 +275,42 @@
       "statement": "isUnanswered matches validate.ts's empty notion for strings/numbers but booleans have their own rule: a boolean is offered unless already true (the AI can propose flipping to true, never to false, and never clears a ticked box), because the data model cannot represent an unanswered boolean.",
       "evidence": [
         {
-          "resource": "repo://src/llm/fields.ts#L18-L33",
+          "resource": "repo://src/llm/fields.ts#L26-L41",
           "version": "repo-lines-v1:sha256:576461a57086929bf5768f7ab5ea2774e64d21d15fa829189e65e0acc747bdab:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBjMTZlZGZjZmU3N2JjNzRlMGU3YTBjOTI1M2FkMDU2M2MzMzA5YmNlMjIxZmIzMzcyMzI1NGY0ODY1ZDM4YzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA3ZmI1YTViYmVjYjBkN2ViNmE3ODQ0OWE2NGFhMTkyNGNhYTgxMTdiMzVmYjczMGFmZmRlYTdhNDFkMTYyMTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjljYmZlYWYzNTQ5NzIzMjBjNDVjZWQzOTc2OGI3NGI4OGRjYjI3N2RhMjk1NjRiYTVkYTQ1MGM4MzAwMDZlOTIifQ"
         }
       ]
     },
     {
       "id": "claim_c68977b5177c461b98f2792233e5bf5a",
-      "statement": "useAiStore owns the AI flow as a phase state machine (setup → reading → starting → calling → parsing → review → applied/error; 'starting' starts an app-managed local System One model before the first call) and is kept separate from the main store; the only bridge is apply(), which hands checked rows to the main store's applyAiSuggestionsBatch as a single undo step that never overwrites a reviewer and leaves no trace when it writes nothing.",
+      "statement": "useAiStore owns the AI flow as a phase state machine (setup, reading, starting, calling, parsing, review, applied/error) and is kept separate from the main store; the only bridge is apply(), which hands checked rows to the main store's applyAiSuggestionsBatch as a single undo step that never overwrites a reviewer and leaves no trace when it writes nothing.",
       "evidence": [
         {
-          "resource": "repo://src/state/aiStore.ts#L1998-L1998",
-          "version": "repo-lines-v1:sha256:c4d9bb7482b137b18352df59b1663570b10e3588a68534c99ba0731756ae9ee5:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzRkOWJiNzQ4MmIxMzdiMTgzNTJkZjU5YjE2NjM1NzBiMTBlMzU4OGE2ODUzNGM5OWJhMDczMTc1NmFlOWVlNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzRkOWJiNzQ4MmIxMzdiMTgzNTJkZjU5YjE2NjM1NzBiMTBlMzU4OGE2ODUzNGM5OWJhMDczMTc1NmFlOWVlNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODcxNDRmYzhhZGIxNDkwYWZjZTMyYTE3ZTM4NWQ3ODFhZDZhOTZmODIwNzRjZjJhNDM4ZmNlYWI1ZmY1YzY4NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjE4ZTQ3NjJlNjhkZTAwMTI2MDYzYjA3NTgyOTk3NmY2YTUxNTdhNzFiYzk0Njk2NjBkM2MzMzJhZjk0OTVkYSJ9"
+          "resource": "repo://src/state/aiStore.ts",
+          "version": "repo-file-v1:sha256:8422e293ee5a28b4a65406b2dfdde266ab3bc72cc3dddbb0c4916ddcdb142798"
         },
         {
-          "resource": "repo://src/state/aiStore.ts#L83-L95",
-          "version": "repo-lines-v1:sha256:7a901c6fb3771c99bc98821de47361210963e5498d0bb04b06e7ca50d9d014db:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU5YmZiYmU3ZDNiYjI2MWZiMmMwZjExM2U4ZWQ4M2NlYTdlMWI4MWM0MGI1ODNlMjRmOTk0NmU0ZWE2OGMwMDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM4OWE1OTc5YWRhZjY2YzJlMTU1ODE3Y2EzNGYwNjA4Y2M2YmJjMmI3ZTk3ZTc4ZWJkYWEwMjZmNDkyYzkxZTAifQ"
-        },
-        {
-          "resource": "repo://src/state/store.ts#L2781-L2900",
-          "version": "repo-lines-v1:sha256:9ddcf5aaba37eff2fec8690c5ddc07b04f08f7c42b9d688c2fbb3960e448953d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI3YjVhNGMzOTA3ZWQ4ZjdkMjVmYjk5MjNmMWY2NzIwMTE5MmJhZDk3MWIwMTk3OGVlMTM3MDQ1ZDY5YTliYzY2IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIxNDI1NjkxN2RjYjM5NmJiMjg2NGVkYmU0NGIxMzI5ZGE5ZWMzMDJmMWM2OTA1ZjY1M2M1YjEwZDljODQ4ZTE2IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI3ZDc0MTJhZGNlN2U0MDIzMGIzMTAxYWQ0YWUxZDFjY2EwMzVjNTRmMzEzOWU1NjA1ZWYxZWE2MDY5YmI5YzA5IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0YmY3ZWQzNTA2MjRhYjdjYTM5MDljMzViNWZiZWY4YjlmOTJmMTE5ZDNlNmI1NTdiY2Q4NTc1ZjcwMTU0ZjkzIn0"
+          "resource": "repo://src/state/store.ts",
+          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
         }
       ]
     },
     {
       "id": "claim_62c159c2e55642e4986abccba3127bb4",
-      "statement": "The finished run's target is recorded (runUsage) when the run starts and apply reads it rather than the current selection, so a reply about paper A cannot be written onto paper B while the dialog, paper list, seat picker, and target picker stay usable in flight; a superseded run returns silently rather than publishing or narrating over the replacement.",
+      "statement": "The finished run's target is recorded (runUsage) when the run starts and apply reads it rather than the current selection, so a reply about paper A cannot be written onto paper B; a superseded run returns silently rather than publishing over its replacement.",
       "evidence": [
         {
-          "resource": "repo://src/state/aiStore.ts#L1825-L1860",
-          "version": "repo-lines-v1:sha256:8ca0c23bcd49238a07d323d14784b2ab82c9e414b928ee9d7b7135c722ecb69a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0OWJlNGYxNDI4MTk5OWZmZTM2MTEwMWYxNGRkZjI4MDU5MWNkMDM5ZGY3ZmVkYWNiM2IxMjkyOThiNjBjMjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwNTg0MDA4ZWI1NzZiZWI4MzA5YTNkYmE2YzU5OGUxYWY0MGU1YTFkZDNmODk0NjFhZTA5YTIzYzI5MjRjMjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkzYTBkMTVhZDJkZTRhYzFiYTJiMjc0MTBhNjAwMjNlYjBlOTIzODI5YmIyMmQxNGY2NzExYzUxNWY0NDA1MzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0NTkwNDNlMGFlZTViMGYwYzRhYzI5MGVjODNjZGViZTU0NTNiNDE5NjJkMWQyZDEwZDAzMGQ2NzYzNDUwOWEifQ"
-        },
-        {
-          "resource": "repo://src/state/aiStore.ts#L278-L290",
-          "version": "repo-lines-v1:sha256:24b88305e654b8dedf25a4e9f98d58611c104d000083a34fbe7b2c6b1bb9b70f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI4ZjdmMDMyMmIxZGYzNTg3N2E5ZDgzYmY4Njc2MmYxZTI3ZjY0MmViMmJmY2VlNzFjZWMxYWNhMGJjYzU0OTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk0YzVjNGQxZjgzZDdlYTZlYWY4NmNlYjQyZmU4ODZiYTU3YjdiMGYwYWEwODQxMjZhNzRiZmUzMzg1NzI0ODQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkwMzI1Y2JlZjliY2Q5NWUwMTYxMzk2NzRkYzc5ZjY5NDFiZDVlNTQ3MmY1ODUyM2QzMDgxZDNmOGE2YmQxNTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg4Yzk2YWNlMzM2MjQ2YmJiODAzNjY1ZDEwNTRiZjhmNmM3M2JjNWNhMTk1ZmYzZjI2MWNiNjM0YWRiZDM0MjgifQ"
+          "resource": "repo://src/state/aiStore.ts",
+          "version": "repo-file-v1:sha256:8422e293ee5a28b4a65406b2dfdde266ab3bc72cc3dddbb0c4916ddcdb142798"
         }
       ]
     },
     {
       "id": "claim_357f19a02dc34e45839b3ed7dd0cc051",
-      "statement": "At review most suggestion rows are pre-ticked (rowChecked: judge accept, or System One confidence ≥ threshold; null confidence stays ticked) so the reviewer's job is to remove what is wrong, and the initial tick decision is mirrored into flagged so the needs-attention filter survives re-ticking; apply passes only the checked rows.",
+      "statement": "At review most suggestion rows are pre-ticked (rowChecked: judge accept, or System One confidence at or above the threshold; null confidence stays ticked), so the reviewer removes what is wrong; the initial tick decision is mirrored into flagged so the needs-attention filter survives re-ticking; apply passes only checked rows.",
       "evidence": [
         {
-          "resource": "repo://src/state/aiStore.ts#L1825-L1845",
-          "version": "repo-lines-v1:sha256:912f886da6e10d8571aad12de5847d36eda8c28fd843500ec8df2f911a855a1d:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0OWJlNGYxNDI4MTk5OWZmZTM2MTEwMWYxNGRkZjI4MDU5MWNkMDM5ZGY3ZmVkYWNiM2IxMjkyOThiNjBjMjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0MzgwMzFhNjZiYTdmNTlmODg0N2UwOTM2OTNhODQxYWMxMTU3YmY4MWU5OGQ3ZjIwZTE3MDYzZjVjZGI2YjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkzYTBkMTVhZDJkZTRhYzFiYTJiMjc0MTBhNjAwMjNlYjBlOTIzODI5YmIyMmQxNGY2NzExYzUxNWY0NDA1MzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjNhYWRkMjAwN2U3ZWUxNTIzNGY0NzNkNjQwZjRiMjFlNTZjNTk5N2NkYjNiMDMzOTBlMDcwODYzZTcxOGU4YTMifQ"
-        },
-        {
-          "resource": "repo://src/state/aiStore.ts#L960-L980",
-          "version": "repo-lines-v1:sha256:bc7ade609331912d46555cf562486344e9db3574050aa66c74844993b2255055:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAzZTM4NWIyNDI1Njc0OGY5MzdlYzVmYjE3MjBjYzZlMjAxZTk1Mzk2NTQxZjcwMTY2ZTAyMjM3M2FiN2U3ZTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxZDMzMWYwZGJlZTA0N2MwYmYwZDgxYmRlNDM5OTI2N2RmMmVmNmI5ZmI3ZTJjM2E2MDM0NmVlMzlhMjg1NmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM0MzY0NGNlMjNiMmExOTkzMTI2ZTJmOTFjYzJjNGY1MmFhMTQ4M2ZlYTZlODM3OGMyMzU5MzRiMmZmY2Q2OTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFkNmQ1YTYwYTk3ZjVmNTFiOTc2MjIzNDlkNGVkMjIyYjA0MTQ2OTE2MzEzYzA5NThkYmYxOWMzNmI3N2U3NzIifQ"
+          "resource": "repo://src/state/aiStore.ts",
+          "version": "repo-file-v1:sha256:8422e293ee5a28b4a65406b2dfdde266ab3bc72cc3dddbb0c4916ddcdb142798"
         }
       ]
     },
@@ -331,11 +319,11 @@
       "statement": "cancel aborts only and does not clear the controller slot (clearing it there made the run's own catch unable to tell an abort from a failure); the run clears the slot itself when it settles if it is still current. skipPaper aborts a single paper's own controller, recording it in skippedPapers (not errors) so it stays a resume candidate.",
       "evidence": [
         {
-          "resource": "repo://src/state/aiStore.ts#L1775-L1790",
-          "version": "repo-lines-v1:sha256:d58f555b48eb0dc5f84bc31f0c40fb25ba697feb5ea4881af0fb52aa3a3fc8d2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcyNDgxZWI0MWZjODFhZGY1YjA5MGM3MTY4Yjk1NmJiZGI5M2VjNGMxN2MxZGY3Y2QzZmM3YzUwMWVjZTYyYjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVhM2I5MjUxNWJjZGZkOTk3YWFlYjkwODcxZTY0NjM1MTczYTY2OTMwYzNkYzA0MWQ2MGJhMzkwNTA0Y2JlMzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM4YzNkNGZmNTUzZDg5Mjg3YTdiMzJlMDYwZDVhZDhkNDM2Nzk3ZDFlYzEyYTUwZGFhMzNiZDQ0ZTFmMjg0YWYifQ"
+          "resource": "repo://src/state/aiStore.ts#L1933-L1950",
+          "version": "repo-lines-v1:sha256:23c7471aba00239eb3d4cf57b6e2c93ff7a56dbee667d1acb2aa58a633e24dee:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcyNDgxZWI0MWZjODFhZGY1YjA5MGM3MTY4Yjk1NmJiZGI5M2VjNGMxN2MxZGY3Y2QzZmM3YzUwMWVjZTYyYjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhjOWI1ZDc0YTIwYTM0NjA2NmQ2ZTk1MDUzZjA5ODA2N2I3YzNlNDU4ZTFmNjVjZGNmNDU0MTNlOTkwNGU2ODAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVhM2I5MjUxNWJjZGZkOTk3YWFlYjkwODcxZTY0NjM1MTczYTY2OTMwYzNkYzA0MWQ2MGJhMzkwNTA0Y2JlMzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM4YzNkNGZmNTUzZDg5Mjg3YTdiMzJlMDYwZDVhZDhkNDM2Nzk3ZDFlYzEyYTUwZGFhMzNiZDQ0ZTFmMjg0YWYifQ"
         },
         {
-          "resource": "repo://src/state/aiStore.ts#L365-L370",
+          "resource": "repo://src/state/aiStore.ts#L413-L418",
           "version": "repo-lines-v1:sha256:df2108719860409f81961dd4816f8e10730cce8da25a55fd6554a150fa139f82:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjRiNmY4ODMzYzc0MTMyYTI5ODExZmRlZTYyZTlmMDM4NjgxODc3NjEyOWJhZWVkYzE5MGEyYWEzY2ViOTg1MiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTI1YWUzMGE2NjhmZDllNzQxMDQ4ODM1MmJjMmEzODdiYjEwZWNjNGZmNjczNTBhYWM2Y2VkZTY4NjRhYjVkYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTNmMmM5MDk1MDYxOWM4NTRiOWJiZWRmMDhmZThkZTgwN2QxMzYxMThhYjY5YmM5MDM1YzNjYmM2NmFlMmMyZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzAzN2M4NDlmZThhMGU2ZjkzY2QzNGM2NmVkZjhiZjdmODkxZDY5NWFmM2IzOWQ3NmI5OTZmMGQ2NDI1NzE1NyJ9"
         }
       ]
@@ -345,7 +333,7 @@
       "statement": "verifyConfig saves the target first (the key must be stored before use), sends the smallest request that reliably answers ('Reply with OK'), uses a 2048-token budget below the real run, and distinguishes empty reply from budget-exhausted-on-reasoning via wasTruncated.",
       "evidence": [
         {
-          "resource": "repo://src/state/aiStore.ts#L1519-L1544",
+          "resource": "repo://src/state/aiStore.ts#L1667-L1692",
           "version": "repo-lines-v1:sha256:a4e3559cb8e121290a85778b852d5bf0c73fc158355cefb3336e83b6c7460c5b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5YTdlNjUwNDc0YWVmNGU5Zjg1MDI0MGY5MzgzMzkwNzNiMWRjOTQxNTg2OTI0NmM5YWM5NmQ3ODdkZDY0ZDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyZGExNzBmOGExN2JlOWU4M2U1MmQzMTNlNGM5MzI5OTgxMmUyMjIwMDk1YzAyMzNmMGIwNmZmYjIwYTE0YmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImY5ZjZmZjc3MDhlOWFhYjYyYzJkNzBkZTQyY2Y2ZmMxOTU2NDcwMTA3ZDg1ZWEyM2I0NDZiNWQxYmM5YjgwMjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJkM2JiODIwMTU2YmE4OTQ5NDU2MDVmNjU5ODk2OTA4ZTIxNTZlNmMzNWFjNWU1MTE0ZjYwMmViNzdmZjQ3NjcifQ"
         }
       ]
@@ -355,18 +343,18 @@
       "statement": "applyAiSuggestions is the only place model output reaches the project data and guarantees: it never overwrites the reviewer (a field answered since or a path that no longer resolves is skipped), the whole fill is one undo step, and a run that writes nothing leaves no trace.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts#L3118-L3129",
+          "resource": "repo://src/state/store.ts#L3676-L3687",
           "version": "repo-lines-v1:sha256:e93a51e8444965856834f4e0803cfb85512d0ed36f91905b7a4662d144aacb7e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUxYjZmNjk1MjlhMmIyNGE3NTI0ZmNlOTEwNWYyOTk4YWM0YTFkZWMxYjkwNjNlOTc4NmZhZTdiMjIxOTUxZDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlNmRjNjI3MTUyMWZkZjk1MDA0NWJmZDJhYTJhNmFkMDYyMzBmYmUxYThkYjZmM2NhZjJiMjU2MTAzYzA1MmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjZWViMjcwMzJiZWJlMjFlMWNmNGRmOTIzZjBkNzIzZDZlMjUwYjFmYmI3NmI3NTNkMjc3MWIwMjJiZDZjMTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYzNmJjZjVlMWJkOTRkNGFhZDQ1ZTBhNDMxMzQ2NzY1MjliNmY1ODNkYmY5ODg3ZWMxMzI1ZWE0NDRmYjJjNzAifQ"
         }
       ]
     },
     {
       "id": "claim_2c30b1f137aa4fbca099d6d775a321fa",
-      "statement": "applyAiSuggestionsBatch refuses at apply time if the project is multi-reviewer with no seat, the seat is Consolidation, or it is a screening project (screening applies via its own applyAiScreeningBatch); a batch applied from the AI's own seat bypasses the no-seat/Consolidation refusals because it writes into the AI seat, and per-item replacements only write when the field still equals the checked value.",
+      "statement": "applyAiSuggestionsBatch refuses at apply time if the project is multi-reviewer with no seat, the seat is Consolidation, or it is a screening project (screening applies via its own applyAiScreeningBatch); a batch applied from the AI's own seat bypasses the no-seat/Consolidation refusals, and per-item replacements only write when the field still equals the checked value.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts#L2781-L2900",
-          "version": "repo-lines-v1:sha256:9ddcf5aaba37eff2fec8690c5ddc07b04f08f7c42b9d688c2fbb3960e448953d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI3YjVhNGMzOTA3ZWQ4ZjdkMjVmYjk5MjNmMWY2NzIwMTE5MmJhZDk3MWIwMTk3OGVlMTM3MDQ1ZDY5YTliYzY2IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIxNDI1NjkxN2RjYjM5NmJiMjg2NGVkYmU0NGIxMzI5ZGE5ZWMzMDJmMWM2OTA1ZjY1M2M1YjEwZDljODQ4ZTE2IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI3ZDc0MTJhZGNlN2U0MDIzMGIzMTAxYWQ0YWUxZDFjY2EwMzVjNTRmMzEzOWU1NjA1ZWYxZWE2MDY5YmI5YzA5IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0YmY3ZWQzNTA2MjRhYjdjYTM5MDljMzViNWZiZWY4YjlmOTJmMTE5ZDNlNmI1NTdiY2Q4NTc1ZjcwMTU0ZjkzIn0"
+          "resource": "repo://src/state/store.ts",
+          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
         }
       ]
     },
@@ -375,12 +363,12 @@
       "statement": "applyAiSuggestionsBatch usage comes from the recorded run usage (provider/model), not the current target selection, so switching the target between reply and Apply does not record the wrong provider/model.",
       "evidence": [
         {
-          "resource": "repo://src/state/aiStore.ts#L1825-L1860",
-          "version": "repo-lines-v1:sha256:8ca0c23bcd49238a07d323d14784b2ab82c9e414b928ee9d7b7135c722ecb69a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0OWJlNGYxNDI4MTk5OWZmZTM2MTEwMWYxNGRkZjI4MDU5MWNkMDM5ZGY3ZmVkYWNiM2IxMjkyOThiNjBjMjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwNTg0MDA4ZWI1NzZiZWI4MzA5YTNkYmE2YzU5OGUxYWY0MGU1YTFkZDNmODk0NjFhZTA5YTIzYzI5MjRjMjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkzYTBkMTVhZDJkZTRhYzFiYTJiMjc0MTBhNjAwMjNlYjBlOTIzODI5YmIyMmQxNGY2NzExYzUxNWY0NDA1MzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0NTkwNDNlMGFlZTViMGYwYzRhYzI5MGVjODNjZGViZTU0NTNiNDE5NjJkMWQyZDEwZDAzMGQ2NzYzNDUwOWEifQ"
+          "resource": "repo://src/state/aiStore.ts",
+          "version": "repo-file-v1:sha256:8422e293ee5a28b4a65406b2dfdde266ab3bc72cc3dddbb0c4916ddcdb142798"
         },
         {
-          "resource": "repo://src/state/store.ts#L2781-L2900",
-          "version": "repo-lines-v1:sha256:9ddcf5aaba37eff2fec8690c5ddc07b04f08f7c42b9d688c2fbb3960e448953d:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI3YjVhNGMzOTA3ZWQ4ZjdkMjVmYjk5MjNmMWY2NzIwMTE5MmJhZDk3MWIwMTk3OGVlMTM3MDQ1ZDY5YTliYzY2IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIxNDI1NjkxN2RjYjM5NmJiMjg2NGVkYmU0NGIxMzI5ZGE5ZWMzMDJmMWM2OTA1ZjY1M2M1YjEwZDljODQ4ZTE2IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI3ZDc0MTJhZGNlN2U0MDIzMGIzMTAxYWQ0YWUxZDFjY2EwMzVjNTRmMzEzOWU1NjA1ZWYxZWE2MDY5YmI5YzA5IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0YmY3ZWQzNTA2MjRhYjdjYTM5MDljMzViNWZiZWY4YjlmOTJmMTE5ZDNlNmI1NTdiY2Q4NTc1ZjcwMTU0ZjkzIn0"
+          "resource": "repo://src/state/store.ts",
+          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
         }
       ]
     },
@@ -389,11 +377,11 @@
       "statement": "aiMarks is session-only (lives beside the project, never serialized to disk) and marks fields the app filled that the reviewer has not looked at; useAiMark exposes the marked/confirm pair and confirmAiMark drops the mark.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts#L128-L128",
+          "resource": "repo://src/state/store.ts#L160-L160",
           "version": "repo-lines-v1:sha256:b467f18cdeb2e27b90d3476b26ebeb7de99aa751fc1b00a1705568d9f11ed8c0:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjQ2N2YxOGNkZWIyZTI3YjkwZDM0NzZiMjZlYmViN2RlOTlhYTc1MWZjMWIwMGExNzA1NTY4ZDlmMTFlZDhjMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjQ2N2YxOGNkZWIyZTI3YjkwZDM0NzZiMjZlYmViN2RlOTlhYTc1MWZjMWIwMGExNzA1NTY4ZDlmMTFlZDhjMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmZhOGMyMWIwYzk3YzQ3NGExNGJiNzczMjdjYjhlYzJiYzUyYTBiNTA2Y2VlOWZkYzZiNjdkZjk3MmJiODgyYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjRiNzZjY2RjMjU5ZjFkZDI3MzE0YzY2MDExZmMwMmZhMzhiMmFjNjMxOGJhNTRiNTU1NWU0MGViYmI5YjBmYyJ9"
         },
         {
-          "resource": "repo://src/state/store.ts#L691-L691",
+          "resource": "repo://src/state/store.ts#L856-L856",
           "version": "repo-lines-v1:sha256:17635585cf655e5fb49b79e89e95b82f64aecee57082737446f9bfc1db0f7f97:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTc2MzU1ODVjZjY1NWU1ZmI0OWI3OWU4OWU5NWI4MmY2NGFlY2VlNTcwODI3Mzc0NDZmOWJmYzFkYjBmN2Y5NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTc2MzU1ODVjZjY1NWU1ZmI0OWI3OWU4OWU5NWI4MmY2NGFlY2VlNTcwODI3Mzc0NDZmOWJmYzFkYjBmN2Y5NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmI4NmI0NWU0ZDQ1OGJiMjQxMGYxYzRlOGZlYjQ1MjA5YTg2Y2IxYWU3MjNmYzlkNTJmMTY3ZWFmOTRmY2FmMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDJlMjc4NDNjMDAwNzhlMDVlMzNmNjkxNzBiZDM3MjdjZWNjODBiOTQ0N2ZlNWVmNjFjMDU4MjY2OWU0ZTZiMSJ9"
         }
       ]
@@ -404,11 +392,11 @@
       "evidence": [
         {
           "resource": "repo://src/components/AiUsageDisclosure.tsx",
-          "version": "repo-file-v1:sha256:98dd35ce77cde96d984955c88646aba89ff9202f95bdcc5c13fcf1c04a1a77a7"
+          "version": "repo-file-v1:sha256:21f0882383efa5bc2893e3737043389ba3039c575cd585937c94fb0cb460680d"
         },
         {
-          "resource": "repo://src/model/project.ts#L37-L73",
-          "version": "repo-lines-v1:sha256:36a2d144cea10de7920bd81bbf4c17bf63652f1d96f97106f19a938588d45d0a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFiZjFlZTZmZTNkMzI4MmQ1MWZjZTQxYmZlN2M2YWIyMDZjMWZiOGYxNTJhMTNmZWExZjBmODkwMDVhZjY4ZTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzZWM1NWUyN2Q2YTljZWM0ZTM3MzA1MTU5N2ViN2Q1NTdmYjg0ODNmMDY0MzkxZTRiMDhlZTE0MzRlZjBjZWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg4OGUzMDQ4NDFiZmY2ZGIxNzI0Y2MyNDA1NjZjMmY5MGE5NmEzODRjMDExZDg0YjQ4MzdmMjRlYWNjYmVkMmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEyYTUxMTU3NWZlNzFjMWFlMjcyZmFjMjQ4MTFhNWNiYjRlOWQ1MTdlMDEzN2MxNWUxYzk1ZjE2ODlkYmJjNGEifQ"
+          "resource": "repo://src/model/project.ts#L42-L99",
+          "version": "repo-lines-v1:sha256:412006d09e5fc229f14ebb6c4806ce5a70a0b00d20dd245a970203d069aadfde:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFiZjFlZTZmZTNkMzI4MmQ1MWZjZTQxYmZlN2M2YWIyMDZjMWZiOGYxNTJhMTNmZWExZjBmODkwMDVhZjY4ZTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjYzZWM1NWUyN2Q2YTljZWM0ZTM3MzA1MTU5N2ViN2Q1NTdmYjg0ODNmMDY0MzkxZTRiMDhlZTE0MzRlZjBjZWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg4OGUzMDQ4NDFiZmY2ZGIxNzI0Y2MyNDA1NjZjMmY5MGE5NmEzODRjMDExZDg0YjQ4MzdmMjRlYWNjYmVkMmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEyYTUxMTU3NWZlNzFjMWFlMjcyZmFjMjQ4MTFhNWNiYjRlOWQ1MTdlMDEzN2MxNWUxYzk1ZjE2ODlkYmJjNGEifQ"
         }
       ]
     },
@@ -417,7 +405,7 @@
       "statement": "LlmSettingsDialog enforces the key-invariant in the UI: an existing key is only ever hasKey (never shown/pre-filled), leaving the key box blank on an edit keeps the stored key, and Verify saves the target first because the key must be stored before anything can use it.",
       "evidence": [
         {
-          "resource": "repo://src/components/LlmSettingsDialog.tsx#L21-L34",
+          "resource": "repo://src/components/LlmSettingsDialog.tsx#L27-L40",
           "version": "repo-lines-v1:sha256:9017a97d15ccdf83367089622585bb985ec4b635d622024dca63255dce95d98b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjI5ZmY0YmI3OWYyMjMxNjYwOWEzOTM3MWQ3OGU3NzBkOGQzMDMzYWE0NGNhYjY0MWUxZTYxOGNkNmU5MmY0YzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdmMjgzYWQ1MWVkZGVmZGRmNTVjYmQ0NTY1YzU1NDNiMDBkNTQzMTc3ZGNkYjU5YWU5YWJjMGE1NDc5MWNiMmYifQ"
         }
       ]
@@ -427,7 +415,7 @@
       "statement": "Switching provider resets the base URL, clears the model and reasoning effort (they belong to the old catalog), and clears the fetched model list; a reasoning-effort selector appears only for a model with a ReasoningProfile and a useEffect keeps reasoningEffort in step with the selected model.",
       "evidence": [
         {
-          "resource": "repo://src/components/LlmSettingsDialog.tsx#L156-L172",
+          "resource": "repo://src/components/LlmSettingsDialog.tsx#L168-L184",
           "version": "repo-lines-v1:sha256:154e667779f8165191d4cc515592e8d71815c405c7aae017b8c8eec9a19f0efe:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3NzQwNjU2MTBmZmUzMDIzNjFlNjU1ZDgxNzBlZTY4MDNlOGJhZTFiNmVhYjAwMGEzMjBlYWEzOGE3MjUwY2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFjMGYyZGY0ZDJkYjVmMTRjYmU0NWI4NjhhMDQxYWFiNTVmYjI2OThiOWE5NWM5ZGUzZDI0NmI1MGQzOGNiNGEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUwZGMxNjMwYzc4ZDZkMzYwOGI3YjViOWUwYWM5OTMyODNhNmNiZTI0NTEwMzQ1NWExZjU4ODAwMGJmMzcyYWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZkZDk2ZDQ5OWM1ODQ5ZDVjNmU5MTNjMGZhYTUwNTYwOWRmNzkwZmMwZjZhMzFhNTIzOTM1NjlkNGQxMTZlODEifQ"
         }
       ]
@@ -437,22 +425,22 @@
       "statement": "ModelPicker is deliberately not ComboBox: the model field is a free-text input the reviewer can always type into (a catalog may be incomplete or unfetched), with a searchable dropdown and a red invalid flag judged only against a list actually fetched (an empty list means unknown, never invalid).",
       "evidence": [
         {
-          "resource": "repo://src/components/ModelPicker.tsx#L16-L28",
+          "resource": "repo://src/components/ModelPicker.tsx#L18-L30",
           "version": "repo-lines-v1:sha256:09aee64754ce0e56f579a543814154cc892da77ca0953fe554d18af00881976f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ1ZWY1NWRiYmFkMzJlNDJlNTQ1NDYxZjNmNTk1NWQ1M2FiNWU4OGRkOWJlZmY1MTRhZjNmYWNiNmIwYmZhZDUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1MGU3MDkzOWE0MDkwOTVkYWY2YWVlYjZhYjc1OTlmNDM1NGNhZmJjMjI1ZDRiMGFkZTYzZDYyZTZkY2YwYjcifQ"
         }
       ]
     },
     {
       "id": "claim_418e288b292d41e0a3cd7dbbd3ec455b",
-      "statement": "Each call carries a requestId so the renderer's AbortSignal maps to a separate llm:abort command that the Rust Flight registry (net.rs) matches against the in-flight request; the CallResult also carries a parsed Retry-After (delta-seconds or IMF-fixdate HTTP date) as retry_after_ms.",
+      "statement": "Each call carries a requestId so the renderer's AbortSignal maps to a separate llm_abort command that the Rust Flight registry (net.rs) matches against the in-flight request; the CallResult also carries a parsed Retry-After (delta-seconds or HTTP date) as retry_after_ms.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/llm.rs#L274-L303",
-          "version": "repo-lines-v1:sha256:39de097bcef760a108f9cd614316c83eab596ef5ede59f7c29a1cd58ea03f31e:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhOGExZTA5NjgxZDkxMjMzOWJiMjg3MjI2MzJlYTk0NWUwMGE5ZWJhZjJkNTVkYjg2NDZkOGZiNzY4YmFkYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk5NWRmMjc5YTM1MmQwOTJjY2Q1NjYyYmVjNzRiZTQ4MjlkMzhiN2M5NGRiMTFmODhmYjJmZDc3ZGNiNjI2YzIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5Zjc3N2JkMTc1NGJkZTBjYzI4ZGJmMmE3ZGViOTM2ZjZhNDUwMDcyNzgyZTdjZjkzMjBkYjdlNGJiNDJhNjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJkMWZjZDc2MmJkNmNkYzc1OTQxNzRiMzNjYzgxZjdmMTU4NmRhMjZmMzc3YTA5Y2NlNjVhMjA3NzcxN2E4MzkifQ"
+          "resource": "repo://src-tauri/src/llm.rs",
+          "version": "repo-file-v1:sha256:eda19de2fd0ff99b2da2f06b1db4a69241034a04dced506314bcddcc7e22824f"
         },
         {
-          "resource": "repo://src-tauri/src/llm.rs#L407-L435",
-          "version": "repo-lines-v1:sha256:642bebbd5af70d915958054ea451edb51675169b7730ee93eed67858410f3f53:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMyNTBiZWVmYTM3NDAyNGNhODU3Mzc0OGI4ODYwNGI2ZmJmMjRiZmFiYjRjMTBjNmNhNzI2MWI1MGJlMmZjYjQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM0ODcxNWIwOTg1NmRjMmZlYjY4NjFhMzczMWYyN2VjM2NlOTBlYjRhYWRkYzhlYjcxZTRmNGI2N2NhZDJmYjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY2NDBkYjk5MWExNWFlZTc1ZGZlMzQzYTIxOTBjYTFmNzkxODYyNTFiNjMzODE2MjE2ZmE5ODRiMjFkMGYxOWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjI0MTYxODRkNjBjNGZkNWFjYzQxNzY1MGIzNmJiZDlkNGZlNTg3OWU2YmViNTg5NTAzMTA2ZDRmYjQyNjhhMWQifQ"
+          "resource": "repo://src-tauri/src/net.rs",
+          "version": "repo-file-v1:sha256:dfaaab7561438d637287e184776aeaefab47b791013add47f7305b45e10342b8"
         }
       ]
     },
@@ -461,8 +449,8 @@
       "statement": "The llm:call handler re-derives the configured origin and refuses to send the key unless the request URL scheme is http/https and matches the base scheme, and the origin matches exactly — preventing a compromised renderer posting the key to a host of its choosing, and avoiding a file: base authorizing any file: target.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/llm.rs#L323-L341",
-          "version": "repo-lines-v1:sha256:d20b0f0d55701809ce43a8f0341009fe4b2812973262d4c747653536244694d1:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmNTIxY2M2NGYwNTU4NmI5ZDIyZmExYTQyZTYwN2EwMGM4MDQ4MTVkMDRkOWYxOTQzMTBjZjI4YjFjODEyZTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1MjdkZGM3MjFiM2JkOTc3NWRkZDljNDZlYjllMDI1NmI5OGVhYjA1NTI2YWE0MDgzYjg2YTY2NDBlMjZlMTgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNhMjEwM2I1ZWFmZDVkMjQxNDk2NTUwZWZiNjlhYzc4MzAzMDAzY2YzMmRkZDM4N2VkODA0OTllNDk1OTQ5YWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjllOTI2ZmI3YmZiN2Y0ZDAyNzUzNGFjMWRhYzZlMzBjMmRjZjhjYWI4YmZmMDcwZGRkZDFmODFmMDE3YzFjODgifQ"
+          "resource": "repo://src-tauri/src/llm.rs#L364-L385",
+          "version": "repo-lines-v1:sha256:90e0ff55bc7c982e88000979a5ddbdf4de2a816a298c7cbd43285c7349b1737e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRmNTIxY2M2NGYwNTU4NmI5ZDIyZmExYTQyZTYwN2EwMGM4MDQ4MTVkMDRkOWYxOTQzMTBjZjI4YjFjODEyZTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI1MjdkZGM3MjFiM2JkOTc3NWRkZDljNDZlYjllMDI1NmI5OGVhYjA1NTI2YWE0MDgzYjg2YTY2NDBlMjZlMTgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNhMjEwM2I1ZWFmZDVkMjQxNDk2NTUwZWZiNjlhYzc4MzAzMDAzY2YzMmRkZDM4N2VkODA0OTllNDk1OTQ5YWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjllOTI2ZmI3YmZiN2Y0ZDAyNzUzNGFjMWRhYzZlMzBjMmRjZjhjYWI4YmZmMDcwZGRkZDFmODFmMDE3YzFjODgifQ"
         }
       ]
     },
@@ -471,7 +459,7 @@
       "statement": "The llm:call handler sends with a reqwest client with no document origin (no CORS preflight), refuses redirects both via the NO_REDIRECT policy and by treating any 3xx status as an error (following one would carry the substituted key past the origin check), and enforces a 10-minute LLM_TIMEOUT via the net.rs Flight abort/timeout registry.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/llm.rs#L371-L405",
+          "resource": "repo://src-tauri/src/llm.rs#L427-L461",
           "version": "repo-lines-v1:sha256:9c112c2de754e994fdcc993df64679d82911abb669e1112752bf3704d10654ca:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdhYmUzMDZmMTg1MjkxZmM1NTlkZWE5YjllOTlkZWNiYWMxNWUxYTJhOTlhZWI2ZDAzYjU0ZDZlOTkyZjM2YzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZkNTIzYzhkYzliZDM1ZTg5MjQwOTc5MGRkYjY2NDM4NmZkYmM0Nzg0NmE1MjNjOTQxYzY1NmFhOTgwOGUxYzkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA5N2E2NzMzNTg5MjgwNjUxNTgzMTljYWMxNmNkOGQ3ODM3ZWNmNjYxZTRmNmQzOTAzOGY2YTFiNGRjMzI0NTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJkNDAxZDRkMjkwMmJlOTYwNjg0NDlhOTgzNWUxODllYmQ0N2VhNjkxZDI0MWQ2YmNiODM2OTJlYjNlYmY5NzQifQ"
         },
         {
@@ -485,26 +473,22 @@
       "statement": "join appends a path to a base URL without duplicating what the user already typed, accepting http://host:1234, …/v1, or the full …/v1/chat/completions as the endpoint for openai-compatible.",
       "evidence": [
         {
-          "resource": "repo://src/llm/providers.ts#L225-L238",
+          "resource": "repo://src/llm/providers.ts#L232-L245",
           "version": "repo-lines-v1:sha256:7f9cd6a279cafc3f341bbb5a4b31dbb217935546fc003495b6183d6dc3314e86:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM2ZGQ3YTgzNDQ1ZmE3M2FmMzk5NGUzMjY2ZTk1MWJjZjYzMTg2ZTQ1YmY4NzIwNjEzYjlkYzE2ZWMzOGM0YTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIwZmJhMTRlOTQ0ODYyYWNlMzZiODYyYTdmYWU2M2I2MzRiODMzY2Q2Yjc5NWZlNzMzMmM1ZTllNTI3YmJiMjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY0Y2RjNTMwYTZmNGE5Y2U4YTVmZDg0MjBkNDdiZmM4ODMwNWZjNjg2OTM4NjQ4MWQ2MDBhOGRkNjkyMjI3YjIifQ"
         }
       ]
     },
     {
       "id": "claim_c4069dcbfa7a4fc595aab0e2bdbc80e2",
-      "statement": "An API key never lives in the renderer: LlmConfig has no apiKey field; the Rust shell stores keys in the OS keychain via the keyring crate (service 'SaiLoR', entry 'llm:<id>'), and configs persist in config_dir/SaiLoR/llm-config.json (mode 0600, Mutex-serialized read-modify-write) keeping the Electron format with a '\"keyring\": true' marker per keyed entry — legacy Electron safeStorage blobs are kept but cannot be decrypted, so such keys must be entered once more; the renderer only ever sees hasKey/noKey and there is no read-back path.",
+      "statement": "An API key never lives in the renderer: LlmConfig has no apiKey field; the Rust shell stores keys in the OS keychain via the keyring crate (service 'SaiLoR', entry 'llm:<id>'), and configs persist in config_dir/SaiLoR/llm-config.json (mode 0600, Mutex-serialized) with a \"keyring\": true marker per keyed entry; legacy Electron safeStorage blobs cannot be decrypted, so keys must be entered once more; the renderer only sees hasKey/noKey.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/llm.rs#L1-L60",
-          "version": "repo-lines-v1:sha256:d8046182d19c647b4bb744f9eb307397931aa78aa94649b786e41c8cc9b5ac16:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQzMGQwZjdlZGE0NmVkYzYzYzdmMWNhMzY3M2RhNWRlNWZkOGZkZmRiZWI5MzNhYzY3Y2U4NTJhZDk3NWM5ZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFhZjMzZTViZGYyYWEwNzNlYThjZWY0NDEzY2U1Y2Y5YThhODA5OWZjZWFlMmY3YmUzMGJlZGVjODQ1NWE3YjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU1MGNmN2RjZTE3NmYyYzZkZjI3M2IwMTdiZWUxODcwODc0MjU3MDE4ZTIxYjkzYjZlOTkzOGIzNzRjMjExNDIifQ"
+          "resource": "repo://src-tauri/src/llm.rs",
+          "version": "repo-file-v1:sha256:eda19de2fd0ff99b2da2f06b1db4a69241034a04dced506314bcddcc7e22824f"
         },
         {
-          "resource": "repo://src-tauri/src/llm.rs#L130-L230",
-          "version": "repo-lines-v1:sha256:4347d2aa88b957758861a3877d20d8b0020872a1c7226111003eacf240dbad10:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJjNTZjNGIwMDcyNTMwMTlkNDdiNTU4ZGQ4ZGU1YTE1YTI4ZDc3MzYxYWFjYzM5MTk3NDA0YTU1ZmVjNmY5M2Y3IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJiOWI1N2U1NmE3YjdkMDliNDgxZGE2MGE0NDAzZTI1NGJkZTcwMmVmNzg2M2RmOGZlN2Q0ZDc5MmI2ZTQ0ODdjIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJiMzdmMTAyMzAxNWVhZDY5OWIwZTI5MjIwNzI4N2YzYjlkYjRkODE3N2QzNWU3YzRiNzFkZTYxMTcxZmM2ZWI0IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJhM2Y0YTZhOGEwZjhiZTZkMjNhYWQxNzM3MTdhYTFmNzFkMDI4NmJlMjI1YmZlMmZiYTgzOGU4MDJmOGI4NTQ4In0"
-        },
-        {
-          "resource": "repo://src/llm/types.ts#L27-L53",
-          "version": "repo-lines-v1:sha256:ea7941d3d39ae7c4bbdebc56bcc6b3063f86cdec9539b55e90238618bf80afa9:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwMTA5Y2MyMjJmY2E4YTYyZTZlZDZlYmFkMGY3ZjlhMjZlNDZlZjNiZjY0MjAxNzNhMGI2OWE5YzFjYTkxOTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVkNzAxNmI4ZTU3Yjk3MDQ2ZmNkMmI2NTI3NGYyODhkNGIzMmIwYzBmNjhiYWM4MTEyNTc3ZTBlZDQxYWYxYTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU5MDdjMjU0NGNlNzUwMzYxZjI3NzQ5YzExOGYyYzVjM2FmYjI2NzUwNTUzOGVhZDJhYTk3N2Y3OTVkMzMyZGYifQ"
+          "resource": "repo://src/llm/types.ts",
+          "version": "repo-file-v1:sha256:d3a0a5484e4c66c6e1453b7915de030b81ed8d7482e939fe2713832e1333991f"
         }
       ]
     },
@@ -513,34 +497,30 @@
       "statement": "A call for an app-managed local model (managed.catalogId) is started lazily by llm:call: the stored base URL is only a placeholder the origin checks pinned the request to, and the call is re-pinned to the running llama-server's origin (paths restricted to /v1/* and /health) over a loopback client with that server's per-session --api-key.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/llm.rs#L345-L365",
-          "version": "repo-lines-v1:sha256:915beb604c34468e1c45f599bd9a71b48d3fd78f8b53506f4007f500749ba45e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQwNGEzYjZhMTJmZjk5ODI0OGE1Yjg1NzRiMjViNjhmZTc5NTM0Nzc5YTE3ZjdkMmRiNzc3MDQ4NTNlOGY5ZjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZGQyZTEyM2VjNWI2ZjY0YmI4YzU1NTU1NDg0MGIxNzc2MDczODM3NmJmODQ0YWUzZTUwODkxNDgzMDk3ZDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjllOTI2ZmI3YmZiN2Y0ZDAyNzUzNGFjMWRhYzZlMzBjMmRjZjhjYWI4YmZmMDcwZGRkZDFmODFmMDE3YzFjODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRkMjI5MDhjZDJmNThmMWZhNDhhZWUzNzZhYjBkMWU0Y2YyMWFiOTE2MGUwMDc0NjI0NjA0ZWVjNTAzMDE3OTYifQ"
+          "resource": "repo://src-tauri/src/llm.rs#L389-L413",
+          "version": "repo-lines-v1:sha256:bca21fdddddd9267535502e631e3e4ac8e3cba5fafece3d661e9c463f4c24ee5:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQwNGEzYjZhMTJmZjk5ODI0OGE1Yjg1NzRiMjViNjhmZTc5NTM0Nzc5YTE3ZjdkMmRiNzc3MDQ4NTNlOGY5ZjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZGQyZTEyM2VjNWI2ZjY0YmI4YzU1NTU1NDg0MGIxNzc2MDczODM3NmJmODQ0YWUzZTUwODkxNDgzMDk3ZDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjllOTI2ZmI3YmZiN2Y0ZDAyNzUzNGFjMWRhYzZlMzBjMmRjZjhjYWI4YmZmMDcwZGRkZDFmODFmMDE3YzFjODgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRkMjI5MDhjZDJmNThmMWZhNDhhZWUzNzZhYjBkMWU0Y2YyMWFiOTE2MGUwMDc0NjI0NjA0ZWVjNTAzMDE3OTYifQ"
         },
         {
           "resource": "repo://src-tauri/src/localruntime.rs",
-          "version": "repo-file-v1:sha256:55e566ec6cf25a8a8ff112b3eef5a5cb78460b61ea7f34e884a5b4678d6cde27"
+          "version": "repo-file-v1:sha256:d17a8ba13569f9373554a78b42f74671583ac2b4b37fc330686200950958ac24"
         }
       ]
     },
     {
       "id": "claim_04c5ae866d42460d86fd173936dd6167",
-      "statement": "Agent mode runs a bounded tool loop (DEFAULT_MAX_ROUNDS 3, DEFAULT_MAX_TOOL_CALLS_PER_ROUND 12) over the tools search_paper, read_pages, scholarly_search (OpenAlex), lookup_doi (Crossref), fetch_url (untrusted content) and submit_annotations (carrying up to 5 schema_remarks); a separate judge model scores each new/changed, signature-deduped proposal as accept/revise/reject, and the loop exits on all-accept, the round budget, or an identical resubmission.",
+      "statement": "Agent mode runs a bounded tool loop (DEFAULT_MAX_ROUNDS 3, DEFAULT_MAX_TOOL_CALLS_PER_ROUND 12) over the tools search_paper, read_pages, scholarly_search (OpenAlex), lookup_doi (Crossref), fetch_url (untrusted content) and submit_annotations; a separate judge model scores each new or changed, signature-deduped proposal as accept/revise/reject, and the loop exits on all-accept, the round budget, or an identical resubmission.",
       "evidence": [
         {
-          "resource": "repo://src/llm/agent.ts#L141-L200",
-          "version": "repo-lines-v1:sha256:cc329d12bfd1795441cc91512e8a054f0cec50eaed6c9f37b5179f75e9e7ccd8:eyJzZWxlY3RlZExpbmVDb3VudCI6NjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVlZjc5ZTEzM2ViYjkyNGM1OTUwODhlMjMyMDhlM2YzNWVjM2JlYzI1YmFmM2FhZjlkMThjOWE5ZjMzZTkyNDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI5NzhlMjUwM2I4Y2YzN2EwNmY3ZDZmMGEzYTZiNmZlMzU2OTFmYmNhYjUwYjg3NzVjYWI2ZmFiYzcxYzU5MmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZiNTgwZTk2NGY4M2E0NzNmNDNkNDQzODQ2Mjk0OWQ2OGI1NjAwZmRhNzg3ZjE2Mzc0NWQwMGRlODljYmYzNmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjljMmMwMWRmYjczZTRlMGQwNjJhOTUwMDE5OGEyZjhjMGI1NDI5MDQzZGZjNWM5YTRmMzRmOGVmNzNhMDAyZTIifQ"
-        },
-        {
-          "resource": "repo://src/llm/agent.ts#L36-L37",
-          "version": "repo-lines-v1:sha256:bb7bf949de60fbf7108677e3224fd66d431a8860899b8ab7401c00eb9e8ef271:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDcyODg0ZTlkMzVmMmYyZmYzNGRhZmExZTM3N2JhMjRjMGNjMGExYjc4MjYyMmYxMTg0YTIyYmNkNzRiNmQ3MiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTMyNmZmNWJiNDc0NjNjNGViNjIzNWVjN2M1MDM2MDllM2FhYWRjMGM5ODYzZTM1NjI3Mzg2ZDQ4ZGU0OTdhZiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjE1ODFlZTVmNzUzZGMzYjI3ZDhmNDUyZTcxMjM1MzJkYWYwZmFmMGUwM2NmOGUyYjcxZDM2MWQ0MDI1OWU5MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzMwODI5MDVmNjczNjMxNmJjNmYzZDE5Mjc4OGM5MGI1MDc0YmJjNmU0ODIwYzVhYjVhNTIxM2YwMTQ5N2E5OCJ9"
+          "resource": "repo://src/llm/agent.ts",
+          "version": "repo-file-v1:sha256:aec3638e13207892d3bf1752cbc0641a4a58addaf02e8661755ab7803a09cdca"
         },
         {
           "resource": "repo://src/llm/judge.ts",
-          "version": "repo-file-v1:sha256:c126b12b2d6d6ea8e469c62e0ffa197a07c6d0f33ec0f3af0498a47032b567d4"
+          "version": "repo-file-v1:sha256:26b712ed20f54375a805bc0b64991a0ab1a98e8f069741ee29c6cb3651b69d04"
         },
         {
           "resource": "repo://src/llm/tools.ts",
-          "version": "repo-file-v1:sha256:acbf45ecdeb893e62ce0056827d24b1cbb120fa97bbf78b3f08aa572811208b9"
+          "version": "repo-file-v1:sha256:9fd24a60fc469a28564555026e21561f574e5d1534a3bb31e8de1e67b83a0c8d"
         }
       ]
     },
@@ -550,11 +530,11 @@
       "evidence": [
         {
           "resource": "repo://src/llm/verify.ts",
-          "version": "repo-file-v1:sha256:51ce10dc8b3aeda3978429a21b7b39ca741a02323688b993c2352cb9c18c073e"
+          "version": "repo-file-v1:sha256:fc7ba8efe383e2e2f80631752152f03ad5db88c0562b6f11e631ad375b7b459c"
         },
         {
           "resource": "repo://src/llm/websearch.test.ts",
-          "version": "repo-file-v1:sha256:a3da1ca7fa3c0790ca7537e7b8268365904c0819429fc4b5cedaa03a4978fd73"
+          "version": "repo-file-v1:sha256:3feae6491cd57256f8e04701013d08b71234e307df4c0b805ea614be3fb2f51d"
         }
       ]
     },
@@ -563,15 +543,15 @@
       "statement": "Classify mode sends only closed-answer questions to a System One decision model: booleans become noul questions and string enums with 2-255 options become choice questions; per-family profiles (modelProfiles.ts) bound state size, questions and options per request, ineligible or over-limit fields are reported 'not handled by <model>' rather than silently dropped, the state mode (full/abstract+body/abstract-only) is surfaced in the review, and confidence recorded is System One's own (noul or probs[choice]) — a Classify target can also serve as the cross-check model with a threshold (default 0.8) that unticks low-confidence rows.",
       "evidence": [
         {
-          "resource": "repo://src/llm/modelProfiles.ts#L1-L88",
-          "version": "repo-lines-v1:sha256:2965dd205bc767cb2b6df89aa052f3676b2cefae3c23f9115c91e66b1de4a4a3:eyJzZWxlY3RlZExpbmVDb3VudCI6ODgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmYTFmY2RkMGIwNjA2ZjdjZjk2N2I4Mjc0MjYzNjE5MzRlOTRjMTg5OGIxOWNiMDcyNTNjMzg3YmQ5Y2NlOWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/llm/modelProfiles.ts#L1-L90",
+          "version": "repo-lines-v1:sha256:0729cb46c42f99c12d11560347767f4cdf443fd8e3813279a1b20fee9e7d0b78:eyJzZWxlY3RlZExpbmVDb3VudCI6OTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkZDk4MWUxMGNmYmViM2UwODI4ZDQyNmZiMDIwZGNmZWM0OWE2OGVkMzE4OGJjOTI1MTc1YTcxNzMwZjU4ODEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
-          "resource": "repo://src/llm/systemone.ts#L22-L70",
+          "resource": "repo://src/llm/systemone.ts#L24-L72",
           "version": "repo-lines-v1:sha256:1f6991a2b5ca24768f0459837aa46a3d06ac0f13434929a9aa191be64cd85a95:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlkMTI3M2I1MGZhMzhmZjJkZmJmY2MwMTE5Mjc1Y2EzNDU5OGNhOGRiODQ4NTM0MDJhNTMyOTJmZWRlODQ2NDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJlZDVhODUzYWNhZDU1YzkyYjZjMTM1NTJlNDEyODRiNWJiMzU2ZWMyNzJjMDQ2NWFkNDI0NTM1N2FkMzUyZDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJkNWExMzNhMjAzOWY2MjdhM2JmYmU0NDI4NDMwNGI5MGIxN2IxODA4YjhkMzQyNDM1YWVmNWQ2ZTkyNTk5YzIifQ"
         },
         {
-          "resource": "repo://src/state/aiStore.ts#L2167-L2167",
+          "resource": "repo://src/state/aiStore.ts#L2393-L2393",
           "version": "repo-lines-v1:sha256:15d752c578b57a73d124cc65a6e29dc227440edca8a0551f0e4bdc9953e301fe:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTVkNzUyYzU3OGI1N2E3M2QxMjRjYzY1YTZlMjlkYzIyNzQ0MGVkY2E4YTA1NTFmMGU0YmRjOTk1M2UzMDFmZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTVkNzUyYzU3OGI1N2E3M2QxMjRjYzY1YTZlMjlkYzIyNzQ0MGVkY2E4YTA1NTFmMGU0YmRjOTk1M2UzMDFmZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTNlMGIzMDExNmZkMTI5ZGUyYWM1YjQ3Mzc3MGQ2NzE1YjE1MjY2M2E4YTBhZTAxNTcxY2YyMDVlMzkzNDA3MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTk3Y2ZkYzRhNTJmZjllNDcyODkyYzYzYjI2MDAxY2ExYTBmYmRiOGIzNmY1ZDVhZmJmYjlhOTYzZGU2NTU0NyJ9"
         }
       ]
@@ -582,11 +562,11 @@
       "evidence": [
         {
           "resource": "repo://src/llm/recheck.ts",
-          "version": "repo-file-v1:sha256:ffa7f5d6970f196b9df78fc8c4183194207dd2154703ef2d43b6b9637a8b87fd"
+          "version": "repo-file-v1:sha256:08f464a15f631e9e85e55cd8ddd479c409d09d9e27733616c671a532a7749a55"
         },
         {
           "resource": "repo://src/state/aiStore.ts",
-          "version": "repo-file-v1:sha256:5e813b6fffcad03bfcadf53c93c3674318d1dca2ba561aa3f1ca130595b91920"
+          "version": "repo-file-v1:sha256:8422e293ee5a28b4a65406b2dfdde266ab3bc72cc3dddbb0c4916ddcdb142798"
         }
       ]
     },
@@ -595,12 +575,12 @@
       "statement": "An in-flight batch persists across restarts (slr.llm.batch.<identity>.<seat>) so the dialog can resume it; above PERSIST_SIZE_CAP (2 MB serialized) the record drops its rows/notes/errors and resume re-runs the scope instead of replaying stale review rows. executeBatch (shared by run and resume) starts papers with a runPool concurrency (1-4, default 2), records skipped papers separately from failures, and stops starting new papers once spend exceeds the cap while the in-flight paper finishes.",
       "evidence": [
         {
-          "resource": "repo://src/state/aiStore.ts#L62-L70",
+          "resource": "repo://src/state/aiStore.ts#L87-L95",
           "version": "repo-lines-v1:sha256:1507bf2e1d0838636175d0e5f7f20a2dbf1cb2d1cc3fdb379c6126af95ede6fb:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyMTNjYTI5ZGI4NmRkMTZjNDkwMTNiZjk3YWJhY2YwMGZhYWJjY2IzY2FlNmM1ZDNlMTQwYzI3NTNmNjFjNCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODg4MTAzM2M1NzFkODM3NjUyZDMxZGM3ZDlkZTY3Yjg2ZmMyMzAxOGY1OWZjZDE4NDQ0NDQ4NGE5YzQyNGE3YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWZjMmE4YTc1ZjRiN2E5MWRiYTgyZGFiNGUwY2Y4NTA4YjkzYTY3NDEzZmMxNGQ1OGJmZTNiY2EwNjc2MDA0OSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTcyOTc5NTlkNjIwODI1N2YwOTM2ZjdmYWQwM2Q2N2M0ZGUyZDc0ZDQwODEyY2JlMGMxNzRhMjAyYjRlNGM2NSJ9"
         },
         {
-          "resource": "repo://src/state/aiStore.ts#L754-L842",
-          "version": "repo-lines-v1:sha256:16d1506fb799bd6cb9e7d63467c39a476fbb2af6a9b9b0fcd4b7784d1e475b61:eyJzZWxlY3RlZExpbmVDb3VudCI6ODksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA4YzMyZWI3ZTY1N2RjNjE4OTU3MGJkNDY1OTIzZGY2YWJlZGUwOTQ3MmVlY2ZlNmQzNjkzMWY4ZTllYzBlNzMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5MDU2ZDc3ODAxNzY3MzM4N2VmNWVmMWVkMTgxNmI4NjFhODA2YjY5Zjc5M2Q0NGRhZjIzY2ZiOTgzODM3NWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE5NzE1MTJlNWFmYWQwOGI2YmM0NGY0YTVkOTFiODNmNmNmZWE5NmE2OTAxYTRlMGVhZDUwNWQ2MmFiMDg4YmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU3YjJhNmY0NzEyNWMwYzExZTlkMWVjYmQ4MmEwN2ZhODY2YmMxNTRkZGQ1OTkyYTg4NjZjNjY5ZDk5NjgwNmQifQ"
+          "resource": "repo://src/state/aiStore.ts#L833-L923",
+          "version": "repo-lines-v1:sha256:7456863f300e878182ae354aecd061bb092035eb27c1a1d98b3031ecf7be07eb:eyJzZWxlY3RlZExpbmVDb3VudCI6OTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA4YzMyZWI3ZTY1N2RjNjE4OTU3MGJkNDY1OTIzZGY2YWJlZGUwOTQ3MmVlY2ZlNmQzNjkzMWY4ZTllYzBlNzMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5MDU2ZDc3ODAxNzY3MzM4N2VmNWVmMWVkMTgxNmI4NjFhODA2YjY5Zjc5M2Q0NGRhZjIzY2ZiOTgzODM3NWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE5NzE1MTJlNWFmYWQwOGI2YmM0NGY0YTVkOTFiODNmNmNmZWE5NmE2OTAxYTRlMGVhZDUwNWQ2MmFiMDg4YmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU3YjJhNmY0NzEyNWMwYzExZTlkMWVjYmQ4MmEwN2ZhODY2YmMxNTRkZGQ1OTkyYTg4NjZjNjY5ZDk5NjgwNmQifQ"
         }
       ]
     },
@@ -610,15 +590,15 @@
       "evidence": [
         {
           "resource": "repo://src/llm/chat.ts",
-          "version": "repo-file-v1:sha256:f544018002051fc743c4d14cc554c3881172eb36cbcffd045feedbd499dc66c6"
+          "version": "repo-file-v1:sha256:0e3030c1214a4691852407d1b1e27d660eb6f939d470942804682f4dd4af15b8"
         },
         {
-          "resource": "repo://src/llm/providers.ts#L47-L50",
+          "resource": "repo://src/llm/providers.ts#L50-L53",
           "version": "repo-lines-v1:sha256:a34dfe9a91d9f8ac38ea0573c5c64cb4d1d466a51db3524eb4fae06fba436949:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjBkZDI1OWM2ZWY3NjJmNjFiZmFjZjRkN2UzMmY5NDYyNzdjNGExYjliMGVlZTFhYWRhZjViYjE4YzlhOGExYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTZhOWUzOWIyMjgzNGYyYTU5ZDBkZTA1ZjU1ZjgzYmMwZmFhOWYwYmQxNzhjNzJkODZhNGI0OWU3NzkzMGM0YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjIyODEyMzI2MmMzY2Q2NGMwMzk1MWJmNTQxYjMxNzY5NmI2YjkzNmVlZGQxNzAxYzVmODI1Zjk0ZTUyNDBjNyJ9"
         },
         {
           "resource": "repo://src/llm/websearch.test.ts",
-          "version": "repo-file-v1:sha256:a3da1ca7fa3c0790ca7537e7b8268365904c0819429fc4b5cedaa03a4978fd73"
+          "version": "repo-file-v1:sha256:3feae6491cd57256f8e04701013d08b71234e307df4c0b805ea614be3fb2f51d"
         }
       ]
     },
@@ -628,15 +608,15 @@
       "evidence": [
         {
           "resource": "repo://src-tauri/src/feedback.rs",
-          "version": "repo-file-v1:sha256:9df11a8bcb918e48ad02d3b39cc5f599be42b70f9abf07c0b0dd875933a6e233"
+          "version": "repo-file-v1:sha256:883c7549c5d1ed768abf34ab02ece7e35234df633d4ad1c082943248aafa2ded"
         },
         {
-          "resource": "repo://src/llm/feedback.ts#L67-L67",
+          "resource": "repo://src/llm/feedback.ts#L69-L69",
           "version": "repo-lines-v1:sha256:cb9f915e36956b17f56525063ff1fa46f5d4420c25b096b3b26a4d2134c73a32:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiY2I5ZjkxNWUzNjk1NmIxN2Y1NjUyNTA2M2ZmMWZhNDZmNWQ0NDIwYzI1YjA5NmIzYjI2YTRkMjEzNGM3M2EzMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiY2I5ZjkxNWUzNjk1NmIxN2Y1NjUyNTA2M2ZmMWZhNDZmNWQ0NDIwYzI1YjA5NmIzYjI2YTRkMjEzNGM3M2EzMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMmIxMDkxZmQyZmI2ZWIyNGI2ZjQxMWYwMDJmZDgwZjhjYTg3Nzc0ZTFiYzQwYjVhZWMwYTdmZTcwMjA5NDU4ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODg0MDhkZTY0ZTc5OTg5MjNmYjAxZjk1YmJiMjA5MGQzOTgwYjkxNDliMWNlMjQzMTg5MTYwNzBlM2YyNDBjNiJ9"
         },
         {
           "resource": "repo://src/state/aiStore.ts",
-          "version": "repo-file-v1:sha256:5e813b6fffcad03bfcadf53c93c3674318d1dca2ba561aa3f1ca130595b91920"
+          "version": "repo-file-v1:sha256:8422e293ee5a28b4a65406b2dfdde266ab3bc72cc3dddbb0c4916ddcdb142798"
         }
       ]
     },
@@ -645,30 +625,30 @@
       "statement": "Retryable statuses (408/429/500/502/503/504/529) are retried at most 4 times with jittered backoff capped at 60 s, honoring the server's Retry-After (the retry_after_ms the Rust shell parses from a delta-seconds or HTTP-date header); a cross-check disagreement (unlike a fill failure) never fails the paper.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/llm.rs#L274-L303",
-          "version": "repo-lines-v1:sha256:39de097bcef760a108f9cd614316c83eab596ef5ede59f7c29a1cd58ea03f31e:eyJzZWxlY3RlZExpbmVDb3VudCI6MzAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhOGExZTA5NjgxZDkxMjMzOWJiMjg3MjI2MzJlYTk0NWUwMGE5ZWJhZjJkNTVkYjg2NDZkOGZiNzY4YmFkYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk5NWRmMjc5YTM1MmQwOTJjY2Q1NjYyYmVjNzRiZTQ4MjlkMzhiN2M5NGRiMTFmODhmYjJmZDc3ZGNiNjI2YzIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5Zjc3N2JkMTc1NGJkZTBjYzI4ZGJmMmE3ZGViOTM2ZjZhNDUwMDcyNzgyZTdjZjkzMjBkYjdlNGJiNDJhNjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJkMWZjZDc2MmJkNmNkYzc1OTQxNzRiMzNjYzgxZjdmMTU4NmRhMjZmMzc3YTA5Y2NlNjVhMjA3NzcxN2E4MzkifQ"
+          "resource": "repo://src-tauri/src/llm.rs#L304-L334",
+          "version": "repo-lines-v1:sha256:ca472ba3222352924901ba129a9fecd59f1f224dc28579fff0cbb38cd901e0a9:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhOGExZTA5NjgxZDkxMjMzOWJiMjg3MjI2MzJlYTk0NWUwMGE5ZWJhZjJkNTVkYjg2NDZkOGZiNzY4YmFkYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk5NWRmMjc5YTM1MmQwOTJjY2Q1NjYyYmVjNzRiZTQ4MjlkMzhiN2M5NGRiMTFmODhmYjJmZDc3ZGNiNjI2YzIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijc5Zjc3N2JkMTc1NGJkZTBjYzI4ZGJmMmE3ZGViOTM2ZjZhNDUwMDcyNzgyZTdjZjkzMjBkYjdlNGJiNDJhNjkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJkMWZjZDc2MmJkNmNkYzc1OTQxNzRiMzNjYzgxZjdmMTU4NmRhMjZmMzc3YTA5Y2NlNjVhMjA3NzcxN2E4MzkifQ"
         },
         {
           "resource": "repo://src/llm/retry.ts",
-          "version": "repo-file-v1:sha256:b81e1176b57c62ae9f74eddedda8393803c19c4aceac669f9e0b094776757207"
+          "version": "repo-file-v1:sha256:9ce00d53f05573308cb0bb1869ae1551846a572918d98e5e4b2dcb5817635c00"
         }
       ]
     },
     {
       "id": "claim_b8e349353cf34e90b468cf22001f82f1",
-      "statement": "When a chat target's contextTokens is known, the paper is fitted to the window: chatInputBudget subtracts the system prompt (schema, rules, few-shot block), wrapper, reply reserve and THINK_RESERVE (4096, only with a reasoning effort); fitPaperText drops the reference list first, then trailing pages, then cuts inside page 1 keeping [page N] markers; below MIN_PAPER_TOKENS (256) the paper fails instead of being sent. Agent mode requires at least AGENT_MIN_CONTEXT (32,000 tokens) on annotator and judge, an Ollama target with unset Context to use blocks the run, and a reply whose prompt_eval_count is within 64 tokens of num_ctx sets inputTruncated and fails the paper so nothing from a truncated prompt reaches the review.",
+      "statement": "When a chat target's contextTokens is known, the paper is fitted to the window: the input budget subtracts the system prompt, wrapper, reply reserve and THINK_RESERVE (4096, only with a reasoning effort); fitPaperText drops the reference list first, then trailing pages, then cuts inside page 1; below MIN_PAPER_TOKENS (256) the paper fails instead of being sent. Agent mode requires AGENT_MIN_CONTEXT (32,000 tokens) on annotator and judge, and a reply whose prompt_eval_count is within 64 tokens of num_ctx fails the paper as truncated.",
       "evidence": [
         {
-          "resource": "repo://src/llm/budget.ts#L25-L80",
-          "version": "repo-lines-v1:sha256:76ae8e717935b1ba52804e725bf8bee63f1f67fec15a17d3cf3e671b5d2a2fde:eyJzZWxlY3RlZExpbmVDb3VudCI6NTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU1YWFmZWFmNzFhZDE4MzgwMDE1Y2E5ZTQ2ODkzM2M1NzBjZDI5ZDVmNjYwNGFmOWI1ZTExOGYzMmJhODUxYTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImM3ODNkY2QwN2JiYjYwYWU5Y2Y1OTQzMDZhMjg1MGJkNDIyZjE1ODJjNzkzNDY2OGNjNWIyNmZhZmZjMGVmZTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk3MDBlYjRlNWQzOGM1MzJiODQwY2I4NGFmMWMyM2M3ZDcxZTM0YjA3MWNjMTA5Yjc1NTNhNjQ3ZDEwOGJkZjMifQ"
+          "resource": "repo://src/llm/budget.ts",
+          "version": "repo-file-v1:sha256:3df5feb1aaf840f71604ae0196519f920e8b88fb94807ae4442228cece05a386"
         },
         {
           "resource": "repo://src/llm/ollama.ts",
-          "version": "repo-file-v1:sha256:149bc30a40caefb2ab3d03d75c6d000183b2ee4faef5c3a2f4d2c742ee140011"
+          "version": "repo-file-v1:sha256:ee1a3c9b5bc558cdd4c9dfe64be6e7803d8c31066600046be28554d840af5433"
         },
         {
-          "resource": "repo://src/state/aiStore.ts#L420-L468",
-          "version": "repo-lines-v1:sha256:0882b8b2a18b89bd814e09c1541232aac91c22497f64ebda95779ba0f4950288:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIzMzUzOWMzZWRmYjMzN2U0ZWFmZGUxZjgyYjNhZjI2YmY5NDc2MTFmZThhMTQyYjc1NTJkZDA5YWE4OTljZWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ2MGY1OGFkNDc0NThiNDRhNjE3NGYxNmE0NWU4MmUxMjgyOThkZDIyMWZlYWE5YjBjOGUxY2QzN2VmYjhmNmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBlMmY1NjJlMzAzM2E2ZmFmYjI1ODA1NGFlMmE5NGE1ZWMwYWI3MTdlYmMyOWNiY2ExZTEzZWNlYTE3YWZiZWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgyY2I5OGQ4YThkMmY1ZjJhODRkOTU2YjhjZWU5ZWFhMmYzOTkyYmRkZTVjN2JiM2ZiMjliYzFlOWNmYzY4YzYifQ"
+          "resource": "repo://src/state/aiStore.ts",
+          "version": "repo-file-v1:sha256:8422e293ee5a28b4a65406b2dfdde266ab3bc72cc3dddbb0c4916ddcdb142798"
         }
       ]
     }

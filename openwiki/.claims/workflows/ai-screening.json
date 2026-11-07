@@ -1,18 +1,18 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:7c3d957ceed08db3468a961ec39073e80ce59f216f574f7b292387daf092fc32",
+  "pageVersion": "sha256:d395fac88a21bbf5f34318208d3b45d7207331775712821ef2e8e7d7c88d2f5d",
   "claims": [
     {
       "id": "claim_c859faccc82745efafa99a4b05488760",
       "statement": "The aiScreeningStore flow produces one Include/Exclude proposal per paper from title+abstract (or the first 3 PDF pages when no abstract exists), and nothing is written into the project until the reviewer approves proposals in a review table; Apply writes ticked rows as one undoable batch.",
       "evidence": [
         {
-          "resource": "repo://src/llm/screeningAi.ts#L1-L20",
+          "resource": "repo://src/llm/screeningAi.ts#L2-L21",
           "version": "repo-lines-v1:sha256:d808cb198acd6a5acf53417516193f7f49246e01235c6481308b945bd0b5dc68:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2YWRjNGQwNzcxZDkzMTMwYmNjZDhiODdjZTg4N2I5ODJiZmU3MTUwZjFjMjRjMzU3ZjI2ODczM2ExMDdjYWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgwZGNhOWIxMDgzZGRkNmNmNzQ1NWNhMzRmNTI5OTlmNzA1ZmZkY2MxNWVhNGY3YmE5NmQ1ZTRkZTdiMTg1OGUifQ"
         },
         {
-          "resource": "repo://src/state/aiScreeningStore.ts#L1-L480",
-          "version": "repo-lines-v1:sha256:a10cebf36b8b4670ef4aee9ad74cba47898692cc4e9b779372f3d18c5f3fba33:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI4MTIzOGE3NGZlMWZjMGFkY2QyMTUzMTRjODM0ZDYzYTY4YTQ2NmU5NTM4MmE2NTMxNGQ1NjJkNGFjNjNhMGIzIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI5NjEwMzE5ZGQ5MDBiY2FkNmU2MzVhMGE2Zjc0NzdjOGRkYmY4MjA3N2E5OTEzNTkxZmVlZjI0YTZlY2ZiODI0In0"
+          "resource": "repo://src/state/aiScreeningStore.ts#L1-L497",
+          "version": "repo-lines-v1:sha256:c7036bb165e04aaf6bf57a3971754bc73d3916ccbc77889a159ae4ebdb3d319b:eyJzZWxlY3RlZExpbmVDb3VudCI6NDk3LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI5MDhhYzQ2OWM3ZjgxMGVkYjZiMzg5ZDg2YzI1YTk3YTI1MzJjZDBjNTA3ZDA1YTc5YzEyYzcyOTMzMWYxMmM4IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI5NjEwMzE5ZGQ5MDBiY2FkNmU2MzVhMGE2Zjc0NzdjOGRkYmY4MjA3N2E5OTEzNTkxZmVlZjI0YTZlY2ZiODI0In0"
         }
       ]
     },
@@ -21,11 +21,11 @@
       "statement": "Reviewer-authored reasons and protocol text are flattened with oneLine before being embedded in screening prompts (both the Prompt system prompt and System One instructions/options) so a line break cannot forge a heading or rule (REQ-LLM-140); untrusted paper text enters only via buildScreeningUserText, fenced and clipped to MAX_SCREENING_TEXT_CHARS (6000).",
       "evidence": [
         {
-          "resource": "repo://src/llm/screeningAi.ts#L44-L79",
+          "resource": "repo://src/llm/screeningAi.ts#L49-L84",
           "version": "repo-lines-v1:sha256:3715454c09a5d3deee5497f592afed2113acee3bf33eb196d3b99b154e1ebb9c:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmNDQ2MGIyZDkzYzFjNWUwMzRkNTA3NGJmNjBlMjllNzg4MGFmMzc2OTFjYjM3ZjcyMmQ5MGE0M2Y5ZDI4NDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ2YTU3ZTg3MzNiNDIwZGQyNTlkOWZiNWMwMjFlMWQzY2YxMmFmYjNhZjI2ZWU5YmFkOTFiMDIzOGE4NjgzZmQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3MmI5ZDJiMWU1M2JkODhmNmQxMmEzZTcyMTAyYTVkZTdlN2M4ZTM1Y2I0NWZkYjgwZTRkZGQ5NmNiYWRlMGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkxY2M3ZTVlNTIxOTBjMDU5Y2FlYWFlNmIwY2I0YmUwZDE3MmJmMTg3NmQ2MGVmNmJlOGZiMDA0OTM4M2I4MGMifQ"
         },
         {
-          "resource": "repo://src/llm/screeningAi.ts#L85-L94",
+          "resource": "repo://src/llm/screeningAi.ts#L90-L99",
           "version": "repo-lines-v1:sha256:ea7632de703737ace0b0844bef08ef84ab1cf93498582efd91ff403c87397ca2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQyMTQzNDU0N2RkYTE5ODE1YzFkOGUzNDkyZGNiMDEyMGM1YWMwZjBlNGViMWZlMTNhM2IwYTlhY2ViZTg1OTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRlYzg5ZjJjMTRiYmYwMzE2NGMyMjY3OWFlMTUyYWZhYTkzMGE4Mjg2MGJmMmFkNzVhZDRkYjI2ZDU0ZDJmODIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZlYjk0YjU3N2Q3NzY1YTdjNGI3ZWM4ZWYxNTNkMjE1OWRiYjI3MDQ0ZjlkMWViOTllNTllMTVhZTk0NGVlZDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4OWU4NjI3NGU5MTM3YTc3NTczYTM5ZTVjN2NjMmY4ZDliZmUyNGNiNDEwZjMyMzRiYTY0Njc3Yjg5ZjliNzkifQ"
         }
       ]
@@ -35,15 +35,15 @@
       "statement": "The run has phases setup/running/review/applied; the target seat (AI seat if any, else the current reviewer's) is fixed at run start, runs are voided by dialog close or project replacement via runToken/projectGeneration, and Cancel aborts while keeping finished rows for review.",
       "evidence": [
         {
-          "resource": "repo://src/state/aiScreeningStore.ts#L175-L260",
+          "resource": "repo://src/state/aiScreeningStore.ts#L182-L267",
           "version": "repo-lines-v1:sha256:1986d46b14694e7be290ac36da4e2b6018d9a8deb17a6ec8e24df4fe93812bf9:eyJzZWxlY3RlZExpbmVDb3VudCI6ODYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRlNWI4OGI4ZTU4MjUwOWY2ODc5MGFkNGE5OTAyOWE4MWI5YmZjNTM2OTQwZTUyODZjMWFkYzZjMTQ5MjFiMzgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFlMDNjYmMyNGQ0MDlmZTE1ZWFmMTdiY2RhODFiYmVmYzQ2Yjc2ZWM5MzdkMWYyNGI2YjkzOWFmYTNlZGYwMTYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFjMzkwMTYwNDg2Yzc4NmNkNmZjNTNjNTNiNDRmZjBmMjg3ZjM0NzA0YWViYjMwYmJmMGM3NjUxNmIwNGRlMWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNiY2U5OTlhODIwMWY1OWFjMzk5M2ZmOGU2MTY2NGI3OWJmNjczMzI1ZTY2YmVjODM1NTQwYzA4Y2ExYzllZGEifQ"
         },
         {
-          "resource": "repo://src/state/aiScreeningStore.ts#L27-L130",
-          "version": "repo-lines-v1:sha256:40d41b2e52ff17e5dd4dc03491e4e91f3c8a76fbb7093e4aaff54347db381687:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxMmIxMzhhNGUzYTc1ODlhYTY4MjQ5MmM2NTlkYzdjMDM3YzI2MTA2NzUzOTRiMGMzMGI5YzE0MzY3NzE4MDMyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI5NzJhNDI5MzgyYjJlMTQ3MThlMGUzN2IwNTcwYThhMTcwMjk5MWZjZDg0OThjZDg0MDYwYThiZjRmMDUwMTdiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI4YzgyOWM5NzQ1YjM1Yjk5MDljYmU1NGM5MzIwZmMwNTJlNzQ1Nzc3MmMxOWUzZTJkMzQ1ZGFiMWJlNGM3YTE0IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIzYTE1ZDBmYWQ3MWY3ZTkzNjg3OTQwZjhmOWZhYjRkYzgxOWE0MGZlMjBhNzJjNzc3ZDUwMjYwODk0YjJmMDlkIn0"
+          "resource": "repo://src/state/aiScreeningStore.ts#L32-L136",
+          "version": "repo-lines-v1:sha256:8ae331fd4cf180220c1452410a5a632047cebbdd598bf3e0187ae2987ccca1b2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxMmIxMzhhNGUzYTc1ODlhYTY4MjQ5MmM2NTlkYzdjMDM3YzI2MTA2NzUzOTRiMGMzMGI5YzE0MzY3NzE4MDMyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI5NzJhNDI5MzgyYjJlMTQ3MThlMGUzN2IwNTcwYThhMTcwMjk5MWZjZDg0OThjZDg0MDYwYThiZjRmMDUwMTdiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI4YzgyOWM5NzQ1YjM1Yjk5MDljYmU1NGM5MzIwZmMwNTJlNzQ1Nzc3MmMxOWUzZTJkMzQ1ZGFiMWJlNGM3YTE0IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIzYTE1ZDBmYWQ3MWY3ZTkzNjg3OTQwZjhmOWZhYjRkYzgxOWE0MGZlMjBhNzJjNzc3ZDUwMjYwODk0YjJmMDlkIn0"
         },
         {
-          "resource": "repo://src/state/aiScreeningStore.ts#L484-L494",
+          "resource": "repo://src/state/aiScreeningStore.ts#L501-L511",
           "version": "repo-lines-v1:sha256:73eeb1251b7469e454afe80b62e58332570c8cfa3d73d88f6dc6519aad81829a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY0Yzg3NWQzMzExYmM3MTQyMGQ4YTZkMmZiZjlkMzQzYWZkZDE0YWEzZTc5OTU5ODUyMTYzM2QzMWUwNDA3NzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk2MTAzMTlkZDkwMGJjYWQ2ZTYzNWEwYTZmNzQ3N2M4ZGRiZjgyMDc3YTk5MTM1OTFmZWVmMjRhNmVjZmI4MjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
@@ -53,15 +53,15 @@
       "statement": "Two engines exist: Prompt (any chat model, JSON reply parsed by parseScreeningAnswer) and Classify (System One models only, buildScreeningSystemOneRequest with two choice questions, parseScreeningSystemOne); modelsFor restricts System One models to Classify and chat models to Prompt.",
       "evidence": [
         {
-          "resource": "repo://src/llm/screeningAi.ts#L106-L137",
-          "version": "repo-lines-v1:sha256:c39065cb35b1b6acc511fe882fd8fd684bec0a81ed3d19b19e24182684513294:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVhNmMyOTU1NzU3M2QwYjZjN2E3MmIwNjA2MzYzMTNhMDI4MjI3ZDZiM2JiZThjOTdkYzU3NDU5Njg0MzJkZGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRiNTc3Y2FhZTBiMTFiMzNiZDk3ZDljN2EzYzE2ZWUwNmQwMDI1ODYyN2FlNDVmMzUyNGNjMjRlYjBjN2FhYWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA5NThlNGVjMWVlYmIzNzMwMTI4MjcwYWUxMDVhMTU0ZjYzMzViM2M5YzFiMDVkYWIxMzVlOTIyZjY0NGYyZWQifQ"
+          "resource": "repo://src/llm/screeningAi.ts#L111-L147",
+          "version": "repo-lines-v1:sha256:b358c620c2f256cfcf2621f15adaa654d00db5ff930624036be3502c19096cd7:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVhNmMyOTU1NzU3M2QwYjZjN2E3MmIwNjA2MzYzMTNhMDI4MjI3ZDZiM2JiZThjOTdkYzU3NDU5Njg0MzJkZGUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRiNTc3Y2FhZTBiMTFiMzNiZDk3ZDljN2EzYzE2ZWUwNmQwMDI1ODYyN2FlNDVmMzUyNGNjMjRlYjBjN2FhYWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA5NThlNGVjMWVlYmIzNzMwMTI4MjcwYWUxMDVhMTU0ZjYzMzViM2M5YzFiMDVkYWIxMzVlOTIyZjY0NGYyZWQifQ"
         },
         {
-          "resource": "repo://src/llm/screeningAi.ts#L142-L207",
+          "resource": "repo://src/llm/screeningAi.ts#L152-L217",
           "version": "repo-lines-v1:sha256:9ae55573ad4e2ffb52ae262c7c8e9cf52064b0559f67f0109490ad109847dee3:eyJzZWxlY3RlZExpbmVDb3VudCI6NjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI1MmQxZTE4ODUxYWU1NzYzZmZiZjZiODZiNGM1NTk3YTYwNmU4ZmU5OTRiYzJiMWQ3YmIxMmQwM2U5YWU3YWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImExMGVjMGU3MDRjYzBlNWI5YjViZTI5ZDI3MzljNzBmODNiMDJlNDI3NmQ2Mjg1MTVmNTNmZjliZjkyOWIyM2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
-          "resource": "repo://src/state/aiScreeningStore.ts#L97-L98",
+          "resource": "repo://src/state/aiScreeningStore.ts#L102-L103",
           "version": "repo-lines-v1:sha256:e0110ce103a9ad6aa981defb744f4de467836b7007293a88bc160937c83809f7:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDQyODU5Y2ZjYjkzZDU4NjRmMzA4ZTVkYzk3OWU3MTQ3YTQ5N2YyODdjM2YyZjM3NGYwODUyM2E3YzBkZGU2MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNzZlZGJiZDU2Y2U3MzYxODQyOWVkNGRhOGQ5NmQzODU2M2NkOWZkOTFhY2Y5MDM4MzBkODQwNzdiZjdhODhhNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDg2Y2FhZGIyMmUwMjMzZjZmZTc3ZDY5Y2YwNmQyMjk5MGNiZjZlYjRkMmNhODU1M2JiNzMyYTIxNzBkYzExMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmFjZTBhYTI5N2ViZTIzMWM0ZTk2YTUyZDY0MjRmOTcwMDFkY2IzZjg0ZmFhN2M2YzI1NThiZTVkNjFkNDVlMyJ9"
         }
       ]
@@ -71,12 +71,12 @@
       "statement": "Exclude proposals never start ticked and Include proposals start ticked only at confidence >= the configured threshold (default 0.8), because a wrongly excluded paper is silently lost (REQ-LLM-640).",
       "evidence": [
         {
-          "resource": "repo://src/components/AiScreeningDialog.tsx#L313-L316",
-          "version": "repo-lines-v1:sha256:71f8d13d152239fe822f02a39a88aac4e634b63270920549be5b41444fb7c6f7:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTllMmIxNGU3MDNkNmUzMTEyOGIwNjc3NjNlY2RkNmM1OTIyOWEzNTQ5M2Y5MmVjNmFhNGMzZmM1NTc3MjU2ZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTlmMTkyOWQ4NGVkZDY5OWI3ZjEyZDYxODgzM2MzNGQ0NmI0OGM5ODEwYWY3ZTBmNGQxMmQwYWJjZTU5NWMxOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMGExODI0MThlY2ZjNzQyNDA2ZTQwMGVjOTM5MjZhNmY3ZTc3ZDJkNzY3Y2FmZGU4MWNjNmRhM2E5MWQ4ZmZiOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjNjMDQzZDA3ZTU4MjBkMTBjOGQ0MWEzZGU3ZmZkZDBkZmMzMmE5MzZiZDg2MzdiYjdhMzJjNDE1NGUxZGIzMiJ9"
+          "resource": "repo://src/components/AiScreeningDialog.tsx",
+          "version": "repo-file-v1:sha256:dc87183e0b5728b544af4194483167f0cfeb9522a9368333d43edad442cf3520"
         },
         {
           "resource": "repo://src/state/aiScreeningStore.ts#L93-L97",
-          "version": "repo-lines-v1:sha256:920fdf62a6a3b13f372003828c8e630d3cc862e6604bf7a944a752b38c0b2af1:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiN2Q5MzJkNmQ0NDYzZGNiOWE4ZmUwYWM2NTE5MGQ1YmY4YWQ1ODUzMDc3OGFlMDg0NzVjOGE0NWNhZTNlNTRlYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDQyODU5Y2ZjYjkzZDU4NjRmMzA4ZTVkYzk3OWU3MTQ3YTQ5N2YyODdjM2YyZjM3NGYwODUyM2E3YzBkZGU2MyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNThiYWU1YzZkZDZjZGU0ZTJlZTE4MmEzNmQyNGJjMjBmNjNhZmFjNWU4ZDIwNTBjZjVkNDBlYWZhZjBiNTMzYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDZjNGNmZWNhMGY1YTdkMTE1YmI5OTU5MTAzMzQ3Zjk4N2ExNjFlZmEzNmVmM2U0YzA1MDJlMWMyZTA4ODFmZiJ9"
+          "version": "repo-lines-v1:sha256:bf79c8ffbf6a59c2a1a68ad841801e5b25d193d148ec9fdeffa7b90ca8624400:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDVlYzM0ZTc4NjllMmMzYTBmZDQwZGJkYjZmZWVkM2JmMDgyZjdiZTdiZGFkMGNjNzU5ODVjMTk5ZTY4ZDQ3YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzE5NDdlNmU1MDY3YTcyNDJmMTFlYWRlYWQxN2FhZDJiZGM1ZTFhNjBlM2M2YzM0NTA4NTA3NWZhNjY0ZmYzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOWFjZWQzYzE4NjUxYWE2OThlZTZlMGZjYjc4MjVmMGNlMzJhYTk1NWM3MWQ3MTgxNDRhNDNiMGIwNjNkMmFmNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDcxZGRhZmZiMGUxNmI2ZmUwNTc2YjFkY2I4MTAyZDA1ODIwYmIwNTE2ODM1ZTU2YjI5YzE3OTA2NjQ3NmJkYSJ9"
         }
       ]
     },
@@ -85,15 +85,15 @@
       "statement": "A proposal carries decision/reason/justification/evidence/confidence, where reason is set exactly when the decision is Exclude (Include may never carry a reason); the parsers enforce a verbatim configured exclusion reason for Exclude and reject unparseable replies as failed notes rather than writing them.",
       "evidence": [
         {
-          "resource": "repo://src/llm/screeningAi.ts#L172-L196",
+          "resource": "repo://src/llm/screeningAi.ts#L182-L206",
           "version": "repo-lines-v1:sha256:42f04b53d61ce8bba288f913f0356a9991ca08f7794eb8bfab8b6796760f014f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ3M2UxODk4MzRiNjM5NGQ0NGI4ODhkOWFiNzk2MzBhNjljY2JjMjg1ZDBiY2JjOWIxNzZkMWI3YWNkNzc0ZjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVmNDFjOWIwZmRkNzhjN2ZiNTNjNjk5NDNmOWIwMWQwNzZmYzQ3Y2Q4M2JhOTc4MWQ2YTYxMTA2M2E1MzU3MTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhNDU5YWRjNTI5MTJiMjg5YWJlYTQ3MjYzYWQ3MmM5NjRkNmZlOWJkYzQ5ZmI3Y2FmM2EyMjEwMTljNmYwZjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBjZmNiOGE4YzViYWJiODk0MThmMTdlMmEyZGIwMGUxOWU4ZDIyNmYzMDdkM2QyOWZmNDQwOTMwMTYwYTRlMGEifQ"
         },
         {
-          "resource": "repo://src/llm/screeningAi.ts#L22-L33",
+          "resource": "repo://src/llm/screeningAi.ts#L23-L34",
           "version": "repo-lines-v1:sha256:cbbc43645a78ed2c81e1badb2410507fb5cb617a474b67c0024a6a793df4dc94:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxMGIzYzNiZTRmZWRmYWZhZjU5YTgxZDZjOGQ1YjM0MjhmZmIyZDIxYmQ5MjdhNjIyNmNkMDk4ZDliY2M0ZjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkMjhlYzM1MWZlYmE2ZGMyYzg0OTM2ZDAyZjUwNGIxM2FlMjM0MjQxZTlkNzA5ZTc2NWQzMTczMzVjMTY1YzkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUyZGYyYTUxY2YwMWIxMTg2MzU2ZDkxOGM1Mzc0NTRkNjViZDBiMmJkNTA3NmZiN2VkODcyNTQ4OGU0MzNiMzkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY4YzZjMjgzZjNkOGE2MWNiNjgxNWU2ZWFmNjA1MDZlODBkYzhmYjY5YzkzMWQ1MzVjNWM0MTFmYzQ3ZmYwNzQifQ"
         },
         {
-          "resource": "repo://src/llm/screeningAi.ts#L96-L113",
+          "resource": "repo://src/llm/screeningAi.ts#L101-L118",
           "version": "repo-lines-v1:sha256:244b270035e70ed8750fcf76fafaca29a13662ad89996768325255bb6d98ef53:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJmMmExNGY3ODc4MzhmMTMzZTBjNjNhYmQzYjExMmYxZWVlMWE4NzQ1YTRmMDlmYWJjNzg5NzJlMDI0ZDQ1NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNmMjI4NWEzNmRkZWQyYWNjMzQ2NjMyMTYwOTYyYzlhOTkyZGRjZjY2YTRhZjRlODQyNTdlNmM4MzA2ZTE0MDgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjUzYTM3OTlkYzEzMmY1MDgwODEwOGIwNGRlNzA5NTQ5Mzg4Mjk1ZWViZTA2Y2MyYzk0YWZjNTI3OGQ3N2RkZTUifQ"
         }
       ]
@@ -103,15 +103,15 @@
       "statement": "Papers run through runPool at 1-4 concurrency (default 2) with withRetry rate-limit retry; the run's provider/model is recorded per paper as an aiUsage record with mode 'screening', rendered by AiUsageDisclosure.",
       "evidence": [
         {
-          "resource": "repo://src/state/aiScreeningStore.ts#L185-L230",
+          "resource": "repo://src/state/aiScreeningStore.ts#L192-L237",
           "version": "repo-lines-v1:sha256:34a543c5bd484e9f50e6acad76f7f5d681782085c6199e16da1f9691c12a9e0c:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2ZGE3MGYzM2NhYjk1MGJiNjFkOWJhOWE2YzNhMzM4MmU4MzA1MjM1OThlYjJlMDQ0ZWJlYzdiMzY5MTk2NTUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmMGNkYjk3MmE3YmZiN2VkMjQ2ZjlmZjY3MjM4NWU1NWY0OTY4ZmMxMTA0M2RjNWI2ODRkNTFkZmEzMWRiY2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY4ODRkZmUzZjU4NTA4YzRjMWY5YzQ2MzZkMjBkMjYyNTAxMTE2ZWFkZGFmMDljYTA5ODNhZmFkNzFhZmJmYmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc4MGQ0M2NhZTI0NjE1N2E0NWZkZDk5OGE5MmMwYjU1MDllNGYwY2ZjMmM4ODk1NjU5MzYyZWM1YWY4ODMyZTgifQ"
         },
         {
-          "resource": "repo://src/state/aiScreeningStore.ts#L37-L42",
+          "resource": "repo://src/state/aiScreeningStore.ts#L42-L47",
           "version": "repo-lines-v1:sha256:42f1daf398e0df07ce51975c6585dc69c68f0b8ca46fce905238ee60e6248f96:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNzYzYzc5MTAwMjQ0YTgzMzU0NjJmZjY0NTA5NTkxYzI2NGI2ZjcyZDFlMmEwMzU3NzJkZWRmOTNhODFiZDVhNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTZkOWJiMGQwODI4NmNlZjQ1NzFhNjA5MTJiNzk1ZDcyN2UzYWRhODIzNTk2Y2MxNzVjZmI3YzM4MDcxMzkyMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGNhOTE0ZmYzZDVmZGE2N2Y2YzkwM2RiODMwMjJmYjRhODdiMDdiYThhMzQ5ZDRjNGRiNzAwMzczNGY5Y2YwZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmM5NWM3MzViOGNlZTMyNmExZWEwOWM2ZTU3MzAzZmI3MjEwZTExYjY5YjU4YTQwNGMyZWE3YWE3NDkwZWQ0ZCJ9"
         },
         {
-          "resource": "repo://src/state/store.ts#L2937-L2994",
+          "resource": "repo://src/state/store.ts#L3405-L3462",
           "version": "repo-lines-v1:sha256:3d90222e4ca122a12313f130f6048caa9f721d6e1011450cfd246e2a7312c770:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1ZGQ5ZjlmODY2ZDJkMmRlN2UxYjBiNjYzN2E4Y2IxMThmZmJkZGRjODA2NjlmZGM3N2U3MDNjNjY2MTFhMzMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3N2NlYmRhMjYwZTZhM2JkNDQwNWFiMmZmYmVkZjNlZWEwZGU2YzllNDVmYTM1OTZmNmNjZTc4YjFhNDZlOWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjcwODkzYWM5ZTc4NDVlYzA2MTFjOTVjYjBkNWMzOGU1MWIzZmIxNjJjYWRjOGNjNjFlNGE3OTZkNjQyODJmNmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjExYmEwYzVmOTgzNjEyYjdkNTcyYTY5NDQ4MjJjOTExMmNhNmJiZjRjMjQ1NmYyM2ExZjczNjUwOTQwOTZmNmUifQ"
         }
       ]
@@ -121,8 +121,8 @@
       "statement": "The source records intentional design gaps: no resume, spend cap, or agent mode in screening runs (unlike annotation runs), to be added if screening batches grow.",
       "evidence": [
         {
-          "resource": "repo://src/state/aiScreeningStore.ts#L8-L13",
-          "version": "repo-lines-v1:sha256:b7df445fe0c16274889bea23a70133e0c80104a401a0adef9ff7cff37f1b1fb8:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzczNDBlNmM1YzdhNTI5MGZmOTVlZmE4YzI2ZWE3MGNkNmU2MzRhNDBmYTY1OWM1NzkzYWQzMzAzM2YyNDcwYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjc4NTNiNjk0NGE3ODA4YzFlOWVkYjA2NTY2Yzg4ZDEyZTIzMTNkNmE5NTQ0YmFlYjBkZjVmNzIzY2YxMjkwMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGE5MTdlZWZlNWE4ZTc4MzBlYjU1YjQyOGNkY2ViNWNiYmYxOWM0ZGI5MDRlNmMxZTNmMzJmNTI2YTM5YThlYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWQxNjFhNmI3YzVmZDQ3MTAyM2M2Y2YyOGRhNDJlYzUwY2RkZTVhODkzODg3NGZkNWNkOWE3YjkyNjIxM2U1OCJ9"
+          "resource": "repo://src/state/aiScreeningStore.ts#L11-L16",
+          "version": "repo-lines-v1:sha256:ee27cb43d0dc0355c3bccffb4702db0f969f42f9accea0b8b04feabe14b1d966:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYzczNDBlNmM1YzdhNTI5MGZmOTVlZmE4YzI2ZWE3MGNkNmU2MzRhNDBmYTY1OWM1NzkzYWQzMzAzM2YyNDcwYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjc4NTNiNjk0NGE3ODA4YzFlOWVkYjA2NTY2Yzg4ZDEyZTIzMTNkNmE5NTQ0YmFlYjBkZjVmNzIzY2YxMjkwMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGE5MTdlZWZlNWE4ZTc4MzBlYjU1YjQyOGNkY2ViNWNiYmYxOWM0ZGI5MDRlNmMxZTNmMzJmNTI2YTM5YThlYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWQxNjFhNmI3YzVmZDQ3MTAyM2M2Y2YyOGRhNDJlYzUwY2RkZTVhODkzODg3NGZkNWNkOWE3YjkyNjIxM2U1OCJ9"
         }
       ]
     },
@@ -131,7 +131,7 @@
       "statement": "buildScreeningSystemOneRequest drops the exclusion-reason question (with a surfaced note) when the reasons list does not fit the model window rather than chunking; an Exclude answer then fails to parse and the reviewer picks the reason.",
       "evidence": [
         {
-          "resource": "repo://src/llm/screeningAi.ts#L142-L176",
+          "resource": "repo://src/llm/screeningAi.ts#L152-L186",
           "version": "repo-lines-v1:sha256:c6c101d6cde07ddf652c7d2805bb22452490cf1aa632a51c2d3fdfa0fd60ddb5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI1MmQxZTE4ODUxYWU1NzYzZmZiZjZiODZiNGM1NTk3YTYwNmU4ZmU5OTRiYzJiMWQ3YmIxMmQwM2U5YWU3YWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjczNzVjYTc0NTM5ZTg1YmFiOTcwMzhkYjQwN2YwMjFlMmYzMzY4NjExNmZhZWIyOTZiMGM5MWMzZWU1Nzg5MmQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImExMGVjMGU3MDRjYzBlNWI5YjViZTI5ZDI3MzljNzBmODNiMDJlNDI3NmQ2Mjg1MTVmNTNmZjliZjkyOWIyM2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM1ZWRlMzhlNmZlZGE0ZDNlNzNhOGIwMDVhZTIwZTIwYmI0MmJmNDhkODQxODVjNzViNzkyMzg4ZGJiMjVhOWUifQ"
         }
       ]
@@ -141,8 +141,22 @@
       "statement": "applyAiScreeningBatch guards writes: read-only, non-screening project, unpicked seat, consolidation seat, already-decided papers, and Exclude without a valid configured reason are all skipped; written fields are AI-marked and the batch is one undo step.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts#L2937-L2994",
+          "resource": "repo://src/state/store.ts#L3405-L3462",
           "version": "repo-lines-v1:sha256:3d90222e4ca122a12313f130f6048caa9f721d6e1011450cfd246e2a7312c770:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY1ZGQ5ZjlmODY2ZDJkMmRlN2UxYjBiNjYzN2E4Y2IxMThmZmJkZGRjODA2NjlmZGM3N2U3MDNjNjY2MTFhMzMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA3N2NlYmRhMjYwZTZhM2JkNDQwNWFiMmZmYmVkZjNlZWEwZGU2YzllNDVmYTM1OTZmNmNjZTc4YjFhNDZlOWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjcwODkzYWM5ZTc4NDVlYzA2MTFjOTVjYjBkNWMzOGU1MWIzZmIxNjJjYWRjOGNjNjFlNGE3OTZkNjQyODJmNmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjExYmEwYzVmOTgzNjEyYjdkNTcyYTY5NDQ4MjJjOTExMmNhNmJiZjRjMjQ1NmYyM2ExZjczNjUwOTQwOTZmNmUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_b78971a09a5e4438ade408b88c813599",
+      "statement": "Each AI screening usage record carries a promptVersion: SCREENING_PROMPT_VERSION for the Prompt engine and SCREENING_SYSTEMONE_PROMPT_VERSION for Classify (System One), constants in screeningAi.ts that must change whenever the template changes.",
+      "evidence": [
+        {
+          "resource": "repo://src/llm/screeningAi.ts#L44-L47",
+          "version": "repo-lines-v1:sha256:e8d84ab0f687519076b1a5508f04c4ed37b12922a2ad949c49c875f523034265:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZmQyY2VkZGViOTFjNDE2MzYzNzk2YjE2OWQ0NDJkOGE4ODA1OTQ5NjRlNzYzMzhhZmZiNzUwZDBlOTg4OWNmNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNkNTBhMWM1MDIzNmMwZjZmMDZkNTgyODQ0MTQxNmYyMWY5YzYzNjYwOGY4OTdlNjg1NDM4ZDVlYjUyZmVkMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTcyYTNmZmEzODg2ZmY3N2JjOWFhN2U2NzYxOWE5NmZjM2M1M2NhNjhkOGVmZDM0OTUyODQxMTMyMzMxNjg5ZSJ9"
+        },
+        {
+          "resource": "repo://src/state/aiScreeningStore.ts#L378-L390",
+          "version": "repo-lines-v1:sha256:1f0c7dba1c45a05432cb85f876354c80d02816fc1f0445b59a873af76732f2ca:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxMmY0YmYzM2JlYjRkNTlhMDlmMmE1YWM5ZTc5YWM3NjM3MTAyYTA2NmYzN2Y4OGIyZTk0YmRiZmNlNDNmNTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ2MjIwZDFjOTgyNmFiYTNiYzc2MTRjOWQ4MDMyZDY3MDU1M2ZhZmI1ZmE5ZWQyZmU0MzZhMGRlZDQ3YjgzYjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkOTViMDI4ZjlkNGRjNDM2ZGM3ZTUwNDZhOGVmNDFkODk5ZWE1N2EzYTBlMWJmZDdmMTliYTdhMWM1Yzk5OTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjJhNDhmZTEzMTExODJkOTQwZjhhMmIwMmJiNzhiZmJjN2M2MzJlZGVhNWEzYjllOTFmZTgzYTg1N2UwZGY1ZWIifQ"
         }
       ]
     }

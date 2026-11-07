@@ -4,8 +4,6 @@ title: Project Data Model
 description: The on-disk split-file project format and the in-memory TypeScript types behind it — the load → normalize → edit → prune → serialize lifecycle, the per-paper-per-reviewer annotation file layout, schema-version renames and moves, legacy single-file migration, and the five-state annotation vocabulary.
 tags: [data-model, project-format, annotations, persistence, migration, schema-versions, annotation-state]
 sources:
-  - id: openwiki-source-0b53d6b9bf55aab4dfbcffae
-    resource: repo://src-tauri/src/annotations.rs
   - id: openwiki-source-5e350144821ef45403557db2
     resource: repo://src-tauri/src/project.rs
   - id: openwiki-source-138e8b203cbd3e8b566b4f40
@@ -22,16 +20,12 @@ sources:
     resource: repo://src/model/annotationsDir.test.ts
   - id: openwiki-source-e3d216a3eae638c56fad09d2
     resource: repo://src/model/annotationsDir.ts
-  - id: openwiki-source-b829454bd5ef88ed4faf287f
-    resource: repo://src/model/annotationSplit.ts
   - id: openwiki-source-8cea3d31e78ed048bd98459e
     resource: repo://src/model/annotationState.ts
   - id: openwiki-source-8fddc383442d3b02f9cb1e8a
     resource: repo://src/model/paperId.ts
   - id: openwiki-source-68e9e61da0efb614946dda70
     resource: repo://src/model/project.ts
-  - id: openwiki-source-a0459bce65b7490683280544
-    resource: repo://src/model/schema.ts
   - id: openwiki-source-8265ce16bf0c745a31657d73
     resource: repo://src/model/schemaVersion.ts
   - id: openwiki-source-cea8cce51d195938438f2369
@@ -40,22 +34,18 @@ sources:
     resource: repo://src/model/validate.ts
   - id: openwiki-source-d1afade4641722495f434a61
     resource: repo://src/platform/desktop.ts
-  - id: openwiki-source-6caeef66ec21bf4ae91fe55c
-    resource: repo://src/platform/tauri.ts
   - id: openwiki-source-c0a5a9016440eaf62ed2a380
     resource: repo://src/screening/schema.ts
   - id: openwiki-source-f222dc1d70cd27df6524150a
     resource: repo://src/state/editorStore.ts
-  - id: openwiki-source-abd876b19e1ac7ba524a3f34
-    resource: repo://src/state/gitStore.ts
   - id: openwiki-source-f659ecb7722eea1b1900b400
     resource: repo://src/state/store.save.test.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
 verified:
   - by: openwiki/0.7.3
     at: 2026-11-02T08:58:22.323Z
-generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
 ---
 
 # Project Data Model
@@ -133,7 +123,6 @@ should not exist" — the caller (the platform adapter's `saveProject`, or the
 git layer's `toSplitProject`) deletes it if present on disk. The function is
 side-effect-free so it stays unit-testable without a filesystem; the Rust
 shell does the actual writes/deletes (see
-<!-- openwiki: broken internal link [../operations/tauri-shell.md] file "../operations/tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 [`tauri-shell.md`](../operations/tauri-shell.md)).
 
 ## The annotations folder (shared-folder rules)
@@ -354,7 +343,6 @@ mind.
 AI pass that actually wrote something, append-only, oldest first. Unlike the
 session-only "unconfirmed" `aiMarks` in the store, it survives into the saved
 file. See [`llm-annotation.md`](../workflows/llm-annotation.md) for what
-<!-- openwiki: broken internal link [../workflows/ai-screening.md] file "../workflows/ai-screening.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 each mode records and [`ai-screening.md`](../workflows/ai-screening.md) for
 the screening proposal pass.
 
@@ -859,7 +847,6 @@ project cannot silently empty a screening list.
 - [`git-integration.md`](../workflows/git-integration.md) — the git-side views
   of the split files (`own_matcher`, field-level review, merges and the shared
   history).
-<!-- openwiki: broken internal link [../operations/tauri-shell.md] file "../operations/tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 - [`tauri-shell.md`](../operations/tauri-shell.md) — the Rust shell that
   performs the actual `splitProjectFiles` writes/deletes and the shared-folder
   authorization.

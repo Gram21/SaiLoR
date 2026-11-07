@@ -3,9 +3,6 @@ type: guide
 title: SaiLoR Quickstart
 description: Entry-point guide to SaiLoR, a Tauri 2 desktop tool for conducting Systematic Literature Reviews (SLRs). Covers what SaiLoR is, the split project.json + annotations/ storage format, the current tech stack (React 19, Tauri 2 + Rust shell, Vite 6, Zustand+immer, Zod, react-pdf), quick-start commands, the repository layout, and a task-routing map to the right wiki page for common change areas.
 tags: [quickstart, setup, tech-stack, commands, tauri, task-routing]
-verified:
-  - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
 sources:
   - id: openwiki-source-fcc2f35df23dc8a50c340699
     resource: repo://e2e/probe.test.mjs
@@ -21,6 +18,8 @@ sources:
     resource: repo://src-tauri/src/git.rs
   - id: openwiki-source-99b0214e9f2113a0f6a2cf92
     resource: repo://src-tauri/src/main.rs
+  - id: openwiki-source-99d8ec247bccb5e5394a5deb
+    resource: repo://src-tauri/src/pdf.rs
   - id: openwiki-source-5e350144821ef45403557db2
     resource: repo://src-tauri/src/project.rs
   - id: openwiki-source-bab2e053a92fbd20f310fe9e
@@ -33,6 +32,8 @@ sources:
     resource: repo://src/consolidate/align.ts
   - id: openwiki-source-a258703e59a20a265c4d7784
     resource: repo://src/consolidate/apply.ts
+  - id: openwiki-source-f65a101199959fef5004fce6
+    resource: repo://src/demo/mode.ts
   - id: openwiki-source-645237ab18a1b0effda09b72
     resource: repo://src/git/merge.ts
   - id: openwiki-source-d2e79df56d937d834ecbd575
@@ -45,6 +46,8 @@ sources:
     resource: repo://src/model/annotations.ts
   - id: openwiki-source-68e9e61da0efb614946dda70
     resource: repo://src/model/project.ts
+  - id: openwiki-source-1e07552900756183b8f9bb84
+    resource: repo://src/model/seatTree.ts
   - id: openwiki-source-ff5f46fa2216a7ebb3226632
     resource: repo://src/model/validate.ts
   - id: openwiki-source-5ba7c57d04e439c852618f54
@@ -71,7 +74,10 @@ sources:
     resource: repo://vite.config.ts
   - id: openwiki-source-9b13c737ac155b0b0c8d76b9
     resource: repo://vitest.integration.config.ts
-generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+verified:
+  - by: openwiki/0.7.3
+    at: 2026-11-02T08:58:22.323Z
 ---
 
 # SaiLoR — Quickstart
@@ -115,17 +121,19 @@ old single-file shape opens and continues to work as before — it is migrated t
 automatically on the next save, with no explicit "migrate" step.** See
 [Data Model](concepts/data-model.md) for the full shape and migration mechanics.
 
-## SaiLoR is a Tauri 2 desktop app — the web build is discontinued
+## SaiLoR is a Tauri 2 desktop app — the web build runs only the demo
 
-**The browser/web build has been discontinued.** At startup `src/App.tsx` checks `isTauri()`
-(`'__TAURI_INTERNALS__' in window`, from `src/platform/adapter.ts`); outside the Tauri shell it
-renders only a *"SaiLoR for the web has been discontinued — use the desktop app"* notice and
-blocks every project-opening UI before any file picker or project state can be reached.
-`npm run dev` (the plain web dev server, also `make web`) shows only that screen; it exists so
-the Vite build, typecheck, and unit tests keep running, not as a way to use the app. See
-[Architecture](architecture.md) for why the `PlatformAdapter` seam survives anyway — one real
-implementation (`TauriAdapter`) plus one deliberately inert one (`createUnsupportedAdapter`,
-which exists only because the store reads `getPlatform().getRecents()` at module load).
+The desktop app is the only way to open real projects. At startup `src/App.tsx` checks `isTauri()`
+(`'__TAURI_INTERNALS__' in window`, from `src/platform/adapter.ts`). Outside the Tauri shell, the
+normal web build shows only a notice that the web version is discontinued. It blocks every
+project-opening UI before any file picker or project state is reached. `npm run dev` and `make web`
+show only that screen. They exist so the Vite build, the typecheck and the unit tests keep running.
+
+The online demo is the one exception. `npm run build:demo` sets the compile-time constant `DEMO_MODE`
+(`src/demo/mode.ts`). `getPlatform()` then returns `createDemoAdapter()` (in-memory project, bundled
+demo PDFs) in place of the inert `createUnsupportedAdapter()`. See
+[Online Demo and Project Site](operations/demo-and-site.md) and [Architecture](architecture.md) for the
+`PlatformAdapter` seam.
 
 Everything that touches the real machine lives in the **Rust shell** (`src-tauri/`): file
 open/save with authorization, the `slr-file://` scheme that streams PDFs to the renderer,
@@ -142,7 +150,7 @@ hot reload. There is no separate Electron dev command anymore.
 | UI framework | React 19 + TypeScript 5.7 |
 | State management | Zustand 5 + immer middleware |
 | Validation | Zod |
-| PDF rendering | react-pdf 9 (pdf.js); pdf-lib for burning marks into export PDFs |
+| PDF rendering | react-pdf 9 (pdf.js) in the renderer; lopdf in the Rust shell for burning marks into export PDFs |
 | Desktop shell | Tauri 2 — Rust `sailor` crate in `src-tauri/` (command modules per domain) |
 | Renderer ↔ shell bridge | `SlrBridge` interface (`src/platform/bridge.ts`) mapped to Tauri `invoke` commands (`src/platform/tauri.ts`) |
 | Build tool | Vite 6 (renderer only; the shell is built by Cargo/Tauri) |
@@ -155,7 +163,7 @@ make setup            # install build prerequisites (Rust, Node, system librarie
 make install          # npm ci
 
 make dev              # desktop dev loop: npx tauri dev (renderer on http://localhost:5173)
-make web              # renderer only in a browser — renders the discontinuation screen ONLY
+make web              # renderer only in a browser — shows the discontinuation screen only (demo build: npm run build:demo)
 make build            # release installer for this OS (npx tauri build)
 make build-debug      # debug app without installer bundles (--no-bundle)
 
@@ -170,11 +178,11 @@ make docker-linux     # build Linux bundles (AppImage, deb, rpm) in Docker
 ```
 
 npm scripts that matter directly: `npm test` (Vitest unit run), `npm run test:integration`,
-`npm run typecheck`, `npm run check:wiki` (wiki link check), and `npm run scenario`
+`npm run typecheck`, `npm run check:wiki` (wiki link check), `npm run check:site` (site link check), and `npm run scenario`
 (the git-scenario fixture CLI in `samples/git-scenarios/`).
 
 `scripts/ci.sh` is the single source of truth for "does the app build and pass its checks":
-install → typecheck → wiki-link check → unit tests → integration tests → `npm run build`.
+install → typecheck → wiki-link check → site-link check → unit tests with coverage → integration tests → `npm run build`.
 Run it locally with `./scripts/ci.sh` (`SKIP_INSTALL=1` to skip the install step). See
 [Build, CI, and Release](operations/build-release.md) for the full pipeline, GitHub Actions
 workflows, and Docker-based builds; `docs/tauri-migration.md` documents release-signing setup.
@@ -292,7 +300,7 @@ over the custom `slr-file://` scheme.*
 │   │                          useConsolidationAlignment, useUpstreamPolling, useWindowTitle, …
 │   ├── test/integration/      Real-git integration suite (*.integration.test.tsx)
 │   ├── App.tsx                Component composition; the isTauri() gate shows the
-│   │                          web-discontinued notice and blocks all project-opening UI
+│   │                          web-discontinued notice (or the demo adapter in the demo build)
 │   └── styles/                index.css (full app styling), ai.css, editor.css, git.css, …
 ├── e2e/                       Probe e2e: main.tsx (probe page), probe.test.mjs (tauri-driver)
 ├── samples/                   Example projects (project.example.json, screening.example.json),
@@ -326,20 +334,18 @@ Where to start for common change areas (wiki page → source entry points → ke
 | Consolidation entry matching / alignment | [Multi-Reviewer Consolidation](workflows/consolidation.md) | `src/consolidate/align.ts`, `src/consolidate/apply.ts`, `src/state/store.ts` | `alignNode`, `alignableNodes`, `growConsolidated` | `src/consolidate/align.test.ts`, `src/consolidate/apply.test.ts` | `npm test -- src/consolidate` |
 | Git merge / three-way field merge | [Git Integration](workflows/git-integration.md) | `src/git/merge.ts`, `src/state/gitStore.ts`, `src-tauri/src/git.rs` | `mergeProjects`, `applyResolutions`, `git_merge_begin/finish/abort` | `src/git/merge.test.ts`, `src/state/gitStore.test.ts` | `npm test -- src/git/merge.test.ts` |
 | Git ref/path/URL safety gates | [Git Integration](workflows/git-integration.md) | `src/git/ref.ts`, `src/git/relpath.ts`, `src/git/url.ts`, `src/git/ownAnnotationPath.ts`, `src-tauri/src/git.rs` | `refProblem`, `relPathProblem`, `annotationsRelDir`, `validateGitUrl`, `ref_problem` (Rust mirror) | `src/git/ref.test.ts`, `src/git/relpath.test.ts`, `src/git/url.test.ts` | `npm test -- src/git/ref.test.ts src/git/relpath.test.ts` |
-<!-- openwiki: broken internal link [operations/tauri-shell.md] file "operations/tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 | Shell & IPC surface (Tauri commands) | [Tauri Shell](operations/tauri-shell.md) | `src-tauri/src/main.rs`, `src-tauri/src/shell.rs`, `src/platform/tauri.ts` | `generate_handler` registry, `tauriBridge`, `command` (channel→snake_case), `TauriAdapter` | `src/platform/tauri.test.ts` | `npm test -- src/platform/tauri.test.ts` |
-<!-- openwiki: broken internal link [operations/tauri-shell.md] file "operations/tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 | `slr-file://` PDF protocol / path authorization | [Tauri Shell](operations/tauri-shell.md) | `src-tauri/src/protocol.rs`, `src-tauri/src/authz.rs`, `src/platform/adapter.ts` | `protocol::serve`, `Session`, `PdfSource` | `cargo test` (protocol/authz modules) | `cargo test --manifest-path src-tauri/Cargo.toml` |
-<!-- openwiki: broken internal link [operations/tauri-shell.md] file "operations/tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 | Native self-update (tauri-plugin-updater) | [Tauri Shell](operations/tauri-shell.md), [Build, CI, and Release](operations/build-release.md) | `src-tauri/src/update.rs`, `src/model/version.ts`, `src/state/store.ts` | `update_check/download/install`, `checkForNativeUpdate`, `checkForUpdate`, updater `pubkey`/`requireSignedVersion` | `src/model/version.test.ts`, `src/state/store.update.test.ts` | `npm test -- src/model/version.test.ts` |
 | Platform adapter seam / bridge | [Architecture](architecture.md) | `src/platform/adapter.ts`, `src/platform/bridge.ts`, `src/platform/tauri.ts`, `src/platform/desktop.ts`, `src/platform/index.ts`, `src/platform/unsupported.ts` | `PlatformAdapter`, `SlrBridge`, `TauriAdapter`, `DesktopAdapter`, `createUnsupportedAdapter`, `isTauri` | `src/platform/tauri.test.ts`, `src/platform/desktop.test.ts` | `npm run typecheck` |
 | LLM annotation (AI-assisted pre-fill) | [AI-Assisted Annotation](workflows/llm-annotation.md) | `src/llm/providers.ts`, `src/llm/prompt.ts`, `src/llm/parse.ts`, `src/state/aiStore.ts`, `src-tauri/src/llm.rs` | `buildRequest`, `buildSystemPrompt`, `parseAnswer`, `applyAiSuggestions` | `src/llm/parse.test.ts`, `src/state/store.ai.test.ts` | `npm test -- src/llm src/state/store.ai.test.ts` |
-<!-- openwiki: broken internal link [workflows/local-models.md] file "workflows/local-models.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 | Local models (Ollama / managed llama.cpp) | [Local Models](workflows/local-models.md) | `src-tauri/src/ollama.rs`, `src-tauri/src/localruntime.rs`, `src/platform/ollamaApi.ts`, `src/llm/localCatalog.ts` | `ollama_pull`, `local_runtime`, `local_model_install` | `cargo test` (ollama/localruntime modules) | `cargo test --manifest-path src-tauri/Cargo.toml` |
 | Screening mode (Include/Exclude + reason) | [Screening Mode](workflows/screening.md) | `src/screening/schema.ts`, `src/screening/status.ts`, `src/screening/counts.ts`, `src/state/store.ts` | `isScreening`, `screeningStatus`, `screeningCounts`, `screeningIssues` | `src/screening/counts.test.ts`, `src/state/store.screening.test.ts` | `npm test -- src/screening` |
-<!-- openwiki: broken internal link [workflows/ai-screening.md] file "workflows/ai-screening.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 | AI screening runs | [AI Screening](workflows/ai-screening.md) | `src/state/aiScreeningStore.ts`, `src/llm/screeningAi.ts`, `src/components/AiScreeningDialog.tsx` | `aiScreeningStore`, screening decision models | `src/state/aiScreeningStore.test.ts` | `npm test -- src/state/aiScreeningStore.test.ts` |
 | Project editor (schema tree + papers) | [Annotation Schema and Validation](concepts/annotation-schema.md) | `src/state/editorStore.ts`, `src/components/ProjectEditor.tsx` | `editorStore`, `buildProjectJson` | `src/state/editorStore.test.ts` (+ siblings) | `npm test -- src/state/editorStore.test.ts` |
+| Knowledge graph view and exports | [Knowledge Graph View](workflows/knowledge-graph.md) | `src/model/graph.ts`, `src/model/graphLayout.ts`, `src/model/graphQuery.ts`, `src/components/GraphView.tsx` | graph build, layout worker, depth and Cypher-subset queries, exports | `src/model/graph.test.ts`, `src/model/graphQuery.test.ts` | `npm test -- src/model/graph` |
+| Progressive loading of large projects | [Progressive Project Loading](concepts/progressive-loading.md) | `src/state/store.ts`, `src/platform/tauri.ts` | `loadState`, `projectGeneration`, batch retry | `src/state/progressiveLoad.test.ts` | `npm test -- src/state/progressiveLoad.test.ts` |
+| Online demo and project site | [Online Demo and Project Site](operations/demo-and-site.md) | `src/demo/`, `src/platform/demoAdapter.ts`, `site/`, `.github/workflows/pages.yml` | `DEMO_MODE`, `createDemoAdapter`, `npm run build:demo` | `src/demo/*.test.ts` | `npm test -- src/demo` |
 | Build / CI / release / packaging | [Build, CI, and Release](operations/build-release.md) | `Makefile`, `scripts/ci.sh`, `.github/workflows/release.yml`, `src-tauri/tauri.conf.json` | `make build`, `make docker-linux`, tauri bundle targets | — | `./scripts/ci.sh` |
 | Test surface (unit / integration / Rust / e2e) | [Testing Strategy](testing.md) | `vite.config.ts`, `vitest.integration.config.ts`, `src/test/integration/`, `e2e/probe.test.mjs` | vitest `include`/`exclude`, `make test`, `make probe` | — | `npm test` then `npm run test:integration` |
 
@@ -348,7 +354,6 @@ Where to start for common change areas (wiki page → source entry points → ke
 - [Architecture](architecture.md) — the renderer/shell split, the `PlatformAdapter` seam, the
   Zustand stores and undo/redo (incl. undoable PDF marks), the component tree, multi-reviewer
   consolidation with stored alignment, and why the web build is discontinued.
-<!-- openwiki: broken internal link [operations/tauri-shell.md] file "operations/tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 - [Tauri Shell](operations/tauri-shell.md) — the Rust command registry, the `slr-file://`
   protocol, path authorization, window/menu setup, and the native self-update feed.
 - [Annotation Schema and Validation](concepts/annotation-schema.md) — `AnnotationDef`/`ResolvedDef`
@@ -361,7 +366,6 @@ Where to start for common change areas (wiki page → source entry points → ke
   field-level three-way merge, and the security gates.
 - [AI-Assisted Annotation](workflows/llm-annotation.md) — the provider abstraction, prompt
   construction, response parsing, and API-key security.
-<!-- openwiki: broken internal link [workflows/local-models.md] file "workflows/local-models.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 - [Local Models](workflows/local-models.md) — Ollama integration and the managed llama.cpp
   runtime for local decision models.
 - [PDF Viewer and Marks](workflows/pdf-viewing.md) — react-pdf rendering, text-selection capture,
@@ -370,5 +374,8 @@ Where to start for common change areas (wiki page → source entry points → ke
   status, PRISMA-style counts, and the screening UI.
 - [Build, CI, and Release](operations/build-release.md) — the Makefile targets, CI script,
   release packaging, and Docker-based builds.
+- [Knowledge Graph](workflows/knowledge-graph.md) — the graph view of papers and annotations, its layout, and its exports.
+- [Progressive Loading](concepts/progressive-loading.md) — how large projects load in stages and which features wait for the full load.
+- [Online Demo and Project Site](operations/demo-and-site.md) — the `DEMO_MODE` build, the in-memory demo adapter, the two demo links, and the Pages deployment.
 - [Testing Strategy](testing.md) — Vitest unit tests, the real-git integration suite, Rust unit
   tests, and the tauri-driver probe e2e.

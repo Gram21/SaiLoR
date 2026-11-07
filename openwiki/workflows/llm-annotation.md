@@ -68,7 +68,10 @@ sources:
     resource: repo://src/state/aiStore.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
-generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+verified:
+  - by: openwiki/0.7.3
+    at: 2026-11-02T08:58:22.323Z
 ---
 
 # AI-Assisted Annotation
@@ -78,8 +81,6 @@ The AI feature lets a reviewer point an LLM at one paper — or, with a conseque
 - **An API key never lives in the renderer.** `LlmConfig` (`src/llm/types.ts`) has no `apiKey` field. The desktop app's Rust shell (`src-tauri/src/llm.rs`) stores each key in the OS keychain via the `keyring` crate — service `SaiLoR`, entry `llm:<id>` — and substitutes it into outgoing requests at the last moment; the renderer only ever learns *whether* a key exists (`hasKey`) and places the literal sentinel `{{apiKey}}` (`API_KEY_SENTINEL`) where the key goes.
 - **Nothing the model returns reaches the project data unless it typechecks.** `parseAnswer` (`src/llm/parse.ts`) is the trust boundary: every proposed value is coerced against its `ResolvedDef`, and anything that does not fit (bad path, wrong type, value not in the enum, duplicate) is *rejected and shown*, never silently dropped and never guessed into shape. The same `coerce` backs the agent tools (`src/llm/tools.ts`) and the review table's Edit action.
 
-<!-- openwiki: broken internal link [ai-screening.md] file "ai-screening.md" does not exist. Fix the href or restore the target, then delete this comment. -->
-<!-- openwiki: broken internal link [local-models.md] file "local-models.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 The feature is per-project opt-in (`config.ai: true`); a project can forbid it outright. AI-assisted *screening* is a separate sibling flow — see [AI-Assisted Screening](ai-screening.md). Running models locally (Ollama, llama.cpp, managed System One) is covered in [Local Models](local-models.md); this page states the pieces it needs.
 
 ## End-to-end flow
@@ -270,7 +271,6 @@ Three artifacts come out of a fill:
 
 **`AiDialog`** (`src/components/AiDialog.tsx`) is a pure view over `useAiStore`, rendering by phase: the setup screen (target picker, mode radios with per-mode explanations, judge/cross-check pickers, options — few-shot, re-check, web search, concurrency, feedback — the consent line stating what leaves the machine, the cost estimate, and the all-papers consequences warning before it lets a run touch every paper), the running screen (spinner, elapsed seconds, per-paper agent events, cancel, skip-paper), the review table (one row per suggestion with field, proposed value, evidence quote, confidence, judge verdict, cross-check, `webUnverified` badge, and an Edit that re-validates through the same `coerce`), the re-check section (only ticked disagreements actionable; agree/unsure collapsed), the applied screen (filled/replaced/skipped counts, feedback path or its failure), and the error screen with retry (and the scanned-PDF hint when that was the cause). A resume banner offers to continue a saved unfinished batch; a "needs attention" filter isolates flagged rows. A preview notice marks the whole feature as a preview whose proposals must be checked.
 
-<!-- openwiki: broken internal link [local-models.md] file "local-models.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 **`LlmSettingsDialog`** (`src/components/LlmSettingsDialog.tsx`) manages the targets. It enforces the key invariant in the UI: an existing key is only ever `hasKey` — never shown, never pre-filled; a blank key box on an edit keeps the stored key. It shows the OS-keychain notice (in the browser build, which is discontinued for AI use, it warns that storage is not encrypted). Provider switching resets the base URL, model, reasoning effort and fetched list; the reasoning-effort selector appears only for a model with a `ReasoningProfile`; price fields are prefilled (only when empty) from an OpenRouter listing's own pricing. The local-model panels (Ollama chat, guided local System One with download consent) are covered in [Local Models](local-models.md).
 
 **`ModelPicker`** (`src/components/ModelPicker.tsx`) is deliberately *not* `ComboBox`: the model field stays a free-text input the reviewer can always type into (a catalog can be incomplete or unfetched), with a searchable dropdown and a red "not a model {provider} listed" flag judged only against a list actually fetched — an empty list means "unknown", never "invalid".

@@ -1,11 +1,8 @@
 ---
 type: workflow
 title: PDF Viewer and Marks
-description: The PdfViewer component (react-pdf/pdf.js), zoom/navigation/search, text-selection capture for field-grabbing, internal-link hover previews, PDF marks (highlights/comments with undoable mutations), field-linking marks to annotation fields, mark export (burning marks into real PDF annotations in the Rust shell), reading-position persistence, the slr-file:// serving contract, and PDF metadata/text extraction.
+description: The PdfViewer component (react-pdf/pdf.js), zoom/navigation/search, text-selection capture for field-grabbing, internal-link hover previews, PDF marks (highlights/comments with undoable mutations), field-linking marks to annotation fields, mark export (burning marks into real PDF annotations in the Rust shell), reading-position persistence, the slr-file:// serving contract, PDF folder scan and rescan, the demo's no-PDF notice, and PDF metadata/text extraction.
 tags: [pdf, pdf-viewer, pdf-marks, react-pdf, pdfjs, undo-redo, reading-position, pdf-export, slr-file, metadata-extraction, text-extraction]
-verified:
-  - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
 sources:
   - id: openwiki-source-b964a762a9ce70a322ce429d
     resource: repo://src-tauri/src/authz.rs
@@ -19,14 +16,20 @@ sources:
     resource: repo://src/components/ExportPdfDialog.tsx
   - id: openwiki-source-68f078890cce490fe8d3e3a8
     resource: repo://src/components/Field.tsx
+  - id: openwiki-source-544f973ae70ac409570ab819
+    resource: repo://src/components/PdfFolderDialog.tsx
   - id: openwiki-source-5ad199ba542ff21b3fc608a3
     resource: repo://src/components/PdfViewer.tsx
+  - id: openwiki-source-6dcc88af8f90884965072195
+    resource: repo://src/demo/text.ts
   - id: openwiki-source-b829454bd5ef88ed4faf287f
     resource: repo://src/model/annotationSplit.ts
   - id: openwiki-source-e69d9dbba623a3a759cfb3f0
     resource: repo://src/model/linkify.ts
   - id: openwiki-source-054edfaca63c303f09a0f0fc
     resource: repo://src/model/pdfExport.ts
+  - id: openwiki-source-1bbbf67b3e9bebbad5403f3c
+    resource: repo://src/model/pdfFolder.ts
   - id: openwiki-source-859188651eeb8377ceeb6f8f
     resource: repo://src/model/pdfMarks.ts
   - id: openwiki-source-38fd24f72fe3c15924f3f7b8
@@ -45,17 +48,19 @@ sources:
     resource: repo://src/platform/tauri.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
-generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+verified:
+  - by: openwiki/0.7.3
+    at: 2026-11-02T08:58:22.323Z
 ---
 
 # PDF Viewer and Marks
 
 The middle pane of SaiLoR is a PDF reader built on [react-pdf](https://github.com/wojtekmaj/react-pdf) (pdf.js underneath). It does three jobs at once: render and navigate the paper, let the reviewer highlight and annotate it, and feed the annotation panel — text the reviewer selects can be "grabbed" straight into a field, and highlights can be linked to fields as evidence. Crucially, the marks a reviewer makes are **SaiLoR's own overlay data, never written into the PDF binary**; they live in the project's per-seat `marks-*.json` files alongside the annotations and are burned into real PDF annotations only on explicit export. Keeping the PDF untouched is what lets it stay a plain relative-path reference, shared and diffed by git like everything else in a project — writing real PDF annotation objects into the file would make every reviewer's mark a binary edit to a file every reviewer references, with no way to tell whose is whose.
 
-<!-- openwiki: broken internal link [../operations/tauri-shell.md] file "../operations/tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 In the desktop app (SaiLoR's only shipping runtime), the PDF bytes the viewer renders are served by the Rust shell over the custom `slr-file://` scheme, under the same project-directory authorization as everything else (see [Tauri shell](../operations/tauri-shell.md) and the serving contract below).
 
-This page covers the `slr-file://` serving contract as the viewer experiences it, the viewer component itself, the marks model and its undoable mutations, field-linking, mark export, reading-position persistence, and the PDF metadata/text extraction that pre-fills project fields and feeds LLM prompts.
+This page covers the `slr-file://` serving contract as the viewer experiences it, the viewer component itself, the marks model and its undoable mutations, field-linking, mark export, reading-position persistence, the PDF folder scan, and the PDF metadata/text extraction that pre-fills project fields and feeds LLM prompts.
 
 ## Mark lifecycle
 
@@ -103,6 +108,8 @@ A PDF stored *outside* the project's own folder is not a hard refusal — a proj
 2. On `escapes`, `pdf:allowPath` (`pdf_allow_path`) shows a native warning dialog *in the Rust shell* — deliberately not in the renderer, so a renderer can't approve its own escape — explaining that opening means reading a file the project itself names. Approval inserts the relative path into the session's `allowed_escapes` set (`src-tauri/src/authz.rs` `Session`), after which both `resolve_project_path` and `project_pdf` (the export-side reader) accept it. Nothing here is persisted; the approval lives only for the session.
 
 The session's authorization state also gates the *write* side: `pdf:embedMarks` only reads a PDF that is inside the project directory or an approved escape (`project_pdf`), and only writes to a path the export dialog returned this session (`writable_exports`, checked by `export_target`) or to `'original'` itself. `pdf_read` similarly refuses any path not returned by `pdf:pick`/`pdf:pickFolder` this session (`readable_pdfs`).
+
+**Overwrite original is limited to the project.** `embed_marks` refuses `'original'` when the source PDF lies outside the project folder, even if the reviewer approved it for reading: "Refusing to change … it lies outside the project folder. Save a copy instead." Writes go through `write_atomic`, so a failed export never leaves a half-written PDF. A `HEAD` request to `slr-file://` returns the same headers and `Content-Length` as the `GET` without reading the body.
 
 ## The PdfViewer component
 
@@ -188,6 +195,21 @@ A mark just created (`lastCreatedMarkId`) is offered once to the next field-link
 
 `useLinkedMarkCount(path, name, index)` drives the 🔗 button's badge count (routed through `dedupeMarkGroups`, so a cross-page highlight counts as one).
 
+## PDF folder scan and rescan
+
+A project may name a PDF folder (`config.pdfFolder`, a relative path inside the project folder; `pdfFolderProblem` rejects unsafe segments). SaiLoR then offers the PDFs in that folder as new papers.
+
+1. **Scan (Rust).** `pdf_scan_folder` calls `scan_folder` (`src-tauri/src/pdf.rs`). The folder resolves through `resolve_project_path` and must stay inside the project (`no-project`, `escapes`, `not-found` are the error codes). It lists every `.pdf` below it (`collect_pdfs`, sorted) as `{ path, sha256 }`. For the paper `pdf` paths the renderer passes as `known`, it returns the hash, `"missing"` for a file that is gone, or `null` for a path that cannot be read. Hashes are cached per path by size and modification time (`sha256_file`), so a rescan hashes only changed files.
+2. **Filter (renderer).** `newPdfFiles` (`src/model/pdfFolder.ts`) drops every file whose hash is ignored (`extra.ignoredPdfs`), known, or already stored on a paper (`extra.pdfSha256`). A renamed or moved file is therefore not offered again. `missingPaperIds` marks papers whose PDF is `"missing"`; the paper list shows them.
+3. **Propose.** `scanPdfFolder` in the store reads metadata from each new file with `extractPdfMeta`. If `config.crossrefLookup` is on and a DOI was found, it asks Crossref (`crossrefUrl`, `parseCrossrefWork`). `proposeNewPaper` merges the values in the order PDF info, Crossref, file name and records the source of each field.
+4. **Confirm.** `PdfFolderDialog` lists the proposals. The reviewer edits the fields, then adds the paper, skips it for now, or ignores it for good. `addPdfPapers` creates the papers (`newPaper` makes a unique id from the file name and stores `pdfSha256`) as one undo step. A read-only project cannot add or ignore.
+
+A scan runs when a project opens, on every window focus (`App.tsx`) and on the dialog's Rescan button. The dialog opens by itself only for a file it has not offered before this session. A scan does not run while the project is still loading (see [Progressive Project Loading](../concepts/progressive-loading.md)), and a result is dropped if another project replaced this one (`projectGeneration`).
+
+## Demo notice
+
+In the online demo build there is no file system, so the adapter has no PDF for most papers. `PdfViewer` then shows `DEMO_NO_PDF` and, when the paper has one, a link to read it on arXiv (see [Online Demo and Project Site](../operations/demo-and-site.md)).
+
 ## Mark export
 
 Export is the one place marks become real PDF annotations. The coordinate math lives in `src/model/pdfExport.ts`, kept pure and free of any PDF library on purpose so it's trivially unit-testable without a real PDF:
@@ -196,7 +218,7 @@ Export is the one place marks become real PDF annotations. The coordinate math l
 - `rectToQuadPoints(rect, pageWidth, pageHeight)` produces the 8-number `/QuadPoints` array per the PDF spec (§8.4.5): top-left, top-right, bottom-left, bottom-right — that specific pairing, not a clockwise walk, is what viewers expect; getting it wrong renders the highlight mirrored or skewed.
 - `annotatedFileName(name)` derives the export name (`paper.pdf` → `paper-annotated.pdf`), adding a `.pdf` extension when the source has none and leaving an already-`-annotated` name alone rather than double-suffixing.
 
-`src/components/ExportPdfDialog.tsx` is the one-way export dialog. It resolves the current paper's relative `pdf` to an absolute path via the platform adapter (`paths:absolute`), then offers two targets: save as a **new** PDF (a native save picker, `pickPdfExportPath` → `pdf:pickExportPath`, defaulting to the annotated name) or **overwrite the original** (with a warning that this affects every reviewer sharing the file and likely causes a git conflict). Both call `embedPdfAnnotations`, which crosses the platform bridge (`bridge.embedPdfMarks`) to the `pdf:embedMarks` Tauri command (`src/platform/tauri.ts`) and lands in **`src-tauri/src/pdf.rs`'s `pdf_embed_marks`** — the Rust shell is the only place in the app that both opens PDFs and writes files.
+`src/components/ExportPdfDialog.tsx` is the one-way export dialog. It resolves the current paper's relative `pdf` to an absolute path via the platform adapter (`paths:absolute`), then offers two targets: save as a **new** PDF (a native save picker, `pickPdfExportPath` → `pdf:pickExportPath`, defaulting to the annotated name) or **overwrite the original** (with a warning that this affects every reviewer sharing the file and likely causes a git conflict; the Rust shell refuses it for a PDF outside the project folder). Both call `embedPdfAnnotations`, which crosses the platform bridge (`bridge.embedPdfMarks`) to the `pdf:embedMarks` Tauri command (`src/platform/tauri.ts`) and lands in **`src-tauri/src/pdf.rs`'s `pdf_embed_marks`** — the Rust shell is the only place in the app that both opens PDFs and writes files.
 
 There, with the **lopdf** crate, `embed_marks` builds one annotation dictionary per mark by hand (lopdf exposes the raw object graph, not a high-level "add Highlight" helper):
 
@@ -219,12 +241,12 @@ Reopening a project lands the reviewer back on the same paper, PDF page, and scr
 
 ## PDF metadata extraction
 
-`src/model/pdfMeta.ts` is best-effort extraction of a paper's title, authors, and abstract, used to pre-fill the project editor and (for the abstract alone) a screening paper opened with none recorded yet. Title/authors come from two sources in order:
+`src/model/pdfMeta.ts` is best-effort extraction of a paper's title, authors, DOI, and abstract, used to pre-fill the project editor and (for the abstract alone) a screening paper opened with none recorded yet. Title/authors come from two sources in order:
 
 1. The PDF's embedded metadata (`Title`/`Author`) — cheap and exact when present, but validated by `isPlausibleTitle` (rejects filenames, junk like "Microsoft Word - paper_final_v3.doc", and single-word strings) since plenty of publisher toolchains leave it blank or fill it with junk.
 2. A layout heuristic over page 1 (`titleAndAuthorsFromLines`): the largest text near the top is the title, the lines just under it are the authors, parsed per-column (`namesFromAuthorBlock` joins a wrapped list per column before splitting, so a name broken across a line break can be repaired).
 
-The abstract has no metadata source (PDFs carry no standard "Abstract" field), so it is always the layout heuristic (`abstractFromLines`): find a line starting with "Abstract" below the title/author block, take its `Segment`'s `x` as the column, and walk down taking only each line's segment at that same `x` until the next section heading — this is why `Segment` carries an `x`, because on a two-column paper the left column's "Abstract" and the right column's "1 Introduction" arrive on the same baseline as one `Line`. Hyphenated line breaks are healed (`joinWrappedLines`). Extracted abstracts are length-bounded and flagged (`Paper.abstractFromPdf`) for a durable "unverified" warning wherever shown, because they're what a screening decision gets made on. `extractPdfMeta` never throws — it returns `{}` when it can't tell.
+The abstract has no metadata source (PDFs carry no standard "Abstract" field), so it is always the layout heuristic (`abstractFromLines`): find a line starting with "Abstract" below the title/author block, take its `Segment`'s `x` as the column, and walk down taking only each line's segment at that same `x` until the next section heading — this is why `Segment` carries an `x`, because on a two-column paper the left column's "Abstract" and the right column's "1 Introduction" arrive on the same baseline as one `Line`. Hyphenated line breaks are healed (`joinWrappedLines`). Extracted abstracts are length-bounded and flagged (`Paper.abstractFromPdf`) for a durable "unverified" warning wherever shown, because they're what a screening decision gets made on. The DOI (`findDoi`, the first `10.xxxx/…` string without trailing punctuation) comes from the embedded metadata values first, then from the page-1 text; the folder scan uses it for the optional Crossref lookup. `extractPdfMeta` never throws — it returns `{}` when it can't tell.
 
 ## PDF text extraction
 

@@ -6,6 +6,56 @@ tags: [tauri, shell, ipc, security, self-update, pdf, keychain, ssrf]
 verified:
   - by: openwiki/0.7.3
     at: 2026-11-02T08:58:22.323Z
+sources:
+  - id: openwiki-source-164e2da859b5277df81c7d94
+    resource: repo://.github/workflows/ci.yml
+  - id: openwiki-source-76e00d91549214b50cc804d5
+    resource: repo://docs/tauri-migration.md
+  - id: openwiki-source-fcc2f35df23dc8a50c340699
+    resource: repo://e2e/probe.test.mjs
+  - id: openwiki-source-7d9c2c95cd6f848332130fbd
+    resource: repo://src-tauri/build.rs
+  - id: openwiki-source-00ff4b2512b6dbfa268cbfa4
+    resource: repo://src-tauri/capabilities/default.json
+  - id: openwiki-source-ca67060e890937010b96de80
+    resource: repo://src-tauri/Cargo.toml
+  - id: openwiki-source-b964a762a9ce70a322ce429d
+    resource: repo://src-tauri/src/authz.rs
+  - id: openwiki-source-2b72ad248f46939c8530a8c9
+    resource: repo://src-tauri/src/close.rs
+  - id: openwiki-source-01c53dda6993c5a703b98d53
+    resource: repo://src-tauri/src/git.rs
+  - id: openwiki-source-6d58635ffc22bea1e634f656
+    resource: repo://src-tauri/src/llm.rs
+  - id: openwiki-source-beb04ea3db5303116fdfe707
+    resource: repo://src-tauri/src/localruntime.rs
+  - id: openwiki-source-99b0214e9f2113a0f6a2cf92
+    resource: repo://src-tauri/src/main.rs
+  - id: openwiki-source-46111ae7b1d21eb375f7a6dd
+    resource: repo://src-tauri/src/net.rs
+  - id: openwiki-source-81878e27d8aa6fcc322f04fc
+    resource: repo://src-tauri/src/paths.rs
+  - id: openwiki-source-99d8ec247bccb5e5394a5deb
+    resource: repo://src-tauri/src/pdf.rs
+  - id: openwiki-source-5e350144821ef45403557db2
+    resource: repo://src-tauri/src/project.rs
+  - id: openwiki-source-e7abf856466c7e9265c41eff
+    resource: repo://src-tauri/src/protocol.rs
+  - id: openwiki-source-a95d3fc224fa21e1e40a3138
+    resource: repo://src-tauri/src/shell.rs
+  - id: openwiki-source-bab2e053a92fbd20f310fe9e
+    resource: repo://src-tauri/src/update.rs
+  - id: openwiki-source-a5cbb79a6f7cc28f24d51fdc
+    resource: repo://src-tauri/src/webfetch.rs
+  - id: openwiki-source-0abfee918aaf0d7e3ea712fc
+    resource: repo://src-tauri/tauri.conf.json
+  - id: openwiki-source-91abab17cd60dc4816614abd
+    resource: repo://src/hooks/useCloseGuard.ts
+  - id: openwiki-source-d1afade4641722495f434a61
+    resource: repo://src/platform/desktop.ts
+  - id: openwiki-source-6caeef66ec21bf4ae91fe55c
+    resource: repo://src/platform/tauri.ts
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
 ---
 
 # Tauri Shell, IPC and Self-Update
@@ -81,19 +131,19 @@ grouped by module. The registry is the authoritative list of what the renderer c
 | Group | Commands (Rust module) |
 | --- | --- |
 | **CI probe** (feature-gated) | `probe_auto`, `probe_report` (`main.rs`, `#[cfg(feature = "probe")]` — compiled out of release builds; see below) |
-| **project** | `project_open`, `project_open_path`, `project_save`, `project_set_dir`, `project_pick_save_path`, `project_peek`, `project_screening_source`, `reference_pick` (`project.rs`) |
+| **project** | `project_open`, `project_open_path`, `project_read_papers`, `project_save`, `project_set_dir`, `project_pick_save_path`, `project_peek`, `project_screening_source`, `reference_pick` (`project.rs`) |
 | **annotations** | `project_annotations_dir_users`, `project_shared_annotations`, `project_move_annotations_dir`, `project_split_annotations` (`annotations.rs`) |
 | **feedback** | `project_write_feedback`, `project_list_feedback` (`feedback.rs`) |
-| **pdf / text** | `pdf_pick`, `pdf_pick_folder`, `pdf_read`, `pdf_check_path`, `pdf_allow_path`, `pdf_pick_export_path`, `pdf_embed_marks`, `text_pick_export_path`, `text_write` (`pdf.rs`) |
+| **pdf / text** | `pdf_pick`, `pdf_pick_folder`, `pdf_read`, `pdf_check_path`, `pdf_scan_folder`, `pdf_allow_path`, `pdf_pick_export_path`, `pdf_embed_marks`, `text_pick_export_path`, `text_write` (`pdf.rs`) |
 | **paths** | `paths_relative`, `paths_rebase`, `paths_absolute`, `paths_sibling` (`paths.rs` — Node-compatible `path` semantics) |
 | **webfetch** | `web_fetch`, `web_abort` (`webfetch.rs`) |
 | **llm** | `llm_configs`, `llm_save_config`, `llm_delete_config`, `llm_call`, `llm_abort` (`llm.rs`) |
 | **ollama** | `ollama_version`, `ollama_list`, `ollama_show`, `ollama_ps`, `ollama_pull`, `ollama_cancel_pull`, `ollama_delete`, `ollama_manifest_size` (`ollama.rs`) |
 | **localserver** | `localserver_discover` (`ollama.rs`) |
 | **local** | `local_probe` (`hardware.rs`); `local_runtime`, `local_runtime_plan`, `local_runtime_install`, `local_model_plan`, `local_model_install`, `local_cancel`, `local_installed`, `local_remove`, `local_start`, `local_stop`, `local_status`, `local_logs` (`localruntime.rs`) |
-| **git** | `git_probe`, `git_pick_clone_dir`, `git_clone`, `git_pick_project_in`, `git_info`, `git_status`, `git_commit`, `git_last_commit_message`, `git_push`, `git_pull_begin/finish/abort`, `git_merge_begin`, `git_log_begin`, `git_log_diff`, `git_annotation_authors`, `git_repo_setup_status`, `git_apply_repo_setup`, `git_background_fetch`, `git_stash_list/push/restore/drop/branch`, `git_branches`, `git_branch_create`, `git_branch_delete`, `git_checkout`, `git_branch_switch_begin/finish/abort`, `git_head_content`, `git_working_content`, `git_commit_partial`, `git_write_working`, `git_discard_file` (`git.rs`) |
+| **git** | `git_probe`, `git_pick_clone_dir`, `git_clone`, `git_pick_project_in`, `git_info`, `git_status`, `git_commit`, `git_last_commit_message`, `git_push`, `git_pull_begin/finish/abort`, `git_merge_begin`, `git_merge_preview`, `git_undo_merge`, `git_log_begin`, `git_log_diff`, `git_annotation_authors`, `git_repo_setup_status`, `git_apply_repo_setup`, `git_background_fetch`, `git_stash_list/push/restore/drop/branch`, `git_branches`, `git_branch_create`, `git_branch_delete`, `git_checkout`, `git_branch_switch_begin/finish/abort`, `git_head_content`, `git_working_content`, `git_commit_partial`, `git_write_working`, `git_discard_file` (`git.rs`) |
 | **update** | `update_check`, `update_download`, `update_install` (`update.rs`) |
-| **close** | `app_set_dirty`, `app_save_complete` (`close.rs`) |
+| **close / app** | `app_set_dirty`, `app_save_complete`, `app_reload`, `app_set_language` (`close.rs`, `shell.rs`) |
 
 Push events (not commands) come from `app.emit`: `app:requestSave`, `app:undo`, `app:redo`
 (macOS Edit menu), `update:available/progress/downloaded/error`, `ollama:pullProgress`,
@@ -150,6 +200,10 @@ in `main()`) carries:
   mutating git command re-checks via `assert_root`.
 - `listed_splits` — what `project:sharedAnnotations` listed, with per-file stamps, so a later
   split does not act on a folder that changed under it.
+- `heads` — for each opened split project, the validated annotations folder name and the set of
+  paper ids `project.json` listed. `project_read_papers` serves paper batches from this record only
+  (see [Progressive Project Loading](../concepts/progressive-loading.md)), so the renderer cannot
+  name other folders.
 
 Two helpers enforce the shape of every write:
 
@@ -158,6 +212,10 @@ Two helpers enforce the shape of every write:
   `canonicalize()` so symlinked components can't satisfy the lexical check.
 - **`assert_not_symlink(p)`** — `symlink_metadata` check that refuses to write through a link
   ("writing would modify the file it points at"), while treating a missing file as fine.
+
+Project, annotation and export files are written with `paths::write_atomic`: the bytes go to a
+temporary file beside the target, which is renamed over it, so a failed write never leaves a
+truncated file.
 
 Paths are normalized with Node's `path.resolve` semantics (`paths.rs`: absolute, `.`/`..` folded
 lexically, links not followed) so the renderer's path strings behave exactly as the old
@@ -229,13 +287,17 @@ key, however, **never reaches the renderer**:
 - **Origin pinning:** `llm_call` parses the URL the renderer named and refuses to send the key
   unless the scheme matches the config's `baseUrl` scheme and the origin (scheme+host+port)
   is identical. Redirects are refused outright (the `NO_REDIRECT` client): a 3xx would carry the
-  Authorization header to an origin nobody checked.
+  Authorization header to an origin nobody checked. A key is also never sent over plain `http`
+  unless the host is local (`is_local_host`, built on the web-fetch blocked-address rules).
 - **Managed local models:** for a target with `managed.catalogId`, the stored base URL is only a
   placeholder the origin check pinned; the real call goes to the llama.cpp server the shell
   itself runs (`localruntime::endpoint` → `127.0.0.1`, per-session key injected as the Bearer
   token), restricted to `/v1/*` and `/health` paths (`managed_target_url`), over the
   `LOOPBACK` client that forbids proxies so no man-in-the-middle sees the key.
-- Calls run under a `Flight` id `llm:<requestId>` with a 10-minute timeout; `llm_abort` cancels.
+- Calls run under a `Flight` id `llm:<requestId>` with a 10-minute timeout; `llm_abort` cancels,
+  also while a managed local model is still starting. Answers are capped at 32 MB
+  (`MAX_RESPONSE_BYTES`). `llm-config.json` is written through a temporary file and renamed, and
+  an unreadable file is refused instead of overwritten (`read_configs_strict`).
 
 The feature flow that uses these commands is [LLM Annotation](../workflows/llm-annotation.md);
 the local-runtime commands it can target are in [Local Models](../workflows/local-models.md).
@@ -263,8 +325,9 @@ from an LLM that may have read attacker-controlled text, it is treated as hostil
   `localhost`, or end in `.localhost`, `.local`, `.internal`, are refused. Blocked IPv4 ranges:
   `0.0.0.0/8`, `10.0.0.0/8`, `127.0.0.0/8`, `100.64.0.0/10` (CGNAT), `169.254.0.0/16` (link
   local), `172.16.0.0/12`, `192.168.0.0/16`, and `>= 224` (multicast/reserved). Blocked IPv6:
-  loopback, unspecified, IPv4-mapped equivalents of the blocked v4 ranges, `fe80:`
-  (link local), `fc`/`fd` (ULA), `ff` (multicast).
+  loopback, unspecified, the blocked v4 ranges inside IPv4-mapped, IPv4-compatible (`::/96`),
+  NAT64 (`64:ff9b::/96`) and 6to4 (`2002::/16`) addresses, `fe80::/10` (link local), `fc00::/7`
+  (ULA) and `ff00::/8` (multicast).
 - **`check_public_host`** resolves a domain and refuses it unless *every* address is public —
   the Electron version accepted a TOCTOU here; the resolver the request actually connects with
   is `PublicOnly`, a custom `reqwest::dns::Resolve` that re-runs the same `resolve_public` rule.
@@ -273,6 +336,8 @@ from an LLM that may have read attacker-controlled text, it is treated as hostil
 - **Redirects are handled manually** with the same `check` closure re-run on every hop (up to
   `MAX_REDIRECTS = 5`, "Too many redirects." past that) — since the shared client refuses
   redirects, each `Location` is re-validated rather than followed.
+- **No proxy**: the web client is built with `no_proxy()`, so environment proxy settings cannot
+  route a fetch around the guard.
 - **Caps**: 20-second timeout (`Flight`-abortable via `web_abort`), **2 MB body cap**
   (`read_capped` streams chunks and returns `truncated: true` when the cap cut the body), and
   a textual-content-type gate (`text/`, JSON, XML, XHTML, `+xml` suffix); the body is decoded
@@ -363,15 +428,19 @@ is built here rather than by Tauri itself) and attaches the navigation guards: `
 allows `tauri://localhost`, `about:blank`, `tauri.localhost` (Windows' `http(s)://tauri.localhost`)
 and the dev origin in debug builds; anything else is denied in-window and, if http/https,
 handed to `tauri-plugin-opener` (the system browser). `on_new_window` always denies and opens
-externally — no renderer-created windows exist. The module also migrates the pre-rename Electron
+externally — no renderer-created windows exist. A `Help → Settings…` menu item (`app:helpSettings`) opens the settings dialog. The module also migrates the pre-rename Electron
 userData (`SLR Helper`/`slr-helper` → `SaiLoR`, copying `window-state.json` and `Local Storage`
 once, best-effort, skipping symlinks, never overwriting) and, on macOS, replaces the Edit
 menu's native Undo/Redo with `app:undo`/`app:redo` menu items so the app's own history runs
 first.
 
-The capabilities file (`src-tauri/capabilities/default.json`) grants the `main` window only
-`core:default` plus `core:window:allow-set-title` — every privileged operation goes through the
-app's own commands, not Tauri's generic `fs`/`shell` plugins (which are not even compiled in).
+The capabilities file (`src-tauri/capabilities/default.json`) grants the `main` window
+`core:default`, `core:window:allow-set-title` and one `allow-<command>` permission per app
+command. `src-tauri/build.rs` lists every command in `COMMANDS` and generates the matching
+permission files in `src-tauri/permissions/autogenerated/`, so a command missing from either list
+is unreachable and injected script cannot call commands added later. Every privileged operation
+goes through the app's own commands, not Tauri's generic `fs`/`shell` plugins (which are not even
+compiled in).
 
 ## Migration context
 

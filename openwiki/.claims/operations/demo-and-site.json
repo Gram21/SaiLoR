@@ -1,0 +1,94 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:c99b33447f9ac6a3f09ea38a522a469706c65d824b90d2040013f45027d8db6a",
+  "claims": [
+    {
+      "id": "claim_a799479f74b040edb4ff5b74a4e0afe3",
+      "statement": "The online demo is a separate build of the same renderer: npm run build:demo runs vite build --mode demo into dist-demo/, defining the compile-time constant __DEMO__ that DEMO_MODE re-exports, so the normal build folds it to false and drops every demo branch.",
+      "evidence": [
+        {
+          "resource": "repo://src/demo/mode.ts",
+          "version": "repo-file-v1:sha256:21ab7d415367cad3a3ca4987b7868a22de9df9a184dea061df7317af5d0048f8"
+        },
+        {
+          "resource": "repo://vite.config.ts#L8-L50",
+          "version": "repo-lines-v1:sha256:02e8ec228c757bb77a8f50735dcae0fd71d2fb55ca8590e03c80332c53c19a59:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmMGNkYjk3MmE3YmZiN2VkMjQ2ZjlmZjY3MjM4NWU1NWY0OTY4ZmMxMTA0M2RjNWI2ODRkNTFkZmEzMWRiY2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmZTViNGVkMDhmMjU3NTA1ZDY2NGE0MDgwZWQyODliMTQ1NGY1MjdiZjdkYjdiZTU5ZjkyNmVlOGFjODgwYTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk1MmM2MmFmMTE1ZWU5MzM5NDBlZmQwMGNhZGViYzQ0N2I5MDY3NjQ1ZGI3ODlkMzI5MDM3MjJlMTFjMDQ3OGYifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_95fd68f952bc4d8ab2e17c095ec356b2",
+      "statement": "In the demo build App.tsx lifts the desktop-only gate with !isTauri() && !DEMO_MODE, renders a DemoBanner, skips the update check and opens the demo project at start.",
+      "evidence": [
+        {
+          "resource": "repo://src/App.tsx#L120-L137",
+          "version": "repo-lines-v1:sha256:c1d88a18c1a7d06bdab6bed81328c6c9fafef10a4af541d265e9f18bd9851822:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjllMjhlNGE5ZjQzMDZkODgyN2M3MjZhZDBhZTdkZTVjZWNkZGI3ZTBjNGE3Mjc1Y2I2YzZiZTY4ZTQxYzJkMTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRiODAwNmExNzlmNjdmMjY0MzgxOGVjZjM1NWI4OWFkOTQ5Y2M3Y2UzZDdjN2Y3ZTJhYmIyYzZmZWY2ZTIxNGQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgyNjdjNDM2MTQ1YmNkZTYwMzEzMzBlNGQxYWMzNGUwNjE4NTIwZDM5ZmE0OTljYmUxZjY5ZjJmODhiMTg2NjUifQ"
+        },
+        {
+          "resource": "repo://src/App.tsx#L205-L245",
+          "version": "repo-lines-v1:sha256:421ccf96f5f492487846222cc00f0e3027cb867b5c13032567654a6d46fa8613:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ1YmNhZDVhMzA0NjJmOGViM2ZhMzY5ZmU5ZWVjZjIwMjczNzA5MjQxYTEzNDBjNDc3YmIxMWM2YTc4MTI0OGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ2YjhjMTkzN2Y0YjRjNTRmOTE5MmQ4NjFmNGZkMDk4YjI0YWNmODUyNmY1ZGJkMTc2YTI0M2JjNDJlYjI1MzEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzMzllYWM1MjRhZDUwMTI4M2ZkNGQ2YjcyYjVjYTM0M2E5MjRjNDM2NjAwYjljOWI0ZThiNjA5NzIyNDY5NDIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI0MDc0NDFkMDA0MmFiYTA1ODRmNzM2OWM5YmVlYTZjMWMxZGU0ZjFmN2VhNDBlNzgyNGRiYTMyYTk5OTUyNDIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_93ba6ae7b21b48a1ba2097ad04254c9c",
+      "statement": "getPlatform() returns createDemoAdapter() in the demo build when the Tauri shell is absent; the demo adapter holds one project in memory and every method that would touch the disk, the network or git answers as cancelled or refuses with DEMO_NOT_SAVED / DEMO_NOT_AVAILABLE, so nothing persists across a reload.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/demoAdapter.ts",
+          "version": "repo-file-v1:sha256:828131b4e59d91dcb2cb3a0461d4aeead63bf8b66ed42e8c5d69f4736c503862"
+        },
+        {
+          "resource": "repo://src/platform/index.ts",
+          "version": "repo-file-v1:sha256:fb238395e2d5d474c8e8c192a62e909445dfbeeb0528ac9f036a1dd033fe3c4b"
+        }
+      ]
+    },
+    {
+      "id": "claim_3af500b947d7457b97aec7e9e0411f78",
+      "statement": "The demo opened with ?mode=schema (DEMO_SCHEMA_MODE) opens the project editor on a new project, and its save hands the visitor a downloaded project.json instead of writing to disk.",
+      "evidence": [
+        {
+          "resource": "repo://src/demo/schemaMode.ts",
+          "version": "repo-file-v1:sha256:a8bb5ba02f6933a206b825d770690d8412f5687bae92d428b220c4ac686bd558"
+        },
+        {
+          "resource": "repo://src/platform/demoAdapter.ts",
+          "version": "repo-file-v1:sha256:828131b4e59d91dcb2cb3a0461d4aeead63bf8b66ed42e8c5d69f4736c503862"
+        }
+      ]
+    },
+    {
+      "id": "claim_c5e9e289fa46413eb6b936b12a2e3320",
+      "statement": "The demo PDFs live in src/demo/papers/ and are emitted by a Vite plugin only in the demo build as plain files rather than imported, so the normal build never contains them; their file names must match DEMO_PDF_FILES in src/demo/project.ts.",
+      "evidence": [
+        {
+          "resource": "repo://src/demo/project.ts",
+          "version": "repo-file-v1:sha256:f140c4d172198a21dc7074eb78a5bf08100a25fdbb35f99c2e32737466cb42c6"
+        },
+        {
+          "resource": "repo://vite.config.ts#L8-L36",
+          "version": "repo-lines-v1:sha256:61929594568694d67955b6bcb118bdca6c00fc537d6156f196cd53c7f92c4549:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZmYjI5ZTlhMzljMmFhODViZmUxOTgxZWNhNzg3YzMwNjA3MTVjN2YyMmE4ZjFhYmI0ZjFlNTI2ZTFhZDBhOTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmZTViNGVkMDhmMjU3NTA1ZDY2NGE0MDgwZWQyODliMTQ1NGY1MjdiZjdkYjdiZTU5ZjkyNmVlOGFjODgwYTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQxMTIwNjY3ZmJkZTUzOGZjZmE2NjQ1YTgzNGEyYjA4ZGQzNjJkMzg5ZmJjODI0OTI0NTM4NGNiNzNlM2FmMTgifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_ea7cc9b6863e4a90945d30f70c00824d",
+      "statement": "scripts/ci/pages.sh builds the demo, assembles _site/ from site/ plus dist-demo/ under demo/, and runs scripts/check-site-links.js on it; .github/workflows/pages.yml runs the script on pushes to main and release/2.0.0 and deploys _site through the GitHub Actions Pages actions, never cancelling a deployment in progress.",
+      "evidence": [
+        {
+          "resource": "repo://.github/workflows/pages.yml",
+          "version": "repo-file-v1:sha256:02d6714588555fa2f25508566abef0e9a6ce3d238b069707457a03fbc97aaa65"
+        },
+        {
+          "resource": "repo://scripts/ci/pages.sh",
+          "version": "repo-file-v1:sha256:5309ec5fe706884b17439f363fc4ce3b251d6bd3fb75cc5193a684509c2aac95"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.3",
+    "at": "2026-11-02T08:58:22.323Z"
+  }
+}

@@ -18,6 +18,10 @@ sources:
     resource: repo://src/components/ConsolidationVerdicts.ts
   - id: openwiki-source-68f078890cce490fe8d3e3a8
     resource: repo://src/components/Field.tsx
+  - id: openwiki-source-8049c468c1962256968c1b22
+    resource: repo://src/components/StrictGate.tsx
+  - id: openwiki-source-8335a15f5691b1df28cf2a3c
+    resource: repo://src/components/StrictLockBanner.tsx
   - id: openwiki-source-d284db292c5d5d9e3292e37d
     resource: repo://src/consolidate/agreement.ts
   - id: openwiki-source-0e14c9aaf12eaa87038c7351
@@ -44,9 +48,13 @@ sources:
     resource: repo://src/hooks/useConsolidationAlignment.ts
   - id: openwiki-source-e757c5a5c207c012e0ba6957
     resource: repo://src/model/alignment.ts
+  - id: openwiki-source-c98737ffce7db5a20106253b
+    resource: repo://src/model/metadata.ts
+  - id: openwiki-source-6a3b04b3b37bd386f13d04cf
+    resource: repo://src/model/strict.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
-generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
 verified:
   - by: openwiki/0.7.3
     at: 2026-11-02T08:58:22.323Z
@@ -268,8 +276,8 @@ Two things keep the stored record honest as the data moves underneath it:
   grown in slot order, so the removed index *is* the slot position). Left
   unfixed, every slot at or above the removed index would keep naming the entry
   that used to be there, misattributing reviewer answers in every compare popup.
-- **Git merges the mapping per node** (`mergeAlignment` in
-  `src/git/merge.ts`): a three-way merge keyed by node name, so two
+- **Git merges the mapping per node** (`mergePerKey` in
+  `src/git/merge.ts`, shared with the per-seat metadata corrections): a three-way merge keyed by node name, so two
   consolidators who touched different nodes do not read as having disagreed.
   A node matched differently on both sides silently keeps *ours* — a derived
   claim, recoverable by reopening Consolidation, with no canonical path to
@@ -610,6 +618,53 @@ blocks with a divider, skipping papers with no disagreements, matching what
 `ConsolidationOverview`'s list shows. The export only formats — it receives
 verdicts already filtered to `consolidationFieldStatus(...) === 'disagree'`, so
 it never decides what counts as a disagreement.
+
+## Strict mode: persons, gate and locks
+
+Strict mode (`config.strict`, `config.persons`, `config.assignments`; parsed by
+`parseStrictConfig` in `src/model/strict.ts`) is a workflow aid for multi-reviewer
+annotation projects. It is not security: anyone can pick another person or edit the files.
+`strictActive` is true only when strict mode is on, the project has more than one reviewer,
+it is not a screening project, and at least one person exists.
+
+- **Who is working.** The store keeps `strictPerson`: a person id or the Manager
+  (`STRICT_MANAGER`), remembered per project on the computer. A person sees only the
+  papers assigned to them (`personPapers`), and the seat is fixed to their seat on the current paper
+  (`assignedSeat`).
+- **Consolidation gate.** `consolidationGateMissing` lists the assigned persons who have
+  not finished their seat on the current paper (`missingFinishers`). While the list is not empty,
+  `AnnotationPanel` shows `StrictGate` instead of the Consolidation form, and
+  `useConsolidationAlignment` does not run. The Manager can open the paper anyway; the override
+  (`consolidationOverrides`) lasts until the project opens again.
+- **Finish and lock.** Finish starts a finish request. The next save locks every finished seat of
+  the person, but only when `finishReady` holds (no validation issue on their unlocked papers).
+  The locking save writes `finishedAt` into that seat's annotation file
+  (`Paper.reviewsLock`). An edit before the save cancels the request.
+- **Locked seats.** `seatLocked` is true when strict mode is active and `finishedAt` is set. The
+  store's `isLocked` guard then refuses every edit path, and the form is read-only behind
+  `StrictLockBanner`. Only the Manager can reopen a seat (`reopenSeat`); that removes the
+  finished flag and `finishedAt` and writes `reopenedAt`.
+- **Merge.** `git/merge.ts` merges `reviewsLock` per seat and keeps a lock that carries `finishedAt`
+  when the other side has none, so a finished seat stays finished (`lockedSeatsFinished`).
+
+## Metadata corrections
+
+Projects can let reviewers correct paper metadata (`config.metadataEdit`, mode `annotation`;
+`src/model/metadata.ts`). The four fields are title, authors, year and DOI.
+
+- **Per seat.** `applySeatEdit` stores only the values that differ from the project value in
+  `paper.reviewMetadata[seat].overrides`. `effectiveMetadata` shows the paper under those
+  overrides, so each seat sees its own values. `metadataSeatKey` returns null for the
+  Consolidation seat, the AI seat and when the mode is off; with one reviewer it returns seat 1.
+- **Consolidating.** In the Consolidation seat, `mergeSeatMetadata` builds one entry per paper from
+  the human seats' overrides. A field is agreed only when every human seat changed it to the same
+  value; any other changed field is a disagreement. Accept (`applyProjectEdit`) writes the value
+  into the project file and keeps the first value in `extra.metadataOriginal`. Ignore keeps the
+  project file. `metadataFingerprint` hides an entry until a seat changes its overrides again.
+  Accept all skips entries with a disagreement.
+- **Project file.** With one reviewer (`canUpdateProject`), seat 1 can write the corrections
+  directly. `proposeFromPdf` can also propose title, authors and DOI from the PDF, never the year.
+- **Merge.** `git/merge.ts` merges `reviewMetadata` per seat.
 
 ## Extension points and invariants
 

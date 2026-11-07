@@ -1,38 +1,38 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:7bc74e68e5ceadda840bc5d102026e479068994b5e8b2281e82cb08d20ca7cf4",
+  "pageVersion": "sha256:43f4bbd16dd51b7aebb96d2d1beaf680a2610902168f4d928e72f438e406d900",
   "claims": [
     {
       "id": "claim_d512433d8b114757b964025df55ab19f",
       "statement": "`scripts/ci.sh` is the provider-agnostic single source of truth for renderer CI, running from the repo root under `set -euo pipefail` in order: install (`npm ci` or `npm install`, skippable via `SKIP_INSTALL=1`), typecheck (`npm run typecheck`), wiki-link check (`npm run check:wiki`), unit tests (`npm test`), integration tests (`npm run test:integration`), and the static SPA build (`npm run build`).",
       "evidence": [
         {
-          "resource": "repo://scripts/ci.sh#L1-L53",
-          "version": "repo-lines-v1:sha256:71b62054b373cb9fdd44f8c3c94d903896dff57ec10d004d83c4f887f25fbc9a:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkOTVmYzA0YTgwYzk1MmY0OWNlNDE4ODYyN2M1M2IwZmJlOGM0NDA0MWI5NTJkNTkyYWNkMWRlOTk4NjE0NjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MTExYTJlMDI4MDA1ZmViOTkzMTcwNzdlMDRhNTEwNzQ1MDExNjU0Y2M5NzVjNzdjMmMwODJhYWI1YzY0YjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://scripts/ci.sh#L1-L56",
+          "version": "repo-lines-v1:sha256:c77ca6e5e6020d073122e0acc8e9ea43ee4029a5427a45c32c0bad12db2e25f9:eyJzZWxlY3RlZExpbmVDb3VudCI6NTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkOTVmYzA0YTgwYzk1MmY0OWNlNDE4ODYyN2M1M2IwZmJlOGM0NDA0MWI5NTJkNTkyYWNkMWRlOTk4NjE0NjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MTExYTJlMDI4MDA1ZmViOTkzMTcwNzdlMDRhNTEwNzQ1MDExNjU0Y2M5NzVjNzdjMmMwODJhYWI1YzY0YjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
     {
       "id": "claim_51fff641705d42c6874e4ee2297d91eb",
-      "statement": "`.github/workflows/ci.yml` runs `scripts/ci.sh` on `ubuntu-latest` (Node 24) on push to `main` and `release/**` and on every pull request, with `paths-ignore: technical-report/**`; it deliberately adds no push-on-every-branch trigger (a PR branch would build twice) and uses a concurrency group `${{ github.workflow }}-${{ github.ref }}` with `cancel-in-progress: true`.",
+      "statement": ".github/workflows/ci.yml runs scripts/ci.sh on ubuntu-latest (Node 24) on push to main and release/** and on every pull request, with paths-ignore technical-report/**; it deliberately adds no push-on-every-branch trigger (a PR branch would build twice) and uses concurrency group ${{ github.workflow }}-${{ github.ref }} with cancel-in-progress: true.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/ci.yml#L9-L23",
-          "version": "repo-lines-v1:sha256:47ee0ec14947cb3c7c930c740fea6e5e07020b3dbc9238315f5168a6b732461f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlMGUyZGRhYTY2MjI5ZjAwOGEyOWQxMjhkMzBhZDlhMjk1MjU2Zjg1NGJhZGYzMjQwOWFkMDQ3MjRiNTA1NjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU5ZDgwMTU0ZWQ0MmZjNWM3NzliMTMzMTU3OGI1OGI4OWM4MDFlYWNlNzRmMjRjZDQ4ZWI0YTIzNTc5NDBhOTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZkNzhmMTNjNGY0MmQ1MDBkMzUwN2FlMzExOGMxY2Q4ZDVhNGNjZTczMDdiM2VmYWMxY2U5YjNlODYxNzEyMjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUxNzUzMWUwOWQyYTZiMjg5OWUzODA5OTc2YmMwZGM5MjkyY2E0YWQwZDZkODE5YmY0MWVjYmZjNmUzODUwNGMifQ"
+          "resource": "repo://.github/workflows/ci.yml#L1-L33",
+          "version": "repo-lines-v1:sha256:19ef58c1c270e445a188cfd1b7f2ef6d853866e3caefdef4c7ffbe0d0b6f5089:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2ZTFiMzJmYTA5MDc5YWUyZjAwMDFmZmYwZWNhMjdiNDk4NTk1N2Q0ZWI0ODU3OTI5YjNjZjA1OGZhYWU1NDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlZTNjNjBkYjI1M2NiY2VhNzI0YWFkZDkxOGViOTQ2NjRmN2M2N2U3ODRmNzk2Zjc4NGNmMTAyMjA3ZDI2YmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEwZTBiNDE0MDQ0OGIxYWRiMTkzNTU5Y2RhNWNlNjVmNmNiZWE4NmUzYjc0OGRhNGMwMjI1YjQ4MDc4NTNkNjgifQ"
         }
       ]
     },
     {
       "id": "claim_d3589fe97e6f47fe985c0dc217fbcc32",
-      "statement": "The default vitest config in `vite.config.ts` runs jsdom tests over `src/**/*.test.{ts,tsx}` but excludes `*.integration.test.*`, so `npm test` is the fast per-PR unit gate; the integration suite runs separately via `npm run test:integration` with `vitest.integration.config.ts`.",
+      "statement": "The default vitest config in vite.config.ts runs jsdom tests over src/**/*.test.{ts,tsx} but excludes *.integration.test.*, so npm test is the fast per-PR unit gate; the integration suite runs separately via npm run test:integration with vitest.integration.config.ts.",
       "evidence": [
         {
-          "resource": "repo://package.json#L12-L18",
-          "version": "repo-lines-v1:sha256:e2a010d375c26f0b729dfe6c5ecbefabd9bcbd58e67b1f517ce8ac9cfbbf5aad:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjQxZmMyNDllZmE3MWIwZTdhOTdmN2Y0ZWI4Yjg5NDk0YTU5Y2IzZjg3ZDcxYmU2YWFkNjNhYTNiYTVlM2QzYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzU2ZTYwY2NjYTI5N2EwOTdlMWFkMGI3ZWI2ZWVmY2I4M2FjMzRhMzA0ZDdjOTBhNDI0NTA4OGU5YTE4NzQyNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYzVhZGRiNTM2YTQzOGI3MWFmNzlhZjA3MjA5ZjMzZjEyZTU4NThmOTViZjQ2ZTkxY2QyODE3NTIxYzRjMTMzMCJ9"
+          "resource": "repo://package.json",
+          "version": "repo-file-v1:sha256:c9bd3f7faa5a295c14c074b19427809e6523971d30999ab0ec5f8cadfc421e74"
         },
         {
-          "resource": "repo://vite.config.ts#L28-L46",
-          "version": "repo-lines-v1:sha256:0a2c0db2d0565eeafff51c3e066afa31536e2d71196dbf2cd4f6591bb9ff5a0a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmZTg2ZDdhNTc4YTk4MWNiYmE0NjM1NmU5MzA4MzhkZTQxMGIzZmYxYWY3MGM1ODEwMGYxYWE3MzU1NGU1MmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2M2Q1MzVjZTM4MDYzZDZiNGM1MWQ4YzM4NmE3ZjliM2U1ODBhMTRhMTBjMDdiMTk4ZGZhZjE5YzkzYTNiZmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3YzgwOGU2NjgwNjRkMjE5YWU5YjdkNTk5YjkwN2YwZTE0NWQ5YWRhZDg5YjE3NTVlMGZjODBkODRhNzZiNDEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoyLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQ2NjQ4ZTYxMDEyNGY5YjM2ZDA3MjNmNDg3NTYwZDM3MGY4Zjc4MDU3MzU1MGI2NmU2ZmU1MTEwYWI5YWU5NTIifQ"
+          "resource": "repo://vite.config.ts#L48-L70",
+          "version": "repo-lines-v1:sha256:49534e96c36a41b9a75455b0cf269ae766004703e22c9e229a3fb855609a2153:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJjMWI5NWQ3YzA4ODk2NjFmMzAxMjllZjZmYzgwNjRiMGY4YTAyOWE4NjJlNWE2YjgzNWJhMmFlY2E0ZjcxOGEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc5NWY2ZWFiZjM4ZDQxYzJiZmU0YjhiOTQ0NDNhY2U5NzgwMWZlMzMzOGFmMzgzY2JmZjMyOGY3YmJhMTkzNDIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMxOTVlOGUxY2NjODY5ZmM5MjBkY2Q0OTBiZGZkNzY3NDQ5ZGM2YzgwYzJjNzJmMGJjYzFiZGIwNjFjYzkxOTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJiMDEwNmVmM2UyOTk0MThhMjk2Y2ZhZWFiMTA1ODQ5OWJhNzNkYzM1YmQ5MzQyY2EyN2Y1Yjk5ZGQ4YjBlZDQifQ"
         }
       ]
     },
@@ -55,7 +55,7 @@
       "statement": "`package.json` declares `allowScripts: { \"esbuild@0.25.12\": true }`, permitting only esbuild's install script to run while blocking all other post-install scripts.",
       "evidence": [
         {
-          "resource": "repo://package.json#L43-L45",
+          "resource": "repo://package.json#L53-L55",
           "version": "repo-lines-v1:sha256:721b13f80ec524911a40161f1b2ca9dc89d98334f7881ec1b3c76b8600b71843:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOWM2YTVhMDllYTUzM2MyZjEwN2E4NjgyMGI4MDY4ZWQyYjllZjZlNzgzYTdkMzIyNTQ3MTYwMDU3ZThjNzA3NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjdlNTc4OGQ1ZDlkNzNkMjRhODFkYmMwYTVhNzRiZmE4MmM5YzNiM2FmOTllNTJhZjc5NmU5MGI0NjhhOGEzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMWI0N2FiYmExZWJjZjQ3MDZjOGRiMDk0ODU4ZDI4YmVkZDk2YjYxMjIxYjVjOWJmZTIwNDg4NWQ5M2I3ZWIzMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSJ9"
         }
       ]
@@ -65,16 +65,16 @@
       "statement": "`docker-compose.dev.yml` runs the `tauri-linux` service from `Dockerfile.tauri-linux` (Ubuntu 22.04, matching the release runner so the AppImage targets older glibc) with the source bind-mounted at `.:/app`, a named volume shadowing `/app/node_modules`, and a `tauri-target` volume carrying `src-tauri/target`; the default command builds `appimage,deb,rpm` bundles via `npm ci && npx tauri build --config src-tauri/tauri.conf.json`, and `make docker-linux` is the standard invocation.",
       "evidence": [
         {
-          "resource": "repo://Dockerfile.tauri-linux#L1-L21",
-          "version": "repo-lines-v1:sha256:97868f29c5345f61d5e73bc3b9007eb17f1664292b3c9186e1e23ad03d38862a:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlYjQ4YmQ3NThhMDRiMjU4MGM2MDIxYTg2ZGZiY2UyMTFmMDE1YTFkZDVjYzRmMzljMTNiNmVjZmUxNTcyOTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlYjllZjdlZjkxNzM3MmEwZTU0YTBkODY5OTY2YzEwZTRkNjY0OTNmNTQ4ZmI0ODI4ZjZkZGQ5ZDc5MTJhNmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://Dockerfile.tauri-linux#L1-L23",
+          "version": "repo-lines-v1:sha256:2dd3bb85a3ea96dedb80e8234487332f99e838a996b7517d34b8d3d16da72755:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlYjQ4YmQ3NThhMDRiMjU4MGM2MDIxYTg2ZGZiY2UyMTFmMDE1YTFkZDVjYzRmMzljMTNiNmVjZmUxNTcyOTAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlYjllZjdlZjkxNzM3MmEwZTU0YTBkODY5OTY2YzEwZTRkNjY0OTNmNTQ4ZmI0ODI4ZjZkZGQ5ZDc5MTJhNmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
-          "resource": "repo://Makefile#L60-L62",
+          "resource": "repo://Makefile#L100-L102",
           "version": "repo-lines-v1:sha256:edca71961882a7be9f500dff6010fc70fff95c778042313e4cc37b32a4f146a0:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMjJlYTVlYTZkZTUwY2E1MmFmMzc3MzMzNWQwMmRhNTQzMmM1Y2ExNzJkMjA3NGQ3Mzg4NTRhMmEzZGE3MWNhMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGUwOWNjMDE3MmQyN2M0ZGRlZTdjM2FlYjdhMGQ2MjJkNzk2NTJhMGQ4N2IxMWRkMzUyNDAxYzRmODRjNzYwOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
         },
         {
-          "resource": "repo://docker-compose.dev.yml#L1-L19",
-          "version": "repo-lines-v1:sha256:ac3c43d39b283f450307fe372ea9b01a0982df5c28aa75cf1e7fea5ac7e80687:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhMGMyMWFlYzI4ZTY2MjBmZWMyMjQ1ODllOWEwMjQ2OTllZjNiZThlZmNhZGRhYTE2YjQzNTNiZWFiMmU1NWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkZjI1Mzg0NGZjMjU2YzQ2ZDFkOTBhNjgzMzA4Y2NlMzE4MTU5MjliN2RmYjZmNTU3YWEwNTdkMGVhM2JmYmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://docker-compose.dev.yml#L1-L35",
+          "version": "repo-lines-v1:sha256:294d287065a490a987cd15629240d2205ffb2df32f2aae26f24f75a441a42cf7:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZhMGMyMWFlYzI4ZTY2MjBmZWMyMjQ1ODllOWEwMjQ2OTllZjNiZThlZmNhZGRhYTE2YjQzNTNiZWFiMmU1NWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2MzIyYTBiYWM0YmZjZWY4YjNmOWQ3NWQ5NDE1NjIxM2E5YWFiYmI3NmFhNzlkYzcxZDNmMmVkNjg3MDU4ZTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
@@ -94,7 +94,7 @@
       "evidence": [
         {
           "resource": "repo://.github/workflows/wiki-publish.yml#L1-L358",
-          "version": "repo-lines-v1:sha256:f02c26fba34372574b4eff10920709c141c3c102079ecab15f3cf145ab2b50cb:eyJzZWxlY3RlZExpbmVDb3VudCI6MzU4LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI2Y2IxNmRiNGUxNzUyODNlNWU5M2IwYmI2YmE2NDUzZDM1MDE5ZjEzMGFmOWEyYWM4YzdhMzlkMjA3YTEyMTM0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTEwYzY2OThhMjc3YmRjMjAxNWE5OGJmM2ZkNTkwNzM0YmRjMjhmZTZlMjUzODU4ZTQ5OThhYzFlYzc3MjkzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+          "version": "repo-lines-v1:sha256:53d9ba994804c7a67374899f3b45e2bff7728765496a222c71536727fdedaed0:eyJzZWxlY3RlZExpbmVDb3VudCI6MzU4LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI2Y2IxNmRiNGUxNzUyODNlNWU5M2IwYmI2YmE2NDUzZDM1MDE5ZjEzMGFmOWEyYWM4YzdhMzlkMjA3YTEyMTM0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTEwYzY2OThhMjc3YmRjMjAxNWE5OGJmM2ZkNTkwNzM0YmRjMjhmZTZlMjUzODU4ZTQ5OThhYzFlYzc3MjkzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -104,7 +104,7 @@
       "evidence": [
         {
           "resource": "repo://.github/workflows/wiki-import.yml#L1-L255",
-          "version": "repo-lines-v1:sha256:ba83bbd0d4a86079df095c2fce173d261f739b7b9aab81d0efec08bd65e04f2c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjU1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiZTcxODA3M2NiMDgwNTQ0NDI4YzQ0MzYwYjI0ZTUzZTgzZWE4NTYxM2U3OWU1ZDNlNzk0OTZiODYyMjUyMjlkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTdjNmI1ZmMxYTNmNTg5ZTZiNzEyZTJhYTkzZTk0MTIyMmRkZDQwNDUxNThkMDkxYzRiM2ViMWZjY2I5MDFmIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+          "version": "repo-lines-v1:sha256:47994e8d87049d5c2d763e2f689666dc077d4719793aadc43fd075e9f462642c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjU1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiZTcxODA3M2NiMDgwNTQ0NDI4YzQ0MzYwYjI0ZTUzZTgzZWE4NTYxM2U3OWU1ZDNlNzk0OTZiODYyMjUyMjlkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTdjNmI1ZmMxYTNmNTg5ZTZiNzEyZTJhYTkzZTk0MTIyMmRkZDQwNDUxNThkMDkxYzRiM2ViMWZjY2I5MDFmIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -159,18 +159,18 @@
       "statement": "The Makefile provides the local repro entrypoints: `make setup` (scripts/setup.sh or setup.ps1, asking before each install), `make build`/`build-debug` (`npx tauri build`, with/without bundles), `make probe`, `make check` (typecheck + `cargo fmt --check`/clippy `-D warnings` + JS and Rust unit tests), `make docker-linux`, `make report` (`make -C technical-report`); installers land under `src-tauri/target/release/bundle/`.",
       "evidence": [
         {
-          "resource": "repo://Makefile#L1-L62",
-          "version": "repo-lines-v1:sha256:b644f59298c2bf4212b1e16bcd4d3ca7ac5805091f75337e2eddf32a32fe5b53:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYyMDJlMzZlMTc0ODUzYzI4NjA0YzY3YTM4ZWY4MmI0NGU2Y2U2ZGZhYTk5YWQ5YjY3MTg4NjBiZDgyYzdmY2YiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIyZWE1ZWE2ZGU1MGNhNTJhZjM3NzMzMzVkMDJkYTU0MzJjNWNhMTcyZDIwNzRkNzM4ODU0YTJhM2RhNzFjYTIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://Makefile#L1-L109",
+          "version": "repo-lines-v1:sha256:cb97203aadc92760bde0767d81ae7ad73d1f1241357ee8c40b48c42a1c1c0dac:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJmMjAyZTM2ZTE3NDg1M2MyODYwNGM2N2EzOGVmODJiNDRlNmNlNmRmYWE5OWFkOWI2NzE4ODYwYmQ4MmM3ZmNmIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJkM2YwNGZlNTM5NzhjNmRhMGVhOTBlNWIyNGNkNzUxMjk4NzY5NGI4MTQ5MmMxZDgzYTZiN2I1MDJhODU0NmQ0IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
     {
       "id": "claim_d0c31e57e59341029ce2406eb604b3b5",
-      "statement": "The CI `tauri-build` job is a `fail-fast: false` matrix over macos-15, macos-26, windows-latest, ubuntu-22.04, ubuntu-24.04 that runs `cargo test`, builds the installer bundle (`npx tauri build`), then builds the probe (`--no-bundle --features probe --config src-tauri/tauri.probe.conf.json`) and runs it against `samples/project.example.json`, asserting the report contains both `RENDER OK` and `-> 403` (the traversal check), under `xvfb-run -a` on Ubuntu.",
+      "statement": "The CI tauri-build job is a fail-fast: false matrix over macos-15, macos-26, windows-latest, ubuntu-22.04, ubuntu-24.04 and ubuntu-24.04-arm; it runs cargo test, builds the installer bundle, then builds a probe (--no-bundle --features probe) and runs it against samples/project.example.json, asserting the report contains both RENDER OK and the -> 403 traversal check, under xvfb-run -a on Ubuntu. The steps live in scripts/ci/bundle.sh.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/ci.yml#L65-L147",
-          "version": "repo-lines-v1:sha256:d8b03cc50c4cb194a941503f25b186611c6d15863153c92589ba61ec91d1042e:eyJzZWxlY3RlZExpbmVDb3VudCI6ODMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ5NTJjNmQ4ODM0NzBkZGRkYTc3OGY4NjgyODg1NDkzZDRmZThlZTg4YTIwYmNhZDZlMGQyMDgxY2QzZjFkZjkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVlNzgzYzI2NTVkN2Y2NmI1NjRjNTNiNjliOTU0MjM1Yjc2MWE4NzkwMjMzNTJlZDFjMjZiMjliZmE4YzJlNjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImI3NzNjMDk2ODhhYjY1YmUxY2YwY2QwYmExMGE0MTc3MjRjYzVlZTVhNDlkMDE0MDA3NDUyOTRlZjA2NzVkODMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImIwMDY1NjBmZjdlNmJlZWJkYzBkZDg1YzI2ZDI2YzhjYjVmNDNjNWNmOWU3MTkyOWU2NzQwNjM5NGIzOGM1ZjYifQ"
+          "resource": "repo://.github/workflows/ci.yml#L136-L236",
+          "version": "repo-lines-v1:sha256:96dc0b62a8cd572da85b7fac5769e37566a2f6fcbd40b915be6fea120b995918:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJhNjY4OTdkNDk4NmE5ZWQ4ZTkzYmM5MGVhODY2OTdmYjk0YTc3MjVmZjU2MjQyNzYyMDk5MGJhZWE0YTVjNDIwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1MzM1OWFjNTljZTJhOTJjNDFmOTNmYzg0NzEyOTY1MGUwYTg5OGE2ODQwN2MxZGQxYTBkNWU5NmQwMzk4N2E5IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIzOGNiMzdiMjBkODIxNGQ4OGUzOTg3YmExNDlmYjU4ZDllYzM2ZmYwNTQwOGM0YjIzNTcyNTVkZTIxMTRmZDIyIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI3NTE1MDIwYTJlYjczZjhiNGM3NDk2ZThmOThlYzM4YmEwNTdmNGRhNTcwN2ZhZGI2NDFiMDI1ZjNlNzgzN2VjIn0"
         }
       ]
     },
@@ -179,8 +179,8 @@
       "statement": "The CI `tauri-e2e` job runs `node --test e2e/probe.test.mjs` against the probe build via tauri-driver on ubuntu-24.04 and windows-latest only (no macOS support in tauri-driver); Windows installs a msedgedriver matching the installed WebView2 version from the EdgeUpdate registry key and runs the test through gsudo at medium integrity (`sudo --integrity Medium`, with icacls granting Everyone access to the workspace) because WebView2 ignores WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS in the elevated runner.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/ci.yml#L149-L203",
-          "version": "repo-lines-v1:sha256:eb51dbc44b599607c920119c6d6ec9198aa2076912bea4c7b4b3225c9a210751:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MmIzMWRiY2E5MmY1YzQ1NDFiYWI2YmE2MGE5YzkyMDkxOTFhZGNjODBjYmQ4ZTZlOGY3YjViNWIwNTRlOGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1MTUwMjBhMmViNzNmOGI0Yzc0OTZlOGY5OGVjMzhiYTA1N2Y0ZGE1NzA3ZmFkYjY0MWIwMjVmM2U3ODM3ZWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhNGQyZThkNmRhMDdlZjc4ODFjMGE4YTEwZTkzNzJjNWMzOWU5Y2MyMjFjNGFhN2MxYjBhZDJlYjgyZmZlZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://.github/workflows/ci.yml#L184-L237",
+          "version": "repo-lines-v1:sha256:f1e257533ef47ddcc6704279fb3f59ad59120953b65cfa5609c072fb0779c609:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MmIzMWRiY2E5MmY1YzQ1NDFiYWI2YmE2MGE5YzkyMDkxOTFhZGNjODBjYmQ4ZTZlOGY3YjViNWIwNTRlOGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1MTUwMjBhMmViNzNmOGI0Yzc0OTZlOGY5OGVjMzhiYTA1N2Y0ZGE1NzA3ZmFkYjY0MWIwMjVmM2U3ODM3ZWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhNGQyZThkNmRhMDdlZjc4ODFjMGE4YTEwZTkzNzJjNWMzOWU5Y2MyMjFjNGFhN2MxYjBhZDJlYjgyZmZlZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
@@ -189,8 +189,8 @@
       "statement": "`release.yml` triggers on a `v*` tag push, `workflow_dispatch`, and release publication; its `release` job (skipped on a publish event) preflights that the tag matches `v<package.json version>`, that `plugins.updater.pubkey` is set (not the `REPLACE_` placeholder) and that `TAURI_SIGNING_PRIVATE_KEY` exists, then finds or creates a DRAFT release whose notes state macOS 15+ support, manual updates for deb/rpm, and that 1.x users must install this release once by hand (no auto-update across the Electron-to-2.0 migration).",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/release.yml#L1-L72",
-          "version": "repo-lines-v1:sha256:1dadad95c2078baa35a038bd60e032dfa7a74a0fec910d4b9ba904ae707baa9b:eyJzZWxlY3RlZExpbmVDb3VudCI6NzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyZWVmOTAzMGQwYzcwMjkwMTBjNDYzNTY4OWY1ODMyOGQxMDllNmE4NWVkMWE5MjQ1YjIwZjM5NTViN2RiMzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlZTNjNjBkYjI1M2NiY2VhNzI0YWFkZDkxOGViOTQ2NjRmN2M2N2U3ODRmNzk2Zjc4NGNmMTAyMjA3ZDI2YmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE4MDY5YTJkMGVlODdhMTE3M2E2MzgyZjJlN2Y2YTA1NWQ5MGNiMWUyMmU1NGNlODBhNDdmNzZjNTcwMjNiNTAifQ"
+          "resource": "repo://.github/workflows/release.yml#L1-L97",
+          "version": "repo-lines-v1:sha256:148961352f08ccb600b565a25a099210952bde8c78c2c30acf6c8b574e8f5e69:eyJzZWxlY3RlZExpbmVDb3VudCI6OTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyZWVmOTAzMGQwYzcwMjkwMTBjNDYzNTY4OWY1ODMyOGQxMDllNmE4NWVkMWE5MjQ1YjIwZjM5NTViN2RiMzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlZTNjNjBkYjI1M2NiY2VhNzI0YWFkZDkxOGViOTQ2NjRmN2M2N2U3ODRmNzk2Zjc4NGNmMTAyMjA3ZDI2YmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE4MDY5YTJkMGVlODdhMTE3M2E2MzgyZjJlN2Y2YTA1NWQ5MGNiMWUyMmU1NGNlODBhNDdmNzZjNTcwMjNiNTAifQ"
         }
       ]
     },
@@ -199,8 +199,8 @@
       "statement": "The release `build` matrix runs tauri-action@v1 for four targets (macos-15 aarch64-apple-darwin and x86_64-apple-darwin, windows-latest x86_64-pc-windows-msvc, ubuntu-22.04 x86_64-unknown-linux-gnu) with `--config src-tauri/tauri.release.conf.json`, signing updater artifacts with TAURI_SIGNING_PRIVATE_KEY and attaching them to the draft release via the releaseId; macOS Apple secrets default to ad-hoc signing (`APPLE_SIGNING_IDENTITY` `-`, empty secrets deliberately not exported) and Windows Authenticode signing is optional, writing a tauri.windows.conf.json overlay only when WINDOWS_CERTIFICATE is set.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/release.yml#L74-L145",
-          "version": "repo-lines-v1:sha256:ee2fa3860cfc69a3e28bcd5a30de2c52ab747494f3ffa9e13e34ddff82913944:eyJzZWxlY3RlZExpbmVDb3VudCI6NzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVhMTNmYzNjNGY4YjNlYzk5ZGIzNzVjYmE1YjhmMTU1ZjNjOTRiZDZhNzkxYjEwYTEwYTI2ODA4ODBiNDY1NTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFhMjhkNjcwNDI5ZTdmYTFhODAwYzQyZDk2YjQzNzNlM2I2MmNmYTkwYzgzY2I2YWZlNDFjNjFhZWU5NTU3YWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE0NTk2OGM2ZTAyNTcyMTUyMDMzYzBmNzgxODQ5ZmJjZTdlYzM3MGZjOGU5NTU2OGY2YTVkY2JjNzg1ZTg3Y2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJkNWE2NTJmODUyZjc2YzU4Y2U3OTQyMDkwODg4NDdkYTZhMmQ3YWY3MTkxNGMyY2YxYjdhYjI3NWE3OGQxZDIifQ"
+          "resource": "repo://.github/workflows/release.yml#L99-L173",
+          "version": "repo-lines-v1:sha256:90544ee4ac5f740016cdb2846a7623f850397b7c27820937357a8c0782d96239:eyJzZWxlY3RlZExpbmVDb3VudCI6NzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVhMTNmYzNjNGY4YjNlYzk5ZGIzNzVjYmE1YjhmMTU1ZjNjOTRiZDZhNzkxYjEwYTEwYTI2ODA4ODBiNDY1NTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFhMjhkNjcwNDI5ZTdmYTFhODAwYzQyZDk2YjQzNzNlM2I2MmNmYTkwYzgzY2I2YWZlNDFjNjFhZWU5NTU3YWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE0NTk2OGM2ZTAyNTcyMTUyMDMzYzBmNzgxODQ5ZmJjZTdlYzM3MGZjOGU5NTU2OGY2YTVkY2JjNzg1ZTg3Y2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJkNWE2NTJmODUyZjc2YzU4Y2U3OTQyMDkwODg4NDdkYTZhMmQ3YWY3MTkxNGMyY2YxYjdhYjI3NWE3OGQxZDIifQ"
         }
       ]
     },
@@ -209,8 +209,8 @@
       "statement": "`release.yml` has a `check-updater-json` job that asserts the merged `latest.json` on the draft release lists all four platforms (darwin-aarch64, darwin-x86_64, windows-x86_64, linux-x86_64), because concurrent build jobs each merge their platform into the feed and a race can drop one.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/release.yml#L147-L162",
-          "version": "repo-lines-v1:sha256:54f593e0978aab0683b1c68db6901d2f41dbc7c9b3a484753df162bd0f962b14:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2Y2FmMGM2NzVhM2JkY2EzNThmZDE4NThlZTdkZmU0OGMyOGZkNzkwZDVmZTQ2ZTRmYjc5NzBjOGFkMzI3MWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2MjQ0M2JhOTExMjkwMTE1M2IwMjk5MDY5ZDBmYjZkNzMzMjVjMDgxOWFhMDNlM2M4MjMwZTA2YjllMWExZWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5Y2UwMDZhMTJiZWMzNGRiZTQ2ZGMyN2VlNTk2YmFhZjE2ODE1Mjk5ODIzMjE4YmRkYWU1OGI0ZjYzNzc5ODciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkyYTQzNTc4YWYwYmE4OWQyYjk1NmJjNmQxMDRkNjU0MjEyMTlmMzkwMzZhYjIyMzU1MGMyODM2ZGQwZTdhYmUifQ"
+          "resource": "repo://.github/workflows/release.yml#L175-L190",
+          "version": "repo-lines-v1:sha256:d9a5140d065fb8ea528989bfd3eb46f151a00e535cd19c259f052819e1b6a383:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2Y2FmMGM2NzVhM2JkY2EzNThmZDE4NThlZTdkZmU0OGMyOGZkNzkwZDVmZTQ2ZTRmYjc5NzBjOGFkMzI3MWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2MjQ0M2JhOTExMjkwMTE1M2IwMjk5MDY5ZDBmYjZkNzMzMjVjMDgxOWFhMDNlM2M4MjMwZTA2YjllMWExZWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5Y2UwMDZhMTJiZWMzNGRiZTQ2ZGMyN2VlNTk2YmFhZjE2ODE1Mjk5ODIzMjE4YmRkYWU1OGI0ZjYzNzc5ODciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkyYTQzNTc4YWYwYmE4OWQyYjk1NmJjNmQxMDRkNjU0MjEyMTlmMzkwMzZhYjIyMzU1MGMyODM2ZGQwZTdhYmUifQ"
         }
       ]
     },
@@ -219,8 +219,8 @@
       "statement": "On a published release, `release.yml`'s `zenodo` job archives the release on Zenodo as a new version of the existing concept record (recid 23804729, shared concept DOI): a `git archive` source zip plus all release assets, with the GitHub release notes (rendered to markdown) as description, GPL-3.0-only license, and an isIdentifiedTo related identifier; a new version starts from the previous version's files and publishing on Zenodo is permanent.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/release.yml#L164-L242",
-          "version": "repo-lines-v1:sha256:7e9993e78206caeb7fe707bd719eb551e296fdb7b17628b6e306111335f3c810:eyJzZWxlY3RlZExpbmVDb3VudCI6NzksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMzMzczMzRhZWMwZGNiMjRlNDBlM2MyMGRjMDlkNTlhZjY3NDNkMDI3ZGJmZjUwYzFhY2EwODk3NDcxMTc2NzAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1MGIzYTM2MTA5MmM4YWQ4YTA4OWQwMmZjNmI2NjJkMjE2NDg5NzkzMzA1MDkzMTA4ZWVhNmY5ZTE3YWI2ZjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJjYTFiNTg2ZjlkZWE5YTE4N2Y2OWIxZjZjNGQ4ZTFkZTY3NDIyZGNjOTY4ZmQxNTViMDY4N2RhYmVlM2Q1ZmUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://.github/workflows/release.yml#L192-L310",
+          "version": "repo-lines-v1:sha256:5389272b26ebdb79cabb352f87b7e3ff8d0c86596453931e79aaa8b8285f6660:eyJzZWxlY3RlZExpbmVDb3VudCI6MTE5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIzMzM3MzM0YWVjMGRjYjI0ZTQwZTNjMjBkYzA5ZDU5YWY2NzQzZDAyN2RiZmY1MGMxYWNhMDg5NzQ3MTE3NjcwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJhNTBiM2EzNjEwOTJjOGFkOGEwODlkMDJmYzZiNjYyZDIxNjQ4OTc5MzMwNTA5MzEwOGVlYTZmOWUxN2FiNmYzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJiY2ExYjU4NmY5ZGVhOWExODdmNjliMWY2YzRkOGUxZGU2NzQyMmRjYzk2OGZkMTU1YjA2ODdkYWJlZTNkNWZlIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -229,11 +229,11 @@
       "statement": "`technical-report.yml` is the only CI reacting to `technical-report/**` (code CI uses paths-ignore on it): it builds the IEEEtran report via xu-cheng/latex-action@v3 with latexmk pdflatex (`-jobname=SaiLoR-technical-report`, `main.tex`) on pushes/PRs touching the report, screenshots, or the workflow, and uploads the PDF artifact; `make report` reproduces it locally.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/technical-report.yml#L1-L37",
-          "version": "repo-lines-v1:sha256:f685767abcc2ff328f7ec725911f92e582cf3c68b4358fe62abded77ef764137:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE4NTQyMmJjYTllZTFjOWVlZjEwZjNjYjQ4ZWM0NGQzNzYxOTA2OWFhYmU5NjFiMmY3NDNjODczNGIzNDFhZWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzNGFiNDg5ZDQ4YTk5ZDNiNGEwZWRkZTFmNWFlYjkwYmZjZjg0YmE5NzBjYTE4ZGExMzE4OGZiMDQ3ZDAzOTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://.github/workflows/technical-report.yml#L1-L41",
+          "version": "repo-lines-v1:sha256:2bc6f7e52c3e66d33ab06037ae15545d37012f2c5661e5002838d635475ab5fb:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE4NTQyMmJjYTllZTFjOWVlZjEwZjNjYjQ4ZWM0NGQzNzYxOTA2OWFhYmU5NjFiMmY3NDNjODczNGIzNDFhZWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzNGFiNDg5ZDQ4YTk5ZDNiNGEwZWRkZTFmNWFlYjkwYmZjZjg0YmE5NzBjYTE4ZGExMzE4OGZiMDQ3ZDAzOTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
-          "resource": "repo://Makefile#L56-L57",
+          "resource": "repo://Makefile#L76-L77",
           "version": "repo-lines-v1:sha256:08d3ceab10d6278e6f6f49308ca8be3a52070ded9dba241d094277100f1d84c0:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGY1NTdkMDBmY2ZjODM3ZDJlY2E4MmJhZDQ5YTNjNjdkMjVhYjI3Y2I1MWFkNmMwNDlmZGVlMTgyYTZkN2NhOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjYxN2ViMDM0ZjZlMmFmYmJjNWZiYzZhNzI2YTBlYWYyMTViNWRhODg0NzllMzUzZWVmMzEyYjRjYmI5NDVkMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWI4OGQzMmU4MzcxMzc4M2MwM2U2ZjRhZmFiZDk3ZDA5NmE0NGE1ZmU2YmNlYjcwNTQ2NWU2YjgwNWRhNDQ3MCJ9"
         }
       ]
@@ -244,7 +244,7 @@
       "evidence": [
         {
           "resource": "repo://.github/workflows/openwiki-update.yml#L1-L51",
-          "version": "repo-lines-v1:sha256:bc6af93a5bebbf2ce64d5339b410dfb378f3e39e46e25317d1db6fe393c42509:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2MDI3ODdhZjZkY2MwODM0ZGUxMjFjYmIxY2I5NWY5NDU5YjcyMWVhYjAzNDlmMTA1MDFiOTk2YzFjNzdmZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0Nzc5NmQzMTczMmZiY2U4OTk4YTJmN2U3YjFiYjk3NTVjMjNlNTg1MDMyMGI5MDkzN2Q4MmMzZmQwZTYyYTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "version": "repo-lines-v1:sha256:81a1137bf6f72730754759a05abcd9dcc7cb404c9a253dd2b047e20d0a921a91:eyJzZWxlY3RlZExpbmVDb3VudCI6NTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2MDI3ODdhZjZkY2MwODM0ZGUxMjFjYmIxY2I5NWY5NDU5YjcyMWVhYjAzNDlmMTA1MDFiOTk2YzFjNzdmZmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0Nzc5NmQzMTczMmZiY2U4OTk4YTJmN2U3YjFiYjk3NTVjMjNlNTg1MDMyMGI5MDkzN2Q4MmMzZmQwZTYyYTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
           "resource": "repo://.github/workflows/openwiki.yml#L1-L17",

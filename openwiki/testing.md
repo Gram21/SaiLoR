@@ -32,6 +32,8 @@ sources:
     resource: repo://scripts/check-wiki-links.js
   - id: openwiki-source-0744bbc5adcd6bd563690bde
     resource: repo://scripts/ci.sh
+  - id: openwiki-source-e4c00e241f6100d7a6d18a3a
+    resource: repo://scripts/ci/trace.sh
   - id: openwiki-source-ca67060e890937010b96de80
     resource: repo://src-tauri/Cargo.toml
   - id: openwiki-source-01c53dda6993c5a703b98d53
@@ -70,8 +72,6 @@ sources:
     resource: repo://src/platform/adapter.ts
   - id: openwiki-source-776dd28cc442c205e0a91460
     resource: repo://src/platform/index.ts
-  - id: openwiki-source-9b49ad2f97827d5ed9890232
-    resource: repo://src/platform/unsupported.ts
   - id: openwiki-source-f7ba393ad43763486ceb8572
     resource: repo://src/state/gitStore.test.ts
   - id: openwiki-source-fe32e46a358a2106c141c8f8
@@ -80,8 +80,6 @@ sources:
     resource: repo://src/state/store.marks.test.ts
   - id: openwiki-source-38684af70a28fa56af27cf8e
     resource: repo://src/state/store.test.ts
-  - id: openwiki-source-89409d7a9c0280067e058c1a
-    resource: repo://src/state/store.ts
   - id: openwiki-source-ad89e4b33ca7c46aa4f601da
     resource: repo://src/test/integration/annotationSplit.integration.test.tsx
   - id: openwiki-source-0c2cf9efb3a6a56942fd02d7
@@ -106,7 +104,12 @@ sources:
     resource: repo://vite.probe.config.ts
   - id: openwiki-source-9b13c737ac155b0b0c8d76b9
     resource: repo://vitest.integration.config.ts
-generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
+  - id: openwiki-source-6369b39e1545dd104877b6e7
+    resource: repo://vitest.mutation.config.ts
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+verified:
+  - by: openwiki/0.7.3
+    at: 2026-11-02T08:58:22.323Z
 ---
 
 # Testing Strategy
@@ -123,12 +126,14 @@ flowchart TD
     PR["push to main or a release branch, every pull request"] --> CI["ci.yml"]
     CI --> BUILD["build job on ubuntu, Node 24, runs scripts/ci.sh"]
     BUILD --> TS["tsc typecheck"]
-    TS --> WIKI["npm run check:wiki"]
-    WIKI --> UNIT["npm test, the Vitest unit tier"]
+    TS --> WIKI["npm run check:wiki and npm run check:site"]
+    WIKI --> UNIT["npm run test:coverage, the Vitest unit tier with thresholds"]
     UNIT --> INT["npm run test:integration, real scratch git repos"]
     INT --> SPA["npm run build, the static SPA"]
     CI --> RUST["rust job, cargo fmt --check and clippy with -D warnings"]
-    CI --> TB["tauri-build job, 5 OS matrix"]
+    CI --> TRACE["trace job, OpenFastTrace requirement links"]
+    CI --> AUDIT["lint, audit and cargo-audit jobs"]
+    CI --> TB["tauri-build job, 6 runner matrix"]
     TB --> CTEST["cargo test on each OS"]
     CTEST --> BUNDLE["installer bundle build"]
     BUNDLE --> PRB["probe build, then headless probe run"]
@@ -382,7 +387,6 @@ Representative coverage:
   **`net.rs`**, **`hardware.rs`**, **`feedback.rs`** and **`shell.rs`** each
   carry their own module.
 
-<!-- openwiki: broken internal link [operations/tauri-shell.md] file "operations/tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 See [Tauri Shell, IPC and Self-Update](operations/tauri-shell.md) for what the
 tested modules *do*; the point for this page is that the shell's trust boundary
 (refs, relpaths, URLs, the protocol, authorization) is pinned on the Rust side
@@ -543,23 +547,28 @@ exercise; only `smith2021` has a PDF (copied from `samples/pdfs/`).
 
 The single source of truth for "does the app build and pass its checks". CI
 providers do nothing more than check out the code, provide a Node toolchain, and
-run this script — so the exact same checks run locally with `./scripts/ci.sh`:
+run this script — so the exact same checks run locally with `./scripts/ci.sh`.
+Every other CI job is also a script in `scripts/ci/` with a matching `make ci-*`
+target, so a failing job can be reproduced on a developer machine.
 
 ```bash
 # scripts/ci.sh — ordered steps (set -euo pipefail, run from the repo root)
 step "Installing dependencies (npm ci)"   # npm install fallback; SKIP_INSTALL=1 skips
 step "Type checking (tsc -b)"             # npm run typecheck
 step "Checking wiki links (openwiki/, user-guide/)"  # npm run check:wiki
-step "Running tests (vitest)"             # npm test  (unit tier)
+step "Checking project site links (site/)"           # npm run check:site
+step "Running tests (vitest)"             # npm run test:coverage  (unit tier + thresholds)
 step "Running integration tests (src/test/integration/)"  # npm run test:integration
 step "Building static SPA (vite build)"   # npm run build
 step "CI passed ✔"
 ```
 
-Unlike the Electron era, the integration suite is part of the main script —
-both tiers gate every push and PR, not just releases.
+Both test tiers gate every push and PR. The unit tier runs with coverage, and
+`vite.config.ts` sets floors (lines and statements 82, functions 76, branches 84)
+set just under the measured baseline, so a drop fails the run and a rise can raise
+the floors.
 
-### `ci.yml` — four jobs
+### `ci.yml` — eight jobs
 
 ```yaml
 # .github/workflows/ci.yml
@@ -571,26 +580,53 @@ concurrency: { group: "…-${{ github.ref }}", cancel-in-progress: true }
 ```
 
 - **`build`** (ubuntu-latest, Node 24) runs `scripts/ci.sh` — typecheck, the
-  wiki-link check, the unit tier, the integration suite, the SPA build.
-- **`rust`** (ubuntu-latest) lints the shell: `cargo fmt --check` and
+  wiki-link and site-link checks, the unit tier with coverage, the integration
+  suite, the SPA build.
+- **`rust`** (ubuntu-latest) runs `scripts/ci/rust.sh`: `cargo fmt --check` and
   `cargo clippy --all-targets --all-features -- -D warnings`. Rust *tests*
   don't run here — they run per OS in `tauri-build`.
+- **`lint`** runs `scripts/ci/lint.sh` — actionlint on the workflows, shellcheck
+  on the scripts and hadolint on the Dockerfiles.
+- **`audit`** and **`cargo-audit`** check npm (`--omit=dev --audit-level=high`)
+  and Rust dependencies for known advisories (`scripts/ci/audit.sh`); the cargo job
+  also dry-runs the SBOM script that the release job uses (`scripts/ci/sbom.sh`).
+- **`trace`** runs `scripts/ci/trace.sh` — see [Requirement tracing](#requirement-tracing-and-mutation-testing) — and uploads the report as `trace-report`.
 - **`tauri-build`** — a `fail-fast: false` matrix over `macos-15`, `macos-26`,
-  `windows-latest`, `ubuntu-22.04`, `ubuntu-24.04`. Each runner runs
-  `cargo test --manifest-path src-tauri/Cargo.toml`, builds the real installer
-  bundle (`npx tauri build`) and reports installer sizes, then builds the probe
-  and **runs it headless** (report asserted to contain `RENDER OK` and
+  `windows-latest`, `ubuntu-22.04`, `ubuntu-24.04` and `ubuntu-24.04-arm`. Each
+  runner runs `scripts/ci/bundle.sh`: `cargo test --manifest-path src-tauri/Cargo.toml`,
+  the real installer bundle (`npx tauri build`) with installer sizes, then the probe
+  build, **run headless** (report asserted to contain `RENDER OK` and
   `-> 403`; the report is uploaded as a `probe-report-<os>` artifact even on
   failure).
 - **`tauri-e2e`** — `fail-fast: false` over `ubuntu-24.04` and
   `windows-latest` only (tauri-driver has no macOS support). Installs
   `tauri-driver --locked` (plus a WebView2-matching `msedgedriver` and a gsudo
   medium-integrity run on Windows), rebuilds the probe, and runs
-  `node --test e2e/probe.test.mjs` — under `xvfb-run -a` on Linux.
+  `scripts/ci/e2e.sh test`, which runs `node --test e2e/probe.test.mjs` — under
+  `xvfb-run -a` on Linux.
 
+A separate workflow, `pages.yml`, builds and deploys the project site and the
+online demo (see [Online Demo and Project Site](operations/demo-and-site.md)).
 There is deliberately no push-on-every-branch trigger: a branch with an open PR
 would build twice per push for no extra signal. A `concurrency` group cancels
 runs the newest commit supersedes.
+
+## Requirement tracing and mutation testing
+
+Two further checks keep the tests honest. They sit beside the four layers rather than inside one.
+
+- **Requirement trace.** Requirements live in `docs/requirements/` and are converted to
+  OpenFastTrace format by `scripts/oft/convert-requirements.py`. Source and test
+  files carry `[impl->req~id~1]` and `[utest->req~id~1]` tags, and `make trace` checks every
+  requirement has both. `scripts/ci/trace.sh` runs the converter self-test
+  (`scripts/oft/selftest.py`), the conversion and the trace; the `trace` CI job
+  gates it.
+- **Mutation testing.** `npm run test:mutation` runs Stryker over `src/model/**` and
+  `src/llm/cost.ts`/`parse.ts` with `vitest.mutation.config.ts`. That config excludes
+  wall-clock `*.perf.test.*` files, because they fail on instrumented code. Stryker
+  is run by hand, not in CI, and keeps its incremental state in `.cache/stryker/`.
+- **Perf tests.** `src/components/PaperList.perf.test.ts` pins that a large paper
+  list stays fast; the default unit run includes it.
 
 ### `release.yml` — not a test gate
 
@@ -615,6 +651,8 @@ the tag points at.
 | `slr-file://` protocol, PDF serving, authz (`protocol.rs`, `pdf.rs`, `authz.rs`) | `cargo test`, then `make probe` and the probe run — the only tier that exercises the real WebView path |
 | Scenario definitions (`samples/git-scenarios/*`) | `npm run test:integration` (the `gitScenarios` suite) and `npm run scenario -- readme` if the list changed |
 | Wiki pages (`openwiki/`, `user-guide/`) | `npm run check:wiki` |
+| Project site or demo (`site/`, `src/demo/*`) | `npm run check:site`, `make ci-pages` |
+| Requirements or tags | `make ci-trace` |
 
 For a full local pre-release check, mirror CI:
 

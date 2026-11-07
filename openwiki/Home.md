@@ -8,6 +8,8 @@ sources:
     resource: repo://.github/workflows/ci.yml
   - id: openwiki-source-6d3ac2bdfb0e76882a670989
     resource: repo://.github/workflows/openwiki.yml
+  - id: openwiki-source-5f219f204b3e870beec929d9
+    resource: repo://.github/workflows/pages.yml
   - id: openwiki-source-794b8a6d2fa178d64fce49a3
     resource: repo://.github/workflows/wiki-import.yml
   - id: openwiki-source-a7a8965ff53d3530162adf6d
@@ -22,17 +24,20 @@ sources:
     resource: repo://scripts/ci.sh
   - id: openwiki-source-99b0214e9f2113a0f6a2cf92
     resource: repo://src-tauri/src/main.rs
+  - id: openwiki-source-5e350144821ef45403557db2
+    resource: repo://src-tauri/src/project.rs
   - id: openwiki-source-54631e6ebf1d3b815c4a5eed
     resource: repo://src/App.tsx
   - id: openwiki-source-68e9e61da0efb614946dda70
     resource: repo://src/model/project.ts
   - id: openwiki-source-776dd28cc442c205e0a91460
     resource: repo://src/platform/index.ts
-  - id: openwiki-source-6caeef66ec21bf4ae91fe55c
-    resource: repo://src/platform/tauri.ts
   - id: openwiki-source-9b49ad2f97827d5ed9890232
     resource: repo://src/platform/unsupported.ts
-generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+verified:
+  - by: openwiki/0.7.3
+    at: 2026-11-02T08:58:22.323Z
 ---
 
 # SaiLoR — Developer Documentation
@@ -55,7 +60,10 @@ runtime it shows a "use the desktop app" notice instead of any project-opening U
 only as a way to build the Linux installers). The `PlatformAdapter` seam that used to absorb the
 difference between desktop and browser runtimes still exists, but the non-desktop implementation
 (`createUnsupportedAdapter`) now just refuses every action; see
-[Architecture](architecture.md)'s Platform Adapter section for why the seam is still there.
+[Architecture](architecture.md)'s Platform Adapter section for why the seam is still there. The
+one exception is the online demo build (`vite build --mode demo`), which swaps in an in-memory
+`createDemoAdapter` so the project site can show the real UI without saving, git, or AI; see
+[Online Demo and Project Site](operations/demo-and-site.md).
 
 This wiki is the **developer** documentation. If you are here to *use* SaiLoR — installing a release,
 authoring a project file, annotating a paper — start with the
@@ -73,17 +81,17 @@ as the project file authoring reference.
 | **[Data Model](concepts/data-model.md)** | The project on-disk format (meta-only `project.json` plus a sibling `annotations/` folder), the in-memory TypeScript types, PDF marks, stored consolidation alignment, annotation state/finished flags, and the load → normalize → edit → prune → serialize lifecycle that keeps a hand-edited JSON safe. |
 | **[Testing Strategy](testing.md)** | The test layers — Vitest unit tests, the real-git integration suite, Rust unit tests in `src-tauri/`, and the tauri-driver e2e probe — plus the wiki-link check and what CI gates on. |
 | **[Build, CI, and Release](operations/build-release.md)** | The Make targets and `tauri build` pipeline, CI (renderer script, Rust lint/tests, per-OS build matrix + probe, tauri-driver e2e), the release workflow with the signed updater feed and Zenodo archive, the Linux Docker build, and how these wiki pages are kept in sync. |
-<!-- openwiki: broken internal link [operations/tauri-shell.md] file "operations/tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 | **[Tauri Shell, IPC and Self-Update](operations/tauri-shell.md)** | The Rust desktop shell — the command inventory, the `slr-file://` protocol and its security model, session authorization allowlists, OS-keychain API-key handling, and the signed self-update flow. |
 | **[Multi-Reviewer Consolidation](workflows/consolidation.md)** | Entry matching across reviewer seats, the stored alignment persisted in the project, growing/freezing the consolidated tree, agreement statistics, and the compare/adopt UI. |
 | **[Git Integration](workflows/git-integration.md)** | Clone-to-import, commit/pull/push, the field-level three-way merge, the security gates, and the reproducible git scenarios used as tests. |
 | **[AI-Assisted Annotation](workflows/llm-annotation.md)** | The provider abstraction and its four modes (prompt, agent + judge, classify/System One, re-check), the key-never-in-the-renderer invariant, the aiStore run loop, and the AI-usage disclosure records. |
-<!-- openwiki: broken internal link [workflows/ai-screening.md] file "workflows/ai-screening.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 | **[AI-Assisted Screening](workflows/ai-screening.md)** | The aiScreeningStore flow: one Include/Exclude proposal per paper from title+abstract, prompt vs System One engines, and the review table where the human approves each proposal before anything is written. |
-<!-- openwiki: broken internal link [workflows/local-models.md] file "workflows/local-models.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 | **[Local Models and Ollama](workflows/local-models.md)** | Running models fully offline: the managed llama.cpp runtime with hash-verified downloads, the local model catalog, hardware probing, and connecting to a user-run Ollama server. |
 | **[PDF Viewer and Marks](workflows/pdf-viewing.md)** | The pdf.js-based viewer: rendering and zoom, text-selection capture for field grabbing, highlights/notes with per-seat persistence and evidence linking, reading-position persistence, and mark export into real PDF annotations. |
 | **[Screening Mode](workflows/screening.md)** | The derived Decision/Reason schema, tri-state status, PRISMA-style counts, the screening UI, and the screening → annotation project hand-off. |
+| **[Knowledge Graph View](workflows/knowledge-graph.md)** | The graph built from papers, authors, venues, keywords and answers; the force-layout canvas, the folded Nodes drawer, depth queries, the Cypher subset run in a worker with hard limits, and the export formats. |
+| **[Progressive Project Loading](concepts/progressive-loading.md)** | How large projects open in batches, the load-state and generation guards, and why saving is blocked while a project is still loading. |
+| **[Online Demo and Project Site](operations/demo-and-site.md)** | The compile-time `__DEMO__` build, the in-memory demo adapter, the schema-editor demo, the bundled demo PDFs, and the GitHub Pages deploy of the `site/` folder. |
 
 ## How this wiki is maintained
 

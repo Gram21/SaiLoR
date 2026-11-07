@@ -1,0 +1,102 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:1eed8be2cd9353b61f68acdc0177a4dbaf7230d2557519a343ca674fefce5967",
+  "claims": [
+    {
+      "id": "claim_26c0cd6920894404a6dd0ab6f699065a",
+      "statement": "buildGraph builds a graph of Paper, Author, Venue, Keyword, Choice and Answer nodes joined by authoredBy, publishedIn, hasKeyword, cites and hasAnswer edges; graphSource/graphTrees use consolidated answers when present, else one reviewer seat.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/graph.ts",
+          "version": "repo-file-v1:sha256:e5c76a4dc116ed3612bab03f73e5d40fb694daec8a430b91547ec21c353555d6"
+        }
+      ]
+    },
+    {
+      "id": "claim_04d905c1805b42d1abaacf3b5d9ca6da",
+      "statement": "Force layout runs in graphLayout.worker.ts: layoutHost ticks a d3-force simulation within a 12 ms budget per slice and posts Float32Array frames; layoutSettings lowers ticks and raises theta for big graphs.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/GraphView.tsx",
+          "version": "repo-file-v1:sha256:91e25e10d2bd44ad9b95dfd7ce407e785a482785549bccea8d56ade2e26af11f"
+        },
+        {
+          "resource": "repo://src/model/graphLayout.ts",
+          "version": "repo-file-v1:sha256:53a91025685322a985db533bd0941b681cf2a9882c3f6ba9c37c5c7740237121"
+        }
+      ]
+    },
+    {
+      "id": "claim_7568ac96c9354a56bd42f42a9e00c9cd",
+      "statement": "graphCanvas.ts draws the graph on a 2D canvas with viewport culling, zoom-gated labels and per-edge-type dash patterns.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/graphCanvas.ts",
+          "version": "repo-file-v1:sha256:384f37cd805d69037423643e1387f011cc5f80bedb65ed87289fc60ce46e476e"
+        }
+      ]
+    },
+    {
+      "id": "claim_f949754728c64106a01f908020e62596",
+      "statement": "The node list is a folded side drawer with a toggle button showing the node count, so the canvas keeps full width while it is closed.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/GraphView.tsx",
+          "version": "repo-file-v1:sha256:91e25e10d2bd44ad9b95dfd7ce407e785a482785549bccea8d56ade2e26af11f"
+        }
+      ]
+    },
+    {
+      "id": "claim_92e07f552dd341aa87786cfc89f46ab8",
+      "statement": "parseQuery reads free text, type/field/value terms, negation and depth:N (capped at MAX_DEPTH 3); selectSubgraph expands matches by that many hops.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/graphQuery.ts",
+          "version": "repo-file-v1:sha256:9009c0c94cdc51c1c6d99a73a0ba29310b8edbe23b9c304c630e9405d2a84185"
+        }
+      ]
+    },
+    {
+      "id": "claim_6c5480b18a9e4a709dbb37dd383a8920",
+      "statement": "A query starting with match runs in a small Cypher-subset engine that refuses write and advanced clauses and enforces hard limits: MAX_INPUT 4000, MAX_NESTING 32, MAX_HOPS 3, MAX_ROWS 10000 and MAX_WORK 2000000.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/graphCypher.ts",
+          "version": "repo-file-v1:sha256:995b5eb56103f141af94852613c6f819f38e2779dc8fe30a7d6e9d7c3d17aabd"
+        }
+      ]
+    },
+    {
+      "id": "claim_c98f3545339944859bf45ca88a8783d6",
+      "statement": "GraphView runs Cypher queries in graphCypher.worker.ts and terminates the worker with a timeout error after CYPHER_TIMEOUT_MS (20 s).",
+      "evidence": [
+        {
+          "resource": "repo://src/components/GraphView.tsx",
+          "version": "repo-file-v1:sha256:91e25e10d2bd44ad9b95dfd7ce407e785a482785549bccea8d56ade2e26af11f"
+        },
+        {
+          "resource": "repo://src/model/graphCypher.worker.ts",
+          "version": "repo-file-v1:sha256:4de738b26819d8f82ab58979a9dfb6df6f37ca3d05e2367879bc682ddac2452b"
+        }
+      ]
+    },
+    {
+      "id": "claim_ad6e6a200ae1445f83c7fc1dc1e56504",
+      "statement": "ExportGraphDialog exports the graph as JSON-LD, Turtle, GraphML or CSV (nodes and edges files), and the escaping helpers (turtleString, xmlText, csvCell) keep text from breaking the format, with csvCell neutralising formula-leading cells.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ExportGraphDialog.tsx",
+          "version": "repo-file-v1:sha256:e1f6855a2216f401a49ffbbc3033f5a26b55a153f2a4982a7c6f70ad1c3073f0"
+        },
+        {
+          "resource": "repo://src/model/graph.ts",
+          "version": "repo-file-v1:sha256:e5c76a4dc116ed3612bab03f73e5d40fb694daec8a430b91547ec21c353555d6"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.3",
+    "at": "2026-11-02T08:58:22.323Z"
+  }
+}

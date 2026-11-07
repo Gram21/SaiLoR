@@ -52,7 +52,10 @@ sources:
     resource: repo://tsconfig.node.json
   - id: openwiki-source-5e1b077422a94ae165e88e4e
     resource: repo://vite.config.ts
-generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+verified:
+  - by: openwiki/0.7.3
+    at: 2026-11-02T08:58:22.323Z
 ---
 
 # Architecture
@@ -62,7 +65,7 @@ generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
 SaiLoR is a single-codebase React app run as a **Tauri 2** desktop application. It used to ship both an
 Electron desktop build and a static web SPA; **the web runtime is now discontinued** — `src/App.tsx`'s
 `isTauri()` gate shows a "use the desktop app" notice (with a download link to the releases page) and
-blocks every project-opening UI before any of it can be reached, and the browser-only platform code
+blocks every project-opening UI before any of it can be reached (except in the online demo build, where `DEMO_MODE` lifts the gate), and the browser-only platform code
 (`src/platform/browser.ts`, `src/platform/idb.ts`) and the `?project=<url>` server-deployment loader
 (`loadFromUrl` in `src/state/store.ts`) were deleted outright. The Electron shell was replaced in 2.0
 by a Rust one: the desktop process is the Rust binary built from `src-tauri/` (registered commands in
@@ -273,7 +276,7 @@ See "Git" below.
 Recent projects are managed by `src/platform/recents.ts` — up to 5 entries in `localStorage`. The entry `id` is the absolute file path.
 
 `getPlatform()` (`src/platform/index.ts`) returns a singleton: `new TauriAdapter()` when `isTauri()`
-is true, otherwise `createUnsupportedAdapter()`. (Constructing `TauriAdapter` calls
+is true, `createDemoAdapter()` in the compile-time `DEMO_MODE` build, otherwise `createUnsupportedAdapter()`. (Constructing `TauriAdapter` calls
 `setBridge(tauriBridge)` — see the four-layer seam below.) Detection uses `isTauri()`, which checks
 for `'__TAURI_INTERNALS__' in window` — the object Tauri's IPC layer injects into every page it
 serves.
@@ -2839,7 +2842,7 @@ App appearance is controlled by a settings module that persists to `localStorage
 ## App Initialization (`src/App.tsx`)
 
 1. Every hook (`useKeybindings()`, `useDirtyGuard()`, `useCloseGuard()`, `useWindowTitle()`, `useConsolidationAlignment()`, `useAutosave()`, `useUpstreamPolling()`) and every store selector is called at the top level, unconditionally — React's rules of hooks require this even though most of them are meaningless outside the Tauri shell.
-2. **The discontinuation gate**: `if (!isTauri()) return <the "use the desktop app" welcome screen>` — checked *after* the hooks above but *before* any project-opening UI (`Toolbar`, the workspace, the welcome screen's "Open project…" button, drag-and-drop) is reached. See the Overview's discontinuation note. There is no `?project=<url>` auto-load any more — that loader (`loadFromUrl`) was deleted along with the rest of the browser build.
+2. **The discontinuation gate**: `if (!isTauri() && !DEMO_MODE) return <the "use the desktop app" welcome screen>` — checked *after* the hooks above but *before* any project-opening UI (`Toolbar`, the workspace, the welcome screen's "Open project…" button, drag-and-drop) is reached. See the Overview's discontinuation note. There is no `?project=<url>` auto-load any more — that loader (`loadFromUrl`) was deleted along with the rest of the browser build.
 3. Past the gate (Tauri shell only): renders `Toolbar` always. If a project is loaded, renders the three-pane workspace; otherwise shows a welcome screen with an "Open project…" button and, if there are recent projects, a clickable list of them wired to `openRecent(id)`.
 4. `ErrorPanel` is always rendered (renders null when no error). The self-update notice renders from the store's `update`/`updateProgress`/`updateReady`/`updateError` state — a native **Restart to update** flow when `nativeUpdate` is set (download percent while in flight), otherwise the manual **Download for {label}** link from `pickInstaller`.
 

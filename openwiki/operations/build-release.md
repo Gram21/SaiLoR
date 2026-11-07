@@ -39,7 +39,10 @@ sources:
     resource: repo://vite.config.ts
   - id: openwiki-source-742c2ed7fe09ab88b9fb143a
     resource: repo://vite.probe.config.ts
-generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+verified:
+  - by: openwiki/0.7.3
+    at: 2026-11-02T08:58:22.323Z
 ---
 
 
@@ -102,7 +105,6 @@ there is no electron-builder section anymore.
   `https://github.com/Gram21/SaiLoR/releases/latest/download/latest.json` with
   its embedded `pubkey` and `requireSignedVersion: true`. Windows main and the
   renderer talk to the shell as described in
-<!-- openwiki: broken internal link [tauri-shell.md] file "tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
   [Tauri Shell](tauri-shell.md).
 - **`src-tauri/tauri.release.conf.json`** — merged over the base for release
   builds: restricts `bundle.targets` to `app, dmg, nsis, appimage, deb, rpm` and
@@ -236,7 +238,6 @@ The jobs:
    on Zenodo is permanent.
 
 The updater flow at runtime is covered by
-<!-- openwiki: broken internal link [tauri-shell.md] file "tauri-shell.md" does not exist. Fix the href or restore the target, then delete this comment. -->
 [Tauri Shell](tauri-shell.md) and the `plugins.updater` config above: the app
 fetches `latest.json`, whose signatures were produced at release time by
 `createUpdaterArtifacts`, and the updater verifies them against the baked-in

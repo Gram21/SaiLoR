@@ -6,11 +6,21 @@ tags: [screening, ai, llm, review, workflow]
 verified:
   - by: openwiki/0.7.3
     at: 2026-11-02T08:58:22.323Z
+sources:
+  - id: openwiki-source-3f9a6b053278c634f9a03036
+    resource: repo://src/components/AiScreeningDialog.tsx
+  - id: openwiki-source-9825639b47eda774873ecfb3
+    resource: repo://src/llm/screeningAi.ts
+  - id: openwiki-source-876d93ca738ea8e9f2e60629
+    resource: repo://src/state/aiScreeningStore.ts
+  - id: openwiki-source-89409d7a9c0280067e058c1a
+    resource: repo://src/state/store.ts
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
 ---
 
 # AI-Assisted Screening
 
-AI-assisted screening proposes one **Include/Exclude** decision per paper from the title and abstract (or a short PDF excerpt when no abstract exists). The AI never writes anything by itself: every proposal lands in a review table, a human ticks the ones to accept, and only then are decisions written into the project as one undoable batch. The flow is owned by `src/state/aiScreeningStore.ts` (the Zustand run loop), with pure prompt/request builders and reply parsers in `src/llm/screeningAi.ts`, and the UI in `src/components/AiScreeningDialog.tsx`.
+AI-assisted screening proposes one **Include/Exclude** decision per paper from the title and abstract (or a short PDF excerpt when no abstract exists). The AI never writes anything by itself: every proposal lands in a review table, a human ticks the ones to accept, and only then are decisions written into the project as one undoable batch. The flow is owned by `src/state/aiScreeningStore.ts` (the Zustand run loop), with pure prompt/request builders and reply parsers in `src/llm/screeningAi.ts`, and the UI in `src/components/AiScreeningDialog.tsx`, which renders inside the shared `Modal` frame (focus stays inside the dialog while it is open).
 
 The flow is deliberately simpler than AI annotation runs ([LLM Annotation](llm-annotation.md)): the source comment records the gaps as intentional —
 
@@ -113,7 +123,9 @@ The review table lists paper, proposed decision (with reason), justification and
 - The AI's own seat may always be written; any other seat must be the currently selected reviewer (and not `consolidation`).
 - Only papers **still undecided** in that seat are written (a paper decided by hand mid-run is skipped); an Exclude must carry a valid reason.
 
-Approved decisions are written as the fixed two-field screening schema ([Screening](screening.md), [Data Model](../concepts/data-model.md)): `Decision` (Include/Exclude) plus `Reason` on Exclude. Every written field is marked AI-written (`aiMarks`), and one `aiUsage` record per paper (`provider`, `model`, `mode: 'screening'`, seat when multi-reviewer) is pushed so the reviewer/consolidator can see how the value was produced — rendered by `AiUsageDisclosure`. The whole batch is a single undo step.
+Approved decisions are written as the fixed two-field screening schema ([Screening](screening.md), [Data Model](../concepts/data-model.md)): `Decision` (Include/Exclude) plus `Reason` on Exclude. Every written field is marked AI-written (`aiMarks`), and one `aiUsage` record per paper (`provider`, `model`, `mode: 'screening'`, `promptVersion`, seat when multi-reviewer) is pushed so the reviewer/consolidator can see how the value was produced — rendered by `AiUsageDisclosure`. The whole batch is a single undo step.
+
+`promptVersion` is `SCREENING_PROMPT_VERSION` (`screening-1`) for the Prompt engine and `SCREENING_SYSTEMONE_PROMPT_VERSION` (`screening-systemone-1`) for Classify. Both constants live in `src/llm/screeningAi.ts`. Change the matching constant whenever the template changes, so the disclosure shows which template produced a value.
 
 ## Tests
 

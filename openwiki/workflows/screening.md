@@ -3,9 +3,6 @@ type: workflow
 title: Screening Mode
 description: The screening workflow — a fast Include/Exclude decision per paper before annotation begins — covering the derived two-node schema, the tri-state status read, PRISMA-style counts, cross-field validation, the screening UI panels, the on-disk screening-* filename prefix, the screening highlights carried into the next project, and importing a screening project into an annotation project.
 tags: [screening, workflow, prisma, schema, validation, multi-reviewer]
-verified:
-  - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
 sources:
   - id: openwiki-source-5e350144821ef45403557db2
     resource: repo://src-tauri/src/project.rs
@@ -49,8 +46,8 @@ sources:
     resource: repo://src/model/screeningMarks.test.ts
   - id: openwiki-source-6f6097db1395bf290c1b787f
     resource: repo://src/model/screeningMarks.ts
-  - id: openwiki-source-21c51411758a9e9f51f59864
-    resource: repo://src/platform/tauri.test.ts
+  - id: openwiki-source-1e07552900756183b8f9bb84
+    resource: repo://src/model/seatTree.ts
   - id: openwiki-source-6caeef66ec21bf4ae91fe55c
     resource: repo://src/platform/tauri.ts
   - id: openwiki-source-5f3156110d9aafbc8e103762
@@ -63,19 +60,18 @@ sources:
     resource: repo://src/screening/status.ts
   - id: openwiki-source-fa765b0e395ba25b6016d05a
     resource: repo://src/screening/validate.ts
-  - id: openwiki-source-8c6459487bae1e5f2b4509d4
-    resource: repo://src/state/editorStore.screening.test.ts
   - id: openwiki-source-f222dc1d70cd27df6524150a
     resource: repo://src/state/editorStore.ts
   - id: openwiki-source-9de36eae273aef15cabd4bdf
     resource: repo://src/state/store.screening.test.ts
   - id: openwiki-source-ef7081db6ccf2fcb18d86368
     resource: repo://src/state/store.screeningAbstract.test.ts
-  - id: openwiki-source-84922f99cb5fa901e7ed7ace
-    resource: repo://src/state/store.screeningMarks.test.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
-generated: { by: "openwiki/0.7.3", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+verified:
+  - by: openwiki/0.7.3
+    at: 2026-11-02T08:58:22.323Z
 ---
 
 # Screening Mode
@@ -111,7 +107,6 @@ A screening project differs from an annotation project in six coupled ways:
    undecided) papers into a fresh annotation or second-screening project, recording provenance for a
    PRISMA flow diagram.
 6. **The AI flow is a proposal flow, not a fill flow.** The toolbar's AI button opens the screening
-<!-- openwiki: broken internal link [ai-screening.md] file "ai-screening.md" does not exist. Fix the href or restore the target, then delete this comment. -->
    proposal dialog instead of the annotation fill dialog — see [AI-Assisted Screening](ai-screening.md).
 
 ```mermaid
@@ -211,10 +206,10 @@ while excluded.
 ## Counts and PRISMA totals
 
 `src/screening/counts.ts` produces the numbers a screening review must report. It is deliberately
-store-free: `seatTree` reimplements the store's `currentTree` seat routing (single-reviewer reads
-`paper.annotations`; Consolidation reads `paper.annotations`; a numbered reviewer reads
-`paper.reviews[n]`; `null` reads nothing) so the module stays independently testable and never creates
-a reviewer's tree.
+store-free: it imports the shared `seatTree` (`src/model/seatTree.ts`), which the store's
+`currentTree` also builds on (single-reviewer reads `paper.annotations`; Consolidation reads
+`paper.annotations`; a numbered reviewer reads `paper.reviews[n]`; `null` reads nothing), so the module
+stays independently testable, never creates a reviewer's tree, and cannot drift from the store's routing.
 
 `screeningCounts(project, currentReviewer)` returns `ScreeningCounts`:
 

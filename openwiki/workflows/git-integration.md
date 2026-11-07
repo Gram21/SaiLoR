@@ -1,21 +1,17 @@
 ---
 type: workflow
 title: Git Integration
-description: The git workflow end to end — clone-to-import, the commit/pull/push/branch-switch panel, merge-branch, the field-level three-way merge at the heart of conflict resolution, the changes parser, the security gates, concurrent revision reads, the gitStore state machine, and the Electron main-process IPC plumbing that owns the only path to git.
-tags: [git, merge, three-way-merge, electron, ipc, security, state-machine, commit, pull, push, branch-switch, concurrent-reads]
+description: The git workflow end to end — clone-to-import, the commit/pull/push/branch-switch panel, merge-branch, the field-level three-way merge at the heart of conflict resolution, the changes parser, the security gates, concurrent revision reads, the gitStore state machine, and the Rust shell (`src-tauri/src/git.rs`) that owns the only path to git, merge preview with backup refs and Undo last merge, and the stash flows.
+tags: [git, merge, three-way-merge, tauri, rust, ipc, backup-refs, undo-merge, stash, security, state-machine, commit, pull, push, branch-switch, concurrent-reads]
 sources:
-  - id: openwiki-source-5c59216b8218fe8745f9ce38
-    resource: repo://e2e/openSaveProject.spec.ts
-  - id: openwiki-source-8d6b6eb5e58f91e157e37bde
-    resource: repo://electron/main.ts
+  - id: openwiki-source-01c53dda6993c5a703b98d53
+    resource: repo://src-tauri/src/git.rs
   - id: openwiki-source-ac30624c90c990189fe932d0
     resource: repo://src/components/DeleteBranchPrompt.tsx
   - id: openwiki-source-9b3c0d8aea8f1157355dde7b
     resource: repo://src/components/GitMergeDialog.tsx
   - id: openwiki-source-f5fa667876f0603a89a9c779
     resource: repo://src/git/changes.ts
-  - id: openwiki-source-d481c8e79a58502bdf240c20
-    resource: repo://src/git/concurrentRead.test.ts
   - id: openwiki-source-6286c1b97b752bf3b52e09ae
     resource: repo://src/git/concurrentRead.ts
   - id: openwiki-source-d6373cb2e4740c83bd5b4d7f
@@ -36,9 +32,14 @@ sources:
     resource: repo://src/git/types.ts
   - id: openwiki-source-45eebe3ca36ab988bd9323a9
     resource: repo://src/git/url.ts
+  - id: openwiki-source-d1afade4641722495f434a61
+    resource: repo://src/platform/desktop.ts
   - id: openwiki-source-abd876b19e1ac7ba524a3f34
     resource: repo://src/state/gitStore.ts
-generated: { by: "openwiki/0.5.2", at: "2026-09-23T12:49:55.013Z" }
+generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+verified:
+  - by: openwiki/0.7.3
+    at: 2026-11-02T08:58:22.323Z
 ---
 
 # Git Integration
@@ -51,15 +52,15 @@ other (each reviewer's answers live in their own file under `annotations/`):
 - a **field-level three-way merge** (`src/git/merge.ts`) that reconciles two
   divergent copies of the project by the single rule *"a side that did not
   change a value away from the base does not get a vote on it"*, and
-- a strict **fetch-vs-parse split**: the Electron main process is the only thing
-  that talks to git; it returns raw text across IPC and the renderer parses and
-  diffs it. Every diff — a commit panel's HEAD-vs-working review, a merge's
-  base/ours/theirs, a history row's parent-vs-commit — is computed in the
-  renderer from text the main process fetched.
+- a strict **fetch-vs-parse split**: the Rust shell (`src-tauri/src/git.rs`) is the
+  only thing that talks to git; it returns raw text across Tauri commands and the
+  renderer parses and diffs it. Every diff — a commit panel's HEAD-vs-working
+  review, a merge's base/ours/theirs, a history row's parent-vs-commit — is
+  computed in the renderer from text the shell fetched.
 
 This page follows the flow in four layers: the **security gates** that vet
 every input before it reaches a spawned `git`, the **IPC plumbing** in
-`electron/main.ts` that owns the only path to git, the **pure logic** in
+`src-tauri/src/git.rs` that owns the only path to git, the **pure logic** in
 `src/git/` (merge, changes, output, concurrent reads), and the **gitStore**
 state machine plus its UI components that drive the whole thing from the
 renderer.
@@ -67,10 +68,10 @@ renderer.
 ```mermaid
 flowchart TD
   UI["UI components<br/>GitCloneDialog / GitDialog / GitMergeDialog<br/>GitHistoryDialog / MergeBranchPrompt / DeleteBranchPrompt"] --> GS["useGitStore state machine<br/>src/state/gitStore.ts"]
-  GS -->|getGit| GP["GitPlatform seam<br/>src/platform/electron.ts"]
-  GP -->|window.slr bridge| IPC["Electron main IPC handlers<br/>git:* in electron/main.ts"]
-  IPC --> SEC["Security gates first<br/>assertRelPath / assertRef / assertRoot<br/>validateGitUrl / validateClonePath"]
-  SEC --> RG["runGit<br/>execFile + GIT_SAFE_CONFIG + gitEnv"]
+  GS -->|getGit| GP["GitPlatform seam<br/>src/platform/desktop.ts"]
+  GP -->|Tauri invoke| IPC["Rust command handlers<br/>git_* in src-tauri/src/git.rs"]
+  IPC --> SEC["Security gates first<br/>assert_rel_path / assert_ref / assert_root<br/>validate_git_url / validate_clone_path"]
+  SEC --> RG["run_git<br/>Command + safe_config + stripped env"]
   RG --> GIT["user's git binary"]
   IPC -->|raw text| GP
   GP -->|raw text| GS
@@ -83,25 +84,25 @@ The diagram above shows who owns what; the layers below explain each one.
 
 Every string the renderer names — a clone URL, a destination path, a repo-relative
 path, a branch ref — is user input that reaches a spawned process or a file
-write, so it is checked **once, before any git command**, in modules under
-`src/git/` that `electron/main.ts` imports rather than keeping a second copy
-inside `electron/`. Those modules are deliberately outside `electron/` because
-`electron/` sits outside vitest's test scope, and "a security gate with no tests
-is a security gate nobody can change safely" — the same reason every gate below
-has a sibling `*.test.ts`.
+write, so it is checked **once, before any git command**, in the renderer
+modules under `src/git/` and again at the trust boundary in `git.rs`
+(`validate_git_url`, `rel_path_problem`, `assert_ref`), which carries
+Rust ports of the same rules. The TypeScript modules give the UI early
+feedback and a vitest-covered reference; the Rust copies guard the spawn.
+Both have unit tests.
 
-`runGit` (`electron/main.ts`) itself hardens the environment so a hostile
+`run_git` (`src-tauri/src/git.rs`) itself hardens the environment so a hostile
 `.git/config` from a folder received by zip/USB cannot run code on a mere
 "open project":
 
-- `gitEnv()` strips inherited `GIT_DIR`/`GIT_WORK_TREE`/`GIT_INDEX_FILE`/
+- The `STRIPPED_ENV` list strips inherited `GIT_DIR`/`GIT_WORK_TREE`/`GIT_INDEX_FILE`/
   `GIT_OBJECT_DIRECTORY`/`GIT_ALTERNATE_OBJECT_DIRECTORIES`/`GIT_CONFIG`/
   `GIT_CONFIG_GLOBAL` variables (a shell sitting inside another repo would
   otherwise point every command at it) and sets `GIT_TERMINAL_PROMPT=0`,
   `GIT_EDITOR=true`, and `GIT_SEQUENCE_EDITOR=true` so git fails fast with its
   own message instead of blocking on a tty that does not exist — while
   credential helpers, askpass programs and SSH agents are deliberately untouched.
-- `GIT_SAFE_CONFIG` is a hard `-c` override prepended to every invocation:
+- `safe_config()` is a hard `-c` override prepended to every invocation:
   `core.fsmonitor=false`, a non-existent `core.hooksPath` under the OS temp dir
   (defanging `.git/hooks`), `core.pager=cat`, `core.editor=false`,
   `core.alternateRefsCommand=`, `uploadpack.packObjectsHook=`, and
@@ -160,27 +161,27 @@ Beyond the environment, four string-level gates vet renderer-supplied input:
   that fails full validation for an unrelated reason doesn't make its own
   annotation paths unrecognizable.
 
-These are wired into the main process as the `assertRelPath`/`assertRef`/
-`assertRoot` guards that throw before any handler body runs, plus the
-`knownGitRoots` set (a branch-switch/checkout handler is told `root` by the
-renderer; `assertRoot` refuses anything this session never actually opened via
-`git:info` or `git:clone`). `assertInsideRoot` (in `electron/main.ts`)
-resolves the real destination against symlinks and is the filesystem-half of
-the relative-path guard.
+These are wired into the shell as the `assert_rel_path`/`assert_ref`/`assert_sha`/
+`assert_root` guards that fail before any handler body runs. `assert_root`
+checks the renderer-supplied `root` against the session's authorised git roots
+and refuses anything this session never opened via `git_info` or `git_clone`.
+`assert_inside_root` resolves the real destination against symlinks and is the
+filesystem half of the relative-path guard.
 
-## The IPC plumbing in `electron/main.ts`
+## The Rust shell in `src-tauri/src/git.rs`
 
 The renderer never spawns git and never touches the filesystem. It reaches the
-main process only through the `window.slr` bridge (`electron/preload.ts`),
-which `ElectronAdapter.getGit()` (`src/platform/electron.ts`) exposes as the
+shell only through the typed bridge (`src/platform/bridge.ts`), which
+`DesktopAdapter.getGit()` (`src/platform/desktop.ts`) exposes as the
 `GitPlatform` interface (`src/git/types.ts`). Every method is a thin pass-through
-to an `ipcMain.handle('git:…')` registration. The handlers are the sole owners
-of the git binary and the disk.
+to a `#[tauri::command]` named `git_*`; each command runs its body on a blocking
+thread. The handlers are the sole owners of the git binary and the disk. Below,
+`git:name` is shorthand for the command `git_name`.
 
-A non-zero git exit is **data, not an exception** — `runGit` resolves a `GitRun`
+A non-zero git exit is **data, not an exception** — `run_git` returns a `GitRun`
 with `ok:false` and the exact stdout/stderr, because half of git's useful output
 (a conflicting merge exits 1; that's the normal path here) arrives on a failing
-exit code. Only a failure to launch git at all is signalled with `code:null`.
+exit code. A failure to launch git, a timeout (30 s; 900 s for clone, push and the fetch before a pull) or more than 32 MB of output is signalled with `code:null`.
 
 The handlers, grouped by job:
 
@@ -306,6 +307,23 @@ checks back out to `sourceBranch` and `stash pop`s — unlike `pullAbort`, the
 checkout already succeeded by the time the reviewer can cancel, so this *undoes*
 it rather than stopping something in flight.
 
+## Merge preview, backup refs and Undo last merge
+
+A merge never starts blind. The Rust shell offers three safety layers around it:
+
+- **Preview.** `merge_preview_of` (`git.rs`) runs the merge as a dry run and returns a `preview` result with
+  `fastForward`, `files`, `papers`, `conflicts` and `conflictsElsewhere`. `gitStore` shows it through
+  `mergePreviewText` and asks the user to confirm before the real merge begins.
+- **Backup refs.** Before a merge, `save_backup` stores the current HEAD under `refs/sailor/backup/<stamp>`.
+  After a fast-forward or a finished merge, `record_result` stores the new HEAD under
+  `refs/sailor/result/<stamp>`. If the merge fails to start, `drop_backup` removes the backup. The shell
+  keeps the 10 newest pairs.
+- **Undo last merge.** `undo_merge` refuses if no result ref exists, if HEAD moved after the merge, or if the
+  working tree is dirty. Otherwise it runs `reset --keep` to the backup, so uncommitted work is never lost.
+
+The stash flows (`stashOps`, `MANUAL_STASH_PREFIX`) follow the same rule: the shell only touches stashes it
+created or that carry the manual prefix.
+
 ## Concurrent reads: `readAllConcurrently`
 
 `readProjectAtRevision` and the working-tree `readProjectText` each need to read
@@ -315,7 +333,7 @@ concurrently and reassembling the id→result map correctly is the fast path —
 "out-of-order resolution reassembled against the wrong index" is exactly the
 bug a rewrite could reintroduce silently. `readAllConcurrently`
 (`src/git/concurrentRead.ts`) is the one place that orchestration lives, pulled
-out of `electron/main.ts` purely so it can be unit-tested:
+for unit-testing the ordering property:
 
 ```ts
 export async function readAllConcurrently<T>(
@@ -334,8 +352,10 @@ read settles first. A rejecting read still rejects the whole call (the same
 since every read is already in flight, if two fail at once it is not guaranteed
 to be the *first* one (by `ids` order) whose error surfaces, only that it is a
 real failure from one of them — an accepted, harmless difference from the old
-behavior. It is used by `readProjectText` (working-tree reads) and
-`readProjectAtRevision` (revision reads via `git show`).
+behavior. The Rust shell no longer calls it: `show_all` in `git.rs` reads the same files
+with `git show` on up to eight scoped worker threads and returns the results in
+input order. The helper and its test remain as the reference for the ordering
+property.
 
 ## The field-level three-way merge (`src/git/merge.ts`)
 
@@ -437,6 +457,11 @@ correctness, because `pruneTree` drops trailing empty instances on save, so an
 instance that exists-but-is-empty and one that is simply not there are the same
 thing on disk and must merge the same way.
 
+**Same PDF, different id.** Two reviewers can add the same paper
+independently. `mergePapers` pairs a paper added only on ours with one added
+only on theirs when both carry the same PDF hash (`pdfHashOf`), merges them as
+one paper under theirs' id, and adds a `paper-same-pdf` note.
+
 **Paper add/remove asymmetry.** `mergePapers` keys papers by id (ours' order,
 then theirs-only appended in theirs' order). The removal asymmetry is the
 load-bearing one: a paper one side deleted and the other *changed* is **kept**
@@ -447,9 +472,12 @@ untouched on the side that kept it) does the deletion actually happen.
 **Non-conflict bookkeeping** merges silently: `mergeEqual` (a set spelled as an
 array — `merge3` of set membership), `mergeMarksList` (PDF highlights unioned by
 id, last-`updatedAt` wins, never dropping one), `mergeReviewMarks` per reviewer,
-`mergeAlignment` per node (a genuinely two-sided mismatch keeps *ours* silently —
-this is a derived claim, not something a reviewer said, recoverable by reopening
-Consolidation), `mergeAiUsage` (union by provider/model/appliedAt), and the
+`mergePerKey` (the stored consolidation alignment per node, and the per-seat
+`reviewMetadata` corrections; a genuinely two-sided mismatch keeps *ours*
+silently — a derived claim, not something a reviewer said, recoverable by
+reopening Consolidation), `mergeReviewsLock` (a strict-mode seat lock: a
+finished lock wins over an unfinished one, and `lockedSeatsFinished` marks locked
+seats finished), `mergeAiUsage` (union by provider/model/appliedAt), and the
 `finished`/`reviewsFinished` keep-the-declaration tiebreak (a wrongly-kept
 declaration is one click from gone; a dropped reviewer statement is not).
 
@@ -588,7 +616,7 @@ both an ordinary git merge, finished and aborted by `finishPull`/`abortPull`.
 sequenceDiagram
   participant UI as GitDialog / MergeBranchPrompt
   participant GS as gitStore
-  participant Main as electron main
+  participant Main as Rust shell (git.rs)
   participant Git as git binary
 
   UI->>GS: runPull / runMergeBranch / runBranchSwitchCarryOver
@@ -693,9 +721,6 @@ commit/field-review, pull, branch-switch, and stash flows directly) and by
 end-to-end integration tests under `src/test/integration/`
 (`pull.integration.test.tsx`, `branchSwitch.integration.test.tsx`,
 `discard.integration.test.tsx`, `consolidationAndMerge.integration.test.tsx`,
-`annotationWorkflow.integration.test.tsx`). The `electron/main.ts` handlers
-themselves are not unit-tested (outside vitest's include), which is exactly why
-every gate and parser that matters lives in importable `src/git/` modules
-instead — and why `e2e/openSaveProject.spec.ts` reaches the real `runGit`/`gitEnv`/
-`GIT_SAFE_CONFIG` chain as the one test that exercises the main-process
-plumbing against a real git binary.
+`annotationWorkflow.integration.test.tsx`). The Rust handlers are tested
+in `git.rs` itself with `cargo test`, which drives real git against temporary
+bare-repository pairs (merge preview, undo merge, stash and the validators).

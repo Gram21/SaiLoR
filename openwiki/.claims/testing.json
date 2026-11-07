@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:8465af6915aae454d5b09e57a5b753d9a078fb025e2cdf83d4dbc9ff292598a6",
+  "pageVersion": "sha256:177712359f44f6f55cfecfd71aacd50f5e1197254db52c7f25caac404327dac3",
   "claims": [
     {
       "id": "claim_963822971b6d42aaad66333527580c8a",
-      "statement": "The Vitest unit tier is configured in the test block of vite.config.ts with environment jsdom, globals true, include src/**/*.test.{ts,tsx}, and an exclude list that explicitly drops *.integration.test.{ts,tsx} (the exclude replaces Vite's default list rather than appending, so the usual node_modules/dist/etc. entries are repeated alongside it).",
+      "statement": "The Vitest unit tier is configured in the test block of vite.config.ts with environment jsdom, globals, include src/**/*.test.{ts,tsx}, an exclude list that drops *.integration.test.{ts,tsx}, and coverage thresholds that fail the run when coverage falls below the floors.",
       "evidence": [
         {
-          "resource": "repo://vite.config.ts#L31-L47",
-          "version": "repo-lines-v1:sha256:ddd7210cc88ebf2de4663b3379bc06f4a87afbcd6a93378ef0a724e2ff2b92bd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5MzZkZjdhNWEzYWFmMTgwY2ZmZDFkNjVjNjQ2ZWY2YWVhMzUyY2MyNzc3NDY4NjE5OWNkOGZiM2U4OTljN2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEwMWFjMzA5OWJiMWEwZWE4NzQ3NDRmZTFiOGJlYzA3YzRiZWU3NjA3YjgyN2NmYTFlNjhiOTU3YjM1MDY5NmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUifQ"
+          "resource": "repo://vite.config.ts",
+          "version": "repo-file-v1:sha256:7c9c2175d9997636b477451dd334f8918bf2368974eb1f3d270dbf7f66b31f0d"
         }
       ]
     },
@@ -17,7 +17,7 @@
       "statement": "The unit tier runs via `npm test` (`vitest run`) and `npm run test:watch` (`vitest`), as defined in package.json scripts.",
       "evidence": [
         {
-          "resource": "repo://package.json#L12-L13",
+          "resource": "repo://package.json#L13-L14",
           "version": "repo-lines-v1:sha256:292a91d6898558f59a41a6cdbb07fd4a5fb4e27991e3d1c3b4f71a6071db0fd0:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjQxZmMyNDllZmE3MWIwZTdhOTdmN2Y0ZWI4Yjg5NDk0YTU5Y2IzZjg3ZDcxYmU2YWFkNjNhYTNiYTVlM2QzYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGNkYmQ3Y2EyZDEzYWQzNTFkMjBkNzYzOTJjNDI3MzI3NzdmYjU3MmVlZmRjZmI5NTU1ZjcwYjQ0NDQ5MTIyNCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGZjMGRkNWRkOTA0NzQ4NTg1MWZkOTJmZTgwZThlMjQ5YmNjNTJmYTBkYTNhNDZjMWEzMjUwNDhhZDEyNjFjYyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzNjNGNlNjlkMGEyNWE5MTk4N2FhOTlhYjM2NTFiZWM2ODMwNDU1MmQwMWI0YjI0OTdmNTQwMTRiNWIxMzEzNyJ9"
         }
       ]
@@ -27,8 +27,8 @@
       "statement": "The integration tier uses a standalone config (vitest.integration.config.ts) rather than mergeConfig over vite.config.ts, because Vite's mergeConfig concatenates array fields like test.include instead of replacing them, which would silently pull the ~90 unit test files into the integration run too.",
       "evidence": [
         {
-          "resource": "repo://vitest.integration.config.ts#L4-L20",
-          "version": "repo-lines-v1:sha256:d77efea0242f855c620b1fd0edf551298590889975fd633b9165eab46ce56391:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcwMGNiNjFlZjhiYzU2YjMxN2Q5ZGMyYTMyNDE5ZDZkNmEzYzJjYmNiOTEyM2MzYjk4NjdjMzQ2OTJiMzgyMTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjllOGFkMTFiNDJhNmQxNzQ0MzA0ZmJlNmQ3MDAwZjFlZDJjZjQyMTRhOWU2OTZhZWJiNTkzMTcyOGYwZTA0ZjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUifQ"
+          "resource": "repo://vitest.integration.config.ts#L4-L21",
+          "version": "repo-lines-v1:sha256:5ca328815f3f6ace8d4fe40514fc5f0f3403e58d6a0fe269035d0e5342ab7cb6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcwMGNiNjFlZjhiYzU2YjMxN2Q5ZGMyYTMyNDE5ZDZkNmEzYzJjYmNiOTEyM2MzYjk4NjdjMzQ2OTJiMzgyMTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjllOGFkMTFiNDJhNmQxNzQ0MzA0ZmJlNmQ3MDAwZjFlZDJjZjQyMTRhOWU2OTZhZWJiNTkzMTcyOGYwZTA0ZjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUifQ"
         }
       ]
     },
@@ -37,11 +37,11 @@
       "statement": "The integration tier runs via `npm run test:integration` (`vitest run --config vitest.integration.config.ts`) and includes only src/test/integration/**/*.integration.test.tsx.",
       "evidence": [
         {
-          "resource": "repo://package.json#L14-L14",
+          "resource": "repo://package.json#L17-L17",
           "version": "repo-lines-v1:sha256:1a5e3d2b1ed0c8c07710d1292f9a92870dc4882046a4603f6451cf3b92943628:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWE1ZTNkMmIxZWQwYzhjMDc3MTBkMTI5MmY5YTkyODcwZGM0ODgyMDQ2YTQ2MDNmNjQ1MWNmM2I5Mjk0MzYyOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMWE1ZTNkMmIxZWQwYzhjMDc3MTBkMTI5MmY5YTkyODcwZGM0ODgyMDQ2YTQ2MDNmNjQ1MWNmM2I5Mjk0MzYyOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjQxZjgzNTllNTZmODM4MmY4MzI2Mjk0MzMwMzkzMDYxN2RhZjNhNGQwNjU3NGZlMTVlYjExMjY1NWNhMWU0NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWUyMTc3MWZiNjY2Zjk4ODIwYzZlNTNjZTM3MTJjODIxMDRlNDE2ZDMyN2JiMTA4ZTFjZDZiMjE4YzQ4NjYyYiJ9"
         },
         {
-          "resource": "repo://vitest.integration.config.ts#L17-L20",
+          "resource": "repo://vitest.integration.config.ts#L18-L21",
           "version": "repo-lines-v1:sha256:0d131393bae78ed29291c18093a3bc086c06b2d44e348ad5fa391c59951f0f2d:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGVhZTdmNjM4Y2UwY2E1ZTg3ZmZhOTIzZDY1ZGE5MzJkZGE1YThiMzExM2M1ZDVhNmRhYjg2YmY1N2QwMmY2YSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNGQ1Y2QyZmI0ZjNkZjg4NDUxNTI1NWIzOTUyM2YyZjhiNTQ3MmJlZWE5ZjU2NmZmY2EyMDRkYjgwMjU2MTA0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNDQ1OThkNjJhODQ1NzViNDRiMzk2NzFkZDU3ODkxOGVmZTJhOTgwOGZjNDQ1ODE1ZTk1MmY5YWY4MzIxYmUyYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjEsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODU4MGI3NjUxOGRhZTk3OWZhZWJkMDIzNjdhMjkyOTJhNTBkOTc2MDkyMjUxYTM4YTZjZTMwODgwYmE0MjgyNSJ9"
         }
       ]
@@ -51,15 +51,15 @@
       "statement": "Integration tests mock getPlatform() to inject a fake PlatformAdapter at that single seam — the same interface TauriAdapter and the inert createUnsupportedAdapter implement — which makes the whole app run under jsdom without a real Tauri runtime. The fakes do real fs work (saveProject/openProject write and read the scratch repo), so git status/diff see genuine content.",
       "evidence": [
         {
-          "resource": "repo://src/platform/index.ts#L15-L28",
-          "version": "repo-lines-v1:sha256:785deda9bff0f7d252541fc100720254edb2d23ccdd1f7ebf06a58bc8412b8ec:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1NzIxNDg2OTJiYTQwYjBkNmEyZmFkMmMyYzBmMjUzMmM5MTdmZTgyZjQ3MTU5ZTNjYWI3ZGNiNjI3MGRjZmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzYjdjNGI0ZmRhYmJjM2Y3NWI3ZGNmZTgzZWI3YzYzNmM0YTBjYmJkODgzMjljZTA1NDkyMTFjZGFmY2ZmMzEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgzZmI3NDg5NjNkOWQ1MTViZmM3YjM5NjM3MWVmZGFjZDc4Y2Q2ODUyZjY3ZThmMjQwYjhiYzYzZWNiNWRjYzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAzMzNhMzdlZDk3NDNlZDU2YWYxMDNjYWFkNGNiNDA2MGUwYmUxNTA4MzcwNGNmOWIwYjM0ZDY3NjFkNjc5MjAifQ"
+          "resource": "repo://src/platform/index.ts#L18-L31",
+          "version": "repo-lines-v1:sha256:59e93a7256076138547785f9ad46c2761121115a8e5fd0ec51bab34adcb3ee46:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1NzIxNDg2OTJiYTQwYjBkNmEyZmFkMmMyYzBmMjUzMmM5MTdmZTgyZjQ3MTU5ZTNjYWI3ZGNiNjI3MGRjZmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzYjdjNGI0ZmRhYmJjM2Y3NWI3ZGNmZTgzZWI3YzYzNmM0YTBjYmJkODgzMjljZTA1NDkyMTFjZGFmY2ZmMzEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgzZmI3NDg5NjNkOWQ1MTViZmM3YjM5NjM3MWVmZGFjZDc4Y2Q2ODUyZjY3ZThmMjQwYjhiYzYzZWNiNWRjYzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAzMzNhMzdlZDk3NDNlZDU2YWYxMDNjYWFkNGNiNDA2MGUwYmUxNTA4MzcwNGNmOWIwYjM0ZDY3NjFkNjc5MjAifQ"
         },
         {
-          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L165-L198",
+          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L167-L200",
           "version": "repo-lines-v1:sha256:9602456242bc14e59f8e3c9144cf34368465a58eaab63aaf7289f5af3bf18989:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImI0ZDM5NzFiNDVhYjE5MjU5ZjZjNTI4NWJkYzJjOTAzZDJlZGYwMTBkMTg1OTI4OWE3YTAwNTE5NWI1YzQ5M2YiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA5YTEzMjA3MDRmOTJiNzc3NTBiYWI2OWM0ODIyMWMyMjMxNmY1YzkyYzRlZDQwZmRiOTg3ZTkzNjQ0ZmFhMjkiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ2NDNiNzFjYzM0MDBiMzY4MmJiZjU0MTg3NWMxZmUyNGVkMGU0YzRiYWM2MjY5YzNhN2U4YWQ0MjBjNWE4Y2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlkNDUyZjBkMTMwOTVmNTMwNzJiNWVlMTdjZDUxOTM0Yjk0MDhlZTMxODQwOTI1NDRmM2Y2MTlkYWE5M2JhZGIifQ"
         },
         {
-          "resource": "repo://src/test/integration/screeningImport.integration.test.tsx#L20-L77",
+          "resource": "repo://src/test/integration/screeningImport.integration.test.tsx#L21-L78",
           "version": "repo-lines-v1:sha256:993a8c654ff8137ab6a4615ca377a0ec1bffad73840fe2aeefd9971db65d2bef:eyJzZWxlY3RlZExpbmVDb3VudCI6NTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRhNmU5NGE0M2FjZWUzOTI0M2EyYmU0OTY2YTQ2OGRjY2QxMTg4MjQ4OWUyNjI4ZWMxMjdmNTE2OWVjNDZjYmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM3NmRjMjE5ZjAzODA5NDIyMmZjZDI2YjUyYzlkOGIzMzkyNWQ0YWE0OTcwNjVmZGVkODdkYjMyNzJlYTg4NjAifQ"
         }
       ]
@@ -69,12 +69,12 @@
       "statement": "Each integration test spins up a real scratch git repository per test (mkdtempSync, git init, initial commit) and wires a fake GitPlatform whose status/commit/beginPull/etc. shell out to the real git binary against that directory, so merge/pull/push/branch-switch/discard flows run against genuine git rather than a stub.",
       "evidence": [
         {
-          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L208-L218",
+          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L210-L220",
           "version": "repo-lines-v1:sha256:daffd51efa8e58dd1f34382b909e9c5e01f76ddbc6b36a523c6cc97b66a79b36:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjNTc2ZjRlZDc3YTY0OGUxZDBkMDc5MzMxZGM5NzI2NjE2NjhlY2Q1ZTYyMWM0Mzg4MDdjOGRkODgyNjRlZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjEzODEyZmI2NzJmOGIwYjQ0OGEwMzQzN2I5OWNiYzEwMDlkMzAxZmExZDZlMjFmY2FjOGE2NWNjYjIwYWU3NGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImFjZDQ3YTQ4ZjM2ZDkxNDA4MDk0MjdkMTc1YzgzYWQyNjI2ZDBlNjgwMDY3YzdiYjg1ZWU4ZDI1MTdiNWQxZWMifQ"
         },
         {
-          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L82-L167",
-          "version": "repo-lines-v1:sha256:7983b145291a650c7d70c42579a2b582d0cc9ad61b12a81de8c2fb004c70c2ab:eyJzZWxlY3RlZExpbmVDb3VudCI6ODYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2YmEyYjU5OTY3MzJlNzEzOTBkM2UwY2M1YjliZmRmZTU4YWUzZDZkMzgzY2VhYTMyNzRiMzc1OTY1NWRlYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAxN2RmNTkyYTA1NjUwOTViZDFmMDBmODQ5ZGY1ZmUxODcwZmFmMzJjN2NlYjRjMDJiZTBlNDI5Yzc5OGQzMWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY2ZWVjMmNhYjBmYThkY2FiYTE0YjFmMmMyMzUzMzc2M2JiOGEwMjc0NjI5ZmU4OGVjOTdkMGZjMzY3ZjVmYjMifQ"
+          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L82-L169",
+          "version": "repo-lines-v1:sha256:cf0272841f25af7d9d3bb1af133384e10552d4eb8ac3a165fc0ef6fa1d45e8a6:eyJzZWxlY3RlZExpbmVDb3VudCI6ODgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY2YmEyYjU5OTY3MzJlNzEzOTBkM2UwY2M1YjliZmRmZTU4YWUzZDZkMzgzY2VhYTMyNzRiMzc1OTY1NWRlYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAxN2RmNTkyYTA1NjUwOTViZDFmMDBmODQ5ZGY1ZmUxODcwZmFmMzJjN2NlYjRjMDJiZTBlNDI5Yzc5OGQzMWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjY2ZWVjMmNhYjBmYThkY2FiYTE0YjFmMmMyMzUzMzc2M2JiOGEwMjc0NjI5ZmU4OGVjOTdkMGZjMzY3ZjVmYjMifQ"
         },
         {
           "resource": "repo://src/test/integration/pull.integration.test.tsx#L35-L120",
@@ -87,7 +87,7 @@
       "statement": "Integration tests render the real React components with React Testing Library (render/screen/userEvent) and drive them with real clicks/typing/DOM events, not direct store calls; because jsdom performs no real layout they stub getBoundingClientRect/Range.getClientRects/ResizeObserver and mock react-pdf, but everything above that (selection capture, mark creation, the comment popover, annotation form, Git panel) is the genuine component code.",
       "evidence": [
         {
-          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L225-L348",
+          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L227-L350",
           "version": "repo-lines-v1:sha256:e6e34c740d1969e11b1222ee14608eb41037cc318e919aa2d4130e23fb0e8c35:eyJzZWxlY3RlZExpbmVDb3VudCI6MTI0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI1NGM2NmFhZjIxOGFkZDZkODNlMDJhZTJjNzA1Y2JmYmY4NmI5MTQwMjllYWE0ZmQyMDhkOThkMmQxNzg3NjJlIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJiMjM1MjU4OWMzNGQzYzYwNjg1OTMxYjZlY2M0ZDUwOTkxYTdjNTZjOGZiYTI4OTQxMTQ2NTc2OTAyNzJjYWMzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI4NTUxNDU3ZDI3MmU4OTdlOWFmNmU1ODM0MTJkZDdkMzI3ODQ4ODY5NTJjOWEzZDNjOWE1NGY1OWY1NTM5NWIzIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI4NTgwYjc2NTE4ZGFlOTc5ZmFlYmQwMjM2N2EyOTI5MmE1MGQ5NzYwOTIyNTFhMzhhNmNlMzA4ODBiYTQyODI1In0"
         },
         {
@@ -101,7 +101,7 @@
       "statement": "Integration tests verify outcomes independently of the app by reading the scratch repo directly (e.g. git log -1 --format=%s, git show HEAD:project.json), so a green test proves a real commit landed rather than just that the store claims it did.",
       "evidence": [
         {
-          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L339-L347",
+          "resource": "repo://src/test/integration/annotationWorkflow.integration.test.tsx#L341-L349",
           "version": "repo-lines-v1:sha256:04c92a35c9667866fffc917ff3769d652c1ea3bc0a03ac5a9708877c09b10455:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTc1YzcxNTkyOGQ1ZmQxYjg3MzMwZGY1OWU0NmIyMGU1MzVjN2MyNjE1ZmU0OGVlZjI2MzY5NjBmOWU5ZTcyOSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODhmMTQ5NzAyYTNkMmQ5MjE5ZDUxNWUyYzBkMWM2ZWJhNGZjNmIwODgxZjExMDBjM2E5NTA2NzdmMWViOTYwZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjIsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZjFiMjA4MmFkZDlhMjllMDYyZTYwZDQ2ZGJhMWUxZjdjNTNhMGUwNTBiODgxMThjMTEwMjE4YmNjZTA1NTJkMCJ9"
         }
       ]
@@ -111,7 +111,7 @@
       "statement": "The integration suite in src/test/integration/ covers annotationWorkflow (schema authoring, PDF annotation, git commit), consolidationAndMerge (multi-reviewer consolidation and a real merge conflict), branchSwitch (stash-carry-over field-level conflict), pull (real git pull against a bare origin diverged by a second clone), discard (writeWorking not commit), pdfReadingPosition, screeningImport, fetchPolicy (background-fetch safety guard against a repo whose own config names a fetch command — core.sshCommand/credential.helper/include.path, tested against real git config --get-regexp), stashOps (pushStash/restoreStash/dropStash/branchFromStash and the branch-switch carry-over — a stash that no longer fits rolls all the way back, never leaving conflict markers), annotationSplit (splitting a shared annotations folder so git sees renames), and gitScenarios (the scenario rig: every scenario builds and holds what its README entry promises).",
       "evidence": [
         {
-          "resource": "repo://src/test/integration/annotationSplit.integration.test.tsx#L10-L22",
+          "resource": "repo://src/test/integration/annotationSplit.integration.test.tsx#L11-L23",
           "version": "repo-lines-v1:sha256:b095509f353264432a3a8c42105c8a439808bccd8332b47dba42bad09df738e7:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2ZDllNTkxYjFlODI4N2JkYzRmMmFiM2UzYjA2YTRiYmQ4NmRlNjk3MTRlMzZiZWI0ZjdiOWM0YWU2Njg2ODciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhZmZmOTliMWExOTA2YzU5MjYxMWMxNDIzNmM4MWI2NmRiMWNjOTZiMDYxYTdkY2E1ZTJmNzE3NzBlOGU2ZjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImNkNjUzODI1ODRhYzExMDIxZTljMWZlOGRhZmM3OTdjYjUzYWEyNDUyMWMzMzFmYzBkZjIwMjI3YmQ5YzgwMTQifQ"
         },
         {
@@ -127,11 +127,11 @@
           "version": "repo-lines-v1:sha256:87c708ca7370673d4a746851f2e6ec86548534665917f961b233bb1d79a6dd22:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY1NmM3ZGZmMWE3Yjg2Nzg2NjFjZWJkOTEzMmUyOTM1YjYwNTgyNWM4ODM2NGIzNTg5Y2QxZjg3YzQ2MmU4MDQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE4Mzc2MTA4NDAyYWM4MTY5ODM5MTE0M2UxMTAwYmM5MzNlMTA5YWQyZmJjMjNmOTNjMjk3Nzg4MzI5YjYwNTYifQ"
         },
         {
-          "resource": "repo://src/test/integration/fetchPolicy.integration.test.tsx#L8-L15",
+          "resource": "repo://src/test/integration/fetchPolicy.integration.test.tsx#L9-L16",
           "version": "repo-lines-v1:sha256:ab99f9399580d933b5c6e8a423c7a75879e25bcf8b63782e6838bf1d289d34c2:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMGYzZmE2Y2VjOWI5NDcxOTdjZGY4MmZjNzVjMzUyNjIyODEzMjliNGFlOThmZWUyZDliZjlmMjFmOWU0YmM0OSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODgwMzc0ZjM2NDNjZjYyNGI2MzRmYzAwZmZhNDhkYTQ1YjE4ODNmZDhlNDM2ZGM2OGQ2NzMyZmQzYmEyNGRhNiJ9"
         },
         {
-          "resource": "repo://src/test/integration/gitScenarios.integration.test.tsx#L14-L39",
+          "resource": "repo://src/test/integration/gitScenarios.integration.test.tsx#L15-L40",
           "version": "repo-lines-v1:sha256:d1c2524e1df6786b6643b9e0688e41031b66d138f6ce0970e438aeda6a345357:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNiNmJiOTM0Y2RjNDRkZjBjMmM4ZGI1MjcxOGY1NTRlZDM2ZGMyMGVjMzViZmFlMzRiMDUxNzMwNzBjODc2NzAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
@@ -139,7 +139,7 @@
           "version": "repo-lines-v1:sha256:5c0eb8265c86081f3aeda1f0c5a24734c5493791676d7b0d125f9556aece1b40:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOTcyYTQyOTM4MmIyZTE0NzE4ZTBlMzdiMDU3MGE4YTE3MDI5OTFmY2Q4NDk4Y2Q4NDA2MGE4YmY0ZjA1MDE3YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMTMwMjA5NDkxMmY5MjcyODZlM2JkZDViMGVlOWY4NzUxZWRjMWY5M2MzYjU4YjRlZTMwYWJhYWE5OTFjOTY3MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiODk1YjZjNGU3MDE2YjViN2IxYTU5ZjQ4Yzc3ZTJiMzRkMWI3YjQ3MDkwYjAyMmUwMDQzODY2MmI1MGJhOGU4MSJ9"
         },
         {
-          "resource": "repo://src/test/integration/screeningImport.integration.test.tsx#L10-L18",
+          "resource": "repo://src/test/integration/screeningImport.integration.test.tsx#L11-L19",
           "version": "repo-lines-v1:sha256:f30a0f370546843841becbad63c90eb8fbd5bb13af352970554d9d60907f4bf3:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGMzMmNlNDAzOTQzM2QxZmZlOTFkNzRjMGZjNTA2NWMyNWY3MDgxMWJjN2QxNjNiOTVjYTUxZmJmNDI1MmU0NCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjQxNmJlMTE3OGRiNjMyOGU2MjE4YjY1MDNiYzI2YmI0MTYwNmM0MGUxYzI3YWRkMzY5ZmM5NDY3MWY5MGU0MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiM2IyZTY0ZjMwMmI3YWRmMWZhYTdjZDM4YzlhYmU3OTcxMWQ0NmE5NTA4YTI0MDNhNzVlNTc2MmFlZmVmY2VjYyJ9"
         },
         {
@@ -150,67 +150,31 @@
     },
     {
       "id": "claim_81b14439394140b89ba90adc085b3171",
-      "statement": "scripts/ci.sh is the provider-agnostic single source of truth for whether the app builds and passes its checks; CI providers only check out the code, provide a Node toolchain, and run this script, so the same checks run locally with ./scripts/ci.sh. It runs steps in order with set -euo pipefail: dependency install (npm ci with an npm install fallback, skippable with SKIP_INSTALL=1), typecheck (tsc), wiki link check (check:wiki), unit tests (npm test), integration tests (npm run test:integration), and build (vite build).",
+      "statement": "scripts/ci.sh is the provider-agnostic single source of truth for whether the renderer builds and passes its checks; CI providers only check out the code, provide a Node toolchain, and run it, so the same checks run locally with ./scripts/ci.sh. It runs in order with set -euo pipefail: dependency install (npm ci with an npm install fallback, skippable with SKIP_INSTALL=1), typecheck, wiki link check (check:wiki), site link check (check:site), unit tests with coverage thresholds (npm run test:coverage), integration tests (npm run test:integration), and the vite build.",
       "evidence": [
         {
-          "resource": "repo://scripts/ci.sh#L1-L53",
-          "version": "repo-lines-v1:sha256:71b62054b373cb9fdd44f8c3c94d903896dff57ec10d004d83c4f887f25fbc9a:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFkOTVmYzA0YTgwYzk1MmY0OWNlNDE4ODYyN2M1M2IwZmJlOGM0NDA0MWI5NTJkNTkyYWNkMWRlOTk4NjE0NjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MTExYTJlMDI4MDA1ZmViOTkzMTcwNzdlMDRhNTEwNzQ1MDExNjU0Y2M5NzVjNzdjMmMwODJhYWI1YzY0YjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://scripts/ci.sh",
+          "version": "repo-file-v1:sha256:c77ca6e5e6020d073122e0acc8e9ea43ee4029a5427a45c32c0bad12db2e25f9"
         }
       ]
     },
     {
       "id": "claim_13b5fa5e42974a2ba3e334427c2781d8",
-      "statement": "ci.yml has four jobs that all gate every push (to main and release/**) and every pull request (both paths-ignoring technical-report/**): build (ubuntu, Node 24) runs scripts/ci.sh; rust runs cargo fmt --check and cargo clippy -D warnings (tests are not run here); tauri-build runs cargo test per OS across a 5-OS matrix plus the installer build and the headless probe run; tauri-e2e runs the probe through tauri-driver on ubuntu-24.04 and windows-latest (no macOS, which tauri-driver does not support). There is deliberately no push-on-every-branch trigger to avoid double-building branches with open PRs.",
+      "statement": "ci.yml has eight jobs that gate every push (to main and release/**) and every pull request (both ignoring technical-report/**): build (runs scripts/ci.sh), rust (cargo fmt --check and clippy -D warnings), lint, audit, cargo-audit, trace (OpenFastTrace requirement links), tauri-build (cargo test, installer bundle and headless probe on a 6-runner matrix including ubuntu-24.04-arm), and tauri-e2e (probe through tauri-driver on ubuntu-24.04 and windows-latest only). Each job calls a script in scripts/ci/. There is deliberately no push-on-every-branch trigger.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/ci.yml#L10-L63",
-          "version": "repo-lines-v1:sha256:e0a0dd0dcb1f708a1b537fe291573bf62a28386e80d24030d33ab38d995b9e66:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5NmI0Yjc3YTY5MjM3Y2RlZjY2YjQzZTZlNmEwMTdlNmI3Yzg1ZDQ2NDE3ZDkxNzQyNWIwZGEwYWZkYWEyMGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMxZWY3ZmM2MDBhZTVjNjM5NTIzMWMwMTU5Y2UxZmEwNjFjODZjZjEwZjJlYTI5NzRlNTM3N2FiMzllZjdkM2MiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQzMzYyYzE5ZmFlZGQ3MDQzMTVmNTg4ODMwZTRhNWQwODE5ZTY5ZDg5MjA3NjAyZGM2NTdhY2VhZDQzYTUyMWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjM4Y2IzN2IyMGQ4MjE0ZDg4ZTM5ODdiYTE0OWZiNThkOWVjMzZmZjA1NDA4YzRiMjM1NzI1NWRlMjExNGZkMjIifQ"
-        },
-        {
-          "resource": "repo://.github/workflows/ci.yml#L106-L146",
-          "version": "repo-lines-v1:sha256:f3ba2480960126ccf0ffff6cf4ce9fd70165b68230fbbf5c8084a213179c6cbf:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1NjYwMWM0NWQzM2M3NmIxYWJlOGY2NTc0YTdjMWFmNDA3MjY5Y2YzODBmMmE3MzBkOWJhMTBmNWM4YTY0ODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRhNjAzMjllZjMzNzY4NjEzMzY2ZDc4MTk1NGFhMmE2NjYwYzJmMGI1NjU3ZTlkYmY2OGVkMTYzNWY2MzQzZTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk0NzA0NTE4M2JiNzBjZDU1ZjZlMTcwNTBmOWJhYTI1NjI1NGYzMTY1MWEzNTgzMzYzODY4MDRmZDU5NGZmZTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2MzY2M2VkMzliNGE5NDNjMDg0NGRhN2U4NDIzYWM5ZWQzOWI2MDE3Yzg1OGJiZDc1NzY1MThhNDQ3NDUwM2YifQ"
-        },
-        {
-          "resource": "repo://.github/workflows/ci.yml#L149-L203",
-          "version": "repo-lines-v1:sha256:eb51dbc44b599607c920119c6d6ec9198aa2076912bea4c7b4b3225c9a210751:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MmIzMWRiY2E5MmY1YzQ1NDFiYWI2YmE2MGE5YzkyMDkxOTFhZGNjODBjYmQ4ZTZlOGY3YjViNWIwNTRlOGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1MTUwMjBhMmViNzNmOGI0Yzc0OTZlOGY5OGVjMzhiYTA1N2Y0ZGE1NzA3ZmFkYjY0MWIwMjVmM2U3ODM3ZWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhNGQyZThkNmRhMDdlZjc4ODFjMGE4YTEwZTkzNzJjNWMzOWU5Y2MyMjFjNGFhN2MxYjBhZDJlYjgyZmZlZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
-        },
-        {
-          "resource": "repo://.github/workflows/ci.yml#L76-L99",
-          "version": "repo-lines-v1:sha256:90725fd22d90345a61c35f05e381a815069961439b2fcf3e570952fc9f71162e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM4OTk5MTEwM2Y2YmE4ODhlM2RlNzY1MWM1YTMwNWM3N2U1NTQ3Njc3M2FiYTgzOTU5MWVjYzViZDBmMmFiMWUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU5M2MwZjRjZDEwOTc0YjkwNGUyZjFkYmY0ZGE0YjIyMmQ3NmEyM2Q4Mzk3OWZiOTdmNDFkNDEwMWRlMmM5M2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFmOGNkMDY2YWQyMzVkM2VkZGM4MDBiMjg3NzhmZmEyMDlkNzc4YzkzNjI2MThmM2ZhMGIzYjFjNTIxMDkzMWEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjczMTcyNDZjNGJiZTRhYjc4NjcwYjZkNzI5ZmNhNjllNzE3YTc1NmQ2OGExYmNlMTY0NThkMWQzMzk3YTM2MjEifQ"
+          "resource": "repo://.github/workflows/ci.yml",
+          "version": "repo-file-v1:sha256:5ed86be023270e9850b5de3c7e98444a201f8d645fc8050120e6a474e79c585f"
         }
       ]
     },
     {
       "id": "claim_5f37a643f05043598e440b85d3fa0286",
-      "statement": "Pure model tests in src/model/model.test.ts cover schema resolution (defaults, path ids, duplicate sibling names, enum options, max<min rejection, required defaults, and visibleIf conditional-visibility resolution — bare-name, absolute-path, nested all/any groups, equals filtering, cross-branch/ancestor reads), isFieldVisible (fail-open semantics, per-instance repeatable reads), normalizeTree/pruneTree/canAdd/canRemove, loadProject input validation (ProjectLoadError), loadProject→serializeProject round-trip, Paper.finished (a human declaration not derived), Paper.aiUsage (AI-use disclosure), config.ai (an opt-in: disabled when absent, enabled only by an explicit true, written only when enabled), config.aiSeat, config.reviewers/Paper.reviews (multi-reviewer skeleton, per-reviewer normalization, deterministic serialization), Paper.equal, screening, Project.provenance/protocol/schemaInfo (degrade field-by-field rather than all-or-nothing), and a regression for hand-edited primitive instances the loader must adopt as values rather than crash on — with fixtures built through the real load path (loadProject/serializeProject) so inputs are exactly as schema-normalized as a real file would be.",
+      "statement": "Pure model tests in src/model/model.test.ts cover schema resolution and visibleIf, isFieldVisible, normalizeTree/pruneTree, loadProject validation and the load-serialize round trip, Paper.finished, aiUsage, config.ai, multi-reviewer reviews and serialization, screening, and provenance/protocol/schemaInfo degradation, with fixtures built through the real load path.",
       "evidence": [
         {
-          "resource": "repo://src/model/model.test.ts#L1025-L1170",
-          "version": "repo-lines-v1:sha256:e91e9266b7b05dbb7f3e240ac0d1b751fed053ff6ee60f9f59fc24c94af97edb:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQ2LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI5NmE4MjExMzJiOTJmNDM2Yzc5OTg3YzUyMTFjZjQ2YTk4YTkzMGY4Yzg1Yjg1M2MwZDM1NjlmNzcyMmQ5NWE2IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4NTgwYjc2NTE4ZGFlOTc5ZmFlYmQwMjM2N2EyOTI5MmE1MGQ5NzYwOTIyNTFhMzhhNmNlMzA4ODBiYTQyODI1IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIxZWYwYjlkYzJiNWUxYjlhYmVjYmYyZjEwMTVhNDUyM2NiMmE3NTFlZWQ4MjQ0MmEwYTcwODgwZmZjYWY5YmZmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI4NmE5MTJmNWNkMzU5NzVjYWZiMmM4YWM1YTFhYWZlMWU2NTk4MWE1OGY5Y2M3YjAxMDY2N2ZmNTk4ODIzZTljIn0"
-        },
-        {
-          "resource": "repo://src/model/model.test.ts#L1172-L1312",
-          "version": "repo-lines-v1:sha256:c5059984e972e65b13aceed76f36e6c17dcd536c68a42170942e07b9e70f513b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiMTNjOWFmZWExMzQ1NjkxMDhiYzIwNDEyYjMzYzdkNjg4ZjJiY2M3ZmI3MGQ4Y2MyNmZjMzkyNzdhNzA2ZjkxIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwMWJhNDcxOWM4MGI2ZmU5MTFiMDkxYTdjMDUxMjRiNjRlZWVjZTk2NGUwOWMwNThlZjhmOTgwNWRhY2E1NDZiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIxZWYwYjlkYzJiNWUxYjlhYmVjYmYyZjEwMTVhNDUyM2NiMmE3NTFlZWQ4MjQ0MmEwYTcwODgwZmZjYWY5YmZmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI5NGYxYTJlYTBmOWNlM2ZmZDIxNDY0ODFlNDlkZWI1ZTJkMDAxMjQ4NTAxMjYzNzJiMDRiMWM4NzM0YTIxZGU1In0"
-        },
-        {
-          "resource": "repo://src/model/model.test.ts#L1313-L1558",
-          "version": "repo-lines-v1:sha256:81f20a03d2e851cb1212d7d6d7ad31746b0b8ab4f049451357b9b1d34ab5b09b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQ2LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJlMmQ4M2E0YmYwMGEwNjkyYjlhMzU2ZGZmODVlMWM1MjU3MGQ1OGZmZTQzMmE0YmYzYmY4ZTFkYjcwYmZiZjBlIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwMWJhNDcxOWM4MGI2ZmU5MTFiMDkxYTdjMDUxMjRiNjRlZWVjZTk2NGUwOWMwNThlZjhmOTgwNWRhY2E1NDZiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIxZWYwYjlkYzJiNWUxYjlhYmVjYmYyZjEwMTVhNDUyM2NiMmE3NTFlZWQ4MjQ0MmEwYTcwODgwZmZjYWY5YmZmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJkNzkwMTQ4ZTY5YjliNGY4Njk4M2RhYTY4YmE2NDQ1NTE3YjJlOWI0MTg0MTg1MTZmZTlmZTg1MGVjOTFmYjNlIn0"
-        },
-        {
-          "resource": "repo://src/model/model.test.ts#L1559-L1792",
-          "version": "repo-lines-v1:sha256:6b39b6fccf1ebd779914edd70c5c004e3a9559684589d6b3679ece7ba769976f:eyJzZWxlY3RlZExpbmVDb3VudCI6MjM0LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI2ZTU1YjIwYTRjZWYyMWQxODkwYTU4ZmIxYjQxMzk5OGU3NDQxYTEwY2ZmZjg4YzFmY2E5MmMxNTg3Yjk3YTYxIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwMWJhNDcxOWM4MGI2ZmU5MTFiMDkxYTdjMDUxMjRiNjRlZWVjZTk2NGUwOWMwNThlZjhmOTgwNWRhY2E1NDZiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIxZWYwYjlkYzJiNWUxYjlhYmVjYmYyZjEwMTVhNDUyM2NiMmE3NTFlZWQ4MjQ0MmEwYTcwODgwZmZjYWY5YmZmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJmMzYwYjQyZGMwN2ZiMDU0NTU0OWMyZGVmZGU2YjRlYzcyNDM4MGNmN2Q4NjQ3ZjQxMjhiZTEyMGJmMWRjYjcwIn0"
-        },
-        {
-          "resource": "repo://src/model/model.test.ts#L1793-L2104",
-          "version": "repo-lines-v1:sha256:037da18e5a7bfa2c8b8731cbc623e4be77d1e0e88eff8c381c3df857a9ad0d54:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIwM2FlYzY5ZGQ3MGIwNTRjZTRhOWUxMjJmNGY5NjA2ZWE1NmM0NzU3NjI2ZTIzNjM3MjYxNjdlODYwY2FiMTMwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4NTgwYjc2NTE4ZGFlOTc5ZmFlYmQwMjM2N2EyOTI5MmE1MGQ5NzYwOTIyNTFhMzhhNmNlMzA4ODBiYTQyODI1IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIxZWYwYjlkYzJiNWUxYjlhYmVjYmYyZjEwMTVhNDUyM2NiMmE3NTFlZWQ4MjQ0MmEwYTcwODgwZmZjYWY5YmZmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
-        },
-        {
-          "resource": "repo://src/model/model.test.ts#L55-L623",
-          "version": "repo-lines-v1:sha256:32a0154476d8d1f69d1b897918f8e8a70feee9392596f9ddbd1310894ab0ef94:eyJzZWxlY3RlZExpbmVDb3VudCI6NTY5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJhNzkzMWU1NDlkM2Y0NTc3MWViOGU3ODljOTZiYjM4NGM5OWExYzZhYjYzOGU5MjBmMjZlZjRhNzA3NTgwMDAwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4NTgwYjc2NTE4ZGFlOTc5ZmFlYmQwMjM2N2EyOTI5MmE1MGQ5NzYwOTIyNTFhMzhhNmNlMzA4ODBiYTQyODI1IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJkY2Y5NWYyYTJmZjQ1NDQyZTEzNWQwNGY2NmZiMjU0YmE3MDEwZWUzMmJlOGIzYWNhMDAyNzNlMTc3ZDA5ZjIzIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI3MjVhMTkxYmFhNzA3NmU2ZmE5YTNlMGY0YWNlMzIzNzdiNzgyNzExNTRhZDJiZTc0YTZkYzRjMWRiMTg1NGRhIn0"
-        },
-        {
-          "resource": "repo://src/model/model.test.ts#L625-L1023",
-          "version": "repo-lines-v1:sha256:8da0bfabc3324e73ab025e134c0a0b2e50acf5ce18d12485a8f77201798efeaf:eyJzZWxlY3RlZExpbmVDb3VudCI6Mzk5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiN2NiNTBhMzYyMjBhMDVjMjk0Mjc0MDE3NzYzZmE5MzA3YTBiYzM1Zjg0ODA5NzU2OTIwODUxYWU2OTUyZGQ5IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI4NTgwYjc2NTE4ZGFlOTc5ZmFlYmQwMjM2N2EyOTI5MmE1MGQ5NzYwOTIyNTFhMzhhNmNlMzA4ODBiYTQyODI1IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIxZWYwYjlkYzJiNWUxYjlhYmVjYmYyZjEwMTVhNDUyM2NiMmE3NTFlZWQ4MjQ0MmEwYTcwODgwZmZjYWY5YmZmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIzNzQ0NzM4ZjJhOTQyN2FlODljNjU5NTk1N2RmZTc1YzRhM2FlNzk1ODNmNzM0NTk4NDhmZjliZjZhODU0OTFmIn0"
+          "resource": "repo://src/model/model.test.ts",
+          "version": "repo-file-v1:sha256:151be5d04e7d642972d6cb0b2d86d2f1a0c0f9ca192c68ec0bdc04594967a756"
         }
       ]
     },
@@ -219,8 +183,8 @@
       "statement": "Store tests (src/state/store.*.test.ts) mock the platform seam at getPlatform() with a fake PlatformAdapter, use a beforeEach that loads a known project via loadFromText, and cover annotation lifecycle, undo/redo (coalescing consecutive same-field edits into one step, a new edit clearing the redo stack), marks, reading position, reviewer seats, save/save-as, finished flags, and AI-suggestion application (never overwriting the reviewer, one undo step per run, a no-op run leaving no trace).",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ai.test.ts#L113-L253",
-          "version": "repo-lines-v1:sha256:9e4a9728c5de674e661adc124c64040f6fcb3cbd40052de3564f7aaa80379258:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI5ZWE4N2ZmNTk3YTY0MTRkODE3ZTk4M2IxNGQzMzUyNWIwYTMwYzIxMmZmMDQ5MDg3Yzk3N2Y1YWE5MDUxNjM1IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwMWJhNDcxOWM4MGI2ZmU5MTFiMDkxYTdjMDUxMjRiNjRlZWVjZTk2NGUwOWMwNThlZjhmOTgwNWRhY2E1NDZiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJhMTk5NjI1ZWIyZjBiNTdkOTA3ZjE0MThmYTM4MThjYTczY2VhYzQ1YWVlODhmY2JhY2ZjOTU4YTIyYmFiNTFhIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI2YTliOTYyYTQ3NTRiNGU4OWRlOWE0YmNlNWEzYzZlY2ViOGIzOTY1Y2I5NTZkODI0MWNiZGM5ZGJjYTFlNTVkIn0"
+          "resource": "repo://src/state/store.ai.test.ts#L114-L255",
+          "version": "repo-lines-v1:sha256:78a41a6035031d5a170e67d5d94c67b9382dad56fbdfae4f68eaf045aff0aa2a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQyLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI5ZWE4N2ZmNTk3YTY0MTRkODE3ZTk4M2IxNGQzMzUyNWIwYTMwYzIxMmZmMDQ5MDg3Yzk3N2Y1YWE5MDUxNjM1IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwMWJhNDcxOWM4MGI2ZmU5MTFiMDkxYTdjMDUxMjRiNjRlZWVjZTk2NGUwOWMwNThlZjhmOTgwNWRhY2E1NDZiIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJhMTk5NjI1ZWIyZjBiNTdkOTA3ZjE0MThmYTM4MThjYTczY2VhYzQ1YWVlODhmY2JhY2ZjOTU4YTIyYmFiNTFhIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI2YTliOTYyYTQ3NTRiNGU4OWRlOWE0YmNlNWEzYzZlY2ViOGIzOTY1Y2I5NTZkODI0MWNiZGM5ZGJjYTFlNTVkIn0"
         },
         {
           "resource": "repo://src/state/store.marks.test.ts#L18-L40",
@@ -237,8 +201,8 @@
       "statement": "gitStore.test.ts stubs the full GitPlatform shape and drives runPull's orchestration (dirty guard, pull classification, parse boundary, merge, resolution dialog) through each branch via beginPullResult/finishPullResult, exercising exactly the branch each test means to test.",
       "evidence": [
         {
-          "resource": "repo://src/state/gitStore.test.ts#L18-L100",
-          "version": "repo-lines-v1:sha256:a73a1d7acd6ec7c26ffdf45984addaf16d9da9c81b28aca97be82fd201ca5612:eyJzZWxlY3RlZExpbmVDb3VudCI6ODMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJmNGU2MzFmMjkxNGMwMTc0NmVkZDRlZTc1ZmMxZmM1MTY1ODM2NWNlMDFlMGJjZTQ5ZDNlNGM5MGFmYmU1YTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVlYTAyNTczZGI0Njg5NTk1ZGQxN2NjMzVhZmU5M2Y3ZDA2ODE2ZWQ3NGU5N2E4ODZkYzA4YzQ4NjE0OTlkODAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU2YzYyMTQwMWE3ZTQ1YTQ4YWI4MGI3MjY5MzgwMjNjYjdlYzQzMzIzZDcwMzhmOTZkYmQyZTg4YWUyMzNjZTQifQ"
+          "resource": "repo://src/state/gitStore.test.ts#L19-L105",
+          "version": "repo-lines-v1:sha256:0283edc2f58f09e135c6400d54fd41e43693190aa35f5e0ce0277e707a66aafa:eyJzZWxlY3RlZExpbmVDb3VudCI6ODcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJmNGU2MzFmMjkxNGMwMTc0NmVkZDRlZTc1ZmMxZmM1MTY1ODM2NWNlMDFlMGJjZTQ5ZDNlNGM5MGFmYmU1YTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVlYTAyNTczZGI0Njg5NTk1ZGQxN2NjMzVhZmU5M2Y3ZDA2ODE2ZWQ3NGU5N2E4ODZkYzA4YzQ4NjE0OTlkODAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU2YzYyMTQwMWE3ZTQ1YTQ4YWI4MGI3MjY5MzgwMjNjYjdlYzQzMzIzZDcwMzhmOTZkYmQyZTg4YWUyMzNjZTQifQ"
         }
       ]
     },
@@ -247,7 +211,7 @@
       "statement": "merge.test.ts in src/git builds base/ours/theirs fixtures through loadProject (the real load path, not hand-assembled Project objects) so each side is exactly as schema-normalized and empty-skeleton-shaped as a file mergeProjects' caller would actually hand it, covering merge3/mergeProjects/applyResolutions/conflictId over repeatable findings and paper-meta fields.",
       "evidence": [
         {
-          "resource": "repo://src/git/merge.test.ts#L18-L82",
+          "resource": "repo://src/git/merge.test.ts#L21-L85",
           "version": "repo-lines-v1:sha256:4e2e773032c2732fb05f897ab51f555ae50239806745f68509a3df54d31493e5:eyJzZWxlY3RlZExpbmVDb3VudCI6NjUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU4MGJmMTczMDE4MzE0Mzc4YTk1ODk2NDkyZjljZGIwNTIxMzM2Y2VhMzYzOTRkMWQ1ZjY1NDI2YmRiNTM3MjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY4MjdlNzRmOGNkYjA2YzhkMTkzYjdkNWI4OTljMWQ0ZWFiNTQ3OGU4NTk2M2Q5OTgzODc5ZmRjNjI5NjQxZDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk3OWRjNjdmNzNkYjUyMGRiMDQ2YWQ3NmY3ODdjZjA5YjFiNTdmYzg1MmZhMTM2Mzc3NTA1MzQ0NDdkYmYwOTUifQ"
         }
       ]
@@ -267,8 +231,8 @@
       "statement": "Component tests come in two shapes: src/components/*.test.ts files test pure helper functions extracted from components directly without rendering (PaperList's paperIsMarkedDone/paperMetadataHaystack, GitDialog's mixedDiscardConfirmMessage and isProjectOwnPath, PdfViewer's destinationPoint/markVerticallyVisible/dedupeOverlappingRects, PapersEditor's duplicatePaperIds, Toolbar's gitButtonState/aiButtonState), while the *.test.tsx files render real components under jsdom with React Testing Library; the multi-step, multi-component workflows live in the integration suite.",
       "evidence": [
         {
-          "resource": "repo://src/components/GitDialog.test.ts#L1-L77",
-          "version": "repo-lines-v1:sha256:efd5958e1c851fc0abc91ee45df98eb2a7eef199e1ab3a41e07543415a3c76bb:eyJzZWxlY3RlZExpbmVDb3VudCI6NzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEyODQyY2U3NjY0NmUzNTZiYjBiYjUwNGRmYTVhMWVmZjI4N2Y3MjkyY2QyMjQ2YTkwM2ViYWE0NzhiZDM1YmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/components/GitDialog.test.ts#L1-L78",
+          "version": "repo-lines-v1:sha256:0bafd5bfa4de8733e85c6c78cebeacba8f54306cdd9b8c9aa41c511148406478:eyJzZWxlY3RlZExpbmVDb3VudCI6NzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImEyODQyY2U3NjY0NmUzNTZiYjBiYjUwNGRmYTVhMWVmZjI4N2Y3MjkyY2QyMjQ2YTkwM2ViYWE0NzhiZDM1YmQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
           "resource": "repo://src/components/PaperList.test.ts#L1-L206",
@@ -287,22 +251,18 @@
           "version": "repo-lines-v1:sha256:dbdb07a69a8bc1d58f1ba0e70c061ce70e7dacbaad75f2abb1b5bea201fca41a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1YWNkZWVkNDFlNWU5MjZiMjk0OWQ3YjIzMmIxNDA5OWZiNTYwMWVlMmU3NmFhMTIyNWQ0MTVhYzFjMmZlMTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNiYmRmNjc5MWI5MzA1NGU3ODNjODkxNzRjNjM1ZmRkMWJiMzI5YTc0NjQzZjc2OTNhZjczYTYyNWNjOWVlY2YiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5ZDUyYjgzOWRiNjFiZTY2ZTQ5NDY1NjQ2YmMxNDZhYWNjYzk2M2FhZjNjYzQ3NzM4NjJjZmZlZjdhM2RlZTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcyMzFiMzVhZTQ5YmQ0YTY0NWE2YWM5YjZkZmQ4ODhjODM0Nzk1NDY5ZmRmOWExZDE0ZGJhMGJhMGFiMjViNzMifQ"
         },
         {
-          "resource": "repo://src/components/Toolbar.test.ts#L9-L92",
+          "resource": "repo://src/components/Toolbar.test.ts#L12-L95",
           "version": "repo-lines-v1:sha256:5917e9ddd65943bb1e6aeff43fc61c47bca28a744c3d97ace6acf361ba0272b0:eyJzZWxlY3RlZExpbmVDb3VudCI6ODQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRjOGYwYjQyZDhjZjRhODk3NTcxYTJhZDVhM2ZlYWZjMTc4ZWQwM2JjMjRjMTIzZmE2OGVmOTUzMzBlMmQ1ODUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjMyNjM5NTRmOWEzNTZjY2U1ZjU1MDllMTZkYTk0YzZkMjljNTZiZjZjZjY0NDczMmNlNzhlMzg1MmFlYjk1YWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2NjRhODQ1MzBmZTlkMjNmMTE1OGE0YmJlODc3NTYzNzJhNjdiNzEwZmQ1MDllODM0YmFmNzEyZDNkMGI3YmEifQ"
         }
       ]
     },
     {
       "id": "claim_287fa4de46bb4c9e9489705890a7749e",
-      "statement": "paperIsMarkedDone (PaperList) decides the paper-list status dot; in Consolidation the dot must mean 'every numbered reviewer has answered', read from paper.reviews, not 'does paper.annotations have anything' — because adoptUnanimousValues fills paper.annotations just from opening the paper, making annotations presence no longer a signal the consolidator produced. The regression test pins a paper with full annotations and a missing reviewer tree as not done.",
+      "statement": "paperIsMarkedDone (PaperList) decides the paper-list status dot; in Consolidation the dot means every numbered reviewer has answered, read from paper.reviews, not whether paper.annotations has anything, because adoptUnanimousValues fills paper.annotations when the paper opens. A regression test pins a paper with full annotations and a missing reviewer tree as not done.",
       "evidence": [
         {
-          "resource": "repo://src/components/PaperList.test.ts#L101-L135",
-          "version": "repo-lines-v1:sha256:4b8dfe7297d5fb0aae9a42f8ed5afefe9e8641709ee2660e65750764d0294a4e:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImIyMzUyNTg5YzM0ZDNjNjA2ODU5MzFiNmVjYzRkNTA5OTFhN2M1NmM4ZmJhMjg5NDExNDY1NzY5MDI3MmNhYzMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAyZDUzNzJkM2JiNGNhMDI1MGRkNjhiZDRkZDI5ZWNkMzU2OTFjYTY5MzZlMWQwZWY5ODQ2NTg3Y2ViNWUyZWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjY3YmI1YTIyMDVmMTY3YzQ3ODE5YjRhMzhmMDkxMjMzYWZlMzVjMGYxMDI1NDhjM2VjYzQ0YzcwMjVkYjIwZmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyYjQwZjRjMTM3ZmYwY2JmOGU5ODM1ZWVlY2Q2MmFiZTA4MGY2OWExNWUyNzNhYzAzNjRlYWMwYzJkNmZhYWQifQ"
-        },
-        {
-          "resource": "repo://src/state/store.ts#L3148-L3185",
-          "version": "repo-lines-v1:sha256:f16de3b1398566fc5a266d6d537cc2767ebb56e2d7346b535d02c1f631898b0f:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEwNGUxNzQ5ZWM0ZDM1M2UzMjEzYTMyMGYyYjRlOTkwNzM3MTgzZDViZTY4NWZhOTVkMDZlOTIxM2M0ZGNmM2QiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhZDgzYjg3NGJiODcwMGI3M2Y1NmE2MTI3MTZkNjYxMzE1MjU1OGUxMTBlODRjY2FlY2E2MzMyMDE5NjZjOTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZkYzE0OGQ4ZGFjZjllZWIxYTdhMDM2ZjU2ZTBiZDI4OTEwNDFkOGQ0MTI3MDBjYmEzMTlkYWU2OTg2YWQ4NWEifQ"
+          "resource": "repo://src/components/PaperList.test.ts",
+          "version": "repo-file-v1:sha256:8769d89f4be04c8505d3334c796e8fc4897cd2fc6aa02b76795534f457de69a9"
         }
       ]
     },
@@ -311,7 +271,7 @@
       "statement": "mixedDiscardConfirmMessage (GitDialog) warns before a commit silently reverts or deletes a Discard row; a PaperChange marked Discard deletes the paper and all its annotation files (consolidated.json, every reviewer-<n>.json), so it is named as '1 paper' (with 'deleted') rather than the badly-underselling '1 field ... reverted', and discard-only mode suppresses this warning because it has its own separate confirm.",
       "evidence": [
         {
-          "resource": "repo://src/components/GitDialog.test.ts#L4-L55",
+          "resource": "repo://src/components/GitDialog.test.ts#L5-L56",
           "version": "repo-lines-v1:sha256:76f08d553be7fce5cdbf636f046fb459bf6804cde049f552bca7325c6cd8e792:eyJzZWxlY3RlZExpbmVDb3VudCI6NTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjlhM2RiMGU0MDcwMzczZGJjYTk3M2E0YWQ0NjA1MmI1NGM5MmNkYTFjODdlZGIwYWZkZDFiYzJkNzIzMzMwYWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQyYjZkY2FlODkwMGYxYzU0Y2E3MzhkZDhjNDY0N2I4YzZlMjIyOGY4ZjRlYWZhMzQyOWFhMWZjNzNhMWIyM2EiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU4MjY3MjhkNWJhM2YzZjRlNzEzOGMwNDcxNmZmZWM4Y2I0YjNiYWY4MmVkMGY2OGY0YzliZmQyZjgyN2I5OTUifQ"
         }
       ]
@@ -328,41 +288,37 @@
     },
     {
       "id": "claim_857b0eb8dd2845aebe6c742fcabfa30f",
-      "statement": "PlatformAdapter (src/platform/adapter.ts) is the platform abstraction for file I/O, PDF loading, LLM calls, git access and self-update; TauriAdapter is its only live implementation (driving the Tauri bridge), while createUnsupportedAdapter is an inert Proxy stand-in that refuses every action now that the browser/web build is discontinued. It exposes openProject/saveProject/rebasePdfPaths/getPdfSource plus getGit(), and is the single seam both unit and integration tests mock with a fake implementation.",
+      "statement": "PlatformAdapter (src/platform/adapter.ts) abstracts file I/O, PDF loading, LLM calls, git access and self-update; TauriAdapter is its only live implementation, createUnsupportedAdapter is an inert stand-in that refuses every action, and the demo build swaps in an in-memory createDemoAdapter. It is the single seam unit and integration tests mock with a fake.",
       "evidence": [
         {
-          "resource": "repo://src/platform/adapter.ts#L65-L95",
-          "version": "repo-lines-v1:sha256:7bffbd4a636492ed91d689b2590717eb362dec1008e8e1b3c101006e4d1f0db8:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVlNzExMjdmN2Y1ZjE3MTdiOTZlN2U5NzY5MGE3ZDE4MWE1MDcyMzdmY2FkMTg4NDBiYmIwOTM0MDIyYTkyMGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJjNjg0NjU1MmVlMmU1M2ZiMGVhNDgxMjQwMDhkNWI5NzExMTM5ZDk2MTYyZmVmYjQyNjRmMWExNzk4NTczOTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU2OGI5Y2Y5ZjViNzJiYzViNmYwMzdiYjRlZTg1YmM4NzRmY2I0NDk5N2ZlMTc3MWYxYTE4N2MwYzM5NTNmOGMifQ"
+          "resource": "repo://src/platform/adapter.ts",
+          "version": "repo-file-v1:sha256:28dc2594d03b39b43fb2dc320b4f667580ce7c4376c10c735a47411513143f02"
         },
         {
-          "resource": "repo://src/platform/index.ts#L15-L28",
-          "version": "repo-lines-v1:sha256:785deda9bff0f7d252541fc100720254edb2d23ccdd1f7ebf06a58bc8412b8ec:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1NzIxNDg2OTJiYTQwYjBkNmEyZmFkMmMyYzBmMjUzMmM5MTdmZTgyZjQ3MTU5ZTNjYWI3ZGNiNjI3MGRjZmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzYjdjNGI0ZmRhYmJjM2Y3NWI3ZGNmZTgzZWI3YzYzNmM0YTBjYmJkODgzMjljZTA1NDkyMTFjZGFmY2ZmMzEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjgzZmI3NDg5NjNkOWQ1MTViZmM3YjM5NjM3MWVmZGFjZDc4Y2Q2ODUyZjY3ZThmMjQwYjhiYzYzZWNiNWRjYzYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjAzMzNhMzdlZDk3NDNlZDU2YWYxMDNjYWFkNGNiNDA2MGUwYmUxNTA4MzcwNGNmOWIwYjM0ZDY3NjFkNjc5MjAifQ"
-        },
-        {
-          "resource": "repo://src/platform/unsupported.ts#L14-L49",
-          "version": "repo-lines-v1:sha256:50ee0397e004efd39e8ac0aed7b80235927c98270daa5da700949dd4bc72c002:eyJzZWxlY3RlZExpbmVDb3VudCI6MzYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyODY1NTY2MjhkNmNkYzNkMjE2MmEwMmFjZTYzNGUzNzQzNjA0ZjU4YjNiYmEzZDI2MjI0ODBiY2QwZTU0YmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVjNjBkNTE3Nzg3ZjY4NmZlNzlmZGNkM2VkMzExNDA2M2JlZWIwYzMwYjgwNDIwNDBhZDEwOWUwNzA3NzExOWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/platform/index.ts",
+          "version": "repo-file-v1:sha256:fb238395e2d5d474c8e8c192a62e909445dfbeeb0528ac9f036a1dd033fe3c4b"
         }
       ]
     },
     {
       "id": "claim_ee0c991234474a41b1d78b31829ad24e",
-      "statement": "SaiLoR is checked in four deliberately separated test layers, each owning the class of bug the layer below it structurally cannot see: Vitest unit tests (npm test, the fast per-PR tier), a jsdom integration suite that mocks the platform seam and spins up real scratch git repos (npm run test:integration, slower and excluded from the default run but part of CI), Rust unit tests inline in every src-tauri/src module (cargo test --manifest-path src-tauri/Cargo.toml), and the tauri-driver e2e probe (a minimal e2e/ page built with the probe cargo feature and driven by node --test e2e/probe.test.mjs).",
+      "statement": "SaiLoR is checked in four separated test layers: Vitest unit tests (npm test, with coverage thresholds via npm run test:coverage), a jsdom integration suite that mocks the platform seam and uses real scratch git repos (npm run test:integration), Rust unit tests inline in src-tauri/src modules, and the tauri-driver e2e probe. Requirement tracing (OpenFastTrace) and Stryker mutation tests sit beside the layers.",
       "evidence": [
         {
-          "resource": "repo://e2e/probe.test.mjs#L18-L40",
-          "version": "repo-lines-v1:sha256:d04db6cfe0492ad802c9376f6cbb6c79d13388baaa936680e35e0832be026298:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA0YjJhNzA3OTIyNjNjY2FiOTg0MTFhYmFjNzY0NDM2MTNhZDljZTdjMzI4ZGYyYjg0Yjc2YjkyNGJlY2E0MTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://e2e/probe.test.mjs",
+          "version": "repo-file-v1:sha256:54894338a0aa96e2f2a335d999b677eed8203d02593b6aa684bad0bcd214fc83"
         },
         {
-          "resource": "repo://src-tauri/Cargo.toml#L6-L8",
-          "version": "repo-lines-v1:sha256:7d21f2945c2426d476ce5fb94edae4a884baa2eeb3240eb31e1d37257914dc56:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjZmNmMxYzczZTQ2ODViNmY1NTc5MmFlNTM5MjU1M2ZmNzlkM2NjMDY3YjBiNzRlMDY4Njk4ZjZiMmM3NmI4MiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDA2NmY1OTJkM2ZjMzFhYmY5ZjM2NzZjOTczOTY0YzBiMDNiMTBlZjNkNzMyMGZmN2RlYzY0NzgxMDk1MDRjZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMThjODJhYTcwZWEyNmQyNDEyM2JhMjcxNmU5NzEyMTRkNjQwZTMxYzllMTcyZDRmYjc3ZTNhNjk4MDIyNDI0OSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWM0NTBiOGFlYjExMzhiZjE3NWZkYzFkOThmOTVhZmNkNjdjMzI3NDgzNjZjMTY4MDg1NWQ4ZGFjMTQ1YWZlNiJ9"
+          "resource": "repo://package.json",
+          "version": "repo-file-v1:sha256:c9bd3f7faa5a295c14c074b19427809e6523971d30999ab0ec5f8cadfc421e74"
         },
         {
-          "resource": "repo://vite.config.ts#L33-L47",
-          "version": "repo-lines-v1:sha256:ac23e89e05edcf4ac3def90caa699e698d03d4d834e460aa178dd9ff7b7cb0a3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFkMWNkMzlkOTAxZmQ3MmNiODM3ZjQwMjk3NWU2OTQzMmNkODRlMmFmMzliOGY3Y2EzY2Y2MjRkZDE5NTE4NzQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkNWNkMmZiNGYzZGY4ODQ1MTUyNTViMzk1MjNmMmY4YjU0NzJiZWVhOWY1NjZmZmNhMjA0ZGI4MDI1NjEwNDEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjczMjFiMmFmYjQ5ODZjZDlkZDhhNzFkYTk0NGFiYTBjZDFlOTgwODQyOTI2MmE5M2IzNmE0MDU3ZGMxZGRlMWYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUifQ"
+          "resource": "repo://vite.config.ts",
+          "version": "repo-file-v1:sha256:7c9c2175d9997636b477451dd334f8918bf2368974eb1f3d270dbf7f66b31f0d"
         },
         {
-          "resource": "repo://vitest.integration.config.ts#L13-L21",
-          "version": "repo-lines-v1:sha256:80c2c228ec60aabd9b5f3a5924675306b0c6d6b53b12bbab2b42d73e2a59a84b:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODk1NWJiY2VlNDRmM2ZlYWIwMzg3M2M0MWYwNjEzZGY5NjU5MGIyMDYwMmY0YzY1Mzg3NWM1OGNlMjVkNGExYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODU4MGI3NjUxOGRhZTk3OWZhZWJkMDIzNjdhMjkyOTJhNTBkOTc2MDkyMjUxYTM4YTZjZTMwODgwYmE0MjgyNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzQwOWQ2YTliZmIyYjU2MWEwOTc4YWI3ZmNhYjg3NmU1OGJkMDAyYTdmMjdiYWQwZjM3MjI3ZDFlMjU0NjQ0MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+          "resource": "repo://vitest.integration.config.ts",
+          "version": "repo-file-v1:sha256:7c4d52db7504aa0c7e18cc45ba062931f4bb994b826af3c485baa934b3c4effa"
         }
       ]
     },
@@ -371,12 +327,12 @@
       "statement": "The Rust test layer lives inline: every module in src-tauri/src/ except main.rs has a #[cfg(test)] mod tests block. git.rs (the largest module) pins the shell's security and parsing gates — rel_path_problem/validate_git_url/validate_clone_path and ref_problem vectors shared with the renderer's src/git tests, the porcelain/log/stash-list/annotation-authors parsers, own-annotation-path matching, merge-blocking and repo-setup rules — and then runs the real command surface against real scratch repositories (info/status/commit with the detached-HEAD refusal, pull fast-forward/merge/conflict-elsewhere through a clone pair, stash push/restore/drop, branch-switch begin/abort/finish, commit_partial/write_working, discard rules, and a unix symlink-escape check).",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/git.rs#L2272-L2380",
-          "version": "repo-lines-v1:sha256:cef07238330b7b2c73f1b6f9f908f52c4909e16d001dede7b456e80af8a7d199:eyJzZWxlY3RlZExpbmVDb3VudCI6MTA5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxZTBhZjNmZDRhNGMzYTFkNDdjN2Y0NzBlZDBkODZkOTBkOWRlMjEwYTVlYjE0NTVmYmQ5NDQ4MmE0NzY1YjcyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzMTRhMDBhMDU0YWY3NzY0NmZlMjczYTgwOTJkZTY0ZmVkYzIwZmFjOWVkNjZmOWU3MDE1Y2MzZGUyNTJhYTI4IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJhNTIxNjA0YjM1ZmM0MGFmMDBjYmE0ZWVhMmZkNWUyYzNhZjE4NjNiMzkxMTg1ZDdiZjRiYjA5ZTcyZDBjOGIzIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0YTA5ZGJmZmRmMTRkMTlkMzQ5ZjcxYTM1NzA1Zjg5ZTRjNGI1MTg4ZmZmYjhhYWQ3YmVmZDAyMWVhNDBlYmM2In0"
+          "resource": "repo://src-tauri/src/git.rs#L2712-L2826",
+          "version": "repo-lines-v1:sha256:4715308030081cf8c09356513a9bf281886ad20de7e7c79768a0e24563d368ba:eyJzZWxlY3RlZExpbmVDb3VudCI6MTE1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIxZTBhZjNmZDRhNGMzYTFkNDdjN2Y0NzBlZDBkODZkOTBkOWRlMjEwYTVlYjE0NTVmYmQ5NDQ4MmE0NzY1YjcyIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzMTRhMDBhMDU0YWY3NzY0NmZlMjczYTgwOTJkZTY0ZmVkYzIwZmFjOWVkNjZmOWU3MDE1Y2MzZGUyNTJhYTI4IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJhNTIxNjA0YjM1ZmM0MGFmMDBjYmE0ZWVhMmZkNWUyYzNhZjE4NjNiMzkxMTg1ZDdiZjRiYjA5ZTcyZDBjOGIzIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiI0YTA5ZGJmZmRmMTRkMTlkMzQ5ZjcxYTM1NzA1Zjg5ZTRjNGI1MTg4ZmZmYjhhYWQ3YmVmZDAyMWVhNDBlYmM2In0"
         },
         {
-          "resource": "repo://src-tauri/src/git.rs#L2720-L3115",
-          "version": "repo-lines-v1:sha256:340b84ef5c6cabe4a2bfa0c8c36a0ce70acb188fb639df8c81f2abe381f776d3:eyJzZWxlY3RlZExpbmVDb3VudCI6Mzk2LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIwMWJhNDcxOWM4MGI2ZmU5MTFiMDkxYTdjMDUxMjRiNjRlZWVjZTk2NGUwOWMwNThlZjhmOTgwNWRhY2E1NDZiIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI5NTc1ZGE2OGUyODExNjg1NGMwNTg0ZDViZjhmNGZiNGQ1NjFhMzkzYTU4NjdjNGNlYzA5NWY4NDQyYjRkM2I1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+          "resource": "repo://src-tauri/src/git.rs#L3168-L3895",
+          "version": "repo-lines-v1:sha256:6a6a577c398ead82a821d7369561a659b2d5afed41dd96daf741e521923c551f:eyJzZWxlY3RlZExpbmVDb3VudCI6NzI4LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIwMWJhNDcxOWM4MGI2ZmU5MTFiMDkxYTdjMDUxMjRiNjRlZWVjZTk2NGUwOWMwNThlZjhmOTgwNWRhY2E1NDZiIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI5NTc1ZGE2OGUyODExNjg1NGMwNTg0ZDViZjhmNGZiNGQ1NjFhMzkzYTU4NjdjNGNlYzA5NWY4NDQyYjRkM2I1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -385,38 +341,34 @@
       "statement": "protocol.rs's Rust unit tests pin the slr-file:// scheme's security and serving behaviour: ../secret.pdf, pdfs/../../secret.pdf and an absolute path all return 403, a missing file 404, and a session with no project open says so — plus single byte-range serving (206 with Content-Range, 416 for unsatisfiable, malformed/multi-range treated as whole-file), the OPTIONS preflight allowing Range, and form-encoded plus-as-space query parsing. webfetch.rs pins the SSRF guard's blocked-address/blocked-hostname vectors, update.rs asserts the updater feed is the fixed HTTPS GitHub endpoint with requireSignedVersion true read from tauri.conf.json itself, and project.rs pins that save refuses a path the session never opened (the 'Refusing to save' guard).",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/project.rs#L644-L660",
-          "version": "repo-lines-v1:sha256:93e3fb94d85159a106f0806994400ba789125186c42ba8238a79f56b9fd739da:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4Y2YwOTc0Yzg3NmQyYTRhNWI3YjJmNTVmODVmYzhlMjU2YzlkZTg1ZDc3NzQ3ZDllN2QxYTY5NDIyMTJmNGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiMTZmM2U1ZmI1OWNmYTc4ZTYwN2FhYTIzYjViZWQ0MTdjNThmZDY5N2MyZGRkMmNkZTcxMGViOWY1MjhjNjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjczM2I3ZWYyNDRjYzZmMjA5YmFiNWI4MDI3YWRhOTA1NWU1ZTYyNDFmZTVlOTYwNTQzMjc2NThiMTIwMzVlYWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU1MTBhZTRhZGU2ZjkwOTA2YjJlNmI4NmYzN2QxODI0ODI3OTA0MmU0MzYxZjVkNGE4NjgyNTgyOTA0NGRiZGEifQ"
+          "resource": "repo://src-tauri/src/project.rs#L807-L824",
+          "version": "repo-lines-v1:sha256:538e9f83521eef1a85cc38d634b2e55b784df0ec13f0cc0c3c7d936f5131e259:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM4Y2YwOTc0Yzg3NmQyYTRhNWI3YjJmNTVmODVmYzhlMjU2YzlkZTg1ZDc3NzQ3ZDllN2QxYTY5NDIyMTJmNGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdiMTZmM2U1ZmI1OWNmYTc4ZTYwN2FhYTIzYjViZWQ0MTdjNThmZDY5N2MyZGRkMmNkZTcxMGViOWY1MjhjNjAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjczM2I3ZWYyNDRjYzZmMjA5YmFiNWI4MDI3YWRhOTA1NWU1ZTYyNDFmZTVlOTYwNTQzMjc2NThiMTIwMzVlYWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU1MTBhZTRhZGU2ZjkwOTA2YjJlNmI4NmYzN2QxODI0ODI3OTA0MmU0MzYxZjVkNGE4NjgyNTgyOTA0NGRiZGEifQ"
         },
         {
-          "resource": "repo://src-tauri/src/protocol.rs#L123-L220",
-          "version": "repo-lines-v1:sha256:c91669cc10e4bce7f4614a29c2a46ec8e2a4993cb3d1d1b1be098cde1c8535fc:eyJzZWxlY3RlZExpbmVDb3VudCI6OTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlMGFmM2ZkNGE0YzNhMWQ0N2M3ZjQ3MGVkMGQ4NmQ5MGQ5ZGUyMTBhNWViMTQ1NWZiZDk0NDgyYTQ3NjViNzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1MjE2MDRiMzVmYzQwYWYwMGNiYTRlZWEyZmQ1ZTJjM2FmMTg2M2IzOTExODVkN2JmNGJiMDllNzJkMGM4YjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src-tauri/src/protocol.rs#L129-L227",
+          "version": "repo-lines-v1:sha256:e436af0f9b40feba3bee81d337b1f1e1f75e1b519d86e6e62516516993eebc0c:eyJzZWxlY3RlZExpbmVDb3VudCI6OTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlMGFmM2ZkNGE0YzNhMWQ0N2M3ZjQ3MGVkMGQ4NmQ5MGQ5ZGUyMTBhNWViMTQ1NWZiZDk0NDgyYTQ3NjViNzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1MjE2MDRiMzVmYzQwYWYwMGNiYTRlZWEyZmQ1ZTJjM2FmMTg2M2IzOTExODVkN2JmNGJiMDllNzJkMGM4YjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
-          "resource": "repo://src-tauri/src/update.rs#L100-L142",
-          "version": "repo-lines-v1:sha256:70b1432c6feb182ee8e807f673abb0c5a57e8ee421aad8c173c28cef4dcec08e:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlMGFmM2ZkNGE0YzNhMWQ0N2M3ZjQ3MGVkMGQ4NmQ5MGQ5ZGUyMTBhNWViMTQ1NWZiZDk0NDgyYTQ3NjViNzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1MjE2MDRiMzVmYzQwYWYwMGNiYTRlZWEyZmQ1ZTJjM2FmMTg2M2IzOTExODVkN2JmNGJiMDllNzJkMGM4YjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src-tauri/src/update.rs#L124-L169",
+          "version": "repo-lines-v1:sha256:7db5d4230329450c649b4e3f4e1cdaf744417cd4da19aef6c32f2ee8f9b9e471:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlMGFmM2ZkNGE0YzNhMWQ0N2M3ZjQ3MGVkMGQ4NmQ5MGQ5ZGUyMTBhNWViMTQ1NWZiZDk0NDgyYTQ3NjViNzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1MjE2MDRiMzVmYzQwYWYwMGNiYTRlZWEyZmQ1ZTJjM2FmMTg2M2IzOTExODVkN2JmNGJiMDllNzJkMGM4YjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
-          "resource": "repo://src-tauri/src/webfetch.rs#L307-L360",
-          "version": "repo-lines-v1:sha256:b6ea660d65570404dcd693290c17d9b9f10a506fc7e44f68a3f04109af47ba55:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlMGFmM2ZkNGE0YzNhMWQ0N2M3ZjQ3MGVkMGQ4NmQ5MGQ5ZGUyMTBhNWViMTQ1NWZiZDk0NDgyYTQ3NjViNzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2YjVmMmU5NWU1MjFmNWI2NDY5OTVlM2JkOWI2YzBmNGNmNTFiMDVhMThiMjE0YjkzODRiNGE5YzUwNGE4ZDgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1MjE2MDRiMzVmYzQwYWYwMGNiYTRlZWEyZmQ1ZTJjM2FmMTg2M2IzOTExODVkN2JmNGJiMDllNzJkMGM4YjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEwMGRiMDQwZjI5MDliZjk3OGZmMGE5NTZhNTVlODNjNjUzNDE4ZGU2YmI2OGY4MDQxZGE5NzZmOGQzZDIyNzAifQ"
+          "resource": "repo://src-tauri/src/webfetch.rs#L341-L390",
+          "version": "repo-lines-v1:sha256:ace50b76a67e3ba21506a069981e637c64c84137faaf2708168b669202be4d45:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFlMGFmM2ZkNGE0YzNhMWQ0N2M3ZjQ3MGVkMGQ4NmQ5MGQ5ZGUyMTBhNWViMTQ1NWZiZDk0NDgyYTQ3NjViNzIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2YjA0NDkxNDY5NzIyZTgzNjNhOTRlNDA0NDUzOGUwMTNhMmEyMTdlMzZiMWU1NjhiYTYwYWNiN2I0YzhmMmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE1MjE2MDRiMzVmYzQwYWYwMGNiYTRlZWEyZmQ1ZTJjM2FmMTg2M2IzOTExODVkN2JmNGJiMDllNzJkMGM4YjMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEwMGRiMDQwZjI5MDliZjk3OGZmMGE5NTZhNTVlODNjNjUzNDE4ZGU2YmI2OGY4MDQxZGE5NzZmOGQzZDIyNzAifQ"
         }
       ]
     },
     {
       "id": "claim_275fa5f049ee422ba480643ba1264546",
-      "statement": "CI runs the Rust tests per OS rather than once: the tauri-build matrix job (macos-15, macos-26, windows-latest, ubuntu-22.04, ubuntu-24.04) runs cargo test --manifest-path src-tauri/Cargo.toml before building the installer bundle, and the separate rust lint job gates cargo fmt --check plus cargo clippy --all-targets --all-features with -D warnings. Locally the same two checks are make test-rust and make lint.",
+      "statement": "CI runs the Rust tests per OS rather than once: the tauri-build matrix job (macos-15, macos-26, windows-latest, ubuntu-22.04, ubuntu-24.04, ubuntu-24.04-arm) runs cargo test --manifest-path src-tauri/Cargo.toml before building the installer bundle, and the separate rust lint job gates cargo fmt --check plus cargo clippy --all-targets --all-features with -D warnings.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/ci.yml#L62-L63",
-          "version": "repo-lines-v1:sha256:50ce265d99e092fd5ab1f3ec51c58ab6ccc75d7ea8f9cac81696e24c9a96b20c:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWU1YWZjZTM3YzJkNjZlODA1MTdjYmRlN2I4M2NiMDlkZjQyNmY0MTYxODU3ODU4NzBlOTU0MDg4MjY2MDNjYSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYzFlZjdmYzYwMGFlNWM2Mzk1MjMxYzAxNTljZTFmYTA2MWM4NmNmMTBmMmVhMjk3NGU1Mzc3YWIzOWVmN2QzYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2ZlNjMwN2ZlNmUyODUxZDM3ZTQyNzgzZWMxN2U4ZjczODU0MDU0MjE2NWEyMGQ3MjYyZWIzM2E5ZjdjNDRjYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMzhjYjM3YjIwZDgyMTRkODhlMzk4N2JhMTQ5ZmI1OGQ5ZWMzNmZmMDU0MDhjNGIyMzU3MjU1ZGUyMTE0ZmQyMiJ9"
+          "resource": "repo://.github/workflows/ci.yml",
+          "version": "repo-file-v1:sha256:5ed86be023270e9850b5de3c7e98444a201f8d645fc8050120e6a474e79c585f"
         },
         {
-          "resource": "repo://.github/workflows/ci.yml#L96-L99",
-          "version": "repo-lines-v1:sha256:f892360c1e549851abc64f80a53adaa51117cf225df1528fa421859597596790:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNjNmMTdmNzA4YmY5NDE4YjhmYzA4YzE1YTBkNTFiMDE3YzNlNjRlNzkxOTYzZDk0ODI5YmFlNGY1M2ZhYzVkNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTkzYzBmNGNkMTA5NzRiOTA0ZTJmMWRiZjRkYTRiMjIyZDc2YTIzZDgzOTc5ZmI5N2Y0MWQ0MTAxZGUyYzkzZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiN2ZlNjMwN2ZlNmUyODUxZDM3ZTQyNzgzZWMxN2U4ZjczODU0MDU0MjE2NWEyMGQ3MjYyZWIzM2E5ZjdjNDRjYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzMxNzI0NmM0YmJlNGFiNzg2NzBiNmQ3MjlmY2E2OWU3MTdhNzU2ZDY4YTFiY2UxNjQ1OGQxZDMzOTdhMzYyMSJ9"
-        },
-        {
-          "resource": "repo://Makefile#L29-L41",
-          "version": "repo-lines-v1:sha256:c9bd016245995679d20c0bba85b1211ed62104dc00f4ebd371e40a2e194158d9:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjcxYmZhMDIxY2MxNDVhMDgyZWYzNTFhOTNhZmM2MWMwOGQ2ZGVmYzc3MjMwNDA1MjU3N2FkOTljMzZhNjI0YjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ0M2ZlZjE2NjQzNjY5OGE2Y2M5MmI4OGY1MjYxZGFmNTNmZmI1MTc3N2EzNzljMGI4MDEzYjA4N2QxYWQ4ZWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjgzZjlhZDM2ZTkwOGNjOTU1Nzg2YmRmODYwNGU4ZGJhNDVjNTYyNDQwMjE1ZGY1NzZkODgxMzkyYmQ3NmFhZTEifQ"
+          "resource": "repo://Makefile",
+          "version": "repo-file-v1:sha256:cb97203aadc92760bde0767d81ae7ad73d1f1241357ee8c40b48c42a1c1c0dac"
         }
       ]
     },
@@ -425,12 +377,12 @@
       "statement": "The e2e layer is the probe app, replacing the Electron-era Playwright specs: a minimal React page (e2e/index.html + e2e/main.tsx, sharing the app's pdf.js worker setup via src/platform/pdfjs) that is not the real app, built into the real binary and driven through tauri-driver by e2e/probe.test.mjs (node:test). It is the one layer that proves, in a real system WebView, that the shell serves the embedded frontend, that slr-file:// refuses a traversal with 403, and that pdf.js actually renders a real PDF.",
       "evidence": [
         {
-          "resource": "repo://e2e/index.html#L1-L3",
-          "version": "repo-lines-v1:sha256:cc0667d0bdc95dd66f3433ce395ca5cd6eade6dfc84d2af86911011410b91695:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzM1ZmNhODU3NGYwNjBlZWEyNGViY2RhZTZiNzhmMzI0MTRmNWRlMDNkYTEwODRmZDBlNzNkNzEwNzY4ZTNhOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDAwMjMwNDAxMDlmOTg3NTRkYThmYzQ2YjNjZWViZmNjMzlhOTM4MmU2Y2ZjMzJlMWI3ODJkNDZhNzEzMDIxMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+          "resource": "repo://e2e/index.html#L1-L4",
+          "version": "repo-lines-v1:sha256:c04ffd1a166ca0aa497f0a4fa251eb661160bc3542e21004cfd2d1fc39b837ef:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzM1ZmNhODU3NGYwNjBlZWEyNGViY2RhZTZiNzhmMzI0MTRmNWRlMDNkYTEwODRmZDBlNzNkNzEwNzY4ZTNhOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDAwMjMwNDAxMDlmOTg3NTRkYThmYzQ2YjNjZWViZmNjMzlhOTM4MmU2Y2ZjMzJlMWI3ODJkNDZhNzEzMDIxMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjAsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
         },
         {
-          "resource": "repo://e2e/main.tsx#L1-L62",
-          "version": "repo-lines-v1:sha256:a9c7c8e4930fcf9c419637ddb11867a917c7288bff0a8d4d594a625448576ee1:eyJzZWxlY3RlZExpbmVDb3VudCI6NjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2MTE1YjVjMzEwZmQ5OGFhMzQwMmFhNjg4ZDU3MjI4YmIzN2ViZGU2MWUxNTNlN2QzODkwZjMwZTA3MTgyNGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI5MWYwNDgzNjVmMGE5NTc4NjE2YWY3MGUzNzQxMDRlNTkzN2Y0M2Q5ZWRkNzIwOWMwYTNjYmEzZTBhYzU4ZGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://e2e/main.tsx#L1-L67",
+          "version": "repo-lines-v1:sha256:5f831bd84fef7d1a641d0a3c603b95d8d4d35acd59cc94b9b5fd784060541fd6:eyJzZWxlY3RlZExpbmVDb3VudCI6NjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU2MTE1YjVjMzEwZmQ5OGFhMzQwMmFhNjg4ZDU3MjI4YmIzN2ViZGU2MWUxNTNlN2QzODkwZjMwZTA3MTgyNGUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI5MWYwNDgzNjVmMGE5NTc4NjE2YWY3MGUzNzQxMDRlNTkzN2Y0M2Q5ZWRkNzIwOWMwYTNjYmEzZTBhYzU4ZGIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
           "resource": "repo://e2e/probe.test.mjs#L18-L40",
@@ -451,8 +403,8 @@
           "version": "repo-lines-v1:sha256:7d21f2945c2426d476ce5fb94edae4a884baa2eeb3240eb31e1d37257914dc56:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjZmNmMxYzczZTQ2ODViNmY1NTc5MmFlNTM5MjU1M2ZmNzlkM2NjMDY3YjBiNzRlMDY4Njk4ZjZiMmM3NmI4MiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDA2NmY1OTJkM2ZjMzFhYmY5ZjM2NzZjOTczOTY0YzBiMDNiMTBlZjNkNzMyMGZmN2RlYzY0NzgxMDk1MDRjZCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMThjODJhYTcwZWEyNmQyNDEyM2JhMjcxNmU5NzEyMTRkNjQwZTMxYzllMTcyZDRmYjc3ZTNhNjk4MDIyNDI0OSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYWM0NTBiOGFlYjExMzhiZjE3NWZkYzFkOThmOTVhZmNkNjdjMzI3NDgzNjZjMTY4MDg1NWQ4ZGFjMTQ1YWZlNiJ9"
         },
         {
-          "resource": "repo://src-tauri/src/main.rs#L26-L56",
-          "version": "repo-lines-v1:sha256:2f738ac1cb6c1b8a64ba61b34c52e3ce67302daeb9ec7c814a5fb69b44224484:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM1NzAxZDhjOTBkNWVjNzgxM2E0OGViMjM1OWJiOWZjY2M4NThiODNhODhlNzRmNWJlMTJhNWZmYjY0ZGQ4ZWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJmOTJhYzQ2ZTVkOTM5N2ZhMzljNmM2OWYyMTc5ZTc0YzIzNjA5OTAzZTUyY2ZhMjNkMmRiMjBlMjMwN2JjZjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI0NWY5MWVmN2ViYzRkNGM1MTkxYWM5MWQ2NjlhNTUyNGRkYWFiM2M0NDYxYzRmYjg1OTFiNWQ1N2MwMzBmOGEifQ"
+          "resource": "repo://src-tauri/src/main.rs#L28-L58",
+          "version": "repo-lines-v1:sha256:283843fccd1aa81bc60d424633a638cc70029103c1ca1d00147a0b2ba7e93b9a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM1NzAxZDhjOTBkNWVjNzgxM2E0OGViMjM1OWJiOWZjY2M4NThiODNhODhlNzRmNWJlMTJhNWZmYjY0ZGQ4ZWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4OTNmNDBlMzc4MWViODk2YzgyZDA0NmEwODA2N2ExMWUzNWNkZjJmMWRmYWYyNmZlYTkwYjhkYjY2NzY0MTMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJmOTJhYzQ2ZTVkOTM5N2ZhMzljNmM2OWYyMTc5ZTc0YzIzNjA5OTAzZTUyY2ZhMjNkMmRiMjBlMjMwN2JjZjQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI0NWY5MWVmN2ViYzRkNGM1MTkxYWM5MWQ2NjlhNTUyNGRkYWFiM2M0NDYxYzRmYjg1OTFiNWQ1N2MwMzBmOGEifQ"
         },
         {
           "resource": "repo://src-tauri/tauri.probe.conf.json#L1-L8",
@@ -469,26 +421,22 @@
       "statement": "The probe page, on mount, calls probe_auto, lists the project's PDFs, then fetches ../package.json and nope.pdf through the custom scheme logging `probe <rel> -> <status>` for each (the traversal must come back 403), renders the first paper's PDF with react-pdf logging `PDF OK pages=N` then `RENDER OK` on render success, and mirrors every line into the in-page #log element and via probe_report into the report file. The scheme base is http://slr-file.localhost on Windows and slr-file://localhost elsewhere.",
       "evidence": [
         {
-          "resource": "repo://e2e/main.tsx#L37-L53",
-          "version": "repo-lines-v1:sha256:c5217a4c4283e3e973a7cdd7afd336df1ad5c0a6f0ccfda72033c5a1466ffdb6:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgwNTMwZjViMTU1MWFiOGNiZDliMGZjZDliMmNmOGQ1ZjU3MjA2ZDhhZDE1MDgyYTlhMzJhYTlmZmU4NzczMWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM1NzhmMjYxMWQ5MjhjMmRjYzlmNWRmMDZkMzI0ZDlhY2YxYTVlYmViOWMzM2Q4NDNlN2I0MjMyY2RhMTFjNTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3ODFmNjU3MmJlNWY4NGZmOWFhYjlhNDMyYjBjMzNiYWE5YjQzMDQ1Zjg3OTVmOTc2ZjAxMjE4ZTFiZWU3ZGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0ZTJkYTRhOGJjOTliYjMwOTRjZTg0N2I3NDYwYWFkMWEyZDY3NTNjMjdkN2U1MTQ3OGY5YjU1MjI3OTA3Y2QifQ"
+          "resource": "repo://e2e/main.tsx#L37-L58",
+          "version": "repo-lines-v1:sha256:63fb49ed0b1c5bcd81e1df5082173a79859f572601ca94aa849c997b51b52128:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgwNTMwZjViMTU1MWFiOGNiZDliMGZjZDliMmNmOGQ1ZjU3MjA2ZDhhZDE1MDgyYTlhMzJhYTlmZmU4NzczMWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjM1NzhmMjYxMWQ5MjhjMmRjYzlmNWRmMDZkMzI0ZDlhY2YxYTVlYmViOWMzM2Q4NDNlN2I0MjMyY2RhMTFjNTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU3ODFmNjU3MmJlNWY4NGZmOWFhYjlhNDMyYjBjMzNiYWE5YjQzMDQ1Zjg3OTVmOTc2ZjAxMjE4ZTFiZWU3ZGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE0ZTJkYTRhOGJjOTliYjMwOTRjZTg0N2I3NDYwYWFkMWEyZDY3NTNjMjdkN2U1MTQ3OGY5YjU1MjI3OTA3Y2QifQ"
         }
       ]
     },
     {
       "id": "claim_55f1f3f5d0a0462baa3644dc60eb6d5c",
-      "statement": "probe.test.mjs drives the built probe binary through tauri-driver's WebDriver endpoint on 127.0.0.1:4444 with plain fetch: it spawns tauri-driver with SAILOR_PROBE_PROJECT set, creates a session whose application is the probe binary, polls document #log via execute/sync for up to 60 seconds, and asserts the log matches both /RENDER OK/ and /-> 403/. In CI the tauri-e2e job runs it on ubuntu-24.04 (under xvfb-run) and windows-latest (at medium integrity via gsudo, with an msedgedriver matched to the installed WebView2, because WebView2 ignores the driver's browser arguments in an elevated process); there is no macOS job since tauri-driver has no macOS support. The tauri-build job additionally runs the same probe headless and greps the report file for RENDER OK and -> 403.",
+      "statement": "probe.test.mjs drives the built probe binary through tauri-driver's WebDriver endpoint on 127.0.0.1:4444 with plain fetch: it spawns tauri-driver with SAILOR_PROBE_PROJECT set, creates a session whose application is the probe binary, polls document #log for up to 60 seconds, and asserts the log matches /RENDER OK/ and /-> 403/. CI runs it in tauri-e2e on ubuntu-24.04 (under xvfb-run) and windows-latest (at medium integrity via gsudo with a WebView2-matched msedgedriver); there is no macOS job because tauri-driver has no macOS support.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/ci.yml#L106-L146",
-          "version": "repo-lines-v1:sha256:f3ba2480960126ccf0ffff6cf4ce9fd70165b68230fbbf5c8084a213179c6cbf:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ1NjYwMWM0NWQzM2M3NmIxYWJlOGY2NTc0YTdjMWFmNDA3MjY5Y2YzODBmMmE3MzBkOWJhMTBmNWM4YTY0ODYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRhNjAzMjllZjMzNzY4NjEzMzY2ZDc4MTk1NGFhMmE2NjYwYzJmMGI1NjU3ZTlkYmY2OGVkMTYzNWY2MzQzZTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijk0NzA0NTE4M2JiNzBjZDU1ZjZlMTcwNTBmOWJhYTI1NjI1NGYzMTY1MWEzNTgzMzYzODY4MDRmZDU5NGZmZTkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImM2MzY2M2VkMzliNGE5NDNjMDg0NGRhN2U4NDIzYWM5ZWQzOWI2MDE3Yzg1OGJiZDc1NzY1MThhNDQ3NDUwM2YifQ"
+          "resource": "repo://.github/workflows/ci.yml",
+          "version": "repo-file-v1:sha256:5ed86be023270e9850b5de3c7e98444a201f8d645fc8050120e6a474e79c585f"
         },
         {
-          "resource": "repo://.github/workflows/ci.yml#L149-L203",
-          "version": "repo-lines-v1:sha256:eb51dbc44b599607c920119c6d6ec9198aa2076912bea4c7b4b3225c9a210751:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MmIzMWRiY2E5MmY1YzQ1NDFiYWI2YmE2MGE5YzkyMDkxOTFhZGNjODBjYmQ4ZTZlOGY3YjViNWIwNTRlOGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1MTUwMjBhMmViNzNmOGI0Yzc0OTZlOGY5OGVjMzhiYTA1N2Y0ZGE1NzA3ZmFkYjY0MWIwMjVmM2U3ODM3ZWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhNGQyZThkNmRhMDdlZjc4ODFjMGE4YTEwZTkzNzJjNWMzOWU5Y2MyMjFjNGFhN2MxYjBhZDJlYjgyZmZlZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
-        },
-        {
-          "resource": "repo://e2e/probe.test.mjs#L18-L40",
-          "version": "repo-lines-v1:sha256:d04db6cfe0492ad802c9376f6cbb6c79d13388baaa936680e35e0832be026298:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA0YjJhNzA3OTIyNjNjY2FiOTg0MTFhYmFjNzY0NDM2MTNhZDljZTdjMzI4ZGYyYjg0Yjc2YjkyNGJlY2E0MTQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://e2e/probe.test.mjs",
+          "version": "repo-file-v1:sha256:54894338a0aa96e2f2a335d999b677eed8203d02593b6aa684bad0bcd214fc83"
         }
       ]
     },
@@ -501,8 +449,8 @@
           "version": "repo-lines-v1:sha256:6b0fa12ff41ae90057c4718f178922ef925d619f203626ecf84eb5e5c61c1ac7:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE1OWM0Nzg3MmI3MWYxMjU4OTk0Mjg5MjQ2NGU3NjRjMGRiMzUwYzIwYjcyMjI4NjQ1NjE1Y2MzNmUwYTA3MjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNkZDgwMmNkMzAxNzIwMDRmYjA5YzJmNDhiZjFhOTA0ZGVlOTFhMzRkMDk3N2JkZmI0MjFmYTJlYTI3ODA5ZmYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVlYzVjZTczMzk0NDliNWMxZTJhNDAyNWUyMWY0OTY0N2JlZmEyOGVhMDI4OTIzNGUzZDFjODVmMGM0OWQ5ZTEifQ"
         },
         {
-          "resource": "repo://scripts/check-wiki-links.js#L150-L229",
-          "version": "repo-lines-v1:sha256:046c12f0e3e36100fb12b33a3f7e2ed4e4ff038ba8119f84828ed8d4b9633089:eyJzZWxlY3RlZExpbmVDb3VudCI6ODAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2OWRlMTE2YWExOTRlZDE0Y2ZhNzE4OGEwYmYyMGE4ZWU5YjA2OGM0ZmZjOWQ1M2M5MGVhZjU1ZTI5NTM5MDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhMTM3ZThmNjY4ZmYxNzhlMGQ0YzQwMjZiMDFhOWJhYjcxZTlkYTE1MzU2NGM1ODBkZTJjNDZkNTdkOGVmY2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAzNjhhMWJkYjUxYWYxNDAxZWQxZTU5N2Q1NWFjMDZiZjkwYWI3YTQ0NDNmMjM4YTUxNzk5ZDczMWUxNWQ4MmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVmMTI0ZjYyZDZlZTQzN2MwMWI2Y2E2YmNmODBmNTI2ZDVmZTgwMWM4NzlhZTdkYWY4OWNiMTBiNDBlOTkxYzkifQ"
+          "resource": "repo://scripts/check-wiki-links.js#L150-L231",
+          "version": "repo-lines-v1:sha256:c9e0d3b95463b362947b0fcdd60c2cf0dd960c9d6e3b3342a65f0a3da6b58dce:eyJzZWxlY3RlZExpbmVDb3VudCI6ODIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2OWRlMTE2YWExOTRlZDE0Y2ZhNzE4OGEwYmYyMGE4ZWU5YjA2OGM0ZmZjOWQ1M2M5MGVhZjU1ZTI5NTM5MDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhhMTM3ZThmNjY4ZmYxNzhlMGQ0YzQwMjZiMDFhOWJhYjcxZTlkYTE1MzU2NGM1ODBkZTJjNDZkNTdkOGVmY2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAzNjhhMWJkYjUxYWYxNDAxZWQxZTU5N2Q1NWFjMDZiZjkwYWI3YTQ0NDNmMjM4YTUxNzk5ZDczMWUxNWQ4MmYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVmMTI0ZjYyZDZlZTQzN2MwMWI2Y2E2YmNmODBmNTI2ZDVmZTgwMWM4NzlhZTdkYWY4OWNiMTBiNDBlOTkxYzkifQ"
         },
         {
           "resource": "repo://scripts/check-wiki-links.js#L41-L148",
@@ -523,15 +471,15 @@
           "version": "repo-lines-v1:sha256:c1fd0743f576b2af218bcd2cc31c609401ec486c39bcec6fc93c3e60f0612f81:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkY2NiMjBiOTg2NTI5MDk3MDc1YjMwNjhkZWM5NTc4ODQ4Yjk3ZGRmZGZmZjhlNjlmNWRjMThiMDBkMjMxNWQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiYTgyMDZjYTFjNTgyZDk4NTk4OTg1ZWM4NjhlY2FiMzgwNzUwOGQ3ZDY4YmJkYWI0MTNkZTYwNWIwODY0MTIifQ"
         },
         {
-          "resource": "repo://samples/git-scenarios/builder.ts#L175-L209",
+          "resource": "repo://samples/git-scenarios/builder.ts#L176-L210",
           "version": "repo-lines-v1:sha256:c01301c09761725f574440424ee516ef4ad2052887a0611231ee5462db3434f5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ2YjBiZmE5ZjhkY2ZhNDk0ZjNkOGZmNWZlMGZjOTYxNWE2YTAzYjI2MzBiMDQ2MDcwZTY5YjI5NjYwMjQ2NDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
-          "resource": "repo://samples/git-scenarios/builder.ts#L40-L80",
+          "resource": "repo://samples/git-scenarios/builder.ts#L41-L81",
           "version": "repo-lines-v1:sha256:53703cfaa49ceca7c353f9972d5bc4586b8c45eed909dc132ad299e3d20d0b04:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZjN2MxYzYyMjY2NTVmNTVhZmRlMzk0MGM2NmZlZTcxYzJkMzJmMGVmNWM3YjIyY2NmZWJiZDZiN2I4MzU5OWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjBjOTc2MDMzZWUxMjk1M2ZjNWQwNmM4YjJkZmRmYjE2NjNhOWFlYjgwNjUwZjk5ZDgyMjgxNWEyZDMxMmYzMmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJhYWYwM2VkMDg3M2VlMmQ4MzAwNmQyMmU1NDNmODM2MDljZmQ5NTFkOTgzODcyYWQwNDQxMThkNTc5OTc5MTIifQ"
         },
         {
-          "resource": "repo://samples/git-scenarios/cli.ts#L10-L41",
+          "resource": "repo://samples/git-scenarios/cli.ts#L11-L42",
           "version": "repo-lines-v1:sha256:13595138a9fca54b59b66689ceecb337063d0879a18e4b2a944981bcf2a34c31:eyJzZWxlY3RlZExpbmVDb3VudCI6MzIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk3MmE0MjkzODJiMmUxNDcxOGUwZTM3YjA1NzBhOGExNzAyOTkxZmNkODQ5OGNkODQwNjBhOGJmNGYwNTAxN2IiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRhZGE1NmRmMDJhZGUxOGU1MjE5YTFlMjJmNDExYWQ0MmQ0YWZlNzc3MzMxYjVkYWM5NjU3NDYxYjFlMzE5YTEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
@@ -549,11 +497,11 @@
           "version": "repo-lines-v1:sha256:2e80ebebc835756851e6d2d2e7d393b7a5b7af40044ba0243ea93e254a41039b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZmNThmMWQyZjkzMzU0MGEyOTkyY2RmZjllMjE4YTA3OGQzMjIwNDU3M2FkN2MyYzM0YzUzMjkzOTY3MWE0OTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY2NTU4NTJkNzE2ODZjNmM0NDQ3NzczZTMwNTVhNDMwZWY3ODdiZTc4YzYwOGZkM2Y1NTM1ODgyNGMzMzFhMjIifQ"
         },
         {
-          "resource": "repo://samples/git-scenarios/scenarios.ts#L478-L482",
+          "resource": "repo://samples/git-scenarios/scenarios.ts#L479-L483",
           "version": "repo-lines-v1:sha256:1ded170be0aaaf1747b12df2243ab34c5a1f06bc3ff86900fc8b28009c514320:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYmJkNmRlNjIzYWNhMzEzZDMxY2I2YTFiNWIwOTRjYjlkZjQ1MTIyNDYzYjdlMTMyNmIyNmJkNzEzNDYzZjhiOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZWE2MTFhYzYzOTcxNWM3OTE3NjJhYTlkZDIxNzAzOGRiODI0MzY0OGI1ZDkxOGQwMTU3MWY4MWIxNWIzZTEyZiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
         },
         {
-          "resource": "repo://src/test/integration/gitScenarios.integration.test.tsx#L16-L39",
+          "resource": "repo://src/test/integration/gitScenarios.integration.test.tsx#L17-L40",
           "version": "repo-lines-v1:sha256:f59eed197fdd57d14a5761e96236daa513c26d1b715daabc634001c49e2b9af3:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY0NzllMGQzZGVkMDU1YmYzOWE3ZTNkNWVkNGU2ZDc3NjJlNzNkNTg1NzU2ZThlYzM0OGNkMDc5MzQwNmU3ZWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNlMGRhZmIyZmIwNDRhZjMxYzUwNGQxMTdlMGQ2MTQ3NzA2YWExYTY5NDY1NWM5OTYzZGU5MmY1Y2M3NTJjZTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
@@ -563,8 +511,32 @@
       "statement": "Release installers are not gated by a test workflow: release.yml (triggered by a v* tag, workflow_dispatch, or a published release) does preflight checks, creates or finds a draft release, builds four targets via tauri-action with the release config and signed updater artifacts, checks latest.json lists all four platforms, and archives the published release on Zenodo — but runs no test suite. The test gates live entirely in ci.yml on pushes and pull requests.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/release.yml#L10-L140",
-          "version": "repo-lines-v1:sha256:8f7dede439c3194582638462daf481ac18704262c6394702a512a845c5681fa1:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkMWIzM2U0N2Y1MGFiMDc3NTMzMWZiNmMwZjgxMmM3OWVjODcwMDA3NmNiZjQzZjRkZGNiMTljYWU2MjZmYjhjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1Y2U4YjgyZTM4MDVhM2ExODAwM2YyZmU0NWQ0ZjVkYmI0N2FmZGU4YzJkZGY1NTljZWQyYjRmZGM0ZjQwNjM5IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI0MzM2MmMxOWZhZWRkNzA0MzE1ZjU4ODgzMGU0YTVkMDgxOWU2OWQ4OTIwNzYwMmRjNjU3YWNlYWQ0M2E1MjFhIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwZTQ0ODE4YWQyNGRjYmU0MmFjYjM2Y2UxZmNjOTc4YjI1ODVkNDhiZThlMDZkMGY3ZDZkNzcxMjdmYWQyOGE5In0"
+          "resource": "repo://.github/workflows/release.yml#L10-L168",
+          "version": "repo-lines-v1:sha256:b396141d193a446da0d464e069333cb6855008aace9b9b93cd82a578c7ca420f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTU5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkMWIzM2U0N2Y1MGFiMDc3NTMzMWZiNmMwZjgxMmM3OWVjODcwMDA3NmNiZjQzZjRkZGNiMTljYWU2MjZmYjhjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1Y2U4YjgyZTM4MDVhM2ExODAwM2YyZmU0NWQ0ZjVkYmI0N2FmZGU4YzJkZGY1NTljZWQyYjRmZGM0ZjQwNjM5IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI0MzM2MmMxOWZhZWRkNzA0MzE1ZjU4ODgzMGU0YTVkMDgxOWU2OWQ4OTIwNzYwMmRjNjU3YWNlYWQ0M2E1MjFhIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwZTQ0ODE4YWQyNGRjYmU0MmFjYjM2Y2UxZmNjOTc4YjI1ODVkNDhiZThlMDZkMGY3ZDZkNzcxMjdmYWQyOGE5In0"
+        }
+      ]
+    },
+    {
+      "id": "claim_9724a3f9b44f48588ab190277ff42133",
+      "statement": "The trace CI job runs scripts/ci/trace.sh, which converts docs/requirements to OpenFastTrace format (scripts/oft) and traces requirement tags in source and tests ([impl->req~id~1], [utest->req~id~1]).",
+      "evidence": [
+        {
+          "resource": "repo://scripts/ci/trace.sh",
+          "version": "repo-file-v1:sha256:efd3eee2c05121edb5b7e233ab859dcf5776e93cfb1bf493566d9b4192f644ca"
+        }
+      ]
+    },
+    {
+      "id": "claim_11531c1bb74846d293e344c9a1e3e0d5",
+      "statement": "Stryker mutation tests run via npm run test:mutation, excluding wall-clock *.perf.test.* files from the mutation run.",
+      "evidence": [
+        {
+          "resource": "repo://package.json",
+          "version": "repo-file-v1:sha256:c9bd3f7faa5a295c14c074b19427809e6523971d30999ab0ec5f8cadfc421e74"
+        },
+        {
+          "resource": "repo://vitest.mutation.config.ts",
+          "version": "repo-file-v1:sha256:38f99c6176fe759859fcc7f22ff801c6a4790dccb9d8132d6f2a88108d9cf836"
         }
       ]
     }
