@@ -63,6 +63,19 @@ Consolidation's **Adopt all unanimous** takes all of those decisions at once, an
 reports Cohen's/Fleiss' κ over the include/exclude decision specifically — the statistic a screening
 phase actually reports.
 
+## AI proposals
+
+If the project allows AI-assisted screening, the **AI** button opens the **Screen with AI** dialog.
+The AI reads the title, the authors and the abstract, or an excerpt of the PDF.
+The AI proposes Include or Exclude with a reason.
+See [Annotating with AI](getting-started.md#annotating-with-ai) for the model setup.
+
+Caution: A wrong exclusion removes a paper from the review. Check every Exclude proposal.
+
+An Exclude proposal always starts unticked.
+An Include proposal starts ticked only if its confidence is at the threshold or above. The default threshold is 0.8.
+Nothing goes into the project until you apply the ticked proposals.
+
 ## Renaming a reason
 
 If you rename an exclusion reason that papers are already using, SaiLoR checks on blur and offers to

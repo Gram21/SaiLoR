@@ -309,6 +309,53 @@ Check and change the values. Then do one of these for each entry:
 SaiLoR adds only the files that you confirm. The paper list marks a paper whose PDF file is missing.
 SaiLoR does not send PDF files or text to Crossref. With the lookup on, it sends only the DOI.
 
+## Annotating with AI
+
+Caution: AI support is a preview feature. Check every AI proposal yourself before you apply it.
+
+If the project allows AI, the toolbar shows an **AI** button.
+The project editor sets this option. See [Project settings](project-editor.md#project-settings).
+Without an AI seat, the AI button is not available in the Consolidation seat.
+
+Before the first run, add a model:
+
+1. Open **Settings** and go to the **AI** section.
+2. Click **AI models…**.
+3. Add a provider and a model. Enter the API key if the provider needs one.
+
+SaiLoR stores the API keys in the keychain of your operating system, not in the project.
+
+To annotate with AI:
+
+1. Select a paper and click **AI**. The **Annotate with AI** dialog opens.
+2. Select a mode:
+
+   | Mode | Behaviour |
+   | --- | --- |
+   | **Prompt** | One request per paper. The model reads the paper once and proposes values. |
+   | **Agent** | The model searches and re-reads the paper with tools. A second model, the **Judge**, checks each value. |
+   | **Classify** | A fast System One model answers yes/no and single-choice fields. It gives no quotes. |
+
+3. Select the **Annotator** model. Optionally, select a **Judge** and a **Cross-check** model.
+4. Read the consent text. It names the provider and the data that leaves your computer.
+5. Click **Start**.
+6. Check the proposals. Tick the rows that you accept.
+7. Click **Apply**.
+
+Nothing goes into the project until you click **Apply**.
+The AI proposes values only for empty fields, unless you turn on the re-check of filled fields.
+A row starts unticked if its confidence is low, the judge flags it, or the cross-check disagrees.
+
+**Options** has more settings:
+
+- **Annotate all papers** runs the AI on every paper. A warning shows the number of requests and the cost.
+- **Papers at once** sets how many papers run in parallel.
+- **Stop when spent exceeds $** stops the run at a cost limit. This needs model prices.
+- **Show the AI my finished papers as examples** sends some of your finished papers as examples.
+
+If the project has an AI seat, the AI writes into that seat.
+See [AI evaluation](multi-reviewer.md#ai-evaluation) to compare the AI seat with the consolidated answers.
+
 ## Exploring the knowledge graph
 
 The knowledge graph shows papers, authors, venues, keywords and answers as nodes.
