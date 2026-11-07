@@ -270,12 +270,7 @@ Caution: A project file with an override over its limit does not open. Shorten t
 ## Provenance
 
 When a project was built via **New from screening…**, the editor shows a read-only note recording
-where it came from:
-
-<p align="center">
-  <img src="screenshots/project-editor-schema.png" alt="The 'Imported from' provenance note in the project editor" width="900">
-</p>
-
+where it came from.
 The source project's name, the date it was imported, and how many papers were carried over versus left
 behind. It's a durable record, not a setting — there's nothing to edit here, only to read. See
 [Screening](screening.md#starting-the-next-phase-from-a-screening-project).
