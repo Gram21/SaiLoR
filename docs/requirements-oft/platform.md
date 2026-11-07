@@ -521,12 +521,12 @@ Tags: NonFunctional, Security
 ### REQ-PLT-260: Restrict export writes
 `req~plt-260~1`
 
-The system shall write text and PDF exports only to destinations picked via an export save dialog in the current session, refusing symlinked targets and reporting failures as results rather than crashes. The system shall embed marks only into a PDF of the open project (inside the project folder or an approved outside path). The system shall overwrite the original PDF only if the PDF lies inside the project folder.
+The system shall write text, image and PDF exports only to destinations picked via an export save dialog in the current session, refusing symlinked targets and reporting failures as results rather than crashes. The system shall embed marks only into a PDF of the open project (inside the project folder or an approved outside path). The system shall overwrite the original PDF only if the PDF lies inside the project folder.
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src-tauri/src/pdf.rs` (`export_target`, `write_file`, `text_write`, `project_pdf`, `pdf_embed_marks`)
-- **Verified by:** `src-tauri/src/pdf.rs` (`text_write_needs_an_export_dialog_path`, `text_write_refuses_a_symlink`, `embed_reads_only_project_pdfs`, `embed_never_changes_an_approved_pdf_outside_the_project`)
+- **Evidence:** `src-tauri/src/pdf.rs` (`export_target`, `write_file`, `text_write`, `export_write_bytes`, `project_pdf`, `pdf_embed_marks`)
+- **Verified by:** `src-tauri/src/pdf.rs` (`text_write_needs_an_export_dialog_path`, `text_write_refuses_a_symlink`, `export_write_bytes_needs_a_picked_path`, `embed_reads_only_project_pdfs`, `embed_never_changes_an_approved_pdf_outside_the_project`)
 - **Status:** Implemented
 
 Needs: impl, utest

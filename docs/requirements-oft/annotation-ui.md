@@ -953,7 +953,7 @@ Tags: Functional, Usability
 ### REQ-UI-160: Show project entries only with a project
 `req~ui-160~1`
 
-The toolbar shall show the Save menu, the Export menu, the Git button and the Validate button only when a project is open. The toolbar shall have no knowledge graph button. The Export menu shall sit on the left of the toolbar, after the Save menu. The Export menu shall have a "Knowledge graph" item that opens the export dialog of REQ-DAT-520.
+The toolbar shall show the Save menu, the Graph menu, the Git button and the Validate button only when a project is open. The toolbar shall have no knowledge graph button. The Graph menu shall sit on the left of the toolbar, after the Save menu. The Graph menu shall have the items "Explore knowledge graph" and "Knowledge graph", in this order. The "Knowledge graph" item shall open the export dialog of REQ-DAT-520. The Save menu shall have the same "Knowledge graph" item.
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability)
@@ -998,7 +998,7 @@ Tags: Functional, Usability
 ### REQ-UI-190: Knowledge graph view
 `req~ui-190~1`
 
-The Export menu shall have an "Explore knowledge graph" item. The item shall open the knowledge graph view. The view shall show the papers, authors, venues, keywords and answers of the knowledge graph of REQ-DAT-480 and REQ-DAT-490 as nodes and edges in a force layout on a canvas. The user shall pan the graph with a drag on the background. The user shall zoom with the mouse wheel and with the "Zoom in", "Zoom out" and "Reset view" buttons. "Reset view" shall fit all placed nodes into the canvas. The user shall move a node with a drag. A click on a node shall select it. When the pointer is on a node, the canvas shall show the type and label of the node as a tooltip. A double-click on a node shall add its neighbours to the view. The side panel shall show the label, type, DOI, year and values of the selected node and list its neighbours. The "Show neighbours" button shall add the neighbours of the selected node to the view. A "Nodes" button shall open a foldout drawer on the start side of the canvas. The drawer shall be closed at first. The drawer shall list every shown node as a button, as an accessible alternative to the canvas. The node list and the neighbour list shall show 200 entries at first. A "Show more" button shall add the next 200 entries. A click on a listed node shall select it and center the view on it. If the project has no consolidated answers and more than one reviewer, the view shall have a seat selector. The view shall have an "Export…" button that opens the export dialog of REQ-DAT-520. Escape shall close the view when the export dialog is not open. A click on the overlay shall not close the view.
+The Graph menu shall have an "Explore knowledge graph" item as its first item. The item shall open the knowledge graph view. The view shall show the papers, authors, venues, keywords and answers of the knowledge graph of REQ-DAT-480 and REQ-DAT-490 as nodes and edges in a force layout on a canvas. The user shall pan the graph with a drag on the background. The user shall zoom with the mouse wheel and with the "Zoom in", "Zoom out" and "Reset view" buttons. "Reset view" shall fit all placed nodes into the canvas. The user shall move a node with a drag. A click on a node shall select it. When the pointer is on a node, the canvas shall show the type and label of the node as a tooltip. A double-click on a node shall add its neighbours to the view. The side panel shall show the label, type, DOI, year and values of the selected node and list its neighbours. The "Show neighbours" button shall add the neighbours of the selected node to the view. A "Nodes" button shall open a foldout drawer on the start side of the canvas. The drawer shall be closed at first. The drawer shall list every shown node as a button, as an accessible alternative to the canvas. The node list and the neighbour list shall show 200 entries at first. A "Show more" button shall add the next 200 entries. A click on a listed node shall select it and center the view on it. If the project has more than one reviewer, the view shall have a seat selector. The selector shall list every reviewer seat and, if one paper or more has a consolidated answer, the "Consolidation". The consolidation shall be selected at first if it exists. At the top end of the graph area, the view shall have a "Download" button that saves the graph as an image (REQ-UI-260). The view shall have an "Export…" button that opens the export dialog of REQ-DAT-520. Escape shall close the view when the export dialog is not open. A click on the overlay shall not close the view.
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability)
@@ -1099,3 +1099,18 @@ Comment:
 Needs: impl, utest
 
 Tags: NonFunctional, Performance_Efficiency, Usability
+
+### REQ-UI-260: Knowledge graph image download
+`req~ui-260~1`
+
+The view shall have a "Download" button at the top end of the graph area. The button shall open a panel in which the user selects the image format, SVG or PNG, and the area, "Visible section" or "Whole graph, including the part not visible". The visible section shall be the current view of the canvas. The whole graph shall contain every placed node of the shown sub-graph, at a scale of 1 or less and with at most 8192 pixels on the longest side. The image shall show the shown nodes and the edge types that are not hidden, and so respect the current query and filter, or the whole graph if there is no filter. The image shall not show the hover and the selection. The system shall save the image through the save dialog of the system and show the saved path or the error. The system shall write the image only to a path that the save dialog returned (REQ-PLT-260).
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/components/graphImage.ts` (`imageFrame`, `sceneToSvg`, `sceneToPng`), `src/components/GraphDownload.tsx` (`GraphDownload`), `src/components/GraphView.tsx` (`GraphView`), `src-tauri/src/pdf.rs` (`export_write_bytes`)
+- **Verified by:** `src/components/graphImage.test.ts`, `src/components/GraphView.test.tsx`, `src-tauri/src/pdf.rs` (`export_write_bytes_needs_a_picked_path`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Usability

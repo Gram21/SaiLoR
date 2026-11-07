@@ -169,3 +169,6 @@ per category so requirements can be inserted without renumbering.
   with cancellation and a 20 second timeout. REQ-UI-230 revised: one `MATCH` clause uses each relationship at most once,
   text comparisons are case-sensitive, and the help text states both. REQ-UI-220 revised: the edge colours follow
   theme changes. The coverage counts above were not recounted.
+- **Knowledge graph menu and image (2026-11-07).** REQ-UI-260 added for the image download (SVG, PNG; visible section or whole graph).
+  REQ-UI-160 and REQ-UI-190 revised: the Export menu is now the Graph menu with the view first, and the Save menu has the graph export.
+  REQ-DAT-490 and REQ-DAT-520 revised: the consolidation is a selectable seat. The coverage counts above were not recounted.

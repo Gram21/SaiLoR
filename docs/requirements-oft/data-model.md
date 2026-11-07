@@ -834,12 +834,12 @@ Tags: Functional, Functional_Suitability
 ### REQ-DAT-490: Source of the graph data
 `req~dat-490~1`
 
-With one reviewer, the system shall use the annotations of that reviewer. With more reviewers, the system shall use the consolidated annotations if one paper or more has a consolidated answer. Otherwise, the system shall use the annotations of the seat that the user selects. The system shall use the title, the authors, the year, the DOI, the venue and the abstract from the project file only. The system shall not apply the metadata overrides of a seat (REQ-DAT-460).
+With one reviewer, the system shall use the annotations of that reviewer. With more reviewers, the user shall select the seat: a reviewer seat or, if one paper or more has a consolidated answer, the consolidation. The system shall select the consolidation at first if it exists, and seat 1 otherwise. The system shall use the title, the authors, the year, the DOI, the venue and the abstract from the project file only. The system shall not apply the metadata overrides of a seat (REQ-DAT-460).
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
-- **Evidence:** `src/model/graph.ts` (`graphSource`, `graphTrees`)
-- **Verified by:** `src/model/graph.test.ts` (`graphSource`)
+- **Evidence:** `src/model/graph.ts` (`graphSeats`, `defaultGraphSeat`, `graphTrees`)
+- **Verified by:** `src/model/graph.test.ts` (`graph source`)
 - **Status:** Implemented
 
 Needs: impl, utest
@@ -879,7 +879,7 @@ Tags: Functional, Security, Functional_Suitability
 ### REQ-DAT-520: Graph export dialog
 `req~dat-520~1`
 
-The Export menu of the toolbar shall have a "Knowledge graph" item that opens the export dialog. In the dialog, the user shall select the format. If no consolidated data exists and the project has more than one reviewer, the user shall select the seat. The system shall save each file through the save dialog of the system, with the file extension of the format. For CSV, the system shall ask for the node file first and then for the edge file. If the user cancels the edge file dialog after the node file is saved, the system shall show that the export is incomplete. The system shall show the path of each saved file or the error.
+The Graph menu and the Save menu of the toolbar shall have a "Knowledge graph" item that opens the export dialog. In the dialog, the user shall select the format. If the project has more than one reviewer, the user shall select the seat: a reviewer seat or, if it exists, the consolidation. The consolidation shall be selected at first if it exists. The system shall save each file through the save dialog of the system, with the file extension of the format. For CSV, the system shall ask for the node file first and then for the edge file. If the user cancels the edge file dialog after the node file is saved, the system shall show that the export is incomplete. The system shall show the path of each saved file or the error.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability)
