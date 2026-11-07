@@ -1,0 +1,32 @@
+cff-version: 1.2.0
+message: "If you use SaiLoR, cite it with this file. Add the version that you used."
+title: "SaiLoR"
+type: software
+authors:
+  - family-names: Keim
+    given-names: Jan
+    email: jan.keim@kit.edu
+repository-code: "https://github.com/Gram21/SaiLoR"
+url: "https://github.com/Gram21/SaiLoR"
+license: GPL-3.0-only
+# Set to the version that you cite, for example 2.0.0.
+version: "2.0.0"
+# TODO(before release): This DOI is the Zenodo concept DOI. It always resolves to the latest version.
+# Replace it with the version DOI of the release in the version field above.
+# Find the version DOI on the Zenodo record, in the "Versions" panel.
+doi: 10.5281/zenodo.23804729
+
+# TODO(technical report): After the technical report is released, remove the comment marks below
+# and fill in the report data. Then GitHub, Zenodo and Zotero cite the report and not the software.
+# Also change "How to cite" on the project website (site/index.html) and in README.md.
+# preferred-citation:
+#   type: report
+#   title: "TODO: title of the technical report"
+#   authors:
+#     - family-names: Keim
+#       given-names: Jan
+#   institution:
+#     name: "TODO: institution"
+#   year: TODO
+#   doi: TODO
+#   url: TODO

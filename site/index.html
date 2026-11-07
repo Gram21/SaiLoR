@@ -278,12 +278,17 @@ make dev</code></pre>
 
       <section id="cite" aria-labelledby="cite-title">
         <h2 id="cite-title">How to cite</h2>
-        <p>Cite SaiLoR through its Zenodo record. The DOI is <a href="https://doi.org/10.5281/zenodo.23804729">10.5281/zenodo.23804729</a>. Add the version you used.</p>
+        <!-- TODO(before release): The DOI below is the Zenodo concept DOI. It always resolves to the latest version.
+             Use the version DOI of the release that matches the version field (Zenodo record, "Versions" panel).
+             TODO(technical report): After the report is released, cite the report here and in README.md.
+             Keep CITATION.cff in step (preferred-citation). -->
+        <p>Cite SaiLoR through its Zenodo record. The DOI is <a href="https://doi.org/10.5281/zenodo.23804729">10.5281/zenodo.23804729</a>. Replace <code>VERSION</code> with the version that you used. Use the DOI of that version.</p>
         <div class="code-block">
           <button class="copy-button" type="button" aria-describedby="copy-status-cite">Copy</button>
           <pre><code>@software{keim_sailor,
   author  = {Keim, Jan},
   title   = {{SaiLoR}},
+  version = {VERSION},
   doi     = {10.5281/zenodo.23804729},
   url     = {https://github.com/Gram21/SaiLoR},
   license = {GPL-3.0-only}

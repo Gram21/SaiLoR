@@ -877,3 +877,10 @@ have no updater files. macOS and Windows installers must be built on their nativ
   GraphView (canvas drawing in `graphCanvas.ts`).
 - `src-tauri/` — the Rust shell (Tauri v2): window, menu, dialog/fs commands, path authorization,
   PDF protocol, git, AI calls with keychain-held keys, local runtime and updater.
+
+## Citation
+
+Cite SaiLoR with the data in [`CITATION.cff`](CITATION.cff). Use the version that you used. Use the DOI of that version.
+After the technical report is released, cite the report.
+
+<!-- TODO(before release): The DOI badge is the Zenodo concept DOI (latest version). Use the version DOI for a fixed release. -->
