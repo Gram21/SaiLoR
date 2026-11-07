@@ -11,17 +11,18 @@ Optional \LLM assistance proposed answers with evidence, but a human reviewed ev
 
 We also explained the main architecture decisions.
 These were the local files instead of a server, git as collaboration layer, the security model, the move from Electron to Tauri in version 2.0.0, and the support for large projects.
-To keep the tool itself traceable, we documented 493 requirements.
+To keep the tool itself traceable, we documented 510 requirements.
 Of these requirements, 95\% linked to implementing source code and 94\% linked to at least one automated test.
-The test suites held 3423 unit tests, 56 integration tests, and 129 Rust tests.
-Mutation testing of the model code added about 330 unit tests and found no bug in the production code.
+The test suites held 3709 unit tests, 56 integration tests, and 135 Rust tests.
+Mutation testing of the model code added about 350 unit tests and found no bug in the production code.
 We made the source code of \SaiLoR available on GitHub under the GPL-3.0 license, with a Zenodo concept \DOI for all versions.
+An online demo let readers try \SaiLoR in the browser without an installation.
 
 Overall, we argued that plain files and git can keep review data traceable, but the benefit for reviewers remains open.
 
 Regarding the tool, we want to retest the user interface, including the guard against reload shortcuts, in the web views of all three operating systems.
-We also want to finish the mutation testing of the model code.
-We also want to verify the local model runtime on \GPUs with CUDA and Vulkan and enable the managed installation once llama.cpp provides the required route.
+We also want to extend the mutation testing to the store, the user interface components, and the Rust backend.
+In addition, we want to verify the local model runtime on \GPUs with CUDA and Vulkan and enable the managed installation once llama.cpp provides the required route.
 
 In future research, we want to evaluate \SaiLoR in a user study with reviewers who conduct a real \SLR.
 We want to find out whether the tool reduces the effort of extraction and consolidation and whether the recorded history helps others to trace the review.
