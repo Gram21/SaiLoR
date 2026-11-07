@@ -12,6 +12,8 @@ import {
   aiSeatId,
 } from '../model/project'
 import { alignedReviews, reviewerEntriesAt, type StoredAlignment, type StoredSlot } from '../model/alignment'
+import { DEMO_MODE } from '../demo/mode'
+import { DEMO_START_PAPER_ID, DEMO_START_SEAT } from '../demo/text'
 import {
   hasAnnotations,
   makeInstance,
@@ -1887,18 +1889,23 @@ export const useStore = create<AppState>()(
         const strictPerson = loadStrictPerson(handle, project)
         const person = strictPerson !== STRICT_MANAGER ? strictPerson : null
         const ownPapers = person ? personPapers(project, person) : null
-        const landingPaperId = ownPapers
-          ? savedPaperStillExists && ownPapers.includes(savedPosition!.paperId)
-            ? savedPosition!.paperId
-            : (ownPapers[0] ?? null)
-          : savedPaperStillExists
-            ? savedPosition!.paperId
-            : firstUnfinishedPaperId(project, seats.last)
+        // [impl->req~plt-452~1]
+        const landingPaperId = DEMO_MODE
+          ? DEMO_START_PAPER_ID
+          : ownPapers
+            ? savedPaperStillExists && ownPapers.includes(savedPosition!.paperId)
+              ? savedPosition!.paperId
+              : (ownPapers[0] ?? null)
+            : savedPaperStillExists
+              ? savedPosition!.paperId
+              : firstUnfinishedPaperId(project, seats.last)
         // [impl->req~git-255~1]
         const reviewer = person
           ? landingPaperId && assignedSeat(project, landingPaperId, person)
           : project.reviewers > 1
-            ? (landingPaperId && seats.perPaper[landingPaperId]) || seats.last
+            ? DEMO_MODE
+              ? DEMO_START_SEAT
+              : (landingPaperId && seats.perPaper[landingPaperId]) || seats.last
             : null
         landOnFirstUnfinished = !ownPapers && !savedPaperStillExists ? { seats, reviewer } : null
         // The title only becomes known once the JSON is parsed, so the recents

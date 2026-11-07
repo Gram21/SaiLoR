@@ -432,3 +432,17 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `.github/workflows/pages.yml`, `scripts/ci/pages.sh` (runs the link check), `site/index.html`, `site/create-project.html`, `Makefile` (`ci-pages`)
 - **Verified by:** `src/model/siteExamples.test.ts` (`the minimal example loads as a SaiLoR project`, `the extended example loads as a SaiLoR project`), `src/ci/ciScripts.test.ts` (`every CI script stops on the first error and works from the repository root`)
 - **Status:** Implemented
+
+### REQ-PLT-452: Start the demo on the paper with a PDF
+- **Description:** When the demo opens, the system shall select the paper that has the bundled PDF and shall select reviewer seat 1. The system shall not show the reviewer seat prompt at the start. The visitor shall be able to switch the seat from the toolbar.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/state/store.ts` (`openProject`, demo landing paper and seat), `src/demo/project.ts` (`DEMO_START_PAPER_ID`, `DEMO_START_SEAT`)
+- **Verified by:** `src/demo/demoStart.test.ts` (`opens on the paper with the bundled PDF, in reviewer 1 seat, without the seat prompt`, `lets the visitor switch seats after the start`)
+- **Status:** Implemented
+
+### REQ-PLT-453: Show a neutral notice for a demo paper without a PDF
+- **Description:** When a demo paper has no bundled PDF, the system shall show a neutral notice in the PDF pane instead of an error. When the paper names an arXiv abstract page, the notice shall contain a link to that page. The link shall open in a new tab.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/PdfViewer.tsx` (demo notice in the PDF pane), `src/demo/text.ts` (`DEMO_NO_PDF`, `demoArxivUrl`), `src/styles/index.css` (`.pdf-notice`)
+- **Verified by:** `src/components/PdfViewer.demo.test.tsx` (`shows a neutral notice and links to the arXiv page of the paper`, `shows the notice without a link when the paper names no arXiv page`), `src/demo/demoStart.test.ts` (`takes the arXiv abstract page from the venue text`, `returns null when the venue names no arXiv page`)
+- **Status:** Implemented

@@ -14,6 +14,8 @@ import { detectEntryBox, detectNumericCitation, findNumericReference, type Previ
 import { getPlatform } from '../platform'
 import { normalize } from '../llm/verify'
 import { useT, tp } from '../i18n'
+import { DEMO_MODE } from '../demo/mode'
+import { DEMO_NO_PDF, DEMO_READ_ON_ARXIV, demoArxivUrl } from '../demo/text'
 // Side-effect import: configures the pdf.js worker.
 import '../platform/pdfjs'
 
@@ -334,6 +336,7 @@ export function PdfViewer() {
   const paperId = useStore((s) => selectCurrentPaper(s)?.id ?? null)
   const pdfPath = useStore((s) => selectCurrentPaper(s)?.pdf ?? null)
   const title = useStore((s) => selectCurrentPaper(s)?.title ?? '')
+  const demoArxiv = useStore((s) => (DEMO_MODE ? demoArxivUrl(selectCurrentPaper(s)?.venue) : null))
   const authors = useStore((s) => (selectCurrentPaper(s)?.authors ?? []).join(', '))
   const doi = useStore((s) => selectCurrentPaper(s)?.doi)
   const saveHandle = useStore((s) => s.saveHandle)
@@ -1823,8 +1826,20 @@ export function PdfViewer() {
         onMouseOut={onPdfMouseOut}
         onMouseMove={onPdfMouseMove}
       >
+        {/* [impl->req~plt-453~1] */}
         {error ? (
-          <div className="pdf-error">{t('pdf.loadError', { error })}</div>
+          DEMO_MODE && error === DEMO_NO_PDF ? (
+            <div className="pdf-notice">
+              <p>{DEMO_NO_PDF}</p>
+              {demoArxiv && (
+                <a href={demoArxiv} target="_blank" rel="noopener noreferrer">
+                  {DEMO_READ_ON_ARXIV}
+                </a>
+              )}
+            </div>
+          ) : (
+            <div className="pdf-error">{t('pdf.loadError', { error })}</div>
+          )
         ) : needsFolderGrant ? (
           <div className="pdf-grant">
             <p>{t('pdf.grant.body')}</p>

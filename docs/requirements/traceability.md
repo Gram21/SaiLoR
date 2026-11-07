@@ -583,6 +583,8 @@ inspection only.
 | REQ-PLT-449 | Keep demo code out of the desktop build | Non-functional · Maintainability | `vite.config.ts`<br>`src/demo/mode.ts`<br>`src/platform/index.ts` | `src/demo/demoProject.test.ts` | — | — |
 | REQ-PLT-450 | Open the demo in English | Functional · Usability | `src/state/settings.ts`<br>`src/demo/text.ts` | `src/demo/language.test.ts` | — | — |
 | REQ-PLT-451 | Publish the project website and the demo with GitHub Pages | Non-functional · Portability, Reliability | `.github/workflows/pages.yml`<br>`scripts/ci/pages.sh`<br>`site/index.html`<br>`site/create-project.html`<br>`Makefile` (`ci-pages`) | `src/model/siteExamples.test.ts`<br>`src/ci/ciScripts.test.ts` | — | `README.md` (project website) |
+| REQ-PLT-452 | Start the demo on the paper with a PDF | Functional · Usability | `src/state/store.ts`<br>`src/demo/project.ts` | `src/demo/demoStart.test.ts` | — | — |
+| REQ-PLT-453 | Show a neutral notice for a demo paper without a PDF | Functional · Usability | `src/components/PdfViewer.tsx`<br>`src/demo/text.ts`<br>`src/styles/index.css` | `src/components/PdfViewer.demo.test.tsx`<br>`src/demo/demoStart.test.ts` | — | — |
 
 ## Coverage statistics
 
