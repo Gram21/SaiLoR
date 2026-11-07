@@ -147,6 +147,7 @@
   "exportGraph.graphml": "GraphML (.graphml)",
   "exportGraph.csv": "CSV 节点和边列表 (.csv)",
   "exportGraph.csvHint": "CSV 会写入两个文件。请先选择节点文件，再选择边文件。",
+  "exportGraph.notSaved": "{name} 未保存。导出不完整。",
   "exportGraph.consolidated": "导出使用合并后的答案。",
   "exportGraph.pickSeat": "没有合并后的答案。请选择要导出的席位。",
   "exportGraph.seat": "席位",

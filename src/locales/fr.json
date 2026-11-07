@@ -147,6 +147,7 @@
   "exportGraph.graphml": "GraphML (.graphml)",
   "exportGraph.csv": "Listes CSV des nœuds et des arêtes (.csv)",
   "exportGraph.csvHint": "CSV écrit deux fichiers. Sélectionnez d’abord le fichier des nœuds, puis celui des arêtes.",
+  "exportGraph.notSaved": "{name} n’a pas été enregistré. L’export est incomplet.",
   "exportGraph.consolidated": "L’export utilise les réponses consolidées.",
   "exportGraph.pickSeat": "Aucune réponse consolidée n’existe. Sélectionnez le poste à exporter.",
   "exportGraph.seat": "Poste",

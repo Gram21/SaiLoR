@@ -147,6 +147,7 @@
   "exportGraph.graphml": "GraphML (.graphml)",
   "exportGraph.csv": "Listas CSV de nodos y aristas (.csv)",
   "exportGraph.csvHint": "CSV escribe dos archivos. Seleccione primero el archivo de nodos y después el de aristas.",
+  "exportGraph.notSaved": "{name} no se guardó. La exportación está incompleta.",
   "exportGraph.consolidated": "La exportación usa las respuestas consolidadas.",
   "exportGraph.pickSeat": "No hay respuestas consolidadas. Seleccione el puesto que desea exportar.",
   "exportGraph.seat": "Puesto",

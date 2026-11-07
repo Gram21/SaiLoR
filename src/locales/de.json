@@ -147,6 +147,7 @@
   "exportGraph.graphml": "GraphML (.graphml)",
   "exportGraph.csv": "CSV-Knoten- und -Kantenliste (.csv)",
   "exportGraph.csvHint": "CSV schreibt zwei Dateien. Wählen Sie zuerst die Knotendatei und dann die Kantendatei.",
+  "exportGraph.notSaved": "{name} wurde nicht gespeichert. Der Export ist unvollständig.",
   "exportGraph.consolidated": "Der Export verwendet die konsolidierten Antworten.",
   "exportGraph.pickSeat": "Es gibt keine konsolidierten Antworten. Wählen Sie den Platz für den Export.",
   "exportGraph.seat": "Platz",

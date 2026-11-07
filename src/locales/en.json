@@ -147,6 +147,7 @@
   "exportGraph.graphml": "GraphML (.graphml)",
   "exportGraph.csv": "CSV node and edge lists (.csv)",
   "exportGraph.csvHint": "CSV writes two files. Select the node file first, then the edge file.",
+  "exportGraph.notSaved": "{name} was not saved. The export is incomplete.",
   "exportGraph.consolidated": "The export uses the consolidated answers.",
   "exportGraph.pickSeat": "No consolidated answers exist. Select the seat to export.",
   "exportGraph.seat": "Seat",

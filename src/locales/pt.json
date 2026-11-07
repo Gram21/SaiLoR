@@ -147,6 +147,7 @@
   "exportGraph.graphml": "GraphML (.graphml)",
   "exportGraph.csv": "Listas CSV de nós e arestas (.csv)",
   "exportGraph.csvHint": "CSV grava dois arquivos. Selecione primeiro o arquivo de nós e depois o de arestas.",
+  "exportGraph.notSaved": "{name} não foi salvo. A exportação está incompleta.",
   "exportGraph.consolidated": "A exportação usa as respostas consolidadas.",
   "exportGraph.pickSeat": "Não há respostas consolidadas. Selecione o assento a exportar.",
   "exportGraph.seat": "Assento",

@@ -147,6 +147,7 @@
   "exportGraph.graphml": "GraphML (.graphml)",
   "exportGraph.csv": "CSV ノード／エッジ一覧 (.csv)",
   "exportGraph.csvHint": "CSV は 2 つのファイルを書き出します。先にノードファイル、次にエッジファイルを選択してください。",
+  "exportGraph.notSaved": "{name} は保存されていません。エクスポートは不完全です。",
   "exportGraph.consolidated": "エクスポートには統合済みの回答を使用します。",
   "exportGraph.pickSeat": "統合済みの回答がありません。エクスポートする席を選択してください。",
   "exportGraph.seat": "席",

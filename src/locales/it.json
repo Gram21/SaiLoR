@@ -147,6 +147,7 @@
   "exportGraph.graphml": "GraphML (.graphml)",
   "exportGraph.csv": "Elenchi CSV di nodi e archi (.csv)",
   "exportGraph.csvHint": "CSV scrive due file. Selezionare prima il file dei nodi, poi quello degli archi.",
+  "exportGraph.notSaved": "{name} non è stato salvato. L’esportazione è incompleta.",
   "exportGraph.consolidated": "L’esportazione usa le risposte consolidate.",
   "exportGraph.pickSeat": "Non esistono risposte consolidate. Selezionare la postazione da esportare.",
   "exportGraph.seat": "Postazione",

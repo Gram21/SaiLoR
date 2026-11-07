@@ -147,6 +147,7 @@
   "exportGraph.graphml": "GraphML (.graphml)",
   "exportGraph.csv": "فهرست گره‌ها و یال‌ها به‌صورت CSV (.csv)",
   "exportGraph.csvHint": "CSV دو فایل می‌نویسد. ابتدا فایل گره‌ها و سپس فایل یال‌ها را انتخاب کنید.",
+  "exportGraph.notSaved": "{name} ذخیره نشد. خروجی ناقص است.",
   "exportGraph.consolidated": "صدور از پاسخ‌های تجمیع‌شده استفاده می‌کند.",
   "exportGraph.pickSeat": "هیچ پاسخ تجمیع‌شده‌ای وجود ندارد. جایگاه مورد نظر برای صدور را انتخاب کنید.",
   "exportGraph.seat": "جایگاه",
