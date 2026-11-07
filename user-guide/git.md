@@ -156,6 +156,42 @@ block anything.
 
 Pull, Merge, and Push wait for a background fetch that is still running rather than race it.
 
+## Before and after a merge
+
+Before a Pull or a merge starts, SaiLoR shows a summary and asks you to confirm. The summary states:
+
+- whether git moves your branch forward or makes a merge commit,
+- whether the project file changes, and how many annotation files change,
+- which papers change,
+- which conflicts git expects.
+
+If you cancel, nothing changes.
+
+Before a Pull or a merge changes your branch, SaiLoR saves a backup of the branch.
+The backup is a git ref under `refs/sailor/backup/`. SaiLoR keeps the 10 newest backups.
+To go back to the state before the last Pull or merge, click **Undo last merge** next to **Pull**.
+
+Undo works only while your branch is still at the merge result and no file has uncommitted changes.
+In all other cases, SaiLoR refuses and gives the reason.
+
+Caution: If you already pushed the merge, the remote still has it after an undo.
+
+SaiLoR refuses a Pull, a merge and an undo in these cases:
+
+- `index.lock` exists in the repository, because another git process may run.
+- A rebase, merge, cherry-pick or revert is in progress.
+- No branch is checked out (a detached HEAD).
+- A file has uncommitted changes. This applies to Pull and merge only. Use [Stashing changes](#stashing-changes).
+
+SaiLoR does not commit a merge result that is not valid JSON. The message names the file.
+
+These project parts merge without a conflict row:
+
+- **Metadata corrections** merge per seat. If both sides changed the corrections of one seat, your side wins.
+- **Finished work in strict mode** stays locked. If both sides changed the lock of one seat, the locked side wins.
+- **Papers with the same PDF** become one paper. SaiLoR compares the PDF hash. The paper keeps the id of the remote side.
+- **Ignored PDF files** merge as a set.
+
 ## Commit history
 
 **History…**, next to Merge branch… in the panel's header, lists the commits that changed the open
