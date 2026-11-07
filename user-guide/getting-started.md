@@ -381,6 +381,10 @@ Use the view like this:
 - Click **Export…** to save the graph as JSON-LD, RDF Turtle, GraphML or CSV.
 - Press Escape or click × to close the view.
 
+<p align="center">
+<img src="screenshots/knowledge-graph-download.png" alt="The knowledge graph view with the download panel open, showing the SVG and PNG formats, the visible section and whole graph areas, and the Export button" width="900">
+</p>
+
 The view uses the consolidated answers if they exist.
 If no consolidated answers exist and the project has several reviewers, select the **Seat** in the view.
 
