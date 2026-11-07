@@ -1,9 +1,38 @@
 # TODO: Capture the report screenshots
 
-This list covers the five screenshots of the technical report.
-Capture them on the 2.0.0 Tauri build.
+This list covers the six screenshots of the technical report.
 Save each image as a PNG in `technical-report/figures/`, with the exact file name below.
 Until a PNG exists, the report shows a red placeholder box with the file name.
+
+## 0. Status
+
+| # | File name | Status | Source |
+|---|---|---|---|
+| 1 | `annotate-overview.png` | Done | Online demo of 2.0.0, start view, 1440 x 900. |
+| 2 | `project-editor-schema.png` | Done | Online demo with `?mode=schema`, schema entered by hand, cropped to the schema. |
+| 3 | `screening-record.png` | Open | Copy of `site/img/screening.png`, which shows version 1.x, cropped to the abstract and the screening panel. |
+| 4 | `consolidation-compare-popup.png` | Done | Online demo, paper "A Roadmap for Tamed Interactions …", field "Relevant", cropped to the popup. |
+| 5 | `git-merge-conflicts.png` | Open | Copy of `user-guide/screenshots/git-merge-conflicts.png`, which shows version 1.x, cropped to the dialog. |
+| 6 | `knowledge-graph.png` | Done | Online demo, Cypher query for the papers of "Keim", Nodes drawer open, cropped to the dialog. |
+
+The demo figures do not show the sample projects of section 3.
+The captions in `sections/04-tool.tex` name the online demo instead.
+
+Figures 3 and 5 stay open, because the online demo cannot show them:
+
+- The demo has only an extraction project, so it cannot show the screening view.
+- The demo disables git, saving, and the AI features.
+
+Capture figures 3 and 5 on the 2.0.0 Tauri build, as described below.
+Then remove "in version 1.x" from their captions.
+Also remove the sentence about version 1.x from `sections/07-discussion.tex`.
+
+To capture the demo figures again:
+
+1. Run `npm run build:demo`.
+2. Serve `dist-demo/` with a static web server.
+3. Open the demo at 1440 x 900 in the light theme.
+4. Click "Hide the demo notice".
 
 ## 1. Prepare the build
 
@@ -31,13 +60,14 @@ Do not open the sample files in the repository.
 | # | File name | Used in | Caption (short form) | Width in report |
 |---|---|---|---|---|
 | 1 | `figures/annotate-overview.png` | Section 4, Data Extraction, `fig:annotate` | Main view with paper list, PDF, and extraction form | 0.85 of text width (full width) |
-| 2 | `figures/project-editor-schema.png` | Section 4, Planning, `fig:schema` | Schema editor with types, counts, options, and visibility | One column |
+| 2 | `figures/project-editor-schema.png` | Section 4, Planning, `fig:schema` | Schema editor with types, counts, options, and visibility | 0.85 of text width (full width) |
 | 3 | `figures/screening-record.png` | Section 4, Import and Screening, `fig:screening` | Screening view with abstract, decision buttons, and progress | One column |
 | 4 | `figures/consolidation-compare-popup.png` | Section 4, Consolidation, `fig:compare` | Comparison of two reviewers' answers | One column |
 | 5 | `figures/git-merge-conflicts.png` | Section 4, Collaboration with Git, `fig:merge` | Field-level resolution of merge conflicts after a pull | One column |
+| 6 | `figures/knowledge-graph.png` | Section 4, Knowledge Graph, `fig:graph` | Knowledge graph view with a Cypher query, the Nodes drawer, and the result table | 0.85 of text width (full width) |
 
 The caption text lives in `sections/04-tool.tex`.
-Do not change the captions to fit a screenshot.
+For figures 3 and 5, do not change the captions to fit a screenshot.
 Change the screenshot to match the caption.
 
 ## 3. Figure specifications
@@ -197,16 +227,17 @@ Check each item on the screen and on the saved PNG.
 - [ ] The file is PNG, 1800 px wide, with the exact file name.
 - [ ] The image shows no personal data and no API key.
 
-## 8. After you capture all five figures
+## 8. After you capture figures 3 and 5
 
 1. Run `make report` from the repository root.
    The build ends with "Output written on SaiLoR-technical-report.pdf".
 2. Run `pdftotext technical-report/SaiLoR-technical-report.pdf - | grep -c PLACEHOLDER`.
    The output is `0`.
-3. Delete the sentence "Furthermore, all figures in this report show the user interface of version 1.x." from `technical-report/sections/07-discussion.tex`.
-4. Run `make report` again.
-5. Commit only the PNG files and the changed `.tex` files.
-   Do not commit the PDF.
+3. Delete the sentence that starts with "Furthermore, \autoref{fig:screening} and \autoref{fig:merge} still show" from `technical-report/sections/07-discussion.tex`.
+4. Remove "in version 1.x" from the captions of `fig:screening` and `fig:merge` in `sections/04-tool.tex`.
+5. Run `make report` again.
+6. Commit the PNG files and the changed `.tex` files.
+   Commit the rebuilt PDF in a separate commit.
    Do not commit `WRITING_STYLE.md`.
    Do not add a `Co-Authored-By` line or any AI attribution.
 
