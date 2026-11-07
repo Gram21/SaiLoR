@@ -7,6 +7,7 @@
  *
  * For each *.html file under the root it verifies:
  *   1. Every relative href/src points at a file that exists (a directory means its index.html).
+ *      A "?query" is ignored, so "./demo/?mode=schema" checks "./demo/".
  *   2. Every "#fragment" points at an id that exists in the target page.
  * Absolute URLs (https:, mailto:, ...) are not fetched.
  *
@@ -82,8 +83,10 @@ for (const page of pages) {
     if (link === '' || link.startsWith('//') || schemePattern.test(link)) continue
 
     const hashAt = link.indexOf('#')
-    const pathPart = hashAt === -1 ? link : link.slice(0, hashAt)
+    const withoutFragment = hashAt === -1 ? link : link.slice(0, hashAt)
     const fragment = hashAt === -1 ? '' : link.slice(hashAt + 1)
+    const queryAt = withoutFragment.indexOf('?')
+    const pathPart = queryAt === -1 ? withoutFragment : withoutFragment.slice(0, queryAt)
 
     const target = pathPart === '' ? page : resolveTarget(page, pathPart)
     if (target === null) {
