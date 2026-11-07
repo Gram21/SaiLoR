@@ -53,4 +53,10 @@ npm run test:integration
 step "Building static SPA (vite build)"
 npm run build
 
+step "Checking the normal build holds no demo data"
+if grep -rq "KeimKaplan2026_ICSEBoF" dist; then
+  echo "dist/ contains demo data: guard it with DEMO_MODE outside try blocks." >&2
+  exit 1
+fi
+
 step "CI passed ✔"

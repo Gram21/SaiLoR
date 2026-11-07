@@ -917,6 +917,7 @@ Comment:
 - **Type:** Functional (ISO 25010: Usability)
 - **Evidence:** `src/state/settings.ts` (`loadLanguage`), `src/demo/text.ts`
 - **Verified by:** `src/demo/language.test.ts` (`opens in English whatever the browser language`, `keeps the language the visitor chose`)
+- **Status:** Implemented
 
 Needs: impl, utest
 
@@ -944,7 +945,7 @@ When the demo opens, the system shall select the demo's start paper, which has a
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability)
-- **Evidence:** `src/state/store.ts` (`openProject`, demo landing paper and seat), `src/demo/project.ts` (`DEMO_START_PAPER_ID`, `DEMO_START_SEAT`)
+- **Evidence:** `src/state/store.ts` (`openProject`, demo landing paper and seat), `src/demo/text.ts` (`DEMO_START`)
 - **Verified by:** `src/demo/demoStart.test.ts` (`opens on the paper with the bundled PDF, in reviewer 1 seat, without the seat prompt`, `lets the visitor switch seats after the start`)
 - **Status:** Implemented
 

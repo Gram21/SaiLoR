@@ -1,3 +1,5 @@
+import { DEMO_MODE } from './mode'
+
 // English only: the demo notices are not in the locale files, so they read the
 // same in every language.
 
@@ -19,11 +21,13 @@ export const DEMO_NO_PDF = 'The demo does not include a PDF for this paper.'
 
 export const DEMO_READ_ON_ARXIV = 'Read this paper on arXiv'
 
-/** The paper the demo opens on. */
-export const DEMO_START_PAPER_ID = 'KeimKaplan2026_ICSEBoF'
-
-/** The reviewer seat the demo opens in, so the seat prompt does not show. */
-export const DEMO_START_SEAT = '1'
+/**
+ * The paper the demo opens on, and the reviewer seat it opens in so the seat
+ * prompt does not show. Null outside the demo. Decided at module level: the
+ * store reads it inside a try block, where Rollup keeps dead `DEMO_MODE`
+ * branches (tryCatchDeoptimization), so the demo values would ship otherwise.
+ */
+export const DEMO_START = DEMO_MODE ? { paperId: 'KeimKaplan2026_ICSEBoF', seat: '1' } : null
 
 /** The arXiv abstract page named in a paper's venue text, or null when it names none. */
 export function demoArxivUrl(venue: string | undefined): string | null {

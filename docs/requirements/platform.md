@@ -437,7 +437,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-452: Start the demo on the paper with a PDF
 - **Description:** When the demo opens, the system shall select the demo's start paper, which has a bundled PDF, and shall select reviewer seat 1. The system shall not show the reviewer seat prompt at the start. The visitor shall be able to switch the seat from the toolbar.
 - **Type:** Functional (ISO 25010: Usability)
-- **Evidence:** `src/state/store.ts` (`openProject`, demo landing paper and seat), `src/demo/project.ts` (`DEMO_START_PAPER_ID`, `DEMO_START_SEAT`)
+- **Evidence:** `src/state/store.ts` (`openProject`, demo landing paper and seat), `src/demo/text.ts` (`DEMO_START`)
 - **Verified by:** `src/demo/demoStart.test.ts` (`opens on the paper with the bundled PDF, in reviewer 1 seat, without the seat prompt`, `lets the visitor switch seats after the start`)
 - **Status:** Implemented
 

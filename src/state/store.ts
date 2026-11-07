@@ -12,8 +12,7 @@ import {
   aiSeatId,
 } from '../model/project'
 import { alignedReviews, reviewerEntriesAt, type StoredAlignment, type StoredSlot } from '../model/alignment'
-import { DEMO_MODE } from '../demo/mode'
-import { DEMO_START_PAPER_ID, DEMO_START_SEAT } from '../demo/text'
+import { DEMO_START } from '../demo/text'
 import {
   hasAnnotations,
   makeInstance,
@@ -1890,8 +1889,8 @@ export const useStore = create<AppState>()(
         const person = strictPerson !== STRICT_MANAGER ? strictPerson : null
         const ownPapers = person ? personPapers(project, person) : null
         // [impl->req~plt-452~1]
-        const landingPaperId = DEMO_MODE
-          ? DEMO_START_PAPER_ID
+        const landingPaperId = DEMO_START
+          ? DEMO_START.paperId
           : ownPapers
             ? savedPaperStillExists && ownPapers.includes(savedPosition!.paperId)
               ? savedPosition!.paperId
@@ -1903,8 +1902,8 @@ export const useStore = create<AppState>()(
         const reviewer = person
           ? landingPaperId && assignedSeat(project, landingPaperId, person)
           : project.reviewers > 1
-            ? DEMO_MODE
-              ? DEMO_START_SEAT
+            ? DEMO_START
+              ? DEMO_START.seat
               : (landingPaperId && seats.perPaper[landingPaperId]) || seats.last
             : null
         landOnFirstUnfinished = !ownPapers && !savedPaperStillExists ? { seats, reviewer } : null
