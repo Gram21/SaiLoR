@@ -130,8 +130,8 @@ it as a checkbox + a reviewer-count field next to the AI opt-out.
 **`config.aiSeat` — dedicate one reviewer seat to the AI.** Optional, defaults to `false`. Set it to
 `true` to have the AI's own answers occupy the *last* reviewer seat (`config.reviewers`) rather than
 being applied by a human on their own seat — the same tree, compared in Consolidation like any other
-reviewer's. Only *effective* when `config.ai` is `true`, `config.reviewers` is at least `2`, and
-this is not a screening project; the value is still kept as authored outside that window (AI turned
+reviewer's. Only *effective* when `config.ai` is `true` and `config.reviewers` is at least `2`.
+This also applies to a screening project. The value is still kept as authored outside that window (AI turned
 off, or reviewers dropped below 2), so re-enabling either restores the choice rather than losing it.
 Written out only when `true`. A human may still open the AI's seat to look at or correct its work —
 the annotation panel notes when you are.
