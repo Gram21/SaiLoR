@@ -230,7 +230,7 @@ The page's own dimensions come from its `MediaBox`, walking the page tree to inh
 
 Authorization on the export path: the source must be a PDF of the open project (`project_pdf` — inside the project directory or an approved escape), the destination must be either `'original'` or a path the export dialog returned this session (`export_target`, from `writable_exports`), and the final write refuses a symlink destination (`assert_not_symlink`). Outcomes come back to the dialog as `{ ok: true, path }` / `{ ok: false, error }` — failures never throw across the bridge.
 
-The same gate protects the text and binary exports of other features: `text_pick_export_path` accepts the file types `txt`, `jsonld`, `ttl`, `graphml`, `csv`, `svg` and `png`, and `text_write` and `export_write_bytes` write only to a path it returned this session. The graph image download uses them (see [Knowledge Graph](knowledge-graph.md)).
+The same gate protects the text and binary exports of other features: `text_pick_export_path` accepts the file types `txt`, `jsonld`, `ttl`, `graphml`, `csv`, `svg` and `png`, and `text_write` and `export_write_bytes` write only to a path it returned this session. The graph image download uses them (see the Knowledge Graph View page).
 
 ## Reading-position persistence
 
