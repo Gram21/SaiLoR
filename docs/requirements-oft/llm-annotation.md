@@ -94,11 +94,11 @@ Tags: NonFunctional, Security
 ### REQ-LLM-70: Bound LLM call duration
 `req~llm-70~1`
 
-The system shall terminate an LLM request that has not completed within 10 minutes and shall allow the user to abort an in-flight request at any time.
+The system shall terminate an LLM request that has not completed within 10 minutes and shall allow the user to abort an in-flight request at any time. The abort shall also work while the system starts a managed local model for the request.
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `src-tauri/src/llm.rs` (`LLM_TIMEOUT`, `llm_abort`), `src-tauri/src/llm.rs` (`call_can_be_aborted`), commit `98796c1`
+- **Evidence:** `src-tauri/src/llm.rs` (`LLM_TIMEOUT`, `llm_abort`, `call`), `src-tauri/src/llm.rs` (`call_can_be_aborted`, `call_can_be_aborted_while_the_local_model_starts`), commit `98796c1`
 - **Status:** Implemented
 
 Needs: impl, utest

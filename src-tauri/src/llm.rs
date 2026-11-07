@@ -367,6 +367,7 @@ fn managed_target_url(request: &Url, server_base: &str) -> Result<Url, String> {
 }
 
 // [impl->req~llm-60~1]
+// [impl->req~llm-70~1]
 // [impl->req~llm-440~1]
 pub async fn call(
     path: &Path,
@@ -408,12 +409,21 @@ pub async fn call(
         None
     };
     let mut headers = build_call_headers(&request.headers, api_key.as_deref(), no_key)?;
+    let flight = Flight::new(&format!("llm:{request_id}"));
     // Managed local model: the stored base URL is only a placeholder the checks above pinned the
     // request to; the call goes to the server this app runs, with that server's per-session key.
     let (call_url, client) = match config["managed"]["catalogId"].as_str() {
         Some(id) => {
-            let dir = path.parent().ok_or("Invalid URL")?;
-            let (base, key) = crate::localruntime::endpoint(dir, id).await?;
+            let dir = path.parent().ok_or("Invalid URL")?.to_path_buf();
+            let id = id.to_string();
+            let start = tauri::async_runtime::spawn(async move {
+                crate::localruntime::endpoint(&dir, &id).await
+            });
+            let (base, key) = flight
+                .run(LLM_TIMEOUT, start)
+                .await
+                .map_err(|_| "This operation was aborted")?
+                .map_err(err)??;
             headers.insert("Authorization".into(), format!("Bearer {key}"));
             (
                 managed_target_url(&target, &base)?,
@@ -475,7 +485,6 @@ pub async fn call(
             retry_after_ms,
         })
     };
-    let flight = Flight::new(&format!("llm:{request_id}"));
     flight
         .run(LLM_TIMEOUT, send)
         .await
@@ -868,5 +877,33 @@ mod tests {
         let (r, ()) = tokio::join!(pending, abort);
         assert_eq!(r, Err("This operation was aborted".into()));
         drop(listener);
+    }
+
+    // [utest->req~llm-70~1]
+    #[tokio::test]
+    async fn call_can_be_aborted_while_the_local_model_starts() {
+        let path = temp_file("abort-start");
+        let keys = Memory::default();
+        let cfg = json!({ "id": "l", "baseUrl": "http://127.0.0.1:1", "managed": { "catalogId": "laya-en-q8" } });
+        save_config(&path, &keys, cfg, None).unwrap();
+        let c = client();
+        let starting = crate::localruntime::START.lock().await;
+        let pending = call(
+            &path,
+            &keys,
+            &c,
+            "starting",
+            request("l", "http://127.0.0.1:1/v1/x"),
+        );
+        let abort = async {
+            tokio::time::sleep(Duration::from_millis(50)).await;
+            net::abort("llm:starting");
+        };
+        let r = tokio::time::timeout(Duration::from_secs(5), async {
+            tokio::join!(pending, abort).0
+        })
+        .await;
+        drop(starting);
+        assert_eq!(r, Ok(Err("This operation was aborted".into())));
     }
 }
