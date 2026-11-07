@@ -314,6 +314,18 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
   remembered. The PDF paper is always rendered on a normal white background, regardless of theme.
 - **Font size** — the `A− A A+` buttons (or the shortcuts below) scale the app's text. This affects
   the app chrome only, not the rendered PDF. The chosen size is remembered.
+- **Settings** — open with `Ctrl/Cmd + ,` or click the SaiLoR title. Set the theme, font size,
+  autosave, the interface language (9 languages) and the AI models. See
+  [Settings](user-guide/getting-started.md#settings).
+- **View only** — tick it in the toolbar to read a project without changing it.
+- **Metadata corrections** — correct a paper's title, authors, year and DOI per seat. See
+  [Correcting paper metadata](user-guide/getting-started.md#correcting-paper-metadata).
+- **PDF folder** — SaiLoR finds new PDFs in the project's PDF folder and offers to add them. See
+  [Adding new PDFs from a folder](user-guide/getting-started.md#adding-new-pdfs-from-a-folder).
+- **AI annotation** — a model proposes answers, and you check each one before you apply it. See
+  [Annotating with AI](user-guide/getting-started.md#annotating-with-ai).
+- **Strict mode** — assign papers to named persons and lock finished work. See
+  [Strict mode](user-guide/project-editor.md#strict-mode).
 
 ### Keyboard shortcuts
 
@@ -329,6 +341,7 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
 | `Alt + ↓` or `]`        | Next paper                     |
 | `Alt + ↑` or `[`        | Previous paper                 |
 | `F1`                    | Open help                      |
+| `Ctrl/Cmd + ,`          | Open settings                  |
 | `Ctrl/Cmd + C/V/X/Z`    | Native copy/paste/…            |
 | `I` / `E` / `U`         | Screening only: include / exclude / un-decide |
 | `1`–`9`                 | Screening only: exclude with the Nth configured reason |
