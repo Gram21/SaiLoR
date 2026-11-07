@@ -190,6 +190,30 @@ describe('DesktopAdapter.saveProject', () => {
     expect((files as unknown[]).length).toBeGreaterThan(0)
   })
 
+  // [utest->req~plt-457~1]
+  it('keeps the baseline of a project opened while an earlier save was written', async () => {
+    const text = makeProjectText()
+    let finish = () => {}
+    const slowSave = vi
+      .fn()
+      .mockImplementationOnce(() => new Promise((r) => (finish = () => r({ stale: [] }))))
+      .mockResolvedValue({ stale: [] })
+    const openPath = vi.fn().mockResolvedValue({ path: '/b/project.json', text, corrupt: [] })
+    const setProjectDir = vi.fn().mockResolvedValue(undefined)
+    setBridge({ saveProject: slowSave, openPath, setProjectDir } as never)
+
+    const adapter = new DesktopAdapter()
+    const first = adapter.saveProject(text, { kind: 'electron', path: '/a/project.json' })
+    await adapter.openRecent('/b/project.json')
+    finish()
+    await first
+
+    // B unedited: its baseline survived, so nothing is written.
+    await adapter.saveProject(text, { kind: 'electron', path: '/b/project.json' })
+    expect(slowSave.mock.calls[1][1]).toBeNull()
+    expect(slowSave.mock.calls[1][2]).toEqual([])
+  })
+
   it('throws when the handle has no path', async () => {
     const adapter = new DesktopAdapter()
     await expect(adapter.saveProject(makeProjectText(), { kind: 'electron' })).rejects.toThrow('Save as')

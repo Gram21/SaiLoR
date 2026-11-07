@@ -467,3 +467,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `src/demo/schemaMode.ts` (`DEMO_SCHEMA_MODE`), `src/App.tsx` (demo start effect), `src/platform/demoAdapter.ts` (`pickProjectLocation`, `saveProject`, `download`), `src/components/DemoBanner.tsx`, `src/demo/text.ts` (`DEMO_SCHEMA_NOTICE`), `site/index.html`, `site/create-project.html`, `scripts/check-site-links.js`
 - **Verified by:** `src/demo/schemaDemo.test.ts` (`opens a new project in the editor, adds a field and saves it as a download`), `src/platform/demoSchemaAdapter.test.ts` (`downloads the saved text as project.json and writes nothing else`), `src/components/DemoBanner.schema.test.tsx` (`says that save downloads project.json and keeps the link back`)
 - **Status:** Implemented
+
+### REQ-PLT-457: Keep a save on its own project when another project opens
+- **Description:** When the user opens another project while a save or a "Save as" of the previous project is written, the system shall keep the save location, the disk baseline and the change detection of the newly opened project. A save that waits in the queue shall not write while the newly opened project still loads.
+- **Type:** Non-functional (ISO 25010: Reliability)
+- **Evidence:** `src/state/store.ts` (`saveOnce`, `saveAs`, `projectGeneration`), `src/platform/desktop.ts` (`saveProject`)
+- **Verified by:** `src/state/store.saveRace.test.ts`, `src/platform/desktop.test.ts` (`keeps the baseline of a project opened while an earlier save was written`)
+- **Status:** Implemented

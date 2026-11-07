@@ -238,9 +238,12 @@ export class DesktopAdapter implements PlatformAdapter {
     const removed = base
       ? [...base.files.keys()].filter((p) => !present.has(p)).map((relPath) => ({ relPath, text: null }))
       : []
+    const before = lastWritten
     const { stale } = await bridge().saveProject(handle.path, base?.meta === metaText ? null : metaText, [...changed, ...removed])
     if (stale.length > 0) throw new StaleSaveError(stale)
-    noteWritten(handle.path, metaText, files)
+    // [impl->req~plt-457~1]
+    // An open during the write set the baseline of the project now open; keep it.
+    if (lastWritten === before) noteWritten(handle.path, metaText, files)
     return handle
   }
 

@@ -1011,3 +1011,18 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Usability, Security
+
+### REQ-PLT-457: Keep a save on its own project when another project opens
+`req~plt-457~1`
+
+When the user opens another project while a save or a "Save as" of the previous project is written, the system shall keep the save location, the disk baseline and the change detection of the newly opened project. A save that waits in the queue shall not write while the newly opened project still loads.
+
+Comment:
+- **Type:** Non-functional (ISO 25010: Reliability)
+- **Evidence:** `src/state/store.ts` (`saveOnce`, `saveAs`, `projectGeneration`), `src/platform/desktop.ts` (`saveProject`)
+- **Verified by:** `src/state/store.saveRace.test.ts`, `src/platform/desktop.test.ts` (`keeps the baseline of a project opened while an earlier save was written`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: NonFunctional, Reliability
