@@ -232,9 +232,9 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-400: Restrict agent web access to public hosts
-- **Description:** When the AI agent fetches a URL, the system shall allow only `http`/`https` URLs without embedded credentials, resolve the hostname (or literal IP) and refuse the request if any resolved address is loopback, private, link-local, CGNAT, unique-local, multicast, or otherwise non-public, re-check the same rules on each of up to 5 manually-followed redirects, send no cookies or credentials, enforce a 20-second timeout and a 2 MB response body cap, and accept only textual content types.
+- **Description:** When the AI agent fetches a URL, the system shall allow only `http`/`https` URLs without embedded credentials, resolve the hostname (or literal IP) and refuse the request if any resolved address is loopback, private, link-local, CGNAT, unique-local, multicast, or otherwise non-public, re-check the same rules on each of up to 5 manually-followed redirects, send no cookies or credentials, ignore the system proxy settings, enforce a 20-second timeout and a 2 MB response body cap, and accept only textual content types.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src-tauri/src/webfetch.rs` (`validate_fetch_url`, `is_blocked_ip`, `is_blocked_hostname`, `resolve_public`, `web_fetch`, `web_abort`), `src-tauri/src/webfetch.rs` (`blocked_addresses`, `validate_urls`, `redirects_are_rechecked`, `body_is_capped`, `content_types`)
+- **Evidence:** `src-tauri/src/webfetch.rs` (`validate_fetch_url`, `is_blocked_ip`, `is_blocked_hostname`, `resolve_public`, `web_fetch`, `web_abort`), `src-tauri/src/webfetch.rs` (`blocked_addresses`, `validate_urls`, `redirects_are_rechecked`, `body_is_capped`, `content_types`, `fetches_ignore_proxy_settings`)
 - **Status:** Implemented
 
 ### REQ-LLM-380: Switch between prompt and agent mode
