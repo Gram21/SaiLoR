@@ -24,8 +24,15 @@ function confirmed(proposal: PdfProposal, draft: Draft): PdfProposal {
   const sources: MetadataSources = {}
   for (const f of METADATA_FIELDS) {
     const text = draft[f].trim()
+    // Unedited: keep the found value, or an author named "Smith, Jr." would split in two.
     const value =
-      f === 'authors' ? text.split(',').map((a) => a.trim()).filter(Boolean) : f === 'year' ? parseYear(text) : text || undefined
+      draft[f] === start[f]
+        ? proposal.values[f]
+        : f === 'authors'
+          ? text.split(',').map((a) => a.trim()).filter(Boolean)
+          : f === 'year'
+            ? parseYear(text)
+            : text || undefined
     if (value === undefined || (Array.isArray(value) && value.length === 0)) continue
     values[f] = value
     const source = draft[f] === start[f] ? proposal.sources[f] : 'manual'

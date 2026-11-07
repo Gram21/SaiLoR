@@ -55,6 +55,16 @@ describe('PdfFolderDialog', () => {
     expect(screen.queryByRole('region', { name: 'new/a.pdf' })).toBeNull()
   })
 
+  it('keeps an unedited author name that contains a comma', async () => {
+    open()
+    useStore.setState({
+      pdfProposals: [proposeNewPaper({ path: 'new/c.pdf', sha256: 'hc' }, { title: 'C' }, { authors: ['Smith, Jr.', 'Ann'] })],
+    })
+    render(<PdfFolderDialog />)
+    await userEvent.click(within(entry('new/c.pdf')).getByRole('button', { name: 'Add paper' }))
+    expect(papers()[1].authors).toEqual(['Smith, Jr.', 'Ann'])
+  })
+
   it('keeps a skipped file in the scan result and adds nothing', async () => {
     open()
     render(<PdfFolderDialog />)
