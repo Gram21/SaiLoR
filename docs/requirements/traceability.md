@@ -406,6 +406,7 @@ inspection only.
 | REQ-GIT-580 | Merge and commit metadata corrections | Functional · Functional Suitability, Reliability | `src/git/merge.ts` (`mergePaper`, `canonicalPaper`, `mergeProjects`, `applyResolutions`)<br>`src/git/changes.ts` (`BOOKKEEPING_FIELDS`) | `src/git/merge.test.ts` | — | `docs/annotation-schema.md` §4 Correcting paper metadata |
 | REQ-GIT-590 | Keep finished work locked in a merge | Functional · Functional Suitability, Reliability | `src/git/merge.ts` (`mergePaper`, `mergeReviewsLock`, `canonicalPaper`)<br>`src/git/changes.ts` (`BOOKKEEPING_FIELDS`) | `src/git/merge.test.ts` | — | `docs/annotation-schema.md` §9 Strict mode |
 | REQ-GIT-600 | Merge papers by PDF hash | Functional · Functional Suitability, Reliability | `src/git/merge.ts` (`mergePapers`, `mergeProjects`) | `src/git/merge.test.ts` | — | `docs/annotation-schema.md` §4 Watching a PDF folder |
+| REQ-GIT-610 | Keep edits made while git rewrites the project files | Non-functional · Reliability | `src/state/store.ts` (`resyncProjectFromDisk`)<br>`src/state/gitStore.ts` (`runStashOperation`, `runStashRestore`, `runUndoMerge`) | `src/state/store.resyncDirty.test.ts` | — | — |
 
 ## LLM-assisted annotation ([llm-annotation.md](llm-annotation.md))
 
@@ -514,6 +515,7 @@ inspection only.
 | REQ-LLM-830 | Show the AI evaluation in a read-only dialog | Functional · Functional Suitability, Usability: Operability, Security: Confidentiality | `src/components/AiEvaluationDialog.tsx`<br>`src/components/ConsolidationOverview.tsx` | `src/components/AiEvaluationDialog.test.tsx`<br>`src/components/ConsolidationOverview.test.tsx` | — | `user-guide/multi-reviewer.md` §AI evaluation |
 | REQ-LLM-831 | Export the AI evaluation as CSV | Functional · Functional Suitability, Security: Integrity | `src/llm/evaluation.ts` (`evaluationCsv`)<br>`src/components/AiEvaluationDialog.tsx`<br>`src/model/graph.ts` (`csvCell`) | `src/llm/evaluation.test.ts`<br>`src/components/AiEvaluationDialog.test.tsx` | — | `user-guide/multi-reviewer.md` §AI evaluation |
 | REQ-LLM-832 | Show an empty state for the AI evaluation | Functional · Usability: Operability | `src/components/AiEvaluationDialog.tsx` | `src/components/AiEvaluationDialog.test.tsx` | — | `user-guide/multi-reviewer.md` §AI evaluation |
+| REQ-LLM-833 | Limit the URLs the agent fetches | Non-functional · Security | `src/llm/tools.ts` (`fetchUrl`, `AGENT_TOOLS`) | `src/llm/tools.test.ts` | — | — |
 
 ## Platform & desktop shell ([platform.md](platform.md))
 
@@ -588,6 +590,8 @@ inspection only.
 | REQ-PLT-454 | Bundle a PDF for every demo paper | Functional · Usability | `src/demo/project.ts` (`DEMO_PDF_FILES`, `demoPdfUrl`)<br>`src/platform/demoAdapter.ts` (`getPdfSource`)<br>`vite.config.ts` (`slr-demo-pdfs`)<br>`src/demo/papers/`<br>`src/demo/PDF-LICENSES.md` | `src/demo/demoProject.test.ts` (`bundles a PDF file for every paper`)<br>`src/platform/demoAdapter.test.ts` (`serves the bundled PDF of every demo paper and says why for any other path`) | — | `docs/building.md` §Build the online demo |
 | REQ-PLT-455 | Link the demo back to the project page | Functional · Usability | `src/components/DemoBanner.tsx`<br>`src/demo/text.ts` (`DEMO_BACK_URL`, `DEMO_BACK_LABEL`)<br>`src/styles/index.css` (`.demo-folded`) | `src/components/DemoBanner.test.tsx` (`links back to the project page from the notice and while the notice is folded`) | — | `docs/building.md` §Build the online demo |
 | REQ-PLT-456 | Open a schema editor demo that saves by download | Functional · Usability, Security | `src/demo/schemaMode.ts`<br>`src/App.tsx`<br>`src/platform/demoAdapter.ts` (`pickProjectLocation`, `saveProject`)<br>`src/components/DemoBanner.tsx`<br>`src/demo/text.ts` (`DEMO_SCHEMA_NOTICE`)<br>`site/index.html`<br>`site/create-project.html`<br>`scripts/check-site-links.js` | `src/demo/schemaDemo.test.ts` (`opens a new project in the editor, adds a field and saves it as a download`)<br>`src/platform/demoSchemaAdapter.test.ts` (`downloads the saved text as project.json and writes nothing else`)<br>`src/components/DemoBanner.schema.test.tsx` (`says that save downloads project.json and keeps the link back`) | — | `docs/building.md` §Build the online demo |
+| REQ-PLT-457 | Keep a save on its own project when another project opens | Non-functional · Reliability | `src/state/store.ts` (`saveOnce`, `saveAs`, `projectGeneration`)<br>`src/platform/desktop.ts` (`saveProject`) | `src/state/store.saveRace.test.ts`<br>`src/platform/desktop.test.ts` | — | — |
+| REQ-PLT-458 | Set the project folder only for a known project | Non-functional · Security | `src-tauri/src/project.rs` (`set_dir`, `project_set_dir`) | `src-tauri/src/project.rs` (`set_dir_refuses_a_project_that_was_not_opened`) | — | — |
 
 ## Coverage statistics
 

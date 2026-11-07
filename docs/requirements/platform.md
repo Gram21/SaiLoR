@@ -425,6 +425,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Type:** Functional (ISO 25010: Usability)
 - **Evidence:** `src/state/settings.ts` (`loadLanguage`), `src/demo/text.ts`
 - **Verified by:** `src/demo/language.test.ts` (`opens in English whatever the browser language`, `keeps the language the visitor chose`)
+- **Status:** Implemented
 
 ### REQ-PLT-451: Publish the project website and the demo with GitHub Pages
 - **Description:** When a commit reaches `main`, the Pages workflow shall build the online demo, copy it under `demo/` next to the files of `site/`, and check every relative link and image of the site pages. The workflow shall deploy the result to GitHub Pages only after the check passes. The site pages shall use relative links, so that the site works under the project path. The site pages shall load no script, style, font or image from another host. The walkthrough on the site shall contain project files that the project loader accepts.
