@@ -139,6 +139,30 @@ independently by that many people — each sees only their own answers. On top o
 project always gets one extra **Consolidation** role. "2 reviewers" means two independent passes plus
 a consolidation pass. See [Working with several reviewers](multi-reviewer.md) for the full workflow.
 
+## Project settings
+
+The **Settings** tab holds the options that apply to the whole project.
+
+<p align="center">
+  <img src="screenshots/project-editor-settings.png" alt="The Settings tab: annotations folder, project title, screening, reviewers, AI, AI seat, finishing, metadata corrections, PDF folder with the Crossref option, and the review protocol" width="900">
+</p>
+
+| Setting | What it does |
+| --- | --- |
+| **AI** | **Allow AI-assisted annotation** shows the **AI** toolbar button. |
+| **AI seat** | The AI takes the last reviewer seat. This option needs AI and at least 2 reviewers. |
+| **Finishing** | Reviewers tick **Annotation finished** to mark a paper as done. |
+| **Metadata corrections** | **On** lets reviewers correct the title, authors, year and DOI of a paper. |
+| **PDF folder** | A folder in the project folder. SaiLoR scans it for new PDF files. Leave it empty to turn off the scan. |
+| **Look up metadata on Crossref** | Off by default. If on, SaiLoR sends the DOI of a new PDF to `api.crossref.org`. |
+
+With **Metadata corrections** set to **Off (read-only)**, reviewers cannot change paper metadata.
+With **On**, SaiLoR stores each correction in the annotation files of that reviewer seat.
+See [Correcting paper metadata](getting-started.md#correcting-paper-metadata).
+
+The PDF folder must be inside the project folder. SaiLoR refuses a folder outside it.
+See [Adding new PDFs from a folder](getting-started.md#adding-new-pdfs-from-a-folder).
+
 ## Screening instead of annotation
 
 Tick **This is a screening project** to replace the schema-building section with a short, ordered list

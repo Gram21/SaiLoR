@@ -251,6 +251,64 @@ otherwise fail every required field at once and bury the problems that are actua
 Note the reminder at the top of the dialog: a *Yes/No* field is never reported as missing, even if
 it's marked required — see [Things to know](things-to-know.md#a-smaller-one-a-yesno-field-can-never-be-reported-as-missing).
 
+## Correcting paper metadata
+
+If the project allows metadata corrections, the toolbar shows a **Metadata** button.
+The project editor sets this option. See [Project settings](project-editor.md#project-settings).
+The button needs a human reviewer seat or the Consolidation seat.
+
+To correct the metadata of a paper:
+
+1. Select the paper.
+2. Click **Metadata**. The dialog shows the title, authors, year and DOI of the current paper.
+3. Change the values. The year must be between 1000 and 2100, or empty.
+4. Click **Save**.
+
+SaiLoR stores the correction in the annotation file of your seat. The project file does not change.
+The paper list and the panel header show the corrected title and authors of your seat.
+A badge in the paper list names the corrected fields.
+
+Click **Check PDFs** to read the title, authors and DOI from each PDF file.
+The dialog then shows one entry for each proposed correction. For each entry, do one of these:
+
+| Button | Result |
+| --- | --- |
+| **Save** | Stores the values as a correction in your annotation file. |
+| **Save all** | Stores every shown proposal in one undo step. |
+| **Skip** | Hides the entry until the dialog opens again. |
+| **Ignore** | SaiLoR does not propose these values again. |
+
+Nothing changes until you confirm an entry. Each confirmation is one undo step.
+The correction goes into the project file only in a separate step in the Consolidation seat.
+See [Metadata corrections in Consolidation](multi-reviewer.md#metadata-corrections-in-consolidation).
+
+## Adding new PDFs from a folder
+
+If the project sets a PDF folder, SaiLoR scans the folder for new PDF files.
+SaiLoR scans when the project opens, when the window gets the focus, and when you click **Rescan**.
+The toolbar button shows the count of new files, for example "New PDFs (3)".
+SaiLoR compares files by their content hash, not by their names. A renamed file is not new.
+
+The **New PDF files** dialog shows one entry for each new file.
+Each entry proposes a title, authors, a year and a DOI. A label gives the source of each value:
+
+- **PDF information**: the embedded PDF data and the first page.
+- **Crossref**: the Crossref lookup, if the project turns it on.
+- **file name**: no other source gave a title. The entry shows "Metadata missing".
+- **manual**: you changed the value.
+
+Check and change the values. Then do one of these for each entry:
+
+| Button | Result |
+| --- | --- |
+| **Add paper** | Adds the file as a new paper. |
+| **Add all** | Adds every shown file in one undo step. |
+| **Skip** | Does not add the file now. The next scan offers it again. |
+| **Ignore** | SaiLoR never offers the file again. |
+
+SaiLoR adds only the files that you confirm. The paper list marks a paper whose PDF file is missing.
+SaiLoR does not send PDF files or text to Crossref. With the lookup on, it sends only the DOI.
+
 ## Keyboard shortcuts
 
 Press **F1** at any time for the full, current list for whichever screen you're on — it differs

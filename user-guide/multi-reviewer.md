@@ -116,6 +116,25 @@ once — aligning repeatable groups first, exactly as opening each paper individ
 you clicking through a hundred papers just to trigger the auto-fill on each one. A paper you've
 already partly consolidated is left alone.
 
+## Metadata corrections in Consolidation
+
+Reviewers store metadata corrections in their own annotation files.
+See [Correcting paper metadata](getting-started.md#correcting-paper-metadata).
+In the Consolidation seat, the **Metadata** dialog shows one entry for each paper with corrections.
+With one reviewer, use seat 1 instead.
+
+A field is agreed only if every human seat changed it to the same value.
+All other changed fields are disagreements. The dialog shows the value of each seat.
+
+| Button | Result |
+| --- | --- |
+| **Update project metadata** | Writes the values into the project file. |
+| **Accept all** | Writes every agreed entry in one undo step. It skips entries with a disagreement. |
+| **Ignore** | Keeps the project values. |
+
+After **Update project metadata** or **Ignore**, the entry stays hidden.
+It comes back when a seat changes its corrections again.
+
 ## AI evaluation
 
 Use **AI evaluation** to compare the AI seat with the consolidated answers. The table shows which
