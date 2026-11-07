@@ -12,7 +12,7 @@ Until a PNG exists, the report shows a red placeholder box with the file name.
 | 2 | `project-editor-schema.png` | Done | Online demo with `?mode=schema`, schema entered by hand, cropped to the schema. |
 | 3 | `screening-record.png` | Done | 2.0.0 renderer with `samples/screening.example.json`, cropped to the abstract and the screening panel. |
 | 4 | `consolidation-compare-popup.png` | Done | Online demo, paper "A Roadmap for Tamed Interactions …", field "Relevant", cropped to the popup. |
-| 5 | `git-merge-conflicts.png` | Done | 2.0.0 merge dialog with a prepared conflict on "smith2021" and "Design", cropped to the dialog. |
+| 5 | `git-merge-conflicts.png` | Done | 2.0.0 merge dialog with prepared conflicts on two demo papers, cropped to the dialog. |
 | 6 | `knowledge-graph.png` | Done | Online demo, Cypher query for the papers of "Keim", Nodes drawer open, cropped to the dialog. |
 
 The demo figures do not show the sample projects of section 3.
@@ -160,7 +160,7 @@ Setup:
 Must show:
 
 - The merge conflict dialog after a pull.
-- One row for the paper "smith2021" and the field "Design".
+- Rows for "Software Architecture Meets LLMs" and "The ARDoCo Tool Landscape", with the fields "Study Type" and "Relevant".
 - The two values side by side.
 - The "Finish merge" button.
 
