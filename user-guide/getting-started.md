@@ -21,6 +21,29 @@ record and an Include/Exclude choice instead — see [Screening](screening.md). 
 **multiple reviewers**, you'll be asked which seat you are before you can annotate anything — see
 [Working with several reviewers](multi-reviewer.md).
 
+Tick **View only** in the toolbar to look at the annotations without the risk of a change.
+In view-only mode, SaiLoR does not change the project. Clear the checkbox to edit again.
+
+### Opening a large project
+
+SaiLoR opens a project in two steps. First it shows the paper list with the metadata of all papers.
+Then it reads the answers of the papers in batches.
+While SaiLoR reads, the paper list shows the progress, for example "Loading papers: 12,000 / 50,000".
+You can open and annotate each paper that has loaded.
+
+Some features need all papers. SaiLoR disables them until the last paper has loaded:
+
+- save, save as and autosave
+- validation and AI evaluation
+- the knowledge graph export and view
+- the PDF folder scan and the Git panel
+- the consolidation overview, the disagreement lists and the screening summary
+
+The tooltip of each disabled control gives the reason.
+If a batch cannot be read, the paper list shows where loading stopped. Click **Retry** to read the batch again.
+SaiLoR keeps saving blocked until every paper has loaded.
+A project in the old single-file layout opens in one step. Save it once to change it to the split layout.
+
 ## Finding a paper
 
 The box above the paper list searches **title, authors, DOI, abstract, the PDF's file name, and the
@@ -228,6 +251,159 @@ otherwise fail every required field at once and bury the problems that are actua
 Note the reminder at the top of the dialog: a *Yes/No* field is never reported as missing, even if
 it's marked required — see [Things to know](things-to-know.md#a-smaller-one-a-yesno-field-can-never-be-reported-as-missing).
 
+## Correcting paper metadata
+
+If the project allows metadata corrections, the toolbar shows a **Metadata** button.
+The project editor sets this option. See [Project settings](project-editor.md#project-settings).
+The button needs a human reviewer seat or the Consolidation seat.
+
+To correct the metadata of a paper:
+
+1. Select the paper.
+2. Click **Metadata**. The dialog shows the title, authors, year and DOI of the current paper.
+3. Change the values. The year must be between 1000 and 2100, or empty.
+4. Click **Save**.
+
+SaiLoR stores the correction in the annotation file of your seat. The project file does not change.
+The paper list and the panel header show the corrected title and authors of your seat.
+A badge in the paper list names the corrected fields.
+
+Click **Check PDFs** to read the title, authors and DOI from each PDF file.
+The dialog then shows one entry for each proposed correction. For each entry, do one of these:
+
+| Button | Result |
+| --- | --- |
+| **Save** | Stores the values as a correction in your annotation file. |
+| **Save all** | Stores every shown proposal in one undo step. |
+| **Skip** | Hides the entry until the dialog opens again. |
+| **Ignore** | SaiLoR does not propose these values again. |
+
+Nothing changes until you confirm an entry. Each confirmation is one undo step.
+The correction goes into the project file only in a separate step in the Consolidation seat.
+See [Metadata corrections in Consolidation](multi-reviewer.md#metadata-corrections-in-consolidation).
+
+## Adding new PDFs from a folder
+
+If the project sets a PDF folder, SaiLoR scans the folder for new PDF files.
+SaiLoR scans when the project opens, when the window gets the focus, and when you click **Rescan**.
+The toolbar button shows the count of new files, for example "New PDFs (3)".
+SaiLoR compares files by their content hash, not by their names. A renamed file is not new.
+
+The **New PDF files** dialog shows one entry for each new file.
+Each entry proposes a title, authors, a year and a DOI. A label gives the source of each value:
+
+- **PDF information**: the embedded PDF data and the first page.
+- **Crossref**: the Crossref lookup, if the project turns it on.
+- **file name**: no other source gave a title. The entry shows "Metadata missing".
+- **manual**: you changed the value.
+
+Check and change the values. Then do one of these for each entry:
+
+| Button | Result |
+| --- | --- |
+| **Add paper** | Adds the file as a new paper. |
+| **Add all** | Adds every shown file in one undo step. |
+| **Skip** | Does not add the file now. The next scan offers it again. |
+| **Ignore** | SaiLoR never offers the file again. |
+
+SaiLoR adds only the files that you confirm. The paper list marks a paper whose PDF file is missing.
+SaiLoR does not send PDF files or text to Crossref. With the lookup on, it sends only the DOI.
+
+## Annotating with AI
+
+Caution: AI support is a preview feature. Check every AI proposal yourself before you apply it.
+
+If the project allows AI, the toolbar shows an **AI** button.
+The project editor sets this option. See [Project settings](project-editor.md#project-settings).
+Without an AI seat, the AI button is not available in the Consolidation seat.
+
+Before the first run, add a model:
+
+1. Open **Settings** and go to the **AI** section.
+2. Click **AI models…**.
+3. Add a provider and a model. Enter the API key if the provider needs one.
+
+SaiLoR stores the API keys in the keychain of your operating system, not in the project.
+
+To annotate with AI:
+
+1. Select a paper and click **AI**. The **Annotate with AI** dialog opens.
+2. Select a mode:
+
+   | Mode | Behaviour |
+   | --- | --- |
+   | **Prompt** | One request per paper. The model reads the paper once and proposes values. |
+   | **Agent** | The model searches and re-reads the paper with tools. A second model, the **Judge**, checks each value. |
+   | **Classify** | A fast System One model answers yes/no and single-choice fields. It gives no quotes. |
+
+3. Select the **Annotator** model. Optionally, select a **Judge** and a **Cross-check** model.
+4. Read the consent text. It names the provider and the data that leaves your computer.
+5. Click **Start**.
+6. Check the proposals. Tick the rows that you accept.
+7. Click **Apply**.
+
+Nothing goes into the project until you click **Apply**.
+The AI proposes values only for empty fields, unless you turn on the re-check of filled fields.
+A row starts unticked if its confidence is low, the judge flags it, or the cross-check disagrees.
+
+**Options** has more settings:
+
+- **Annotate all papers** runs the AI on every paper. A warning shows the number of requests and the cost.
+- **Papers at once** sets how many papers run in parallel.
+- **Stop when spent exceeds $** stops the run at a cost limit. This needs model prices.
+- **Show the AI my finished papers as examples** sends some of your finished papers as examples.
+
+If the project has an AI seat, the AI writes into that seat.
+See [AI evaluation](multi-reviewer.md#ai-evaluation) to compare the AI seat with the consolidated answers.
+
+## Exploring the knowledge graph
+
+The knowledge graph shows papers, authors, venues, keywords and answers as nodes.
+Edges connect each paper to its authors, venue, keywords, answers and cited papers.
+
+To open the graph view, click **Export ▾** and then **Explore knowledge graph**.
+
+<p align="center">
+  <img src="screenshots/knowledge-graph-nodes.png" alt="The knowledge graph view with the Nodes drawer open on the left, one paper selected, and the side panel with its details and neighbours" width="900">
+</p>
+
+Use the view like this:
+
+- Drag the background to move the graph. Turn the mouse wheel to zoom.
+- Click a node to select it. The side panel shows its details and its neighbours.
+- Double-click a node, or click **Show neighbours**, to add its neighbours to the view.
+- Clear a checkbox under **Relations:** to hide the edges of that type.
+- Click **Nodes** to open the node list. The list is closed when the view opens.
+  The list is a keyboard alternative to the canvas. It shows 200 nodes; **Show more** adds 200 more.
+- Click **Export…** to save the graph as JSON-LD, RDF Turtle, GraphML or CSV.
+- Press Escape or click × to close the view.
+
+The view uses the consolidated answers if they exist.
+If no consolidated answers exist and the project has several reviewers, select the **Seat** in the view.
+
+### Graph queries
+
+Type a query into the query box. Then press Enter or click **Show**.
+
+| Query | Shows |
+| --- | --- |
+| `turing` | Nodes that contain the word, and their neighbours. |
+| `type:paper Method=Survey` | Papers with the answer *Survey* in the field *Method*. |
+| `author:smith` | Author nodes that contain *smith*, and their papers. |
+| `turing -type:author` | Nodes that contain *turing*, but no author nodes. A `-` removes the matches of a term. |
+| `type:paper depth:2` | Papers and the nodes up to 2 steps away. The default depth is 1. The maximum is 3. |
+
+A query that starts with `MATCH` is a read-only Cypher query:
+
+<p align="center">
+  <img src="screenshots/knowledge-graph-cypher.png" alt="A Cypher query that finds the papers of one author, with the matching nodes in the graph and a results table in the side panel" width="900">
+</p>
+
+The side panel shows the result rows. The graph marks the returned nodes.
+If the query has an error, the view shows the reason and the position.
+SaiLoR stops a query after 20 seconds.
+For the full query syntax, see [Knowledge graph](../README.md#knowledge-graph) in the main README.
+
 ## Keyboard shortcuts
 
 Press **F1** at any time for the full, current list for whichever screen you're on — it differs
@@ -246,6 +422,32 @@ annotating:
 | Alt+↓ / `]` | Next paper |
 | Alt+↑ / `[` | Previous paper |
 | F1 | Open help |
+
+Focus stays inside an open dialog:
+
+- Tab on the last control moves to the first control.
+- Shift+Tab on the first control moves to the last control.
+- Most dialogs close with Escape or with a click outside the dialog.
+- A click inside the dialog does not close it.
+
+The knowledge graph view does not close on a click outside it. Use Escape or the × button.
+
+## Settings
+
+Open **Settings** with Ctrl/Cmd+, or click the SaiLoR title in the toolbar.
+
+<p align="center">
+  <img src="screenshots/settings-dialog.png" alt="The Settings dialog: the General section with theme, font size and autosave, and the Language section" width="680">
+</p>
+
+| Section | Content |
+| --- | --- |
+| **General** | Theme, app font size and **Autosave every 5 minutes**. |
+| **Language** | The language of the user interface. |
+| **AI** | **AI models…** opens the AI model library. SaiLoR shows this section only if the open project allows AI. |
+| **Git** | The git version that SaiLoR found, or the reason that git is not available. |
+
+SaiLoR stores these settings for your user account. Project settings stay in the project file.
 
 ## Changing the language
 

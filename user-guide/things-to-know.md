@@ -100,6 +100,28 @@ was already committed in your seat by someone else — but only once their work 
 pulled, so agree out of band (a message, a spreadsheet, whatever) who reads which paper in which seat
 regardless. See [Reviewer-seat identity](multi-reviewer.md#reviewer-seat-identity).
 
+## Strict mode does not protect the data
+
+Warning: Strict mode is a workflow aid, not an access control.
+
+- Any user can select any person, or **Manager**, in the **Who are you?** prompt.
+- Any user can edit the project files outside SaiLoR.
+- A lock on finished work stops edits in SaiLoR only.
+
+Use strict mode to keep honest reviewers on their own papers.
+Use git history or file permissions if you need a record of who changed what.
+See [Strict mode](multi-reviewer.md#strict-mode).
+
+## AI proposals can be wrong
+
+Caution: An AI model can propose a wrong value or a quote that is not in the paper.
+
+- Check every proposal against the PDF before you click **Apply**.
+- The consent text names the provider that receives the paper. Read it before you click **Start**.
+- If the provider charges per request, a run on all papers can have a high cost. Set a spending limit.
+
+See [Annotating with AI](getting-started.md#annotating-with-ai).
+
 ## Two projects of the same kind sharing papers need two annotations folders
 
 ⚠️ Each project keeps its answers in a folder next to its JSON file — `annotations/` unless the

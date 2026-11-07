@@ -314,6 +314,18 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
   remembered. The PDF paper is always rendered on a normal white background, regardless of theme.
 - **Font size** — the `A− A A+` buttons (or the shortcuts below) scale the app's text. This affects
   the app chrome only, not the rendered PDF. The chosen size is remembered.
+- **Settings** — open with `Ctrl/Cmd + ,` or click the SaiLoR title. Set the theme, font size,
+  autosave, the interface language (9 languages) and the AI models. See
+  [Settings](user-guide/getting-started.md#settings).
+- **View only** — tick it in the toolbar to read a project without changing it.
+- **Metadata corrections** — correct a paper's title, authors, year and DOI per seat. See
+  [Correcting paper metadata](user-guide/getting-started.md#correcting-paper-metadata).
+- **PDF folder** — SaiLoR finds new PDFs in the project's PDF folder and offers to add them. See
+  [Adding new PDFs from a folder](user-guide/getting-started.md#adding-new-pdfs-from-a-folder).
+- **AI annotation** — a model proposes answers, and you check each one before you apply it. See
+  [Annotating with AI](user-guide/getting-started.md#annotating-with-ai).
+- **Strict mode** — assign papers to named persons and lock finished work. See
+  [Strict mode](user-guide/project-editor.md#strict-mode).
 
 ### Keyboard shortcuts
 
@@ -329,6 +341,7 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
 | `Alt + ↓` or `]`        | Next paper                     |
 | `Alt + ↑` or `[`        | Previous paper                 |
 | `F1`                    | Open help                      |
+| `Ctrl/Cmd + ,`          | Open settings                  |
 | `Ctrl/Cmd + C/V/X/Z`    | Native copy/paste/…            |
 | `I` / `E` / `U`         | Screening only: include / exclude / un-decide |
 | `1`–`9`                 | Screening only: exclude with the Nth configured reason |
@@ -388,9 +401,13 @@ it) and the project works that way.
   identity take an already-claimed one. That protection only exists once git is in use and a seat has
   actually been claimed with it on — agree out of band who is Reviewer 1, Reviewer 2, … regardless.
 
-It is still **one file, with no locking**: two people saving the same JSON at once will overwrite
-each other. Pass it along, or take turns — or see [Git](#git) below, which is built for exactly
-this: independent copies, reconciled field by field instead of overwritten.
+Each seat of each paper has its own file under `annotations/`, so reviewers on different papers or
+seats do not write the same file. SaiLoR has **no file locking**. Instead, a save stops when a file
+that it would overwrite changed on disk since you opened or last saved the project. You then choose
+**Overwrite with my version**, **Keep theirs, drop my changes to these files**, **Combine both** (a
+field-by-field merge) or **Not now**. This check sees only what has reached your disk: copies sent
+by email, or a synced folder that has not synced yet, can still diverge. For independent copies, see
+[Git](#git) below. It reconciles the copies field by field instead of overwriting them.
 
 > 📖 Full details, including the exact file shape, are in
 > [§9 of the schema guide](docs/annotation-schema.md#9-multiple-reviewers--consolidation).
@@ -500,8 +517,9 @@ in the view.
 - Double-click a node to add its neighbours. The **Show neighbours** button in the side panel does
   the same.
 - The side panel shows the type, DOI, year and values of the selected node, and its neighbours.
-- The side panel lists every shown node as a button. Use this list as a keyboard alternative to the
-  canvas. Each list shows 200 entries first. **Show more** adds the next 200 entries.
+- The **Nodes** button opens a drawer that lists every shown node as a button. The drawer is closed
+  when the view opens. Use this list as a keyboard alternative to the canvas. Each list shows 200
+  entries first. **Show more** adds the next 200 entries.
 - The selected node, its edges and its neighbours stay strong. The other nodes and edges become dim.
 - The **Relations** legend has one checkbox per edge type. Clear a checkbox to hide the edges of
   that type.

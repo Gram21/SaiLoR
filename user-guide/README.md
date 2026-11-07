@@ -23,11 +23,11 @@ the project JSON that will silently eat your changes if you don't know about it.
 | Page | What's in it |
 | --- | --- |
 | [Things to know](things-to-know.md) | Warnings worth reading before you rely on this for real review data |
-| [Getting started](getting-started.md) | Opening a project, the three-pane layout, annotating, search, grabbing text from the PDF, highlighting/sticky notes/PDF export, linking a mark to a field, validating |
-| [Screening](screening.md) | The fast include/exclude pass that usually comes before annotation, and starting the next phase from it |
-| [Working with several reviewers](multi-reviewer.md) | Independent reviewers, Consolidation, agreement statistics, disagreements, reviewer-seat identity |
-| [Setting up a project](project-editor.md) | Building the annotation schema, adding papers, importing references, duplicate detection, the review protocol |
-| [Git support](git.md) | Cloning, committing field by field, pulling, switching/creating branches, and resolving merge conflicts (desktop app only) |
+| [Getting started](getting-started.md) | Opening a project, large projects, the three-pane layout, annotating, search, grabbing text from the PDF, highlighting/sticky notes/PDF export, validating, metadata corrections, new PDFs from a folder, AI annotation, the knowledge graph, settings, the interface language |
+| [Screening](screening.md) | The fast include/exclude pass that usually comes before annotation, AI proposals, and starting the next phase from it |
+| [Working with several reviewers](multi-reviewer.md) | Independent reviewers, Consolidation, agreement statistics, disagreements, metadata corrections, strict mode, AI evaluation, reviewer-seat identity |
+| [Setting up a project](project-editor.md) | Building the annotation schema, adding papers, importing references, duplicate detection, project settings, strict mode, the review protocol, the AI prompt |
+| [Git support](git.md) | Cloning, committing field by field, pulling, switching/creating branches, the merge summary and undo, and resolving merge conflicts (desktop app only) |
 
 ## Quick start
 
@@ -53,12 +53,15 @@ From the start screen:
 - **New from screening…** — build the next phase (annotation, or a second screening pass) from a
   finished screening project. See [Screening](screening.md).
 
-## Desktop app only
+## Desktop app and online demo
 
-SaiLoR is a **desktop app (Tauri)** — download and run the installer above. SaiLoR used to also
-offer a web version that ran in the browser, but that has been discontinued: browser file-system
-limitations made too many features (saving, git) unreliable to support real review work, so the web
-build now just points you back here instead of opening a project. Use the desktop app.
+SaiLoR is a **desktop app (Tauri)**. Download and run the installer above.
+
+The [online demo](https://gram21.github.io/SaiLoR/demo/) runs SaiLoR in your browser with a sample project.
+Use it to try the interface before you install the app.
+The demo has no git support and no AI support.
+
+Warning: The demo does not keep your work. Use the desktop app for real review data.
 
 ## Getting help inside the app
 

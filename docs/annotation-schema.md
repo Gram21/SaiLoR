@@ -26,13 +26,16 @@ This document is the in‑depth companion to it.
 
 ## 1. Overview
 
-A **project** is a single JSON file that holds two things together:
+A **project** is a JSON file that holds two things together:
 
 - a **schema** — the taxonomy of annotation fields you want to record for every paper, and
 - a list of **papers** — the documents you will read and annotate.
 
-As you annotate in the app and save, your answers are written back into the same file, under
-each paper's `annotations`. So the one file is your schema, your paper list, and your data.
+As you annotate in the app and save, SaiLoR writes your answers into an `annotations/` folder next
+to `project.json`, with one file per paper and seat. The app joins these files into one logical
+project when it loads. This guide shows that logical shape, with the answers under each paper's
+`annotations`. A project in the older single-file layout still opens. Its next save writes the
+split layout. See [Project file format](../README.md#project-file-format) for the files on disk.
 
 The file is **plain JSON**. That means a few rules you must follow, or the file will not open:
 
@@ -71,6 +74,7 @@ The top‑level object has three keys:
 | `config`    | required  | The annotation schema (`schema`) and options such as `ai`, `screening`.    |
 | `protocol`  | optional  | The review's protocol — research questions, search, criteria. See below.   |
 | `provenance`| optional  | Set by *New from screening…* to record where the papers came from (§10).   |
+| `ignoredPdfs`| optional | Hashes of PDF files that the folder scan must not offer again (§4).        |
 | `papers`    | required  | The list of papers to annotate.                                            |
 
 `config.schema` must be an **array with at least one node** — *unless* `config.screening` is
@@ -126,8 +130,8 @@ it as a checkbox + a reviewer-count field next to the AI opt-out.
 **`config.aiSeat` — dedicate one reviewer seat to the AI.** Optional, defaults to `false`. Set it to
 `true` to have the AI's own answers occupy the *last* reviewer seat (`config.reviewers`) rather than
 being applied by a human on their own seat — the same tree, compared in Consolidation like any other
-reviewer's. Only *effective* when `config.ai` is `true`, `config.reviewers` is at least `2`, and
-this is not a screening project; the value is still kept as authored outside that window (AI turned
+reviewer's. Only *effective* when `config.ai` is `true` and `config.reviewers` is at least `2`.
+This also applies to a screening project. The value is still kept as authored outside that window (AI turned
 off, or reviewers dropped below 2), so re-enabling either restores the choice rather than losing it.
 Written out only when `true`. A human may still open the AI's seat to look at or correct its work —
 the annotation panel notes when you are.

@@ -116,6 +116,59 @@ once — aligning repeatable groups first, exactly as opening each paper individ
 you clicking through a hundred papers just to trigger the auto-fill on each one. A paper you've
 already partly consolidated is left alone.
 
+## Metadata corrections in Consolidation
+
+Reviewers store metadata corrections in their own annotation files.
+See [Correcting paper metadata](getting-started.md#correcting-paper-metadata).
+In the Consolidation seat, the **Metadata** dialog shows one entry for each paper with corrections.
+With one reviewer, use seat 1 instead.
+
+A field is agreed only if every human seat changed it to the same value.
+All other changed fields are disagreements. The dialog shows the value of each seat.
+
+| Button | Result |
+| --- | --- |
+| **Update project metadata** | Writes the values into the project file. |
+| **Accept all** | Writes every agreed entry in one undo step. It skips entries with a disagreement. |
+| **Ignore** | Keeps the project values. |
+
+After **Update project metadata** or **Ignore**, the entry stays hidden.
+It comes back when a seat changes its corrections again.
+
+## Strict mode
+
+In strict mode, each person sees only the papers assigned to that person, on a fixed seat.
+The project editor sets up the persons and the assignments.
+See [Strict mode](project-editor.md#strict-mode) in the project editor guide.
+
+Warning: Strict mode is a workflow aid, not security. Anyone can pick a different person or edit the files.
+
+When a strict project opens, SaiLoR asks **Who are you?**:
+
+- Select your name to see your assigned papers. SaiLoR sets the seat for each paper. The seat switch is hidden.
+- Select **Manager** to see all papers and seats, and to consolidate.
+
+SaiLoR remembers the choice for this project on this computer.
+A bar shows "Working as" and your name. Click **Switch person** to select a different person.
+Save your changes before you switch.
+
+To finish your work:
+
+1. Annotate all your assigned papers.
+2. Click **Finish** in the bar.
+3. Confirm. SaiLoR marks your assigned papers as finished and saves the project.
+
+The save locks your work. A locked paper shows "Finished. Ask the manager to reopen." and a read-only form.
+If validation finds problems, the save does not lock your work. Fix the problems and click **Finish** again.
+
+Only the Manager can reopen locked work.
+The Manager clicks **Reopen** in the banner of the paper, or in the assignments table of the project editor.
+
+Consolidation of a paper opens when every assigned person has finished the paper.
+Until then, the Consolidation seat lists the persons who have not finished.
+The Manager can click **Open anyway** to consolidate the paper earlier.
+This choice lasts until the project opens again.
+
 ## AI evaluation
 
 Use **AI evaluation** to compare the AI seat with the consolidated answers. The table shows which

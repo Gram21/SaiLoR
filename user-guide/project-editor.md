@@ -139,6 +139,57 @@ independently by that many people — each sees only their own answers. On top o
 project always gets one extra **Consolidation** role. "2 reviewers" means two independent passes plus
 a consolidation pass. See [Working with several reviewers](multi-reviewer.md) for the full workflow.
 
+## Project settings
+
+The **Settings** tab holds the options that apply to the whole project.
+
+<p align="center">
+  <img src="screenshots/project-editor-settings.png" alt="The Settings tab: annotations folder, project title, screening, reviewers, AI, AI seat, finishing, metadata corrections, PDF folder with the Crossref option, and the review protocol" width="900">
+</p>
+
+| Setting | What it does |
+| --- | --- |
+| **AI** | **Allow AI-assisted annotation** shows the **AI** toolbar button. |
+| **AI seat** | The AI takes the last reviewer seat. This option needs AI and at least 2 reviewers. |
+| **Finishing** | Reviewers tick **Annotation finished** to mark a paper as done. |
+| **Metadata corrections** | **On** lets reviewers correct the title, authors, year and DOI of a paper. |
+| **PDF folder** | A folder in the project folder. SaiLoR scans it for new PDF files. Leave it empty to turn off the scan. |
+| **Look up metadata on Crossref** | Off by default. If on, SaiLoR sends the DOI of a new PDF to `api.crossref.org`. |
+
+With **Metadata corrections** set to **Off (read-only)**, reviewers cannot change paper metadata.
+With **On**, SaiLoR stores each correction in the annotation files of that reviewer seat.
+See [Correcting paper metadata](getting-started.md#correcting-paper-metadata).
+
+The PDF folder must be inside the project folder. SaiLoR refuses a folder outside it.
+See [Adding new PDFs from a folder](getting-started.md#adding-new-pdfs-from-a-folder).
+
+## Strict mode
+
+Strict mode gives each person a fixed list of papers and a fixed seat for each paper.
+Consolidation of a paper opens when every assigned person has finished the paper.
+The **Strict mode** section is at the end of the **Settings** tab. It starts collapsed.
+
+<p align="center">
+  <img src="screenshots/project-editor-strict.png" alt="The Strict mode section: the Use strict mode checkbox, two persons with their assigned and finished counts, and the assignments table with one reviewer selector per seat" width="900">
+</p>
+
+To set up strict mode:
+
+1. Open the **Strict mode** section.
+2. Tick **Use strict mode**.
+3. Click **Add person** once for each person. Type a name for each person.
+4. Set **Persons per paper**.
+5. Click **Assign papers without persons**. SaiLoR assigns persons in turn and skips the AI seat.
+6. Change single assignments in the table if necessary.
+7. Save the project.
+
+Each person row shows how many papers the person has assigned and finished.
+SaiLoR locks the selector of a finished assignment. Click **Reopen** to remove the finished flag.
+You cannot remove a person or change an assignment while it has finished work.
+See [Strict mode](multi-reviewer.md#strict-mode) for the work with a strict project.
+
+Warning: Strict mode is a workflow aid, not security. Anyone can pick a different person or edit the files.
+
 ## Screening instead of annotation
 
 Tick **This is a screening project** to replace the schema-building section with a short, ordered list
@@ -219,12 +270,7 @@ Caution: A project file with an override over its limit does not open. Shorten t
 ## Provenance
 
 When a project was built via **New from screening…**, the editor shows a read-only note recording
-where it came from:
-
-<p align="center">
-  <img src="screenshots/project-editor-schema.png" alt="The 'Imported from' provenance note in the project editor" width="900">
-</p>
-
+where it came from.
 The source project's name, the date it was imported, and how many papers were carried over versus left
 behind. It's a durable record, not a setting — there's nothing to edit here, only to read. See
 [Screening](screening.md#starting-the-next-phase-from-a-screening-project).
