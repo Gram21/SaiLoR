@@ -48,7 +48,10 @@ export function ExportGraphDialog({ onClose }: { onClose: () => void }) {
     try {
       for (const [name, text] of files) {
         const path = await platform.pickTextExportPath(name, format)
-        if (!path) break
+        if (!path) {
+          if (done.length) done.push({ ok: false, text: t('exportGraph.notSaved', { name }) })
+          break
+        }
         const res = await platform.writeTextFile(path, text)
         done.push(
           res.ok

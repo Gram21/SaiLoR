@@ -184,12 +184,12 @@ Tags: Functional, Functional_Suitability
 ### REQ-PLT-70: Refuse symlinked and escaping write targets
 `req~plt-70~1`
 
-The system shall refuse a file write whose target is a symbolic link or whose resolved path lies outside the project's `annotations/` directory.
+The system shall refuse a file write whose target is a symbolic link or whose resolved path lies outside the project's `annotations/` directory. The system shall apply the same checks before it deletes an annotation file.
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Security)
 - **Evidence:** `src-tauri/src/project.rs` (`write_project_files`), `src-tauri/src/authz.rs` (`assert_not_symlink`, `within`)
-- **Verified by:** `src-tauri/src/project.rs` (`save_refuses_symlinks`, `save_refuses_escapes_and_feedback`)
+- **Verified by:** `src-tauri/src/project.rs` (`save_refuses_symlinks`, `save_refuses_to_delete_through_symlinks`, `save_refuses_escapes_and_feedback`)
 - **Status:** Implemented
 
 Needs: impl, utest
@@ -228,7 +228,7 @@ Tags: Functional, Functional_Suitability
 ### REQ-PLT-95: Split a shared annotations folder
 `req~plt-95~1`
 
-When a project is opened whose annotations folder other project files in the same directory also use while being of the same kind and listing at least one of the same paper identifiers, the system shall propose giving each of them its own folder, assigning each annotation file by paper identifier and file kind and, where several projects could own it, by the schema version it records or by which project's schema its answers fit, listing those files for confirmation and copying undecidable ones to each; on confirmation it shall copy the files, record each project's folder in its project file, and only then remove the originals, refusing while the open project has unsaved changes, a target folder is not empty, or a listed project file changed.
+When a project is opened whose annotations folder other project files in the same directory also use while being of the same kind and listing at least one of the same paper identifiers, the system shall propose giving each of them its own folder, assigning each annotation file by paper identifier and file kind and, where several projects could own it, by the schema version it records or by which project's schema its answers fit, listing those files for confirmation and copying undecidable ones to each; on confirmation it shall copy the files, record each project's folder in its project file, and only then remove the originals, refusing while the open project has unsaved changes, a target folder is not empty, or a listed project file changed. The system shall refuse the split before it writes any file if a path it would copy to, rewrite, or remove is a symbolic link.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
@@ -521,12 +521,12 @@ Tags: NonFunctional, Security
 ### REQ-PLT-260: Restrict export writes
 `req~plt-260~1`
 
-The system shall write text and PDF exports only to destinations picked via an export save dialog in the current session, refusing symlinked targets and reporting failures as results rather than crashes. The system shall embed marks only into a PDF of the open project (inside the project folder or an approved outside path), also when it overwrites the original PDF.
+The system shall write text and PDF exports only to destinations picked via an export save dialog in the current session, refusing symlinked targets and reporting failures as results rather than crashes. The system shall embed marks only into a PDF of the open project (inside the project folder or an approved outside path). The system shall overwrite the original PDF only if the PDF lies inside the project folder.
 
 Comment:
 - **Type:** Non-functional (ISO 25010: Security)
 - **Evidence:** `src-tauri/src/pdf.rs` (`export_target`, `write_file`, `text_write`, `project_pdf`, `pdf_embed_marks`)
-- **Verified by:** `src-tauri/src/pdf.rs` (`text_write_needs_an_export_dialog_path`, `text_write_refuses_a_symlink`, `embed_reads_only_project_pdfs`)
+- **Verified by:** `src-tauri/src/pdf.rs` (`text_write_needs_an_export_dialog_path`, `text_write_refuses_a_symlink`, `embed_reads_only_project_pdfs`, `embed_never_changes_an_approved_pdf_outside_the_project`)
 - **Status:** Implemented
 
 Needs: impl, utest
@@ -1011,3 +1011,33 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Usability, Security
+
+### REQ-PLT-457: Keep a save on its own project when another project opens
+`req~plt-457~1`
+
+When the user opens another project while a save or a "Save as" of the previous project is written, the system shall keep the save location, the disk baseline and the change detection of the newly opened project. A save that waits in the queue shall not write while the newly opened project still loads.
+
+Comment:
+- **Type:** Non-functional (ISO 25010: Reliability)
+- **Evidence:** `src/state/store.ts` (`saveOnce`, `saveAs`, `projectGeneration`), `src/platform/desktop.ts` (`saveProject`)
+- **Verified by:** `src/state/store.saveRace.test.ts`, `src/platform/desktop.test.ts` (`keeps the baseline of a project opened while an earlier save was written`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: NonFunctional, Reliability
+
+### REQ-PLT-458: Set the project folder only for a known project
+`req~plt-458~1`
+
+The system shall refuse to set the project folder for PDF access from a project file that the user did not open or choose via a dialog in this session.
+
+Comment:
+- **Type:** Non-functional (ISO 25010: Security)
+- **Evidence:** `src-tauri/src/project.rs` (`set_dir`, `project_set_dir`)
+- **Verified by:** `src-tauri/src/project.rs` (`set_dir_refuses_a_project_that_was_not_opened`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: NonFunctional, Security

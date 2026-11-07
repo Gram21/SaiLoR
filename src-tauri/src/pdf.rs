@@ -357,6 +357,12 @@ fn write_text(session: &Mutex<Session>, abs_path: &str, text: &str) -> Result<St
     write_file(abs_path, text.as_bytes())
 }
 
+fn in_dir(dir: &Path, real: &Path) -> bool {
+    normalize(dir)
+        .canonicalize()
+        .is_ok_and(|base| within(real, &base))
+}
+
 // [impl->req~plt-260~1]
 /// The real file of a PDF the open project references: inside the project
 /// directory, or an outside path the reviewer approved (`allowed_escapes`).
@@ -372,9 +378,7 @@ fn project_pdf(session: &Mutex<Session>, abs: &str) -> Result<PathBuf, String> {
     let real = Path::new(abs)
         .canonicalize()
         .map_err(|e| format!("Could not open the PDF: {e}"))?;
-    let inside = normalize(&dir)
-        .canonicalize()
-        .is_ok_and(|base| within(&real, &base));
+    let inside = in_dir(&dir, &real);
     let approved = || {
         escapes
             .iter()
@@ -595,16 +599,22 @@ fn embed_marks(
     marks: &Value,
     target: &Value,
 ) -> Result<String, String> {
-    let dest = match target {
-        Value::String(s) if s == "original" => pdf_abs_path,
-        _ => {
-            let p = target.get("newPath").and_then(Value::as_str);
-            let p = p.ok_or("Unknown export target.")?;
-            export_target(session, p)?;
-            p
-        }
+    let original = matches!(target, Value::String(s) if s == "original");
+    let dest = if original {
+        pdf_abs_path
+    } else {
+        let p = target.get("newPath").and_then(Value::as_str);
+        let p = p.ok_or("Unknown export target.")?;
+        export_target(session, p)?;
+        p
     };
     let source = project_pdf(session, pdf_abs_path)?;
+    let project_dir = lock(session).project_dir.clone();
+    if original && !project_dir.is_some_and(|d| in_dir(&d, &source)) {
+        return Err(format!(
+            "Refusing to change \"{pdf_abs_path}\": it lies outside the project folder. Save a copy instead."
+        ));
+    }
     let marks = parse_marks(marks);
     let opened = fs::read(&source)
         .map_err(err)
@@ -843,10 +853,29 @@ mod tests {
         let r = embed_marks(&s, &outside, &json!([]), &json!("original"));
         assert!(r.unwrap_err().contains("not a PDF of the open project"));
         lock(&s).allowed_escapes.insert("../outside.pdf".into());
+        let copy = d.join("copy.pdf").display().to_string();
+        lock(&s)
+            .writable_exports
+            .insert(normalize(Path::new(&copy)));
         assert_eq!(
-            embed_marks(&s, &outside, &json!([]), &json!("original")),
-            Ok(outside)
+            embed_marks(&s, &outside, &json!([]), &json!({ "newPath": copy })),
+            Ok(copy)
         );
+    }
+
+    // [utest->req~plt-260~1]
+    #[test]
+    fn embed_never_changes_an_approved_pdf_outside_the_project() {
+        let d = tmp("embedoriginal");
+        fs::create_dir_all(d.join("proj")).unwrap();
+        fs::write(d.join("outside.pdf"), sample_pdf()).unwrap();
+        let outside = d.join("outside.pdf").display().to_string();
+        let s = Mutex::new(Session::default());
+        lock(&s).project_dir = Some(d.join("proj"));
+        lock(&s).allowed_escapes.insert("../outside.pdf".into());
+        let r = embed_marks(&s, &outside, &json!([]), &json!("original"));
+        assert!(r.unwrap_err().contains("outside the project folder"));
+        assert_eq!(fs::read(d.join("outside.pdf")).unwrap(), sample_pdf());
     }
 
     #[test]

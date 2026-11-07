@@ -361,6 +361,10 @@ pub fn split(session: &Mutex<Session>, project_path: &str, plan: &SplitPlan) -> 
         .collect();
     let shared_dir = dir.join(&listed.folder);
     let moved: Vec<&SplitRow> = plan.rows.iter().filter(|r| !r.targets.is_empty()).collect();
+    for f in plan.folders.values() {
+        inside(f)?;
+    }
+    let mut copies = vec![];
     for r in &moved {
         for t in &r.targets {
             let folder = folder_of
@@ -368,34 +372,49 @@ pub fn split(session: &Mutex<Session>, project_path: &str, plan: &SplitPlan) -> 
                 .ok_or_else(|| format!("No folder chosen for \"{t}\"."))?;
             let text = safe_read(&shared_dir, &r.rel_path)
                 .ok_or_else(|| format!("Could not read \"{}/{}\".", listed.folder, r.rel_path))?;
-            let dest = inside(&format!("{folder}/{}", r.rel_path))?;
-            let parent = dir_of(&dest);
-            fs::create_dir_all(parent).map_err(err)?;
-            if !within(&parent.canonicalize().map_err(err)?, &real_dir) {
-                return Err(format!(
-                    "Refusing a path outside the project directory: \"{folder}/{}\"",
-                    r.rel_path
-                ));
-            }
-            write_atomic(&dest, text).map_err(err)?;
+            let rel = format!("{folder}/{}", r.rel_path);
+            copies.push((inside(&rel)?, text, rel));
         }
     }
+    let mut projects = vec![];
     for (p, folder) in &plan.folders {
         let file = inside(&base_name(p))?;
         let text = with_folder(read_json(&file)?, folder)?;
-        write_atomic(&file, text).map_err(err)?;
+        projects.push((file, text));
     }
-    for r in &moved {
-        fs::remove_file(inside(&format!("{}/{}", listed.folder, r.rel_path))?).map_err(err)?;
-    }
-    let paper_dirs: HashSet<&str> = moved
+    let removals = moved
+        .iter()
+        .map(|r| inside(&format!("{}/{}", listed.folder, r.rel_path)))
+        .collect::<Result<Vec<_>, _>>()?;
+    let paper_dirs = moved
         .iter()
         .filter_map(|r| r.rel_path.rsplit_once('/').map(|(d, _)| d))
-        .collect();
-    for d in paper_dirs {
-        let _ = fs::remove_dir(inside(&format!("{}/{d}", listed.folder))?);
+        .collect::<HashSet<&str>>()
+        .into_iter()
+        .map(|d| inside(&format!("{}/{d}", listed.folder)))
+        .collect::<Result<Vec<_>, _>>()?;
+    let shared_path = inside(&listed.folder)?;
+
+    for (dest, text, rel) in copies {
+        let parent = dir_of(&dest);
+        fs::create_dir_all(parent).map_err(err)?;
+        if !within(&parent.canonicalize().map_err(err)?, &real_dir) {
+            return Err(format!(
+                "Refusing a path outside the project directory: \"{rel}\""
+            ));
+        }
+        write_atomic(&dest, text).map_err(err)?;
     }
-    let _ = fs::remove_dir(inside(&listed.folder)?);
+    for (file, text) in projects {
+        write_atomic(&file, text).map_err(err)?;
+    }
+    for f in removals {
+        fs::remove_file(f).map_err(err)?;
+    }
+    for d in paper_dirs {
+        let _ = fs::remove_dir(d);
+    }
+    let _ = fs::remove_dir(shared_path);
     lock(session).listed_splits.remove(&key);
     Ok(())
 }
@@ -629,5 +648,40 @@ mod tests {
         assert!(split(&ses, &path, &good)
             .unwrap_err()
             .contains("List the shared folder first"));
+    }
+
+    #[cfg(unix)]
+    #[test]
+    fn split_checks_every_path_for_symlinks_before_the_first_write() {
+        let d = tmp("ann-split-link");
+        let a = d.join("a.json");
+        let b = d.join("b.json");
+        fs::write(&a, r#"{"papers":[{"id":"p1"}]}"#).unwrap();
+        fs::write(&b, r#"{"papers":[{"id":"p1"}]}"#).unwrap();
+        let listed_file = d.join("annotations/p1/reviewer-1.json");
+        fs::create_dir_all(listed_file.parent().unwrap()).unwrap();
+        fs::write(&listed_file, "{\"n\":1}").unwrap();
+        let path = a.display().to_string();
+        let ses = known_session(&a);
+        shared(&ses, &path).unwrap().unwrap();
+
+        let real = d.join("annotations/p1/real.json");
+        fs::rename(&listed_file, &real).unwrap();
+        std::os::unix::fs::symlink(&real, &listed_file).unwrap();
+        let plan = SplitPlan {
+            folders: [(&a, "a-ann"), (&b, "b-ann")]
+                .iter()
+                .map(|(p, f)| (p.display().to_string(), f.to_string()))
+                .collect(),
+            rows: vec![SplitRow {
+                rel_path: "p1/reviewer-1.json".into(),
+                targets: vec![a.display().to_string()],
+            }],
+        };
+        assert!(split(&ses, &path, &plan)
+            .unwrap_err()
+            .contains("symbolic link"));
+        assert!(!d.join("a-ann").exists());
+        assert_eq!(annotations_dir_of(&read_json(&a).unwrap()), "annotations");
     }
 }

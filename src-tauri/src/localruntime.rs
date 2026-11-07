@@ -523,7 +523,7 @@ struct Shared {
 
 static STATE: LazyLock<Mutex<Shared>> = LazyLock::new(Default::default);
 // ponytail: one lock serializes all starts (dedupes concurrent starts of one model); per-model locks if two models ever need to start at once.
-static START: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
+pub(crate) static START: tokio::sync::Mutex<()> = tokio::sync::Mutex::const_new(());
 static IDLE: Once = Once::new();
 
 /// Loopback calls to llama-server: no proxy may see the per-session key, no redirects.

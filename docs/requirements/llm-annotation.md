@@ -44,9 +44,9 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-70: Bound LLM call duration
-- **Description:** The system shall terminate an LLM request that has not completed within 10 minutes and shall allow the user to abort an in-flight request at any time.
+- **Description:** The system shall terminate an LLM request that has not completed within 10 minutes and shall allow the user to abort an in-flight request at any time. The abort shall also work while the system starts a managed local model for the request.
 - **Type:** Non-functional (ISO 25010: Reliability)
-- **Evidence:** `src-tauri/src/llm.rs` (`LLM_TIMEOUT`, `llm_abort`), `src-tauri/src/llm.rs` (`call_can_be_aborted`), commit `98796c1`
+- **Evidence:** `src-tauri/src/llm.rs` (`LLM_TIMEOUT`, `llm_abort`, `call`), `src-tauri/src/llm.rs` (`call_can_be_aborted`, `call_can_be_aborted_while_the_local_model_starts`), commit `98796c1`
 - **Status:** Implemented
 
 ### REQ-LLM-80: AI is off unless the project opts in
@@ -219,10 +219,11 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-360: Treat fetched web content as untrusted data
-- **Description:** When the agent-mode `fetch_url` tool returns a fetched page's text, the system shall wrap it in a clear untrusted-content delimiter and instruct the model, in the system prompt, to treat it only as data to extract from and never as instructions to follow.
+- **Description:** When the agent-mode `fetch_url` tool returns a fetched page's text, the system shall wrap it in a clear untrusted-content delimiter and instruct the model, in the system prompt, to treat it only as data to extract from and never as instructions to follow. The system shall wrap the results of the `scholarly_search` and `lookup_doi` tools in the same delimiter.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src/llm/tools.ts` (`fetchUrl`), `src/llm/prompt.ts` (`buildAgentSystemPrompt`)
+- **Evidence:** `src/llm/tools.ts` (`fetchUrl`, `untrusted`), `src/llm/prompt.ts` (`buildAgentSystemPrompt`)
 - **Status:** Implemented
+- **Tests:** `src/llm/tools.test.ts` (`wraps the results as untrusted content`, `wraps the metadata as untrusted content`)
 
 ### REQ-LLM-370: Per-run token and call accounting
 - **Description:** The system shall accumulate, across every agent- and judge-model call of one agent-mode run, the total input tokens, output tokens, and number of calls, and report them alongside the number of rounds run.
@@ -231,9 +232,9 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-400: Restrict agent web access to public hosts
-- **Description:** When the AI agent fetches a URL, the system shall allow only `http`/`https` URLs without embedded credentials, resolve the hostname (or literal IP) and refuse the request if any resolved address is loopback, private, link-local, CGNAT, unique-local, multicast, or otherwise non-public, re-check the same rules on each of up to 5 manually-followed redirects, send no cookies or credentials, enforce a 20-second timeout and a 2 MB response body cap, and accept only textual content types.
+- **Description:** When the AI agent fetches a URL, the system shall allow only `http`/`https` URLs without embedded credentials, resolve the hostname (or literal IP) and refuse the request if any resolved address is loopback, private, link-local, CGNAT, unique-local, multicast, or otherwise non-public, re-check the same rules on each of up to 5 manually-followed redirects, send no cookies or credentials, ignore the system proxy settings, enforce a 20-second timeout and a 2 MB response body cap, and accept only textual content types.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src-tauri/src/webfetch.rs` (`validate_fetch_url`, `is_blocked_ip`, `is_blocked_hostname`, `resolve_public`, `web_fetch`, `web_abort`), `src-tauri/src/webfetch.rs` (`blocked_addresses`, `validate_urls`, `redirects_are_rechecked`, `body_is_capped`, `content_types`)
+- **Evidence:** `src-tauri/src/webfetch.rs` (`validate_fetch_url`, `is_blocked_ip`, `is_blocked_hostname`, `resolve_public`, `web_fetch`, `web_abort`), `src-tauri/src/webfetch.rs` (`blocked_addresses`, `validate_urls`, `redirects_are_rechecked`, `body_is_capped`, `content_types`, `fetches_ignore_proxy_settings`)
 - **Status:** Implemented
 
 ### REQ-LLM-380: Switch between prompt and agent mode
@@ -687,3 +688,10 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/components/AiEvaluationDialog.tsx`
 - **Status:** Implemented
 - **Tests:** `src/components/AiEvaluationDialog.test.tsx`
+
+### REQ-LLM-833: Limit the URLs the agent fetches
+- **Description:** The `fetch_url` tool shall refuse a URL with more than 2048 characters. The tool shall remove the query string and the fragment from the URL before the fetch. The tool description shall tell the model about both limits.
+- **Type:** Non-functional (ISO 25010: Security)
+- **Evidence:** `src/llm/tools.ts` (`fetchUrl`, `AGENT_TOOLS`)
+- **Status:** Implemented
+- **Tests:** `src/llm/tools.test.ts` (`removes the query string and the fragment before the fetch`, `refuses a URL with more than 2048 characters`, `fetches the DOI, arXiv or landing page %s unchanged`)

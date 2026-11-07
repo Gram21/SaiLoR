@@ -151,10 +151,12 @@ impl reqwest::dns::Resolve for PublicOnly {
     }
 }
 
+// [impl->req~llm-400~1]
 static WEB: LazyLock<Client> = LazyLock::new(|| {
     net::builder()
         .redirect(reqwest::redirect::Policy::none())
         .dns_resolver(PublicOnly)
+        .no_proxy()
         .build()
         .expect("http client")
 });
@@ -448,6 +450,33 @@ mod tests {
             "windows-1252"
         );
         assert_eq!(charset("text/html; charset=\"bogus\"").name(), "UTF-8");
+    }
+
+    // [utest->req~llm-400~1]
+    #[tokio::test]
+    async fn fetches_ignore_proxy_settings() {
+        const NAME: &str = "webfetch::tests::fetches_ignore_proxy_settings";
+        if std::env::var_os("SAILOR_PROXY_CHILD").is_some() {
+            let get = WEB.get("http://public.test/x").send();
+            let _ = tokio::time::timeout(std::time::Duration::from_secs(10), get).await;
+            return;
+        }
+        let s = serve(vec![(
+            "GET http://public.test/x",
+            response(200, "text/plain", "via proxy"),
+        )]);
+        let status = std::process::Command::new(std::env::current_exe().unwrap())
+            .args([NAME, "--exact", "--test-threads=1"])
+            .env("SAILOR_PROXY_CHILD", "1")
+            .env("HTTP_PROXY", &s.origin)
+            .env("http_proxy", &s.origin)
+            .env("ALL_PROXY", &s.origin)
+            .env_remove("NO_PROXY")
+            .env_remove("no_proxy")
+            .status()
+            .unwrap();
+        assert!(status.success());
+        assert!(s.seen.lock().unwrap().is_empty());
     }
 
     #[tokio::test]

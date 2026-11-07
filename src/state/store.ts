@@ -2000,6 +2000,14 @@ export const useStore = create<AppState>()(
       if (!handle?.path || get().loadState === 'loading') return
       const opened = await getPlatform().openRecent(handle.path)
       if (!opened) return
+      // [impl->req~git-610~1]
+      // An edit made while git rewrote the files: replacing the project would lose it.
+      if (get().dirty) {
+        set((s) => {
+          s.loadError = { message: t('store.loadError.resyncKeptEdits'), details: [] }
+        })
+        return
+      }
       try {
         const project = loadProject(opened.text)
         diskProject = project
@@ -2037,9 +2045,12 @@ export const useStore = create<AppState>()(
       return run
     },
 
+    // [impl->req~plt-457~1]
     saveOnce: async () => {
       const { project, saveHandle } = get()
-      if (!project || !saveHandle) return false
+      // Queued behind another write: by now another project may be loading.
+      if (!project || !saveHandle || stillLoading()) return false
+      const generation = projectGeneration
       // Undecided from an earlier attempt: writing now would skip the question.
       if (get().staleSave) {
         set((s) => {
@@ -2058,6 +2069,14 @@ export const useStore = create<AppState>()(
         const handle = await platform.saveProject(text, saveHandle)
         // Kept until the write succeeds, so a failed save is retried with the finish lock.
         if (finishRequest === project) finishRequest = null
+        // Another project was opened during the write: its handle and disk
+        // state must not be replaced by the file just written.
+        if (generation !== projectGeneration) {
+          set((s) => {
+            s.busy = false
+          })
+          return true
+        }
         diskProject = toSave
         // Nothing blocks input while the write above is in flight (Field.tsx
         // writes every keystroke straight to the store, and screening's I/E/U
@@ -2089,7 +2108,7 @@ export const useStore = create<AppState>()(
       } catch (err) {
         set((s) => {
           s.busy = false
-          if (err instanceof StaleSaveError) {
+          if (err instanceof StaleSaveError && generation === projectGeneration) {
             s.staleSave = { paths: err.paths, refusal: null, merge: null, error: null, dismissed: false }
           } else {
             s.loadError = saveFailure(err)
@@ -2335,9 +2354,11 @@ export const useStore = create<AppState>()(
       }
     },
 
+    // [impl->req~plt-457~1]
     saveAs: async () => {
       const { project, projectName, saveHandle } = get()
       if (!project || stillLoading()) return false
+      const generation = projectGeneration
       const platform = getPlatform()
       set((s) => {
         s.busy = true
@@ -2397,6 +2418,14 @@ export const useStore = create<AppState>()(
 
         const text = serializeProject(toWrite)
         const handle = await platform.saveProject(text, location.handle)
+        // Same as `saveOnce`: the project now open is not the one written.
+        if (generation !== projectGeneration) {
+          set((s) => {
+            s.busy = false
+            s.recents = platform.getRecents()
+          })
+          return true
+        }
         // Carry the remembered seats over to the new location's own key, or
         // they would silently look unselected the next time this file is opened.
         const carried = get().project

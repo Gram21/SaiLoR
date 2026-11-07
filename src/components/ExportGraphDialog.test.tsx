@@ -7,6 +7,7 @@ import userEvent from '@testing-library/user-event'
 const picks: [string, string | undefined][] = []
 const writes: [string, string][] = []
 let pickResult: string | null = '/out/file'
+let cancelPick = 0
 
 vi.mock('../platform', () => ({
   getPlatform: () => ({
@@ -18,7 +19,7 @@ vi.mock('../platform', () => ({
     getOsInfo: () => null,
     pickTextExportPath: async (name: string, ext?: string) => {
       picks.push([name, ext])
-      return pickResult ? `${pickResult}-${picks.length}.${ext}` : null
+      return pickResult && picks.length !== cancelPick ? `${pickResult}-${picks.length}.${ext}` : null
     },
     writeTextFile: async (path: string, text: string) => {
       writes.push([path, text])
@@ -55,6 +56,7 @@ beforeEach(() => {
   picks.length = 0
   writes.length = 0
   pickResult = '/out/file'
+  cancelPick = 0
   useStore.setState({ project: null })
 })
 
@@ -81,6 +83,19 @@ describe('ExportGraphDialog', () => {
     ])
     expect(writes[0][1].split('\r\n')[0]).toMatch(/^"id","type","label"/)
     expect(writes[1][1].split('\r\n')[0]).toBe('"source","target","type","field"')
+  })
+
+  it('reports an incomplete CSV export when the edge file dialog is cancelled', async () => {
+    open(1, true)
+    cancelPick = 2
+    render(<ExportGraphDialog onClose={() => {}} />)
+    await userEvent.click(screen.getByRole('radio', { name: 'CSV node and edge lists (.csv)' }))
+    await userEvent.click(screen.getByRole('button', { name: 'Export' }))
+    expect(writes).toHaveLength(1)
+    expect(await screen.findByText('Saved to /out/file-1.csv')).toBeInTheDocument()
+    expect(
+      screen.getByText('knowledge-graph-edges.csv was not saved. The export is incomplete.'),
+    ).toHaveClass('ai-error')
   })
 
   it('exports the selected seat when no consolidated answer exists', async () => {
