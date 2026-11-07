@@ -1,6 +1,7 @@
 import { assembleLegacyProjectJson } from '../model/project'
 import meta from './data/project.json'
 
+// [impl->req~plt-454~1]
 /**
  * The bundled demo PDFs, keyed by the `pdf` path in project.json. Each file is in
  * src/demo/papers/, and vite.config.ts writes every PDF there to `papers/` in the
