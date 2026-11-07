@@ -10,22 +10,18 @@ Until a PNG exists, the report shows a red placeholder box with the file name.
 |---|---|---|---|
 | 1 | `annotate-overview.png` | Done | Online demo of 2.0.0, start view, 1440 x 900. |
 | 2 | `project-editor-schema.png` | Done | Online demo with `?mode=schema`, schema entered by hand, cropped to the schema. |
-| 3 | `screening-record.png` | Open | Copy of `site/img/screening.png`, which shows version 1.x, cropped to the abstract and the screening panel. |
+| 3 | `screening-record.png` | Done | 2.0.0 renderer with `samples/screening.example.json`, cropped to the abstract and the screening panel. |
 | 4 | `consolidation-compare-popup.png` | Done | Online demo, paper "A Roadmap for Tamed Interactions …", field "Relevant", cropped to the popup. |
-| 5 | `git-merge-conflicts.png` | Open | Copy of `user-guide/screenshots/git-merge-conflicts.png`, which shows version 1.x, cropped to the dialog. |
+| 5 | `git-merge-conflicts.png` | Done | 2.0.0 merge dialog with a prepared conflict on "smith2021" and "Design", cropped to the dialog. |
 | 6 | `knowledge-graph.png` | Done | Online demo, Cypher query for the papers of "Keim", Nodes drawer open, cropped to the dialog. |
 
 The demo figures do not show the sample projects of section 3.
 The captions in `sections/04-tool.tex` name the online demo instead.
 
-Figures 3 and 5 stay open, because the online demo cannot show them:
-
-- The demo has only an extraction project, so it cannot show the screening view.
-- The demo disables git, saving, and the AI features.
-
-Capture figures 3 and 5 on the 2.0.0 Tauri build, as described below.
-Then remove "in version 1.x" from their captions.
-Also remove the sentence about version 1.x from `sections/07-discussion.tex`.
+Figures 3 and 5 come from the 2.0.0 renderer outside the desktop shell, because the online demo cannot show them.
+Figure 3 opens `samples/screening.example.json` in a demo-mode dev build.
+Figure 5 renders the merge dialog with a prepared conflict.
+A capture on the 2.0.0 Tauri build, as described below, may replace them.
 
 To capture the demo figures again:
 
