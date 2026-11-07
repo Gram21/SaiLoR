@@ -1042,3 +1042,18 @@ Comment:
 Needs: impl, utest
 
 Tags: NonFunctional, Security
+
+### REQ-PLT-459: Load project files off the main thread
+`req~plt-459~1`
+
+While the renderer opens a project in the split layout, the main thread shall not parse, assemble or validate the project files. A background worker shall do this work for the head and for each batch, so the user interface stays responsive. Each batch shall hold at most 250 papers, so the loading progress updates often. If the environment has no worker support, the same steps shall run inline.
+
+Comment:
+- **Type:** Non-functional (ISO 25010: Performance Efficiency, Usability)
+- **Evidence:** `src/platform/projectJobs.ts` (`runJob`), `src/platform/projectJobs.worker.ts`, `src/platform/offMain.ts` (`offMain`), `src/platform/assemble.ts` (`assembler`), `src/platform/tauri.ts` (`opened`), `src/platform/desktop.ts` (`opened`), `src/state/store.ts` (`PAPER_BATCH`, `loadFromText`)
+- **Verified by:** `src/platform/projectJobs.test.ts`, `src/state/progressiveLoad.test.ts`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: NonFunctional, Performance, Usability

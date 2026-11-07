@@ -922,7 +922,7 @@ interface AppState {
   resolveClosePrompt: (choice: 'save' | 'discard' | 'cancel') => Promise<void>
   /** Discard the open project and return to the start screen. */
   closeProject: () => void
-  loadFromText: (text: string, handle: SaveHandle | null, name: string) => void
+  loadFromText: (text: string, handle: SaveHandle | null, name: string, parsed?: Project) => void
   /** Re-reads the open project from disk after a git commit/discard rewrote the
    *  working file (see `gitStore.ts`'s `runCommit`/`runDiscard`). Unlike
    *  `loadFromText`, view state (selected paper, filters) is left alone — only
@@ -1437,7 +1437,7 @@ async function adoptAndSave(result: Project): Promise<void> {
 }
 
 /** Papers read per batch while a project opens; the UI renders between batches. */
-const PAPER_BATCH = 2000
+export const PAPER_BATCH = 250
 
 // [impl->req~plt-440~1]
 // [impl->req~plt-443~1]
@@ -1621,7 +1621,7 @@ export const useStore = create<AppState>()(
           return
         }
         const generation = projectGeneration
-        get().loadFromText(opened.text, opened.handle, opened.name)
+        get().loadFromText(opened.text, opened.handle, opened.name, opened.project)
         const corrupt = [...(opened.corruptFiles ?? [])]
         if (opened.readPapers && generation !== projectGeneration) {
           const more = await streamPapers(opened.readPapers)
@@ -1836,7 +1836,7 @@ export const useStore = create<AppState>()(
           return
         }
         const generation = projectGeneration
-        get().loadFromText(opened.text, opened.handle, opened.name)
+        get().loadFromText(opened.text, opened.handle, opened.name, opened.project)
         const corrupt = [...(opened.corruptFiles ?? [])]
         if (opened.readPapers && generation !== projectGeneration) {
           const more = await streamPapers(opened.readPapers)
@@ -1866,9 +1866,9 @@ export const useStore = create<AppState>()(
       }
     },
 
-    loadFromText: (text, handle, name) => {
+    loadFromText: (text, handle, name, parsed) => {
       try {
-        const project = loadProject(text)
+        const project = parsed ?? loadProject(text)
         // The seat last in use decides where "first unfinished" is, since
         // finished is per seat; the landing paper's own seat, when it has one,
         // then wins for the paper actually opened.

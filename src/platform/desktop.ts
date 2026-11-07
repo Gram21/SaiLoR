@@ -11,6 +11,7 @@ import type {
 import { StaleSaveError, type SharedAnnotations } from './adapter'
 import { readRecents, pushRecent, removeRecent, replaceRecents, type RecentEntry } from './recents'
 import { getBridge, type OpenedHead } from './bridge'
+import { offMain } from './offMain'
 import type { LlmConfig, LlmHttpRequest, LlmHttpResponse, WebFetchResult } from '../llm/types'
 import type { LocalServerResult, OllamaApi } from './ollamaApi'
 import type { LocalRuntimeApi } from './localRuntime'
@@ -178,32 +179,25 @@ export class DesktopAdapter implements PlatformAdapter {
       return { ...at, text: all.text, corruptFiles: [...res.corrupt, ...all.corrupt] }
     }
     const left = new Set<string>()
-    try {
-      const head = loadProject(res.text)
-      for (const p of head.papers) left.add(p.id)
-      noteWritten(res.path, JSON.stringify(splitProjectFiles(head).meta, null, 2), [])
-    } catch {
-      lastWritten = null
-    }
+    const parsed = await offMain<'head'>({ kind: 'head', text: res.text })
+    if (parsed) {
+      for (const p of parsed.project.papers) left.add(p.id)
+      noteWritten(res.path, parsed.meta, [])
+    } else lastWritten = null
     const mine = left.size > 0 ? (streaming = { path: res.path, left }) : null
     const base = lastWritten
     const read = res.readPapers
     const readPapers = async (ids: string[]) => {
       const batch = await read(ids)
-      const project = loadProject(batch.text)
-      try {
-        if (base && lastWritten === base)
-          for (const f of splitProjectFiles(project).files) base.files.set(f.relPath, f.text)
-      } catch {
-        lastWritten = null
-      }
+      const { papers, files } = await offMain<'parse'>({ kind: 'parse', text: batch.text })
+      if (base && lastWritten === base) for (const f of files) base.files.set(f.relPath, f.text)
       if (mine && streaming === mine) {
         for (const id of ids) mine.left.delete(id)
         if (mine.left.size === 0) streaming = null
       }
-      return { papers: project.papers, corruptFiles: batch.corrupt }
+      return { papers, corruptFiles: batch.corrupt }
     }
-    return { ...at, text: res.text, corruptFiles: res.corrupt, readPapers }
+    return { ...at, text: res.text, project: parsed?.project, corruptFiles: res.corrupt, readPapers }
   }
 
   // [impl->req~plt-41~1]

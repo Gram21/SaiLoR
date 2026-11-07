@@ -1,4 +1,5 @@
 // [utest->req~plt-440~1]
+// [utest->req~plt-459~1]
 // [utest->req~plt-442~1]
 // [utest->req~plt-443~1]
 import { describe, it, expect, vi, beforeEach } from 'vitest'
@@ -10,7 +11,8 @@ import { loadProject } from '../model/project'
  * read so far are in the project, so saving waits, and so does anything that
  * would read papers that are not there yet.
  */
-const N = 4500
+const B = 250
+const N = B * 2 + B / 2
 const config = { schema: [{ name: 'Relevant', type: 'boolean' }] }
 const papers = Array.from({ length: N }, (_, i) => ({
   id: `p${i}`,
@@ -19,7 +21,7 @@ const papers = Array.from({ length: N }, (_, i) => ({
   pdf: `p${i}.pdf`,
   annotations: { Relevant: [{ value: true }] },
   // The first unfinished paper is in the second batch.
-  finished: i !== 2100,
+  finished: i !== B + 100,
 }))
 const head = JSON.stringify({ version: 1, config, papers: papers.map((p) => ({ ...p, annotations: {}, finished: undefined })) })
 const only = (ids: string[]) => {
@@ -32,7 +34,7 @@ let fail = false
 const readPapers = vi.fn(async (ids: string[]) => {
   await new Promise<void>((resolve) => gate.push(resolve))
   if (fail) throw new Error('disk gone')
-  return { papers: loadProject(only(ids)).papers, corruptFiles: ids[0] === 'p2000' ? ['p2000/consolidated.json'] : [] }
+  return { papers: loadProject(only(ids)).papers, corruptFiles: ids[0] === `p${B}` ? [`p${B}/consolidated.json`] : [] }
 })
 
 const opened = (path: string) => ({
@@ -57,7 +59,7 @@ const mockPlatform = {
 
 vi.mock('../platform', () => ({ getPlatform: () => mockPlatform }))
 
-const { useStore } = await import('./store')
+const { useStore, PAPER_BATCH } = await import('./store')
 const st = () => useStore.getState()
 
 /** Lets the batch the store is waiting for arrive. */
@@ -74,6 +76,8 @@ beforeEach(() => {
   mockPlatform.saveProject.mockClear()
 })
 
+it('reads papers in batches of 250', () => expect(PAPER_BATCH).toBe(B))
+
 describe('progressive project loading', () => {
   it('fills the paper list batch by batch, then reports every corrupt file', async () => {
     const done = st().openRecent('/big/project.json')
@@ -83,28 +87,28 @@ describe('progressive project loading', () => {
     expect(st().project!.papers).toHaveLength(0)
 
     await release()
-    await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(2000))
-    expect(st().project!.papers).toHaveLength(2000)
+    await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(B))
+    expect(st().project!.papers).toHaveLength(B)
     expect(st().project!.papers[0].annotations.Relevant).toEqual([{ value: true }])
     expect(st().currentPaperId).toBeNull()
 
     await release()
-    await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(4000))
-    expect(st().currentPaperId).toBe('p2100')
+    await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(2 * B))
+    expect(st().currentPaperId).toBe(`p${B + 100}`)
     await release()
     await done
-    expect(st().currentPaperId).toBe('p2100')
-    expect(readPapers.mock.calls.map((c) => c[0].length)).toEqual([2000, 2000, 500])
+    expect(st().currentPaperId).toBe(`p${B + 100}`)
+    expect(readPapers.mock.calls.map((c) => c[0].length)).toEqual([B, B, B / 2])
     expect(st().loadState).toBe('ready')
     expect(st().loadProgress).toBeNull()
     expect(st().project!.papers.map((p) => p.id)).toEqual(papers.map((p) => p.id))
-    expect(st().corruptFiles).toEqual(['head.json', 'p2000/consolidated.json'])
+    expect(st().corruptFiles).toEqual(['head.json', `p${B}/consolidated.json`])
   })
 
   it('refuses to save until every paper has loaded, then saves the whole project', async () => {
     const done = st().openProject()
     await release()
-    await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(2000))
+    await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(B))
 
     expect(await st().save()).toBe(false)
     expect(await st().saveAs()).toBe(false)
@@ -123,7 +127,7 @@ describe('progressive project loading', () => {
   it('keeps per-paper edits made while loading, and undo keeps the later batches', async () => {
     const done = st().openRecent('/big/project.json')
     await release()
-    await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(2000))
+    await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(B))
     st().selectPaper('p0')
     st().setFieldValue([], 'Relevant', 0, false)
 
@@ -152,7 +156,7 @@ describe('progressive project loading', () => {
   it('keeps a project whose batch cannot be read open, with its edits, and reads the batch again on retry', async () => {
     const done = st().openRecent('/big/project.json')
     await release()
-    await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(2000))
+    await vi.waitFor(() => expect(st().loadProgress?.loaded).toBe(B))
     st().selectPaper('p0')
     st().setFieldValue([], 'Relevant', 0, false)
     fail = true
@@ -160,7 +164,7 @@ describe('progressive project loading', () => {
     await vi.waitFor(() => expect(st().loadFailed).toContain('disk gone'))
     expect(st().loadError?.details.join()).toContain('disk gone')
     expect(st().loadState).toBe('loading')
-    expect(st().project!.papers).toHaveLength(2000)
+    expect(st().project!.papers).toHaveLength(B)
     expect(await st().save()).toBe(false)
     expect(mockPlatform.saveProject).not.toHaveBeenCalled()
 
@@ -170,7 +174,7 @@ describe('progressive project loading', () => {
     await release()
     await release()
     await done
-    expect(readPapers.mock.calls.map((c) => c[0][0])).toEqual(['p0', 'p2000', 'p2000', 'p4000'])
+    expect(readPapers.mock.calls.map((c) => c[0][0])).toEqual(['p0', `p${B}`, `p${B}`, `p${2 * B}`])
     expect(st().loadState).toBe('ready')
     expect(st().project!.papers).toHaveLength(N)
     expect(st().project!.papers[0].annotations.Relevant).toEqual([{ value: false }])

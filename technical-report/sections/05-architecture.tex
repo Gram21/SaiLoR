@@ -127,7 +127,7 @@ Therefore, we moved this work out of the critical path.
 % Progressive loading
 \SaiLoR opens a project in the split layout in two steps.
 First, the Rust backend reads only the project file, and the user interface shows the metadata of all papers.
-Then, the user interface loads the annotation files in batches of 2,000 papers and gives control back to the event loop between two batches.
+Then, the user interface loads the annotation files in batches of 250 papers and gives control back to the event loop between two batches.
 A progress line shows how many papers are loaded, and reviewers can already annotate the loaded papers.
 Until all papers are loaded, \SaiLoR blocks every save and disables the features that need the whole project, for example, validation, the git view, and the consolidation overview.
 The backend reads a batch only for the opened project and only for the papers that the project file listed when the user opened it.

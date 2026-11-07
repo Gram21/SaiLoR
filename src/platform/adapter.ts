@@ -12,7 +12,7 @@ import type { LocalServerResult, OllamaApi } from './ollamaApi'
 import type { LocalRuntimeApi } from './localRuntime'
 import type { GitPlatform } from '../git/types'
 import type { PdfMark } from '../model/pdfMarks'
-import type { Paper } from '../model/project'
+import type { Paper, Project } from '../model/project'
 
 export type { RecentEntry }
 export type { OsInfo }
@@ -35,6 +35,8 @@ export interface OpenedProject {
    * the UI can say so rather than let a reviewer assume an empty seat is empty.
    */
   corruptFiles?: string[]
+  /** The head of a streamed project, parsed off the main thread, when that worked. */
+  project?: Project
   /**
    * Set only when the project was opened streamed: `text` then holds every paper without its
    * annotations, and this reads the named papers whole, parsed once. Saving refuses until every

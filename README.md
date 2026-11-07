@@ -619,7 +619,9 @@ complete. If a query runs longer than 20 seconds, SaiLoR stops it and shows an e
 SaiLoR opens a project in the split layout (`project.json` and `annotations/`) in two steps:
 
 1. SaiLoR reads `project.json` and shows all papers with their metadata.
-2. SaiLoR reads the files under `annotations/` in batches of 2000 papers.
+2. SaiLoR reads the files under `annotations/` in batches of 250 papers.
+
+A background worker parses each batch. The main thread stays free, so the window keeps responding while the papers load.
 
 While the papers load, the paper list shows the progress, for example
 `Loading papers: 12,000 / 50,000`. Open and annotate each paper that has loaded. If the project

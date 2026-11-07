@@ -482,3 +482,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `src-tauri/src/project.rs` (`set_dir`, `project_set_dir`)
 - **Verified by:** `src-tauri/src/project.rs` (`set_dir_refuses_a_project_that_was_not_opened`)
 - **Status:** Implemented
+
+### REQ-PLT-459: Load project files off the main thread
+- **Description:** While the renderer opens a project in the split layout, the main thread shall not parse, assemble or validate the project files. A background worker shall do this work for the head and for each batch, so the user interface stays responsive. Each batch shall hold at most 250 papers, so the loading progress updates often. If the environment has no worker support, the same steps shall run inline.
+- **Type:** Non-functional (ISO 25010: Performance Efficiency, Usability)
+- **Evidence:** `src/platform/projectJobs.ts` (`runJob`), `src/platform/projectJobs.worker.ts`, `src/platform/offMain.ts` (`offMain`), `src/platform/assemble.ts` (`assembler`), `src/platform/tauri.ts` (`opened`), `src/platform/desktop.ts` (`opened`), `src/state/store.ts` (`PAPER_BATCH`, `loadFromText`)
+- **Verified by:** `src/platform/projectJobs.test.ts`, `src/state/progressiveLoad.test.ts`
+- **Status:** Implemented
