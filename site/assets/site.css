@@ -10,7 +10,6 @@
   --accent: #0550ae;
   --accent-text: #ffffff;
   --code-bg: #f6f8fa;
-  --placeholder-bg: #eaeef2;
   --warn-bg: #fff8c5;
   --warn-border: #9a6700;
   --radius: 8px;
@@ -29,8 +28,7 @@
     --accent: #58a6ff;
     --accent-text: #0d1117;
     --code-bg: #161b22;
-    --placeholder-bg: #21262d;
-    --warn-bg: #2d2400;
+      --warn-bg: #2d2400;
     --warn-border: #d29922;
   }
 }
@@ -272,12 +270,6 @@ figcaption {
   color: var(--muted);
   font-size: 0.9rem;
   margin-top: 0.5rem;
-}
-
-.placeholder-shot img {
-  aspect-ratio: 16 / 10;
-  object-fit: cover;
-  background: var(--placeholder-bg);
 }
 
 section {

@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1440" height="900" viewBox="0 0 1440 900" role="img" aria-label="Screenshot pending">
-  <rect width="1440" height="900" fill="#eaeef2"/>
-  <rect x="24" y="24" width="1392" height="852" rx="12" fill="none" stroke="#8c959f" stroke-width="3" stroke-dasharray="16 12"/>
-  <text x="720" y="430" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="48" font-weight="600" fill="#424a53">Screenshot pending</text>
-  <text x="720" y="492" text-anchor="middle" font-family="system-ui, -apple-system, Segoe UI, Arial, sans-serif" font-size="28" fill="#59636e">The final image replaces this placeholder.</text>
-</svg>
