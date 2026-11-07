@@ -45,6 +45,6 @@ describe('project title', () => {
 
   it('is set on the bundled sample', () => {
     const sample = loadProject(readFileSync('samples/project.example.json', 'utf-8'))
-    expect(sample.title).toBe('Example SLR: Code Search and Program Repair')
+    expect(sample.title).toBe('Example SLR: LLMs for Software Architecture Knowledge')
   })
 })

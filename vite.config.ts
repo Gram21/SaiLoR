@@ -14,7 +14,7 @@ export default defineConfig(({ mode }) => {
   // The demo's PDFs are written as plain files, not imported, so the normal build
   // never contains them. The file names must match DEMO_PDF_FILES in src/demo/project.ts.
   // samples/pdfs/ also holds PDF fixtures for tests; the demo does not ship them.
-  const TEST_FIXTURE = /^(paper-|multipage)/
+  const TEST_FIXTURE = /^(paper-|multipage|A1-)/
   const demoPdfs = {
     name: 'slr-demo-pdfs',
     generateBundle(this: { emitFile: (file: { type: 'asset'; fileName: string; source: Buffer }) => void }) {
