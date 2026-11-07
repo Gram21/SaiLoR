@@ -3,11 +3,14 @@
 
 In this section, we walk through \SaiLoR along the activities of an \SLR.
 We use the running example from \autoref{sec:approach-example}.
+Some figures show the online demo of \SaiLoR instead, which runs in the browser with its own project of seven papers.
+The demo can show the annotation, consolidation, and knowledge graph views, and it opens the project editor on a new project.
+It does not save, and it offers neither the git view nor the \LLM assistance.
 
 \begin{figure*}[t]
     \centering
     \screenshot{\shotAnnotate}{0.85\textwidth}
-    \caption{Main view of \SaiLoR with the paper list on the left, the \PDF in the middle, and the extraction form of the running example for reviewer seat 1 on the right}
+    \caption{Main view of \SaiLoR in the online demo with the paper list on the left, the \PDF in the middle, and the extraction form for reviewer seat 1 on the right}
     \label{fig:annotate}
 \end{figure*}
 
@@ -22,12 +25,12 @@ Each row defines one node with its name, type, minimum and maximum count, option
 In the figure, the field \emph{Exclusion Reason} is only visible if the field \emph{Relevant} has the answer \enquote{No}.
 Reviewers can reorder and nest rows by drag and drop.
 
-\begin{figure}[t]
+\begin{figure*}[t]
     \centering
-    \screenshot{\shotSchema}{\columnwidth}
-    \caption{Schema editor with field types, counts, options, and visibility conditions}
+    \screenshot{\shotSchema}{0.85\textwidth}
+    \caption{Schema editor of the online demo with field types, counts, options, and a visibility condition}
     \label{fig:schema}
-\end{figure}
+\end{figure*}
 
 \subsection{Conducting: Import and Screening}\label{sec:tool-screening}
 
@@ -61,7 +64,7 @@ Validation reports excluded papers without a reason.
 \begin{figure}[t]
     \centering
     \screenshot{\shotScreening}{\columnwidth}
-    \caption{Screening view with the abstract, the decision buttons, and the progress line}
+    \caption{Screening view of the running example in version 1.x with the abstract, the decision buttons, and the progress line}
     \label{fig:screening}
 \end{figure}
 
@@ -73,7 +76,7 @@ The new project records where it came from and how many papers were included, ex
 \subsection{Conducting: Data Extraction}\label{sec:tool-extraction}
 
 % Extraction view
-\autoref{fig:annotate} shows the main view during extraction.
+\autoref{fig:annotate} shows the main view during extraction in the online demo.
 The left pane lists the papers, the middle pane shows the \PDF, and the right pane shows the form that \SaiLoR generates from the schema.
 Repeatable groups such as \emph{Findings} get buttons to add and remove entries.
 A dot next to each paper shows how complete the paper is for the current seat.
@@ -122,13 +125,13 @@ If at least two reviewers answered a field and all answers are equal, \SaiLoR fi
 % Compare and adopt
 For the remaining fields, the consolidator opens a comparison, as shown in \autoref{fig:compare}.
 The comparison lists the answers of all reviewers.
-The consolidator adopts one answer or marks the answers as equivalent.
+The consolidator adopts one answer, enters a different value, or marks the answers as equivalent.
 The disagreements of a paper or of the whole project can be exported as text, for example, to discuss them in a meeting.
 
 \begin{figure}[t]
     \centering
     \screenshot{\shotCompare}{\columnwidth}
-    \caption{Comparison of two reviewers' answers in the consolidation seat}
+    \caption{Comparison of two reviewers' answers to the field \emph{Relevant} in the consolidation seat of the online demo}
     \label{fig:compare}
 \end{figure}
 
@@ -164,7 +167,7 @@ It also saves the current state of the branch, so that the reviewer can undo the
 \begin{figure}[t]
     \centering
     \screenshot{\shotMerge}{\columnwidth}
-    \caption{Field-level resolution of merge conflicts after a pull}
+    \caption{Field-level resolution of merge conflicts after a pull in version 1.x}
     \label{fig:merge}
 \end{figure}
 
@@ -181,14 +184,23 @@ The export is deterministic, so two exports of the same project give the same fi
 The knowledge graph view draws the graph in a force layout.
 Reviewers pan, zoom, move nodes, and expand the neighbors of a node with a double click.
 Each relation type has its own line style, and a legend lets reviewers hide relation types.
-A side panel lists the nodes as text, so that the graph is also usable without the canvas.
+A \enquote{Nodes} button opens a drawer that lists the shown nodes as buttons, so that the graph is also usable without the canvas.
+The list shows 200 nodes at first and more on request.
 A short text query filters the graph, for example, by node type or by the answer of a field.
 
 % Cypher
 For other questions, reviewers can write a query in a read-only subset of Cypher~\cite{francis2018cypher}.
 For example, the query \texttt{MATCH (p:Paper)-[:cites]->(q:Paper)} \texttt{RETURN q.year, count(*)} counts the cited papers per year.
 \SaiLoR shows the result as a table and names the position of an error in the query.
+\autoref{fig:graph} shows a query for the papers of one author in the online demo, with the drawer open.
 \autoref{sec:architecture-scale} describes how \SaiLoR keeps the view and the queries fast for large graphs.
+
+\begin{figure*}[t]
+    \centering
+    \screenshot{\shotGraph}{0.85\textwidth}
+    \caption{Knowledge graph view of the online demo with a Cypher query, the drawer of the shown nodes on the left, and the result table on the right}
+    \label{fig:graph}
+\end{figure*}
 
 \subsection{Languages}\label{sec:tool-languages}
 
@@ -201,6 +213,7 @@ For Persian, \SaiLoR mirrors the layout from right to left, while code, keys, an
 
 % Providers and opt-in
 \LLM assistance is off unless the project enables it.
+Until then, \SaiLoR shows no \LLM button in the toolbar and no \LLM section in the settings.
 Reviewers can connect nine named provider \APIs, among them Anthropic, OpenAI, and Google Gemini, as well as any OpenAI-compatible server.
 Local models run, for example, in Ollama or a llama.cpp server~\cite{llamacpp}.
 \SaiLoR stores \API keys in the keychain of the operating system.

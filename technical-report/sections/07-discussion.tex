@@ -24,7 +24,7 @@ Still, an independent review of the requirements is open.
 The move to Tauri is recent.
 The guard against reload shortcuts is now ported to Tauri as well.
 However, no automated test shows its dialog in a running application, and we have not tried it by hand on Windows and Linux.
-Furthermore, all figures in this report show the user interface of version 1.x.
+Furthermore, \autoref{fig:screening} and \autoref{fig:merge} still show the user interface of version 1.x, because the online demo has no screening project and no git view.
 
 % Platform tests
 Our tests cover the three operating systems unevenly.
@@ -84,4 +84,7 @@ The knowledge graph view and its queries help to explore the data, but reviewers
 The source code is available on GitHub.\footnote{\url{https://github.com/Gram21/SaiLoR}}
 The release workflow builds installers for macOS 15 or later on Apple silicon and Intel, for Windows, and for Linux on x86-64 and arm64 as AppImage, Debian, and RPM packages.
 The Zenodo concept \DOI~\cite{sailor2026zenodo} resolves to the latest archived version.
+A project site on GitHub Pages hosts the online demo.\footnote{\url{https://gram21.github.io/SaiLoR/}}
+The demo runs in the browser without an installation and saves nothing.
+A second mode of the demo opens the schema editor and downloads the project file on save.
 The repository also contains a sample screening project and a sample extraction project, a user guide, and the requirement files described in \autoref{sec:requirements}.
