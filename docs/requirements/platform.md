@@ -474,3 +474,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `src/state/store.ts` (`saveOnce`, `saveAs`, `projectGeneration`), `src/platform/desktop.ts` (`saveProject`)
 - **Verified by:** `src/state/store.saveRace.test.ts`, `src/platform/desktop.test.ts` (`keeps the baseline of a project opened while an earlier save was written`)
 - **Status:** Implemented
+
+### REQ-PLT-458: Set the project folder only for a known project
+- **Description:** The system shall refuse to set the project folder for PDF access from a project file that the user did not open or choose via a dialog in this session.
+- **Type:** Non-functional (ISO 25010: Security)
+- **Evidence:** `src-tauri/src/project.rs` (`set_dir`, `project_set_dir`)
+- **Verified by:** `src-tauri/src/project.rs` (`set_dir_refuses_a_project_that_was_not_opened`)
+- **Status:** Implemented

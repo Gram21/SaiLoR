@@ -37,7 +37,7 @@ async fn probe_auto(
     let path = std::path::PathBuf::from(path);
     let opened = project::open(&session, &path).ok();
     if opened.is_some() {
-        project::set_dir(&session, &path);
+        project::set_dir(&session, &path)?;
     }
     Ok(opened)
 }
