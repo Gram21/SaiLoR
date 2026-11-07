@@ -219,10 +219,11 @@ See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-LLM-360: Treat fetched web content as untrusted data
-- **Description:** When the agent-mode `fetch_url` tool returns a fetched page's text, the system shall wrap it in a clear untrusted-content delimiter and instruct the model, in the system prompt, to treat it only as data to extract from and never as instructions to follow.
+- **Description:** When the agent-mode `fetch_url` tool returns a fetched page's text, the system shall wrap it in a clear untrusted-content delimiter and instruct the model, in the system prompt, to treat it only as data to extract from and never as instructions to follow. The system shall wrap the results of the `scholarly_search` and `lookup_doi` tools in the same delimiter.
 - **Type:** Non-functional (ISO 25010: Security)
-- **Evidence:** `src/llm/tools.ts` (`fetchUrl`), `src/llm/prompt.ts` (`buildAgentSystemPrompt`)
+- **Evidence:** `src/llm/tools.ts` (`fetchUrl`, `untrusted`), `src/llm/prompt.ts` (`buildAgentSystemPrompt`)
 - **Status:** Implemented
+- **Tests:** `src/llm/tools.test.ts` (`wraps the results as untrusted content`, `wraps the metadata as untrusted content`)
 
 ### REQ-LLM-370: Per-run token and call accounting
 - **Description:** The system shall accumulate, across every agent- and judge-model call of one agent-mode run, the total input tokens, output tokens, and number of calls, and report them alongside the number of rounds run.
@@ -687,3 +688,10 @@ See the [index](index.md) for the glossary.
 - **Evidence:** `src/components/AiEvaluationDialog.tsx`
 - **Status:** Implemented
 - **Tests:** `src/components/AiEvaluationDialog.test.tsx`
+
+### REQ-LLM-833: Limit the URLs the agent fetches
+- **Description:** The `fetch_url` tool shall refuse a URL with more than 2048 characters. The tool shall remove the query string and the fragment from the URL before the fetch. The tool description shall tell the model about both limits.
+- **Type:** Non-functional (ISO 25010: Security)
+- **Evidence:** `src/llm/tools.ts` (`fetchUrl`, `AGENT_TOOLS`)
+- **Status:** Implemented
+- **Tests:** `src/llm/tools.test.ts` (`removes the query string and the fragment before the fetch`, `refuses a URL with more than 2048 characters`, `fetches the DOI, arXiv or landing page %s unchanged`)
