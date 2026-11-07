@@ -67,6 +67,7 @@ import {
 import { rich, useLanguage, useT } from './i18n'
 import { getBridge } from './platform/bridge'
 import { DEMO_MODE } from './demo/mode'
+import { DEMO_SCHEMA_MODE } from './demo/schemaMode'
 import { DemoBanner } from './components/DemoBanner'
 
 export function App() {
@@ -128,9 +129,11 @@ export function App() {
   }, [checkForUpdate])
 
   // [impl->req~plt-445~1]
+  // [impl->req~plt-456~1]
   useEffect(() => {
-    if (DEMO_MODE && !useStore.getState().project) void openProject()
-  }, [openProject])
+    if (DEMO_SCHEMA_MODE) void startNew()
+    else if (DEMO_MODE && !useStore.getState().project) void openProject()
+  }, [openProject, startNew])
 
   // Find out which recent projects still exist, so the gone ones grey out.
   useEffect(() => {

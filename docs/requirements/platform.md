@@ -460,3 +460,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Evidence:** `src/components/DemoBanner.tsx` (`DemoBanner`), `src/demo/text.ts` (`DEMO_BACK_URL`, `DEMO_BACK_LABEL`), `src/styles/index.css` (`.demo-folded`)
 - **Verified by:** `src/components/DemoBanner.test.tsx` (`links back to the project page from the notice and while the notice is folded`)
 - **Status:** Implemented
+
+### REQ-PLT-456: Open a schema editor demo that saves by download
+- **Description:** When the online demo opens with the query `?mode=schema`, the system shall open the project editor on a new, empty project, without a file dialog. The editor shall let the visitor add and change schema fields. When the visitor saves, the system shall download the project as `project.json` and shall write nothing else. The demo notice shall say that save downloads `project.json`. The annotation demo shall keep its own start and its refusal to save.
+- **Type:** Functional (ISO 25010: Usability, Security)
+- **Evidence:** `src/demo/schemaMode.ts` (`DEMO_SCHEMA_MODE`), `src/App.tsx` (demo start effect), `src/platform/demoAdapter.ts` (`pickProjectLocation`, `saveProject`, `download`), `src/components/DemoBanner.tsx`, `src/demo/text.ts` (`DEMO_SCHEMA_NOTICE`)
+- **Verified by:** `src/demo/schemaDemo.test.ts` (`opens a new project in the editor, adds a field and saves it as a download`), `src/platform/demoSchemaAdapter.test.ts` (`downloads the saved text as project.json and writes nothing else`), `src/components/DemoBanner.schema.test.tsx` (`says that save downloads project.json and keeps the link back`)
+- **Status:** Implemented

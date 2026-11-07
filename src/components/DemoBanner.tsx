@@ -1,5 +1,6 @@
 import { useState } from 'react'
-import { DEMO_BACK_LABEL, DEMO_BACK_URL, DEMO_RELEASES_URL } from '../demo/text'
+import { DEMO_BACK_LABEL, DEMO_BACK_URL, DEMO_RELEASES_URL, DEMO_SCHEMA_NOTICE } from '../demo/text'
+import { DEMO_SCHEMA_MODE } from '../demo/schemaMode'
 
 // [impl->req~plt-448~1]
 // [impl->req~plt-455~1]
@@ -25,7 +26,7 @@ export function DemoBanner() {
       <a className="demo-back" href={DEMO_BACK_URL}>
         {DEMO_BACK_LABEL}
       </a>
-      <span>Demo: nothing is saved. </span>
+      <span>{DEMO_SCHEMA_MODE ? DEMO_SCHEMA_NOTICE : 'Demo: nothing is saved.'} </span>
       <a href={DEMO_RELEASES_URL} target="_blank" rel="noopener noreferrer">
         Download the app
       </a>

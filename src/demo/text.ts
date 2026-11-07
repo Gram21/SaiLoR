@@ -8,6 +8,9 @@ export const DEMO_BACK_URL = '../'
 
 export const DEMO_BACK_LABEL = '← Back to project page'
 
+/** The notice of the schema editor demo (`?mode=schema`), in place of the annotation demo's notice. */
+export const DEMO_SCHEMA_NOTICE = 'Schema demo: nothing is saved on this site. Save downloads project.json.'
+
 export const DEMO_NOT_SAVED = 'Demo: nothing is saved. Download the app to keep your work.'
 
 export const DEMO_NOT_AVAILABLE = 'Not available in the demo. Download the app to use this.'
