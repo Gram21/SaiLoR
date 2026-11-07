@@ -4,8 +4,6 @@ title: SaiLoR Developer Documentation
 description: Home page for SaiLoR developer documentation. SaiLoR 2.0 is a Tauri desktop tool for conducting Systematic Literature Reviews (SLRs), storing the annotation schema and paper metadata in project.json and each reviewer's/consolidation's annotation data in a sibling annotations/ folder. Links to quickstart, architecture, data model, and operations pages.
 tags: [home, overview, documentation]
 sources:
-  - id: openwiki-source-164e2da859b5277df81c7d94
-    resource: repo://.github/workflows/ci.yml
   - id: openwiki-source-6d3ac2bdfb0e76882a670989
     resource: repo://.github/workflows/openwiki.yml
   - id: openwiki-source-5f219f204b3e870beec929d9
@@ -20,8 +18,6 @@ sources:
     resource: repo://package.json
   - id: openwiki-source-23775c3de52f3ab95a13cb8b
     resource: repo://README.md
-  - id: openwiki-source-0744bbc5adcd6bd563690bde
-    resource: repo://scripts/ci.sh
   - id: openwiki-source-99b0214e9f2113a0f6a2cf92
     resource: repo://src-tauri/src/main.rs
   - id: openwiki-source-5e350144821ef45403557db2
@@ -37,7 +33,7 @@ sources:
 generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
+    at: 2026-11-07T10:50:01.257Z
 ---
 
 # SaiLoR — Developer Documentation

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:56391655739a2d20ede2620b3eb0366cb5f39cc00e985718140236072d077e6d",
+  "pageVersion": "sha256:900a8b8995bbf550134f2b8612e203be08501217857be526dcff096184a3d307",
   "claims": [
     {
       "id": "claim_d5e38331aa914354bb82097894fe1f00",
@@ -36,7 +36,7 @@
         },
         {
           "resource": "repo://src/platform/desktop.ts",
-          "version": "repo-file-v1:sha256:0d896f6309cbb7ab254d27390eb19e45da0eea8039260f59140f150832672aa3"
+          "version": "repo-file-v1:sha256:1dc4cd4b412457275f2d60080121efa45ac518d23c7c22db93536978742d4ba3"
         }
       ]
     },
@@ -354,7 +354,7 @@
         },
         {
           "resource": "repo://src/platform/desktop.ts",
-          "version": "repo-file-v1:sha256:0d896f6309cbb7ab254d27390eb19e45da0eea8039260f59140f150832672aa3"
+          "version": "repo-file-v1:sha256:1dc4cd4b412457275f2d60080121efa45ac518d23c7c22db93536978742d4ba3"
         },
         {
           "resource": "repo://src/state/store.save.test.ts#L122-L144",
@@ -436,7 +436,7 @@
         },
         {
           "resource": "repo://src/platform/desktop.ts",
-          "version": "repo-file-v1:sha256:0d896f6309cbb7ab254d27390eb19e45da0eea8039260f59140f150832672aa3"
+          "version": "repo-file-v1:sha256:1dc4cd4b412457275f2d60080121efa45ac518d23c7c22db93536978742d4ba3"
         }
       ]
     },
@@ -446,7 +446,7 @@
       "evidence": [
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -455,15 +455,15 @@
       "statement": "The desktop adapter's save records a baseline (lastWritten: how the open project's files last stood on disk, refreshed at every open via noteOpened and every save) and writes only entries that differ from it, so a schema edit that materializes an empty entry in every tree does not turn one reviewer's edit into a whole-folder diff. Paths the project used to write and no longer does (a removed or renamed paper id) are deleted by diffing against the baseline, which only ever holds paths this project itself read or wrote — safe where scanning the folder could not tell a removed paper of ours from a sibling project's. Every git flow that rewrites the working tree drops the baseline first (withBaselineDropped) so a stale baseline can never make a save skip a file it should have written.",
       "evidence": [
         {
-          "resource": "repo://src/platform/desktop.ts#L218-L250",
+          "resource": "repo://src/platform/desktop.ts#L212-L244",
           "version": "repo-lines-v1:sha256:dfcb2bc93fa31e432196f2ba90c9779ed794ac6569bb7d98b135ce0bca75aabf:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZhMDkxMmNlYTgzMWNkZTI5NGQxMDkyZDhmMTkyNDQxMWQ4MzI2YTE1MzgwYzI3M2M5NDUwMzM2MGUxYTMxN2UiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIxMzllNGY3YTM0MzE2ZWFjNzI1MTBmZTY2NTU3MGMxOWYyYzM4MzAxNjA3MDI1OTk0OWUzZDEzODA4OTFhMTgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVmNDcxNDgwYWMyYzI1NGU3OGI0YWY4ODQ2MDE0NTgwYmMxOTcyY2Q0ZDY4YjdlMzY1MjY4YjZmNmM3NDIxYTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjllMzhiNzllOTIwMDI3MzE3ODQ1M2EzYzIyYjE5OWMwODFkYTNhM2EwYTUxZmY5NTMwNjcwMWI5Njg3ZmRhYjMifQ"
         },
         {
-          "resource": "repo://src/platform/desktop.ts#L21-L62",
+          "resource": "repo://src/platform/desktop.ts#L22-L63",
           "version": "repo-lines-v1:sha256:b3ffd7aa60b0c09690751abddda971d18235fb7360c7d6a36cddcf2a1aad7060:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRhMTQxYjIyZjA5NmEyZTBjMTRhZjgxZTU2M2VmZmMzNzMzNWJlNjU0MWY5NmI0NmMzODcyOWVkYjEyNTM0M2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ2OGRmZDQ3MDM4YWI3NjJmMTc1ZDBiMjBhZDY3ZDM2ODk5ZTA1ZWVhYzYwN2EzNzIwMTgyNmNjNzZmMzE0ZDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk1ODk2NDJmZGQ1NzdlYmVkZTM2NjYzNmIxNTA5YWZhNjE5MjBjODIxNDlkMTY1YzZlMGNmMTY3ZmQ1MzQzN2EifQ"
         },
         {
-          "resource": "repo://src/platform/desktop.ts#L93-L98",
+          "resource": "repo://src/platform/desktop.ts#L94-L99",
           "version": "repo-lines-v1:sha256:3dd2d96c46b4ee38fb1bd58c40301cf025021ec76e887290aba800133d9d8217:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMGMyYjFjMTQ2NjIxZTExMDM3ZGM5MTczNmQ5YTY4N2NhYzdiMGE2ODZkMjA0ZjRlOTdhMTc5YzQxOGIyNDVkOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjNmODI5NThlZjk1MzllMGRkZTc5OGMxMmRhZTE3Yzg2MWFjYTM1OWQ4NzdmY2NkN2Q0ZDgyZjg4NzQ0NjdkNSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOTI1YTg4NThkMmI1M2U3YTVhOTYxNzEyOWUxZWVmNTAxMDllOWNiNTRjZGJiNTZkZmY5NTZiMjA1MDhmYmIxMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZmI1ODBlOTY0ZjgzYTQ3M2Y0M2Q0NDM4NDYyOTQ5ZDY4YjU2MDBmZGE3ODdmMTYzNzQ1ZDAwZGU4OWNiZjM2YSJ9"
         }
       ]
@@ -482,7 +482,7 @@
         },
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -492,7 +492,7 @@
       "evidence": [
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -543,7 +543,7 @@
           "version": "repo-lines-v1:sha256:b858fd489b9f787fa153c3d002a1fa9bad995273b81cf3a91cd6d8f155404589:eyJzZWxlY3RlZExpbmVDb3VudCI6NDksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjAyMTcyODZkOGU5NjM2NGE5ZmEwZjRiNzFkNTI4ODUxMmMzYjEyYWVjNWI5NjUzMjg5NWRhMzRhY2ZiOWQ2OTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
-          "resource": "repo://src/state/store.ts#L3821-L3841",
+          "resource": "repo://src/state/store.ts#L3820-L3840",
           "version": "repo-lines-v1:sha256:b6d918200bce6c003df9fe19ca121556417e9de627202ae3a13a3c4305317b32:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzMjU2NWE2NTRmOWJkMDI4MDYyYzE1OGUyNTcxYWE2OWQ4MDEyZTk1Yjg2YjA3MTk2ZGEwYWU4NmQxMTMzZGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiNWIyODFjMmQ0NzA5ZmY0ZmI1MWM1YzJjNzM1NDQ5ZGE1ZGVhODEyNThjMTc5MGVhMzc2OTc4MmRiYTYyZjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjIxOTY2YzhiOGEyMWZmYTIxMDZiYTVmY2NiNTM2YTg5Nzk3MWFiNzVlMDgwNzI4M2YwODMxMTdiZjhkYmY2ZGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIzMjc5N2Y4Yzc4YzBlMzAzNmQ1YzU1ZmU4OGFkZGJjYzEzNzYxZjZkNTkxY2FhYjM3NTJmMWY3YjYyNzU5ZTAifQ"
         }
       ]
@@ -551,6 +551,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-02T08:58:22.323Z"
+    "at": "2026-11-07T10:50:01.257Z"
   }
 }

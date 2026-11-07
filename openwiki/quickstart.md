@@ -74,10 +74,10 @@ sources:
     resource: repo://vite.config.ts
   - id: openwiki-source-9b13c737ac155b0b0c8d76b9
     resource: repo://vitest.integration.config.ts
-generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
+    at: 2026-11-07T10:50:01.257Z
 ---
 
 # SaiLoR — Quickstart
@@ -182,7 +182,7 @@ npm scripts that matter directly: `npm test` (Vitest unit run), `npm run test:in
 (the git-scenario fixture CLI in `samples/git-scenarios/`).
 
 `scripts/ci.sh` is the single source of truth for "does the app build and pass its checks":
-install → typecheck → wiki-link check → site-link check → unit tests with coverage → integration tests → `npm run build`.
+install → typecheck → wiki-link check → site-link check → unit tests with coverage → integration tests → `npm run build` → a guard that the normal build holds no demo data.
 Run it locally with `./scripts/ci.sh` (`SKIP_INSTALL=1` to skip the install step). See
 [Build, CI, and Release](operations/build-release.md) for the full pipeline, GitHub Actions
 workflows, and Docker-based builds; `docs/tauri-migration.md` documents release-signing setup.
@@ -276,7 +276,7 @@ over the custom `slr-file://` scheme.*
 │   │   ├── adapter.ts         PlatformAdapter interface + isTauri()
 │   │   ├── bridge.ts          SlrBridge — the backend API type the adapter implements
 │   │   ├── tauri.ts           tauriBridge + TauriAdapter: maps channel:Name to snake_case
-│   │   │                      Tauri commands, reassembles split files on open (assembleProject)
+│   │   │                      Tauri commands, reassembles split files on open (assembleProject, built on assemble.ts)
 │   │   ├── desktop.ts         DesktopAdapter: save baseline (lastWritten — writes only diffs,
 │   │   │                      withBaselineDropped for tree-rewriting git flows), recents
 │   │   ├── unsupported.ts     createUnsupportedAdapter — inert stand-in outside the desktop app
@@ -344,7 +344,7 @@ Where to start for common change areas (wiki page → source entry points → ke
 | AI screening runs | [AI Screening](workflows/ai-screening.md) | `src/state/aiScreeningStore.ts`, `src/llm/screeningAi.ts`, `src/components/AiScreeningDialog.tsx` | `aiScreeningStore`, screening decision models | `src/state/aiScreeningStore.test.ts` | `npm test -- src/state/aiScreeningStore.test.ts` |
 | Project editor (schema tree + papers) | [Annotation Schema and Validation](concepts/annotation-schema.md) | `src/state/editorStore.ts`, `src/components/ProjectEditor.tsx` | `editorStore`, `buildProjectJson` | `src/state/editorStore.test.ts` (+ siblings) | `npm test -- src/state/editorStore.test.ts` |
 | Knowledge graph view and exports | [Knowledge Graph View](workflows/knowledge-graph.md) | `src/model/graph.ts`, `src/model/graphLayout.ts`, `src/model/graphQuery.ts`, `src/components/GraphView.tsx` | graph build, layout worker, depth and Cypher-subset queries, exports | `src/model/graph.test.ts`, `src/model/graphQuery.test.ts` | `npm test -- src/model/graph` |
-| Progressive loading of large projects | [Progressive Project Loading](concepts/progressive-loading.md) | `src/state/store.ts`, `src/platform/tauri.ts` | `loadState`, `projectGeneration`, batch retry | `src/state/progressiveLoad.test.ts` | `npm test -- src/state/progressiveLoad.test.ts` |
+| Progressive loading of large projects | [Progressive Project Loading](concepts/progressive-loading.md) | `src/state/store.ts`, `src/platform/tauri.ts`, `src/platform/projectJobs.ts` | `loadState`, `projectGeneration`, batch retry, worker jobs | `src/state/progressiveLoad.test.ts` | `npm test -- src/state/progressiveLoad.test.ts` |
 | Online demo and project site | [Online Demo and Project Site](operations/demo-and-site.md) | `src/demo/`, `src/platform/demoAdapter.ts`, `site/`, `.github/workflows/pages.yml` | `DEMO_MODE`, `createDemoAdapter`, `npm run build:demo` | `src/demo/*.test.ts` | `npm test -- src/demo` |
 | Build / CI / release / packaging | [Build, CI, and Release](operations/build-release.md) | `Makefile`, `scripts/ci.sh`, `.github/workflows/release.yml`, `src-tauri/tauri.conf.json` | `make build`, `make docker-linux`, tauri bundle targets | — | `./scripts/ci.sh` |
 | Test surface (unit / integration / Rust / e2e) | [Testing Strategy](testing.md) | `vite.config.ts`, `vitest.integration.config.ts`, `src/test/integration/`, `e2e/probe.test.mjs` | vitest `include`/`exclude`, `make test`, `make probe` | — | `npm test` then `npm run test:integration` |

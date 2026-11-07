@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:ab24776b5af3208384670fc584e97374e8a49699e3716c21f2bd24de723c3632",
+  "pageVersion": "sha256:1cedf25a35a889f3d841d6017e3576456b77997cc41a42178ab33b666aca64f8",
   "claims": [
     {
       "id": "claim_1f931ed340c24e66ac3b3f8333417062",
@@ -422,7 +422,7 @@
         },
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -439,6 +439,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-02T08:58:22.323Z"
+    "at": "2026-11-07T10:50:01.257Z"
   }
 }

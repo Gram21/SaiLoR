@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c99b33447f9ac6a3f09ea38a522a469706c65d824b90d2040013f45027d8db6a",
+  "pageVersion": "sha256:6e42e4722effd3a9214f54969f1494dc00a5b975b652bd38cea2d971d179b4dc",
   "claims": [
     {
       "id": "claim_a799479f74b040edb4ff5b74a4e0afe3",
@@ -36,7 +36,7 @@
       "evidence": [
         {
           "resource": "repo://src/platform/demoAdapter.ts",
-          "version": "repo-file-v1:sha256:828131b4e59d91dcb2cb3a0461d4aeead63bf8b66ed42e8c5d69f4736c503862"
+          "version": "repo-file-v1:sha256:ef2fc7fed4d3ee536f68ea18b38a44590c387ce813d90f48e2d05e43b663bc08"
         },
         {
           "resource": "repo://src/platform/index.ts",
@@ -54,7 +54,7 @@
         },
         {
           "resource": "repo://src/platform/demoAdapter.ts",
-          "version": "repo-file-v1:sha256:828131b4e59d91dcb2cb3a0461d4aeead63bf8b66ed42e8c5d69f4736c503862"
+          "version": "repo-file-v1:sha256:ef2fc7fed4d3ee536f68ea18b38a44590c387ce813d90f48e2d05e43b663bc08"
         }
       ]
     },
@@ -64,7 +64,7 @@
       "evidence": [
         {
           "resource": "repo://src/demo/project.ts",
-          "version": "repo-file-v1:sha256:f140c4d172198a21dc7074eb78a5bf08100a25fdbb35f99c2e32737466cb42c6"
+          "version": "repo-file-v1:sha256:0536515280987cd793cdb2aa561255e499b302c375222467c127b33be1632725"
         },
         {
           "resource": "repo://vite.config.ts#L8-L36",
@@ -85,10 +85,38 @@
           "version": "repo-file-v1:sha256:5309ec5fe706884b17439f363fc4ce3b251d6bd3fb75cc5193a684509c2aac95"
         }
       ]
+    },
+    {
+      "id": "claim_536790074b184d9cb75149e6aafd96aa",
+      "statement": "The demo project text is built from the project file plus the reviewer seat files (reviewer-*.json) and the consolidated files (consolidated.json) under src/demo/data/annotations/, so the demo includes a consolidation seat; the demo adapter's writeBinaryFile returns an error with DEMO_NOT_SAVED, so the graph image download is refused in the demo.",
+      "evidence": [
+        {
+          "resource": "repo://src/demo/project.ts#L25-L58",
+          "version": "repo-lines-v1:sha256:4408ba28ddf1cd017b6ef636fcdb530897cbf14d8a9877b3f986da2d5d5f3ea3:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg1MmUzOWRmNWJiYTBkMGMzNDVmMGExMjMyNzViNjYzNmE3NzhiOTE1ZDY3MjE3ZDViOTUyZmUwOTVlMWRjNjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        },
+        {
+          "resource": "repo://src/platform/demoAdapter.ts#L97-L101",
+          "version": "repo-lines-v1:sha256:78192ebdf12473e4380e5bf77b9bc05c68238c17322a832241a09a58f9234078:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTdmNzg3NTJjYWExNmE1MWExMTZhOTJiNzU2MmE2ZDk1YTBlYWUxMjY5MzM3OTkwMzg5NWEwN2M3NDU0OTQ0NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzBhMTI4NmI0YzgxMjU2ZWI5NmVhOGIwNGEyMjkwMWYzNTlmNDI0NmM0YTczNzg2MzhhOGY0YzlkNTA5NDM5YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTg2MGVhNDJmMzJhMTg1M2M5NThmNGUwNTkyZDE2YjgwYTE3YWVmNmNjMzY0ZDRhNzVmY2VmNTU1ZTNjNzIxNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjY0MjA4YWE5NTE2ODAyOWJmMDE5N2IwOWVlZTc5YTc5NGYyNjk3YzZlNzNhZDY5ODJmNmRiNjU1NGYyZjNlYSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_a644f491f99e46e5866bf2422ea5f57b",
+      "statement": "The project site has a How to cite section with the Zenodo concept DOI and a BibTeX block with a VERSION placeholder, and CITATION.cff holds the same citation data for GitHub.",
+      "evidence": [
+        {
+          "resource": "repo://CITATION.cff",
+          "version": "repo-file-v1:sha256:4160e7128a2add62df95163c61b7ba7d50327dfe3556b6c6fcc4fb48e2473d2d"
+        },
+        {
+          "resource": "repo://site/index.html#L280-L303",
+          "version": "repo-lines-v1:sha256:e81645e001d01c0fef07c800683c186858cf7ae5faf5106f00ac359c4a65934e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI2MWI5ZDY3Y2U0YmNhZWE2MmUwM2NkYjQxY2I0YjAxNDc3ZDE5NzgwNzAzZjIzZGUzOTE0YzI3MDVhOWU5MWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmNjRiYzRlZGY2ZDQzYTIzNmFlODcwYjU0MTI1NGNmODc1ZWFhZGUxOTgyOGY3NjU4OWRkYjg2OTZjYTQ0MTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhOGI4Yjg5ZmNlZWY2MmZjOWE4ZDc3NGM2YmE0NzU4Nzc3NTU1YmJkMDFmZmFlNzBhZDQ0NTBhZjQzM2FmZjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ1NjgzMDhkMTBjY2JmMWUzZWY5M2UzMzA1YjU5NDQyYzg5NjA1YTIwYjNlNmU1NTJjMjQ4OTU3NTQ1NWY0M2EifQ"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-02T08:58:22.323Z"
+    "at": "2026-11-07T10:50:01.257Z"
   }
 }

@@ -48,10 +48,10 @@ sources:
     resource: repo://src/platform/tauri.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
-generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
+    at: 2026-11-07T10:50:01.257Z
 ---
 
 # PDF Viewer and Marks
@@ -229,6 +229,8 @@ There, with the **lopdf** crate, `embed_marks` builds one annotation dictionary 
 The page's own dimensions come from its `MediaBox`, walking the page tree to inherit it (US Letter as the fallback). Annotations are appended to each page's existing `/Annots` — whether stored as a direct array or as a reference to one — so annotations already in the PDF survive. A mark whose page is beyond the PDF's actual page count is skipped rather than failing the whole export (`embed`), since the marks and PDF bytes are two files a reviewer might have edited independently. `parse_marks` re-implements `parseMarks` defensively (a malformed mark is dropped), and an encrypted PDF is refused outright before anything is written.
 
 Authorization on the export path: the source must be a PDF of the open project (`project_pdf` — inside the project directory or an approved escape), the destination must be either `'original'` or a path the export dialog returned this session (`export_target`, from `writable_exports`), and the final write refuses a symlink destination (`assert_not_symlink`). Outcomes come back to the dialog as `{ ok: true, path }` / `{ ok: false, error }` — failures never throw across the bridge.
+
+The same gate protects the text and binary exports of other features: `text_pick_export_path` accepts the file types `txt`, `jsonld`, `ttl`, `graphml`, `csv`, `svg` and `png`, and `text_write` and `export_write_bytes` write only to a path it returned this session. The graph image download uses them (see [Knowledge Graph](knowledge-graph.md)).
 
 ## Reading-position persistence
 

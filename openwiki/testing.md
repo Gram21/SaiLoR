@@ -106,10 +106,10 @@ sources:
     resource: repo://vitest.integration.config.ts
   - id: openwiki-source-6369b39e1545dd104877b6e7
     resource: repo://vitest.mutation.config.ts
-generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
+    at: 2026-11-07T10:50:01.257Z
 ---
 
 # Testing Strategy
@@ -560,6 +560,7 @@ step "Checking project site links (site/)"           # npm run check:site
 step "Running tests (vitest)"             # npm run test:coverage  (unit tier + thresholds)
 step "Running integration tests (src/test/integration/)"  # npm run test:integration
 step "Building static SPA (vite build)"   # npm run build
+step "Checking the normal build holds no demo data"  # grep dist/ for the demo project id
 step "CI passed ✔"
 ```
 

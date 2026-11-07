@@ -3,14 +3,15 @@ type: operations
 title: Online Demo and Project Site
 description: How the compile-time DEMO_MODE build, the in-memory demo adapter, the schema-editor demo mode and the bundled demo PDFs work, and how the static project site plus the demo are built and deployed to GitHub Pages.
 tags: [demo, site, github-pages, vite, platform-adapter]
-verified:
-  - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
 sources:
   - id: openwiki-source-5f219f204b3e870beec929d9
     resource: repo://.github/workflows/pages.yml
+  - id: openwiki-source-d6a9eb56960e984a3cd0cce3
+    resource: repo://CITATION.cff
   - id: openwiki-source-2f6e34c116f239a0a80c7cae
     resource: repo://scripts/ci/pages.sh
+  - id: openwiki-source-d440ddd3334dbd9c611629bf
+    resource: repo://site/index.html
   - id: openwiki-source-54631e6ebf1d3b815c4a5eed
     resource: repo://src/App.tsx
   - id: openwiki-source-f65a101199959fef5004fce6
@@ -25,7 +26,10 @@ sources:
     resource: repo://src/platform/index.ts
   - id: openwiki-source-5e1b077422a94ae165e88e4e
     resource: repo://vite.config.ts
-generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
+verified:
+  - by: openwiki/0.7.3
+    at: 2026-11-07T10:50:01.257Z
 ---
 
 # Online Demo and Project Site
@@ -50,13 +54,16 @@ to the site), skips the update check, and opens the demo project at start.
 `getPlatform()` (`src/platform/index.ts`) returns `createDemoAdapter()` when `DEMO_MODE` is set and the
 shell is absent (see [Architecture](../architecture.md)). The adapter in `src/platform/demoAdapter.ts`
 holds one project in memory. Every method that would touch the disk, the network or git answers as if the
-user cancelled, or refuses with `DEMO_NOT_SAVED` / `DEMO_NOT_AVAILABLE` (`src/demo/text.ts`). Nothing
+user cancelled, or refuses with `DEMO_NOT_SAVED` / `DEMO_NOT_AVAILABLE` (`src/demo/text.ts`). This
+includes `writeBinaryFile`, so the graph PNG download refuses with `DEMO_NOT_SAVED`. Nothing
 reaches local storage, so a reload starts over. In schema mode the save handle is a download, so saving
 the schema hands the visitor a `project.json` file.
 
 ## Demo content
 
-`src/demo/project.ts` builds the demo project text. There are seven demo papers with bundled PDFs in
+`src/demo/project.ts` builds the demo project text from the project file, the reviewer seat files
+(`reviewer-*.json`) and the consolidated files (`consolidated.json`) under `src/demo/data/annotations/`, so
+the demo also shows the consolidation seat. There are seven demo papers with bundled PDFs in
 `src/demo/papers/`; their licences are listed in `src/demo/PDF-LICENSES.md`. The PDFs are not imported
 by the code. A small Vite plugin in the demo build emits them as plain files, so the normal build never
 contains them, and the file names must match `DEMO_PDF_FILES` in `src/demo/project.ts`.
@@ -72,6 +79,12 @@ contains them, and the file names must match `DEMO_PDF_FILES` in `src/demo/proje
   progress is never cancelled (`concurrency: pages`).
 - The Pages source must be set to GitHub Actions once in the repository settings, and the
   `github-pages` environment must allow the deploying branch.
+
+## Citation on the site
+
+`site/index.html` has a "How to cite" section with the Zenodo concept DOI and a BibTeX block that has a
+`VERSION` placeholder. A comment in the page says to use the version DOI of the release before release.
+`CITATION.cff` in the repository root holds the same data for GitHub's "Cite this repository" button.
 
 ## Tests and requirements
 

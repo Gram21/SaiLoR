@@ -24,12 +24,18 @@ sources:
     resource: repo://src/main.tsx
   - id: openwiki-source-24c09c3b54387889db23d752
     resource: repo://src/platform/adapter.ts
+  - id: openwiki-source-bddbb7f6aca9d2392d629f42
+    resource: repo://src/platform/assemble.ts
   - id: openwiki-source-c5f69fb184c9942bb27eaf58
     resource: repo://src/platform/bridge.ts
   - id: openwiki-source-d1afade4641722495f434a61
     resource: repo://src/platform/desktop.ts
   - id: openwiki-source-776dd28cc442c205e0a91460
     resource: repo://src/platform/index.ts
+  - id: openwiki-source-176d32cd8ce02636461bc29b
+    resource: repo://src/platform/offMain.ts
+  - id: openwiki-source-eaa560a5d319edfbd4aad953
+    resource: repo://src/platform/projectJobs.ts
   - id: openwiki-source-9b49ad2f97827d5ed9890232
     resource: repo://src/platform/unsupported.ts
   - id: openwiki-source-876d93ca738ea8e9f2e60629
@@ -52,10 +58,10 @@ sources:
     resource: repo://tsconfig.node.json
   - id: openwiki-source-5e1b077422a94ae165e88e4e
     resource: repo://vite.config.ts
-generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
+    at: 2026-11-07T10:50:01.257Z
 ---
 
 # Architecture
@@ -300,7 +306,10 @@ single job:
   (`update:progress`, `update:downloaded`, `update:error`) arrive via Tauri's `listen` API, with
   `replace` used for the update progress stream so an in-flight download is never tracked twice. It
   also owns `assembleProject`, the read-side reassembly of a split on-disk project into the logical
-  whole-project text (see [Data Model](concepts/data-model.md)'s "On-disk layout").
+  whole-project text (see [Data Model](concepts/data-model.md)'s "On-disk layout"). The reassembly
+  itself lives in `src/platform/assemble.ts`; when a project opens, the head and every batch are
+  assembled and parsed in a background worker (`projectJobs.ts`, `offMain.ts`) instead of on the main
+  thread (see [Progressive Loading](concepts/progressive-loading.md)).
 - **`DesktopAdapter` (`src/platform/desktop.ts`)** — the renderer-side *logic* of the desktop
   adapter, implemented against `SlrBridge`: baseline tracking for `saveProject` (`lastWritten`,
   `rebaselined()`, `withBaselineDropped()`), recents, git result parsing, `StaleSaveError` mapping,

@@ -3,16 +3,19 @@ type: workflow
 title: Knowledge Graph View
 description: How SaiLoR builds a graph from papers, authors, venues, keywords and answers, lays it out in a worker, filters it with depth queries or a Cypher subset with hard limits, folds the node list into a side drawer, and exports it as JSON-LD, Turtle, GraphML or CSV.
 tags: [graph, knowledge-graph, cypher, force-layout, canvas, export, web-worker]
-verified:
-  - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
 sources:
   - id: openwiki-source-11aec2ccfdae4fb5b6de97b7
     resource: repo://src/components/ExportGraphDialog.tsx
   - id: openwiki-source-c962bf9f3bb0b8a8f0500c3e
     resource: repo://src/components/graphCanvas.ts
+  - id: openwiki-source-0f756e2ec2a65b393c6520d6
+    resource: repo://src/components/GraphDownload.tsx
+  - id: openwiki-source-72ae9063e01aecc7279eb805
+    resource: repo://src/components/graphImage.ts
   - id: openwiki-source-8aa7502a33c2a1bd25289806
     resource: repo://src/components/GraphView.tsx
+  - id: openwiki-source-9690f05ae6bd7e4ffa4bbeb8
+    resource: repo://src/components/Toolbar.tsx
   - id: openwiki-source-fe3d3b035ab01f9208923099
     resource: repo://src/model/graph.ts
   - id: openwiki-source-6e5d76ccd1a06eee34f0fcd1
@@ -23,7 +26,10 @@ sources:
     resource: repo://src/model/graphLayout.ts
   - id: openwiki-source-0cd6363bcc5b6192ad82d9e5
     resource: repo://src/model/graphQuery.ts
-generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
+verified:
+  - by: openwiki/0.7.3
+    at: 2026-11-07T10:50:01.257Z
 ---
 
 # Knowledge Graph View
@@ -44,10 +50,11 @@ All graph logic is pure TypeScript under `src/model/`; the components in `src/co
 Edge types are `authoredBy`, `publishedIn`, `hasKeyword`, `cites` and `hasAnswer`.
 Authors, venues and keywords are merged by normalised text, and DOIs are normalised so that `doi:` and URL forms match.
 
-`graphSource` and `graphTrees` pick which answers feed the graph:
-
-- A single-reviewer project, or a multi-reviewer project with consolidated answers, uses the consolidated tree.
-- A multi-reviewer project with no consolidated answers yet uses one reviewer seat. The user picks the seat.
+`graphSeats`, `defaultGraphSeat` and `graphTrees` pick which answers feed the graph:
+- A project with one reviewer always uses its consolidated tree.
+- A multi-reviewer project lets the user pick a source: each reviewer seat, and the **consolidation seat**
+  (`CONSOLIDATION`) once a consolidation was saved (`hasConsolidation`). The consolidation is the default
+  source when it exists, otherwise seat 1.
 
 ## Layout and drawing
 
@@ -56,6 +63,17 @@ Authors, venues and keywords are merged by normalised text, and DOIs are normali
 - Dragging a node sends `drag` and `release` messages to the worker. A generation number drops stale frames.
 - `graphCanvas.ts` draws on a 2D canvas. `cull` skips off-screen items, labels show only above `LABEL_ZOOM` and below `LABEL_MAX` nodes, and edge types use different dash patterns.
 - `jsdom` has no `Worker`, so tests run the same host code inline.
+
+## Graph menu and image download
+
+The toolbar has a **Graph** menu (`Toolbar.tsx`). It holds **Knowledge graph**, which opens `GraphView`,
+and the graph export item, which opens `ExportGraphDialog`. The **Save** menu keeps the export item too.
+`GraphDownload.tsx` adds a download panel to the graph view: the user picks SVG or PNG, and the visible
+area or the whole graph. `imageFrame` in `graphImage.ts` fits every placed node into an image of at most
+`MAX_SIDE` (8192) pixels. `sceneToSvg` draws the shown edge types, nodes, query marks and, when zoomed in
+enough, labels, without hover or selection highlight. `sceneToPng` draws the same scene on a canvas.
+`GraphView` writes SVG through `platform.writeTextFile` and PNG through `platform.writeBinaryFile`, after
+`pickTextExportPath`. REQ-UI-260.
 
 ## Nodes drawer
 

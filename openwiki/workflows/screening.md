@@ -48,8 +48,8 @@ sources:
     resource: repo://src/model/screeningMarks.ts
   - id: openwiki-source-1e07552900756183b8f9bb84
     resource: repo://src/model/seatTree.ts
-  - id: openwiki-source-6caeef66ec21bf4ae91fe55c
-    resource: repo://src/platform/tauri.ts
+  - id: openwiki-source-bddbb7f6aca9d2392d629f42
+    resource: repo://src/platform/assemble.ts
   - id: openwiki-source-5f3156110d9aafbc8e103762
     resource: repo://src/screening/counts.ts
   - id: openwiki-source-bb661fe9e76765e4c890ce71
@@ -68,10 +68,10 @@ sources:
     resource: repo://src/state/store.screeningAbstract.test.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
-generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
+    at: 2026-11-07T10:50:01.257Z
 ---
 
 # Screening Mode
@@ -459,7 +459,7 @@ of the *same kind* that lists one of the same papers can collide.
 Two compatibility notes keep older files readable:
 
 - A screening project's highlight files from before they had their own name are still recognised by
-  `parseMarksFileName` as `legacy`. Both read paths (`assembleProject` in `platform/tauri.ts`, and
+  `parseMarksFileName` as `legacy`. Both read paths (`assembler` in `platform/assemble.ts`, which `assembleProject` in `platform/tauri.ts` wraps, and
   `projectFromFiles` in the model layer) process legacy files first so a file under the kind's own
   name wins; `assembleProject` additionally drops a legacy `marks-*.json` when an *annotation*
   sibling sharing the folder lists the same paper id, so the two kinds never fight over one file.

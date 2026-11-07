@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:0b0646cf5556503d9416ab4a9eb9ab5a67e1be9bfbb77816c1b48f1a2233e49a",
+  "pageVersion": "sha256:100df013c5adda41ff6c7e3388d06aab834d295dfff1dc15f2c6d1dbe6ae5174",
   "claims": [
     {
       "id": "claim_73038aa7de1248059ddba1afcb29f3d4",
@@ -8,7 +8,7 @@
       "evidence": [
         {
           "resource": "repo://README.md",
-          "version": "repo-file-v1:sha256:b5a318e80ff5f3dc2aaa2ed70de83746855456a9363d2c1f652560f5a22bd9be"
+          "version": "repo-file-v1:sha256:0802bec33d90dd451a8e4fa1cbd329129870563409e99f147513696e58fc5c51"
         },
         {
           "resource": "repo://src/model/project.ts",
@@ -22,7 +22,7 @@
       "evidence": [
         {
           "resource": "repo://README.md",
-          "version": "repo-file-v1:sha256:b5a318e80ff5f3dc2aaa2ed70de83746855456a9363d2c1f652560f5a22bd9be"
+          "version": "repo-file-v1:sha256:0802bec33d90dd451a8e4fa1cbd329129870563409e99f147513696e58fc5c51"
         },
         {
           "resource": "repo://src-tauri/src/project.rs",
@@ -66,7 +66,7 @@
         },
         {
           "resource": "repo://src/platform/adapter.ts",
-          "version": "repo-file-v1:sha256:28dc2594d03b39b43fb2dc320b4f667580ce7c4376c10c735a47411513143f02"
+          "version": "repo-file-v1:sha256:5377036bf0f2870106b0bbda752b23cf8699f814147bef97f80ea43811ae1e8a"
         }
       ]
     },
@@ -98,7 +98,7 @@
         },
         {
           "resource": "repo://src-tauri/src/pdf.rs",
-          "version": "repo-file-v1:sha256:5b26cd71120a6444ac00ed88aabce8e44dccbb9f75faeec54b8b9b8a866f3b95"
+          "version": "repo-file-v1:sha256:2cd1fb9fd3f53e32b8f98c3743fe77e410a1af35e242195f8e2b904ddc1814d6"
         }
       ]
     },
@@ -122,7 +122,7 @@
       "evidence": [
         {
           "resource": "repo://scripts/ci.sh",
-          "version": "repo-file-v1:sha256:c77ca6e5e6020d073122e0acc8e9ea43ee4029a5427a45c32c0bad12db2e25f9"
+          "version": "repo-file-v1:sha256:fe0b5e072ba9e7d13fb791877568f540536b9e684e1370d6cfd9732ed0647d89"
         },
         {
           "resource": "repo://vite.config.ts",
@@ -154,15 +154,15 @@
     },
     {
       "id": "claim_3db558b016c646dda7ea2e0d88a95b30",
-      "statement": "scripts/ci.sh is the provider-agnostic CI pipeline and single source of truth for 'does the app build and pass its checks': install (npm ci, skippable with SKIP_INSTALL=1) → typecheck → wiki-link check → site-link check → npm run test:coverage → npm run test:integration → npm run build; packaging for release installers is npx tauri build (make build), with Linux bundles built in Docker (make docker-linux).",
+      "statement": "scripts/ci.sh is the provider-agnostic CI pipeline and single source of truth for 'does the app build and pass its checks': install (npm ci, skippable with SKIP_INSTALL=1) → typecheck → wiki-link check → site-link check → npm run test:coverage → npm run test:integration → npm run build → a guard that dist/ holds no demo data; packaging for release installers is npx tauri build (make build), with Linux bundles built in Docker (make docker-linux).",
       "evidence": [
         {
           "resource": "repo://Makefile",
           "version": "repo-file-v1:sha256:cb97203aadc92760bde0767d81ae7ad73d1f1241357ee8c40b48c42a1c1c0dac"
         },
         {
-          "resource": "repo://scripts/ci.sh",
-          "version": "repo-file-v1:sha256:c77ca6e5e6020d073122e0acc8e9ea43ee4029a5427a45c32c0bad12db2e25f9"
+          "resource": "repo://scripts/ci.sh#L20-L62",
+          "version": "repo-lines-v1:sha256:ea3660fd45cccefaf720efe7d8c3b9e7412577ebfac0dbf895a957d9daae3844:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIyMTAzNzBjMjc0OThhOTRiMGUxNDBhY2JkZDhiMGM0OTlmMTdiODYyNDBjMTMzYjAxMDE2ZjViZTlhYjJjZDQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MTExYTJlMDI4MDA1ZmViOTkzMTcwNzdlMDRhNTEwNzQ1MDExNjU0Y2M5NzVjNzdjMmMwODJhYWI1YzY0YjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhZjViMzU1YjI5NDRlMjg1OGUwYWE1NWEwMDg2ZmE3Mzg5MDNlOWUyZDg4NWRkZDYzODJjNzFlZTdiNGNlMzMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
@@ -171,11 +171,11 @@
       "statement": "The Tauri shell (src-tauri/src/main.rs) registers the plugins (single-instance with focus_main, window-state SIZE|POSITION|MAXIMIZED, dialog, updater, and an slr-os plugin whose js_init_script sets window.__SLR_OS__ to process.platform-style names), denies webview permission requests, serves PDFs over the async slr-file:// scheme via protocol::serve, and its generate_handler registry is grouped by domain: project_*, annotations_*, feedback, pdf_*/text_*, paths_*, web_fetch, llm_*, ollama_*/localruntime_*/local_probe, ~40 git_* commands, update_*, and close_*.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/main.rs#L110-L206",
-          "version": "repo-lines-v1:sha256:5269ab8b23eff5a07c5ebfcb6d7ff2f1dc8916fc515b7e37ce6cb0e4d0dd2da5:eyJzZWxlY3RlZExpbmVDb3VudCI6OTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhM2I5NWFlMzgyMWJjZmZjNDQzYjQzOWUxZjY5Nzc1MmUxNjA1ZDdkNTVmZjA2OGY4ZDk4NzE2MzFhMjRkZDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmY2QxNWFhYmMxMDcxYmJjZGViNDYzMmNlZTUyYTJmZDVmMzJiZjAyYmQ2ZTc2M2M1MjY5N2FlZGIxYTEwNTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg2ZTk4NmI3ODAxMzQ1ZTA1ZDI1MzVlYzI3NTY2YzNlZjViMGM5ZTJhYmNiN2ZlMjQ5MDJhZGI4MTE3ZDJiM2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjMjRhNjI3MTJiMTE2MGQ4MGYxYTQ4OWFhZWY2YzBjZTBkOTU1NTcxYzI5MGRjMWJkMWY5ZDViZGEwNDFhNjAifQ"
+          "resource": "repo://src-tauri/src/main.rs#L110-L207",
+          "version": "repo-lines-v1:sha256:319fe11eaf0ba98a34d0a7729af0487f1cc9551ab32eb580b6b9ac59f4e50f78:eyJzZWxlY3RlZExpbmVDb3VudCI6OTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhM2I5NWFlMzgyMWJjZmZjNDQzYjQzOWUxZjY5Nzc1MmUxNjA1ZDdkNTVmZjA2OGY4ZDk4NzE2MzFhMjRkZDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmY2QxNWFhYmMxMDcxYmJjZGViNDYzMmNlZTUyYTJmZDVmMzJiZjAyYmQ2ZTc2M2M1MjY5N2FlZGIxYTEwNTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg2ZTk4NmI3ODAxMzQ1ZTA1ZDI1MzVlYzI3NTY2YzNlZjViMGM5ZTJhYmNiN2ZlMjQ5MDJhZGI4MTE3ZDJiM2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjMjRhNjI3MTJiMTE2MGQ4MGYxYTQ4OWFhZWY2YzBjZTBkOTU1NTcxYzI5MGRjMWJkMWY5ZDViZGEwNDFhNjAifQ"
         },
         {
-          "resource": "repo://src-tauri/src/main.rs#L207-L232",
+          "resource": "repo://src-tauri/src/main.rs#L208-L233",
           "version": "repo-lines-v1:sha256:0935c71da42322776f577213d464a0d71e8ec99fa7d40ade635558677b2ec61b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMzNDM3NmNmNDdmNWY4ZDQ3MGMxNGQ4MjIwNzg4YWU5NmZjZmU1NTA0MjA5NzU0ZjJlMjA4YTkzODUwY2QyNTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5YzEzNTkwNjY1NjMyM2QxYzVlYTQxNjU0ZWU2NmFmYjU4NWFjZGNmYWVhY2ExMjFkNWUzMGJmMTkzZWVkZDciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU2MWUxNWZmMjEyNmE1ZTNhZjMxY2NkNzY2MTRmZGE4MjI1ZDQyZDljMGM0NWUwOWU5Mjc1M2I2NmQwYzE3NzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
         },
         {
@@ -190,11 +190,11 @@
       "evidence": [
         {
           "resource": "repo://src/platform/bridge.ts",
-          "version": "repo-file-v1:sha256:d8242765f30768f8cdaf4884ed845c5702397c01444bb3c798f2f93c8e7cbb33"
+          "version": "repo-file-v1:sha256:5c130bf0496f42cee62ca6d6294e5f1ca93b274921f57b375011d9c63c21c9cc"
         },
         {
           "resource": "repo://src/platform/tauri.ts",
-          "version": "repo-file-v1:sha256:59380b0644211c58027139e71cbae8a016c4416e89cc02fafd75ee564891cb07"
+          "version": "repo-file-v1:sha256:6e968f505094c7c4a3f10fd135d34f4dd06f4ca6ef99a39b4bf197eeb7f79518"
         }
       ]
     },
@@ -226,7 +226,7 @@
         },
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -239,11 +239,11 @@
           "version": "repo-lines-v1:sha256:b1165f002e01885e30482a736b5a5ecd2f629a0409bbf9c26dd2d4ef652ad317:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjExNjVmMDAyZTAxODg1ZTMwNDgyYTczNmI1YTVlY2QyZjYyOWEwNDA5YmJmOWMyNmRkMmQ0ZWY2NTJhZDMxNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjExNjVmMDAyZTAxODg1ZTMwNDgyYTczNmI1YTVlY2QyZjYyOWEwNDA5YmJmOWMyNmRkMmQ0ZWY2NTJhZDMxNyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiM2YwOTNkNjg0NGQyZjk4NGEyOWExYjJmZjViYjI1OWJkOTUwNzI3MDViYjZiYjNhM2MyNzBjYjhjMWU1MjUyNCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNWFiNzk0ZjFjYTFhZmYxMGViNzQzOTNjYWNiZWNkNmY0OTk0ODE2M2E4MDA0ZTJjMmE2ZjIxZjU2ZjY1Yjg4MSJ9"
         },
         {
-          "resource": "repo://src/state/store.ts#L3242-L3287",
+          "resource": "repo://src/state/store.ts#L3241-L3286",
           "version": "repo-lines-v1:sha256:42a5faf8fe6fdcf704f9b9de05018812841a2437d1f40ce763a5b977649993e8:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg3ZTAxOTRmZGVkZWU4Yzc5ZThkYWFjZGZhMDdiZTM3MzBlYTdhNjA0YmQzNjhiMWUwNzMxY2IzZmU5Nzg4NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzMGY1NTY5MmI0Zjk2ZTk2NDBlNzU2M2YzYjgwMjRmYzEwMjE1NzkxNmFhM2ZmMzJjZjRkNTQ1OGJjMDFjMjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhiZTQ2ZDhhMzViMThlNGZhODJmZWYxMjM1ODlhZTQwZGQ1MmVjOGJmZDVmNmM1ODQ4NmRjMjRiMmIzMjQ4ZGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjViYjU0NWRjYjYyNWQ0ZWE4MjI1MGNjYmVkNjM4MDkxYWE3Njk1NzgzYTQ2MDNhYTFjZGQwNjE4NjJiNGFkNDgifQ"
         },
         {
-          "resource": "repo://src/state/store.ts#L3288-L3362",
+          "resource": "repo://src/state/store.ts#L3287-L3361",
           "version": "repo-lines-v1:sha256:d5cd49277875cc2057faaefc61162a52e998e9fd4d6cf7e4d2f4e110d9d7e61a:eyJzZWxlY3RlZExpbmVDb3VudCI6NzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg2Y2E0YTc2ZmRmMGUzYmNiYTU2NzFkYzhjMGQ3MzhmZWRjYmYyNWQ5MTRiNTVlYWQxZTBhMzA0NmQ4NzdjNDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM2YzQ4NjVkMGFmMzZmODA4ZmQ1Nzk5ZTg1NmEwMGRmNGY3YzQ4MmY5MDJhMDgxYjgzOTI2OGFlOWZjYTM0ZDUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5OTNhY2I0MmE3M2E4N2RjYjA3N2UzMDAxMWMzMTgxODg3MmU2NDIxMjQ0MWViNDdhZTA3MTZkMDVkOTcyNmQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjlhMDU5NDFhZWM4MzRiYzVmZjBmNmQ2ZTU3OTQwZGJlNzM1NzY4ZDZhZWU3NDE3MGU0YzFlOGNiZDNiMTcxYTAifQ"
         }
       ]
@@ -323,7 +323,7 @@
           "version": "repo-lines-v1:sha256:65e2d34361422f14d9771266ad7e625bdc9d90f7183a6f2592fd41b3e5792297:eyJzZWxlY3RlZExpbmVDb3VudCI6NDAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRmNjgzMjY3ODY1NDRkNzhiMWU4MjZiNDVhNTBjZTUzZjY0N2VjY2IwNGQzMTc3ZmE5OWU1MTZiOTlmYWRlNjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMxMzJlODUzOGI0MWYyOTkwYjJmMjc5ZjQxYzNjOTgxYzkyOTM0OTdkMWYzY2I1OTcyNzg1MDFjZTIxNzM0ODgifQ"
         },
         {
-          "resource": "repo://src/state/store.ts#L2754-L2794",
+          "resource": "repo://src/state/store.ts#L2753-L2793",
           "version": "repo-lines-v1:sha256:aaa835e1511f765ad166c1ab206587d0d917f44c3052b1b4cad9807021ef6ccd:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBkN2JhZDI3MmIwYTBjNTdmODQwYmFiYWU3YmNlN2RhNmQzMWU3MTUyODM1MDgwZWY0Nzg3OGMzMmY2OWFjMmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjNjZWIzMmI4ZjU4OTA2YWMwNjZiYTJhODFiYzIzNjIzNWEyMjIwNzE0N2Q2OGQ5MjNiMTdlMDhhNDRmYTBlMjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImMwYTYwZDIzZWFhODZmOGY1MmI3YThjYmQ5N2E2M2NiOWE2ZjNjMDMwYWU5ZjZjMjU4YzFhZWRhNWE0MDAxNWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZlZDUzZGY2NjQwZjI2YTIwNWU5ZTNjMzgxZWNjN2JiY2QyMWQ2YzAyYmIyZGIzMGU3YzM1ZjRjMmVhZjI5NmEifQ"
         }
       ]
@@ -353,6 +353,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-02T08:58:22.323Z"
+    "at": "2026-11-07T10:50:01.257Z"
   }
 }

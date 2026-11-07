@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:5c398f61ba912e075b308778f484721e391f904b94321aff89a41b4f1d0cf2e8",
+  "pageVersion": "sha256:95ffd2e8aec9314bfda3a7c4223cf28b7bd8f605249d7596b9be8971d17f548c",
   "claims": [
     {
       "id": "claim_8e1b0de973ac4945a86e1a1a44c12f8a",
@@ -290,7 +290,7 @@
         },
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -343,7 +343,7 @@
       "statement": "applyAiSuggestions is the only place model output reaches the project data and guarantees: it never overwrites the reviewer (a field answered since or a path that no longer resolves is skipped), the whole fill is one undo step, and a run that writes nothing leaves no trace.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts#L3676-L3687",
+          "resource": "repo://src/state/store.ts#L3675-L3686",
           "version": "repo-lines-v1:sha256:e93a51e8444965856834f4e0803cfb85512d0ed36f91905b7a4662d144aacb7e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUxYjZmNjk1MjlhMmIyNGE3NTI0ZmNlOTEwNWYyOTk4YWM0YTFkZWMxYjkwNjNlOTc4NmZhZTdiMjIxOTUxZDAiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlNmRjNjI3MTUyMWZkZjk1MDA0NWJmZDJhYTJhNmFkMDYyMzBmYmUxYThkYjZmM2NhZjJiMjU2MTAzYzA1MmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhjZWViMjcwMzJiZWJlMjFlMWNmNGRmOTIzZjBkNzIzZDZlMjUwYjFmYmI3NmI3NTNkMjc3MWIwMjJiZDZjMTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjYzNmJjZjVlMWJkOTRkNGFhZDQ1ZTBhNDMxMzQ2NzY1MjliNmY1ODNkYmY5ODg3ZWMxMzI1ZWE0NDRmYjJjNzAifQ"
         }
       ]
@@ -354,7 +354,7 @@
       "evidence": [
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -368,7 +368,7 @@
         },
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -377,11 +377,11 @@
       "statement": "aiMarks is session-only (lives beside the project, never serialized to disk) and marks fields the app filled that the reviewer has not looked at; useAiMark exposes the marked/confirm pair and confirmAiMark drops the mark.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts#L160-L160",
+          "resource": "repo://src/state/store.ts#L159-L159",
           "version": "repo-lines-v1:sha256:b467f18cdeb2e27b90d3476b26ebeb7de99aa751fc1b00a1705568d9f11ed8c0:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYjQ2N2YxOGNkZWIyZTI3YjkwZDM0NzZiMjZlYmViN2RlOTlhYTc1MWZjMWIwMGExNzA1NTY4ZDlmMTFlZDhjMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjQ2N2YxOGNkZWIyZTI3YjkwZDM0NzZiMjZlYmViN2RlOTlhYTc1MWZjMWIwMGExNzA1NTY4ZDlmMTFlZDhjMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmZhOGMyMWIwYzk3YzQ3NGExNGJiNzczMjdjYjhlYzJiYzUyYTBiNTA2Y2VlOWZkYzZiNjdkZjk3MmJiODgyYSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjRiNzZjY2RjMjU5ZjFkZDI3MzE0YzY2MDExZmMwMmZhMzhiMmFjNjMxOGJhNTRiNTU1NWU0MGViYmI5YjBmYyJ9"
         },
         {
-          "resource": "repo://src/state/store.ts#L856-L856",
+          "resource": "repo://src/state/store.ts#L855-L855",
           "version": "repo-lines-v1:sha256:17635585cf655e5fb49b79e89e95b82f64aecee57082737446f9bfc1db0f7f97:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTc2MzU1ODVjZjY1NWU1ZmI0OWI3OWU4OWU5NWI4MmY2NGFlY2VlNTcwODI3Mzc0NDZmOWJmYzFkYjBmN2Y5NyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTc2MzU1ODVjZjY1NWU1ZmI0OWI3OWU4OWU5NWI4MmY2NGFlY2VlNTcwODI3Mzc0NDZmOWJmYzFkYjBmN2Y5NyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNmI4NmI0NWU0ZDQ1OGJiMjQxMGYxYzRlOGZlYjQ1MjA5YTg2Y2IxYWU3MjNmYzlkNTJmMTY3ZWFmOTRmY2FmMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNDJlMjc4NDNjMDAwNzhlMDVlMzNmNjkxNzBiZDM3MjdjZWNjODBiOTQ0N2ZlNWVmNjFjMDU4MjY2OWU0ZTZiMSJ9"
         }
       ]
@@ -655,6 +655,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-02T08:58:22.323Z"
+    "at": "2026-11-07T10:50:01.257Z"
   }
 }

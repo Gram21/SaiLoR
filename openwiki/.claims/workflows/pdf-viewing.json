@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:bcc98a83c2ea8f57b86abaf4ec69b3065e8acfbde392c4437af1f2fc70d7121c",
+  "pageVersion": "sha256:0e0a04f80b24a1ce380a2b47163f72f9249199e63dfa3c5f325f1fc070dccf0f",
   "claims": [
     {
       "id": "claim_b410c03b2c5e4183ab4744569122404e",
@@ -62,7 +62,7 @@
       "evidence": [
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -206,7 +206,7 @@
         },
         {
           "resource": "repo://src/platform/tauri.ts",
-          "version": "repo-file-v1:sha256:59380b0644211c58027139e71cbae8a016c4416e89cc02fafd75ee564891cb07"
+          "version": "repo-file-v1:sha256:6e968f505094c7c4a3f10fd135d34f4dd06f4ca6ef99a39b4bf197eeb7f79518"
         }
       ]
     },
@@ -309,7 +309,7 @@
           "version": "repo-lines-v1:sha256:cf56b5aa19ceddc53b2ae67e898566acd626b860e73f2130870b9f2269fb160b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlMWRjMjY1YWVmNGI1NTgxNDZkNTk2MGYwZDkwZDkyN2RmZjEyNzA3MTZmYjc2YTc1NzBiMjYyMDc2MGNiOGIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjczODEwZWE0ZDBlYzE4NWMyMzI3MjdlNjRiMDEyMTY5NzQxMTgzN2Y3NzgyM2Q3ZWYwZjk0MjFmYjU0NmVkNDUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjYwNjNjNGQxYWY4Y2Q4OWJiMGJkZDc2NTdmZmNiZjY4MDZhNjEwZDc5ZDZjOGQ0YzMwN2MyNDFkZjM5MDA1MjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjRmOTY4YWIxMTI0YTI4Y2ExMmFkMGEyYThhYjU0MWQ2ODRiOWFiYmRiYzE1MjgyMjIyZjFjNGQ2MWU3YzJmNWQifQ"
         },
         {
-          "resource": "repo://src/platform/desktop.ts#L256-L305",
+          "resource": "repo://src/platform/desktop.ts#L250-L299",
           "version": "repo-lines-v1:sha256:a82c8e0c250fc2d76992861059c1c4e8e132ce8fb7afdad99cd00c640b077fd4:eyJzZWxlY3RlZExpbmVDb3VudCI6NTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjhkZDQ0ZGE2YTY0MTA0NTAxN2MyNjE5Njg5NWM1MmI4YzI4Yzk4ZTgzZjUzZGExYmU3YTgxMjc5NzlkNjQyMjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM1ZGFlZDZjNjg2ZjM3NTgzMTkyOTZmYjYxNDMyMDE4YTJmZjEzZDA0ZTI1NWRhM2E1YjU3YjNlMjg2ZTNkYWQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ5NjkyNWE2NWJhOTMxYzFhMzkzY2FhNzI0YjM1NTU5ZjgyMDI3YTM1ZmI2N2I0NmM5Y2IwZTVkNzRhMzg1ZTciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU3NjM2N2ZhYTYxNTBlYjllYTQ3ZGQwYzU3MTNiMmI2MGI3NTJmMmQ4ODA3YjExZjIzZjg0ZjYzNWVmMDlmOTAifQ"
         }
       ]
@@ -320,7 +320,7 @@
       "evidence": [
         {
           "resource": "repo://src-tauri/src/pdf.rs",
-          "version": "repo-file-v1:sha256:5b26cd71120a6444ac00ed88aabce8e44dccbb9f75faeec54b8b9b8a866f3b95"
+          "version": "repo-file-v1:sha256:2cd1fb9fd3f53e32b8f98c3743fe77e410a1af35e242195f8e2b904ddc1814d6"
         },
         {
           "resource": "repo://src/components/ExportPdfDialog.tsx",
@@ -328,7 +328,7 @@
         },
         {
           "resource": "repo://src/platform/tauri.ts",
-          "version": "repo-file-v1:sha256:59380b0644211c58027139e71cbae8a016c4416e89cc02fafd75ee564891cb07"
+          "version": "repo-file-v1:sha256:6e968f505094c7c4a3f10fd135d34f4dd06f4ca6ef99a39b4bf197eeb7f79518"
         }
       ]
     },
@@ -338,7 +338,7 @@
       "evidence": [
         {
           "resource": "repo://src-tauri/src/pdf.rs",
-          "version": "repo-file-v1:sha256:5b26cd71120a6444ac00ed88aabce8e44dccbb9f75faeec54b8b9b8a866f3b95"
+          "version": "repo-file-v1:sha256:2cd1fb9fd3f53e32b8f98c3743fe77e410a1af35e242195f8e2b904ddc1814d6"
         }
       ]
     },
@@ -370,7 +370,7 @@
       "evidence": [
         {
           "resource": "repo://src-tauri/src/pdf.rs",
-          "version": "repo-file-v1:sha256:5b26cd71120a6444ac00ed88aabce8e44dccbb9f75faeec54b8b9b8a866f3b95"
+          "version": "repo-file-v1:sha256:2cd1fb9fd3f53e32b8f98c3743fe77e410a1af35e242195f8e2b904ddc1814d6"
         }
       ]
     },
@@ -388,7 +388,7 @@
         },
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -402,13 +402,27 @@
         },
         {
           "resource": "repo://src/demo/text.ts",
-          "version": "repo-file-v1:sha256:6cf2fb480e1c6417d6f46d6b77de1385e073988c932a266b1f074435096ed22d"
+          "version": "repo-file-v1:sha256:238d8c1707d69271274b5167a52ef31d3659662435a4f2ab8508e68b3165c216"
+        }
+      ]
+    },
+    {
+      "id": "claim_ce2aa08b5f634d459831ea03f6fab4c5",
+      "statement": "text_pick_export_path accepts the file types txt, jsonld, ttl, graphml, csv, svg and png, and the returned path becomes writable for the session, so text_write and export_write_bytes (graph exports and image download) write only to dialog-chosen paths.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/pdf.rs#L284-L306",
+          "version": "repo-lines-v1:sha256:1654c5f7f03b8003495b62ee3aa925a54e06ac37e43eb4dc5f81dbb36dafb447:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg5NGM4YzQ2MzMwNGE0NjY0M2I5ZGFhZDQzNDg2OTg4MWFjNzExMzU4MGQxMTMyMDEzZDJkMzcxNzcyNTE1MjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5ZjY5NGJjZjdiMGI4OWJhMDYyYmRjNjMyYTgyNDRlMDA3Yjg2ZjA1OTZjOGJlZmU2YTVkYTFmZWEwMzc0NzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5MmY2ZjY3MzAyNGE5YWRiNGU4ZjgwYjE4MjZmZTM5YzAzNzliYjc4NjJjYTc5MDBkZmNiYzAxZmFmYzVhMmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI1NjQ1OWZhMzNmZWE5YmQwMzUyMDQzZTM4MTQxNjkzYzI1ZjRjNmI2YWI3ZWFhZWJiZDlkZDU3YzBjMzA0ZjYifQ"
+        },
+        {
+          "resource": "repo://src-tauri/src/pdf.rs#L326-L373",
+          "version": "repo-lines-v1:sha256:d402af8150ed5a728987ab0f2d670f1123c55120935542baa3f2f2c801c0a2c0:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxZmZhMGIwOWUxN2E0ODdiOWZhNjA5NDRkYWNhNzNlMzY2OTdmNjkwMDBjZjA3ZjQ2N2Y0YTZiMjYyYmEyYjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNkMjMzMjFmMTllNzY3ODM1ZjY3NmIxZGEyZjVmYTBjZDg5MzkwYWJjZmJkM2VmMGQxNGQzZmMzYTc2M2JhMTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwOGI1N2RhN2Q4MjU3OGYxNjQ4OTZlZTZkMmJmYzczYjE4OTg5OTE4ZjkwZjkxYmRmZTgyN2U1NWY5MTMyMjYifQ"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-02T08:58:22.323Z"
+    "at": "2026-11-07T10:50:01.257Z"
   }
 }

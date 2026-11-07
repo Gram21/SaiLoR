@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:021f0799fb25950f9da7acb57be1050b93511af8e3cb6352d123c7c00646f808",
+  "pageVersion": "sha256:048e14b91e9707ae5fe4af239435f32ae6b8ce6f2118cae684025c52f7540db1",
   "claims": [
     {
       "id": "claim_77c235236a4f499f9da38bd07202a799",
@@ -12,7 +12,7 @@
         },
         {
           "resource": "repo://src/platform/adapter.ts",
-          "version": "repo-file-v1:sha256:28dc2594d03b39b43fb2dc320b4f667580ce7c4376c10c735a47411513143f02"
+          "version": "repo-file-v1:sha256:5377036bf0f2870106b0bbda752b23cf8699f814147bef97f80ea43811ae1e8a"
         }
       ]
     },
@@ -22,10 +22,10 @@
       "evidence": [
         {
           "resource": "repo://src-tauri/src/main.rs",
-          "version": "repo-file-v1:sha256:a93835f2a283657e013fbc29b249c1f4d68e4457e27f3f767841bc66198e8220"
+          "version": "repo-file-v1:sha256:0f36514f58d53a9957db38d0d2ea642ca294acfc37390fdab554aa79bbf42315"
         },
         {
-          "resource": "repo://src/platform/bridge.ts#L204-L213",
+          "resource": "repo://src/platform/bridge.ts#L206-L215",
           "version": "repo-lines-v1:sha256:f30fa081c54c33b9bc8e14ff21b396a66bffe94567d82d93db75337af5766ece:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2ZjI5ZTUyYzViYTc3ZDcxOWQ0OGFkN2IyMGEwYzlkZDMzNWFmNjUyYWYwNGJmNzA4MmJlYTM4MWEzNjA0NDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
@@ -40,7 +40,7 @@
       "evidence": [
         {
           "resource": "repo://src/platform/adapter.ts",
-          "version": "repo-file-v1:sha256:28dc2594d03b39b43fb2dc320b4f667580ce7c4376c10c735a47411513143f02"
+          "version": "repo-file-v1:sha256:5377036bf0f2870106b0bbda752b23cf8699f814147bef97f80ea43811ae1e8a"
         },
         {
           "resource": "repo://src/platform/index.ts#L9-L24",
@@ -62,7 +62,7 @@
         },
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -86,7 +86,7 @@
         },
         {
           "resource": "repo://src/platform/desktop.ts",
-          "version": "repo-file-v1:sha256:0d896f6309cbb7ab254d27390eb19e45da0eea8039260f59140f150832672aa3"
+          "version": "repo-file-v1:sha256:1dc4cd4b412457275f2d60080121efa45ac518d23c7c22db93536978742d4ba3"
         }
       ]
     },
@@ -95,7 +95,7 @@
       "statement": "PlatformAdapter.getGit() returns a GitPlatform capability object on Electron (the user's own git binary via child_process) and null outside Electron (createUnsupportedAdapter), so a caller cannot invoke a git operation without first proving the runtime has one; getOsInfo(): OsInfo | null established the same nullable-capability pattern.",
       "evidence": [
         {
-          "resource": "repo://src/platform/adapter.ts#L314-L314",
+          "resource": "repo://src/platform/adapter.ts#L316-L316",
           "version": "repo-lines-v1:sha256:e40d0c7bc31c969b8cb09cc3a499dd64706c444580e03fc5774e8bbb5edddb9e:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTQwZDBjN2JjMzFjOTY5YjhjYjA5Y2MzYTQ5OWRkNjQ3MDZjNDQ0NTgwZTAzZmM1Nzc0ZThiYmI1ZWRkZGI5ZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTQwZDBjN2JjMzFjOTY5YjhjYjA5Y2MzYTQ5OWRkNjQ3MDZjNDQ0NTgwZTAzZmM1Nzc0ZThiYmI1ZWRkZGI5ZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDc3YWE0ODBhZGNiMDMzMWQ3NzhkZjJhMTZkNjFhMmQ3NjdhYTk3ZjRlZjkwNzBjYjY2NWRiOTBjMzg0OWZhOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTUxMjBmYWQ4ZjM5ZDhhMGQ1YzdhYzA0MWFhZjhiYmY1YjhlNGUyMTIzMjYzMThhMDU0ZTYzMTNkODI2YmVmMiJ9"
         }
       ]
@@ -105,11 +105,11 @@
       "statement": "The app's primary state lives in a Zustand store with immer middleware in src/state/store.ts (useStore), holding project, currentPaperId, saveHandle, undo/redo past/future stacks, theme, fontScale, pdfZoom, recents, aiMarks, reading position, self-update state, currentReviewer, and consolidation/screening UI state — including consolidationUpdatePrompt, the paper id that drives the ConsolidationUpdatePrompt modal; the store reads getPlatform().getRecents() at module scope for its initial recents.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts#L1-L95",
-          "version": "repo-lines-v1:sha256:acf9468927be8aa70aef6a1ed79630300037f7a5f284a68eb61f53870e49b2fe:eyJzZWxlY3RlZExpbmVDb3VudCI6OTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQyZTgzYTlmMWQ1YjJhNzM4ZDg5YmRmMmMzZTEwODk3ZjJlNTg3OGNhY2UyOGQxZmExZDRkZTg3Y2NkZGIyYjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1MmRkZjA2MWNhYmFkMDY4ZWM2ZGI3ODJkYTRjN2I3N2QxYzY5ZmVmM2I1ZTI1YzRiZjQ4ZjZjZTU3NzNkZjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ0NTdlN2U0YWFlMWVhYzQwYmZlNDZlYTEzY2U2MjMwYWIzYTAzNGE3MmNmMzY2MzdmNDRiYmNjNzE0OTY4YzYifQ"
+          "resource": "repo://src/state/store.ts#L1-L94",
+          "version": "repo-lines-v1:sha256:9e81171a6034875b220c48d29451265a4496e95f76823d24d0a39a08477658a2:eyJzZWxlY3RlZExpbmVDb3VudCI6OTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQyZTgzYTlmMWQ1YjJhNzM4ZDg5YmRmMmMzZTEwODk3ZjJlNTg3OGNhY2UyOGQxZmExZDRkZTg3Y2NkZGIyYjgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY1MmRkZjA2MWNhYmFkMDY4ZWM2ZGI3ODJkYTRjN2I3N2QxYzY5ZmVmM2I1ZTI1YzRiZjQ4ZjZjZTU3NzNkZjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ0NTdlN2U0YWFlMWVhYzQwYmZlNDZlYTEzY2U2MjMwYWIzYTAzNGE3MmNmMzY2MzdmNDRiYmNjNzE0OTY4YzYifQ"
         },
         {
-          "resource": "repo://src/state/store.ts#L1544-L1544",
+          "resource": "repo://src/state/store.ts#L1543-L1543",
           "version": "repo-lines-v1:sha256:37625c1886040c92ef9da2effadee956cad8f0a24a421990cf05969af15daa0c:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMzc2MjVjMTg4NjA0MGM5MmVmOWRhMmVmZmFkZWU5NTZjYWQ4ZjBhMjRhNDIxOTkwY2YwNTk2OWFmMTVkYWEwYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzc2MjVjMTg4NjA0MGM5MmVmOWRhMmVmZmFkZWU5NTZjYWQ4ZjBhMjRhNDIxOTkwY2YwNTk2OWFmMTVkYWEwYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjY2YTA5YWQ1MzY5NGU5ZmE5ZTNkYWU4NDllMDI1YjJjNmEyMzVhNmRlOGM0ZThhOTMwNjU3MTM4NGMxZmFiOCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTdmODg0MDg2OTg2MGI1MDIyZGRlZjMyNmQ2YTdjMWE3ZGFlNmZlYjA0YTA1ZDZkN2VhNzkwZDI2ODFjNGY3MyJ9"
         }
       ]
@@ -120,7 +120,7 @@
       "evidence": [
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -165,7 +165,7 @@
           "version": "repo-lines-v1:sha256:d567511be56d732a1e1981990e785b160fe695fe9199c8a91a6a817e6d8a2021:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZDU2NzUxMWJlNTZkNzMyYTFlMTk4MTk5MGU3ODViMTYwZmU2OTVmZTkxOTljOGE5MWE2YTgxN2U2ZDhhMjAyMSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDU2NzUxMWJlNTZkNzMyYTFlMTk4MTk5MGU3ODViMTYwZmU2OTVmZTkxOTljOGE5MWE2YTgxN2U2ZDhhMjAyMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYTYyMTA2ZmVjZmRkMmYwMmE4NTdmZjhjNGY3ZTkyZTA4OTlkMDk3YWZmNmZmYzlhZDFlMWIxYWQ1ZTM1N2I2MyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmYyNjYxMGZhYjI5Nzc1ZjM5ZjM3ZjViZmE0ZjQ5MDMwZGM1YmU4YzJhMTkwMjMxZjlhMTdmNzhkMDI2OTNiMCJ9"
         },
         {
-          "resource": "repo://src/state/store.ts#L1092-L1100",
+          "resource": "repo://src/state/store.ts#L1091-L1099",
           "version": "repo-lines-v1:sha256:a25a89a09b75c6100a2b770e368cb0a8db27fa6cd2098b2bb6b9d0fd0bb1305c:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOTQ1Y2Q0OWVhNWFmNTk3NmM0MjBlNzJjN2I5ZGY2ZDkxNjgwNzA0OTk4MDAwZGI2MTU2MGY0ZmVhZmI5NDllMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZjg0MzQ3MTE0YmU3Mjk5NzJjMjc1NzdhZDI2YzM4ZWY3YzNhNThlMThiMDU4ODZkYzk1NDdhNjQyZGFmMzY3OSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjY1YWQ4MGQ2NWZmOGFmNmU1MGRjZmE3NjlkZmJmMGVhZGFiYjY4NjQ5YTc4MjBmMTQ2OTkzMjNhMjU5YzViMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjZiZTNmZTg4YzdlYmU5ZGU1MGIwMmU3MWQwZjk3YTlkMTE1YjFkY2NjMTAzNmIwOGZmYjVmN2I1MzlkYmEzZCJ9"
         }
       ]
@@ -236,7 +236,7 @@
         },
         {
           "resource": "repo://src/platform/desktop.ts",
-          "version": "repo-file-v1:sha256:0d896f6309cbb7ab254d27390eb19e45da0eea8039260f59140f150832672aa3"
+          "version": "repo-file-v1:sha256:1dc4cd4b412457275f2d60080121efa45ac518d23c7c22db93536978742d4ba3"
         }
       ]
     },
@@ -245,7 +245,7 @@
       "statement": "currentTree(project, currentReviewer, paper, create?) is the single routing decision every mutating action and reader goes through: single-reviewer → paper.annotations; Consolidation → paper.annotations (the tree that ships); a numbered reviewer → paper.reviews[N]; nobody picked on a multi-reviewer project → null. Mutating actions pass create=true (safe inside immer set) while read-only computations pass nothing.",
       "evidence": [
         {
-          "resource": "repo://src/state/store.ts#L4448-L4491",
+          "resource": "repo://src/state/store.ts#L4447-L4490",
           "version": "repo-lines-v1:sha256:b9ccf9da9a288fd21a1cbbb15476a38a6ae7741e3ba684fb6afca9b3bcf3e765:eyJzZWxlY3RlZExpbmVDb3VudCI6NDQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3ZTU3ODhkNWQ5ZDczZDI0YTgxZGJjMGE1YTc0YmZhODJjOWMzYjNhZjk5ZTUyYWY3OTZlOTBiNDY4YThhM2QiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQyYWQxYTE5ZmFiYzUxNTljY2U4ZjBmZmJmZjMwNjM0NjFiMTRlMTY4ZWY1NDM1NDJmYzk4MmRjOGM2ZTM3NTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjBkOTAxZTdlMDM1ZTk2NDUxNjJhMWQ4MGZiZDE0OWUzYzMxYjc5ZmE4YTVmYjg2YTQ1NGM3MzVjZGJkNDRhNGYifQ"
         }
       ]
@@ -256,7 +256,7 @@
       "evidence": [
         {
           "resource": "repo://src/platform/adapter.ts",
-          "version": "repo-file-v1:sha256:28dc2594d03b39b43fb2dc320b4f667580ce7c4376c10c735a47411513143f02"
+          "version": "repo-file-v1:sha256:5377036bf0f2870106b0bbda752b23cf8699f814147bef97f80ea43811ae1e8a"
         },
         {
           "resource": "repo://src/platform/index.ts",
@@ -273,7 +273,7 @@
           "version": "repo-file-v1:sha256:7e86471173c010c3cd4cc09109333ed23bdd4e101d21bbd66f4c96f47d547480"
         },
         {
-          "resource": "repo://src/state/store.ts#L3841-L3851",
+          "resource": "repo://src/state/store.ts#L3840-L3850",
           "version": "repo-lines-v1:sha256:35ce8dbe31abf013227b8d7e3bfb8414df20bf70339b146ad2f9c85a8a1677a3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRiNWIyODFjMmQ0NzA5ZmY0ZmI1MWM1YzJjNzM1NDQ5ZGE1ZGVhODEyNThjMTc5MGVhMzc2OTc4MmRiYTYyZjciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQ4YTcyNzI2M2YyNzc5ZWZlODI4NTUwZGI3MGE1ZjQ5MTUzMjAyNDVmYzljZGNiMjQ1ODcxYWY0NmU5ZWNkZjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkMjU0NGE4YzVkN2UzMTU5NmU5NDRhOWEzZDQxZWE5NzliN2Q5YmU2MmQwYjQ2NDI2NWQ1YjJjZjllYWI3NmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImVhMjc3ZDRjMTJlZjA4MmM5ZWViM2ExZjczNjUxOWM3MDU3ZDkwNzZjNWZiZjM3YjEwZmM5Yjg0ODE5YTQ2MWYifQ"
         }
       ]
@@ -309,10 +309,28 @@
           "version": "repo-lines-v1:sha256:364ca1bcf957f30684290155d148df542b1408dccefabb31714385659bd625d9:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZWFmMjJjZjA3MzI1OTJjMjQ3MTQxY2JlNjFlZmExMTAxMjYxMmY1YTMxMjJiOWFmOWJiYWY1MmY1NzI0ZDE5NCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYjg1YmVmNmQ0YWRkZTU3ZGQxM2JjODM2NTcxZDc5NjNlZWY2YTFmOGE1Yzg5N2Q5NzE2MDQyNTcxY2RiMDJmMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODkwODRjYzUwYzkyOWM5MTVmZjAwMTNkZGRiMjdlZDAxNTU2NjlmZWQ0YTJiODkwZTYxNjVkMWU0YmQ2MDVhYiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMjM1YzZhZjk3ZTVmMmYwZjU2NTI5N2Q3OTMyMWI2OTcwODU2YzhhNTkwZWQ3ZjJlNGE1YmMyNjhlNDk3Yzc3YiJ9"
         }
       ]
+    },
+    {
+      "id": "claim_259e3489e355439cb3ada827070eac64",
+      "statement": "When a split project opens, the head and each batch of paper files are assembled and parsed in a background worker (projectJobs.ts run through offMain.ts), not on the main thread; assembly logic lives in src/platform/assemble.ts.",
+      "evidence": [
+        {
+          "resource": "repo://src/platform/assemble.ts",
+          "version": "repo-file-v1:sha256:731040263e0842877b849ae7fd77d7f7855c23614b74363830e8e6faefd6d1ce"
+        },
+        {
+          "resource": "repo://src/platform/offMain.ts",
+          "version": "repo-file-v1:sha256:e090007159028e25c2abb90af8b6efeec432356efd1a5c9aae53dd7655173dd2"
+        },
+        {
+          "resource": "repo://src/platform/projectJobs.ts",
+          "version": "repo-file-v1:sha256:3d6bcc201b120770423336c2f87dd98da3d4676097486d8c1cfc1729ef72a064"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-02T08:58:22.323Z"
+    "at": "2026-11-07T10:50:01.257Z"
   }
 }

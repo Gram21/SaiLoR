@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:2190e7dd66b18a99244187488816b0c4f66eb9c76f4e6e4def85fc47e61e6158",
+  "pageVersion": "sha256:ab1158b2339b55cac93efcad80a8f7591018dabf4c533eb4cedd5cf206b4f0e6",
   "claims": [
     {
       "id": "claim_b007bc47337e4255a24a9724101a405c",
@@ -123,8 +123,8 @@
           "version": "repo-lines-v1:sha256:cc3add12e03f6e2219716f2b81c7222652564b1f432be499106677572db782dd:eyJzZWxlY3RlZExpbmVDb3VudCI6ODMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzMzVlYTQ5NjQwMWFhMDk2NDA3YmNkMjkyMDY2YTEzY2FiYzBkNThhNjg5YjM3YmJmZjc2YWY2YWU2ZjgwYWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImUxNmQ4MTdhNjk4ZWY5ZTg5YmFiN2FlMDk5ZTBmOTRlNmIzYWVjZDc4MzQ1MThmYWI2NmRlYTAxYTFhMjhiNmQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFkNjk3NGRhYTA1NDk5Yzc5NWI1NzIxYzM4YWY1MjUxM2NlNGQ5OTk1MTkxNDZkZmQwYzZkOGRlY2I1YThmYzgifQ"
         },
         {
-          "resource": "repo://src-tauri/src/main.rs#L85-L233",
-          "version": "repo-lines-v1:sha256:ea87bf88ca996f3bd3af5640625cc3378af488a14341f094a97a4474b648f3cb:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQ5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI4NGM2NmFmZjBmMTVhMDVmZDM0OGM2OGNiZjVjYTUxMDNjMzg1Njk4MTlmZGNmY2JhZWMwNThhNTFmOWI5ODU5IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlZjNkZDg3MDNmZmJiY2JmNTE1ZjU1YjcxODIyZGRmZGM4MGZmODgwN2FiMmIwYmM3MGM2ZDliYzJmMmNkNjUwIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+          "resource": "repo://src-tauri/src/main.rs#L85-L234",
+          "version": "repo-lines-v1:sha256:17eaffa9feaef8e978ca0ea7625fa0b73f00cbc84924cb92ec6cb5e7a9b3461c:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI4NGM2NmFmZjBmMTVhMDVmZDM0OGM2OGNiZjVjYTUxMDNjMzg1Njk4MTlmZGNmY2JhZWMwNThhNTFmOWI5ODU5IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI0MTJjYTM0NWNjZjc1YmY5YzA4MDZiY2U2OTViZThkZTgwOGI3OTk4NDI1MWE3YTU0ZDIwMmNmNjEwMWRkNDUxIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlZjNkZDg3MDNmZmJiY2JmNTE1ZjU1YjcxODIyZGRmZGM4MGZmODgwN2FiMmIwYmM3MGM2ZDliYzJmMmNkNjUwIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -139,20 +139,6 @@
         {
           "resource": "repo://src/model/project.ts#L1229-L1235",
           "version": "repo-lines-v1:sha256:98cb23f3a2d353e4063c7d93deaa06c4b929a12d983a5ffe156e67b6e9af51ae:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiOGFhOGMwMzE4Mjc2NDQ0MWJhNjk0YWFhMGZlMmY2ZDQxOTQwYmE2YmRlMDA3OWFkZjdlMmJiYTczNjQ5ODAxMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNTYyNjc5MzVmYzYzMzQ2NWQ4NDhiNDBhNGVkNjk2N2U3YjdhMzIzZjgxY2Q1M2MxMTBhZTIxMDI5Njg3YWExMyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZmFjN2RjNWFmMmQ3ZWNhZTJlNzI1NDBlNjkzYjJmZWVmMDE2Y2NiMmFjZTk3MGFmNGJiMTNkNWVjYmJlYjIyMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZWFmOTc2M2Y3YTJmMmQ0NjcwODBmODFmZmI2ZmY0M2FlODE1MDYyOWY5MzZlNWFlMTQyMDljMzZlODlhNzZiMyJ9"
-        }
-      ]
-    },
-    {
-      "id": "claim_5b7b8ee2ea41484a9771fc4c28be1b6a",
-      "statement": "The provider-agnostic CI pipeline lives in scripts/ci.sh (npm ci, typecheck, check:wiki link check, vitest unit tests, integration tests, vite build) and is invoked by the ci.yml workflow; heavier gates such as the per-OS Tauri build matrix, Rust tests/clippy, and the tauri-driver e2e probe run as separate ci.yml jobs.",
-      "evidence": [
-        {
-          "resource": "repo://.github/workflows/ci.yml#L1-L18",
-          "version": "repo-lines-v1:sha256:dcee58e223f360b83fa0300378aeef7bc00224393dd44fcd13d21c8df9110f5b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2ZTFiMzJmYTA5MDc5YWUyZjAwMDFmZmYwZWNhMjdiNDk4NTk1N2Q0ZWI0ODU3OTI5YjNjZjA1OGZhYWU1NDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg0ZDMwY2I2ZDk5NmFlZDc5OTVlNGJiYjFlZjhhYjYwNjVkNTJiNzQ5NDA2N2E2YmI4MDAxZTk2YjcwZjBkMzIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImY4Y2I2NWYxODJlZTk1YzI2ZGY0NWU4ZjE2MDc2Y2Q3MGZhZDI1ZTYyZWQwNGU0ZmU0MzBhZDZmZTRiY2VjNjkifQ"
-        },
-        {
-          "resource": "repo://scripts/ci.sh#L38-L56",
-          "version": "repo-lines-v1:sha256:e749337b558fe24f036491909677b5f2a2973985eefb10b1dd5f30a1a34a3aac:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQzNDc0N2RjNmM3M2E1MWNjMzQ3YWRiZWVlNDIwZTU5OTM0M2MzMTFiZGIyOTU0YzA0ZjU0NmY3NDkxOGJlOTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MTExYTJlMDI4MDA1ZmViOTkzMTcwNzdlMDRhNTEwNzQ1MDExNjU0Y2M5NzVjNzdjMmMwODJhYWI1YzY0YjciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjJhNzU1YjQ1OWZhYmYxMDJkYmRmN2Y3N2Q0NDZjY2ZmYzUyOTQwYWZjYmU4NzI0MTRkOGQ3YTdmM2JmYWQ0NzAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
@@ -173,6 +159,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-02T08:58:22.323Z"
+    "at": "2026-11-07T10:50:01.257Z"
   }
 }

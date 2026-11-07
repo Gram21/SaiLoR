@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:177712359f44f6f55cfecfd71aacd50f5e1197254db52c7f25caac404327dac3",
+  "pageVersion": "sha256:19e177f92afbbe2c6e106ffcd131713f9e2ddd6c318b5623bac1636000b5791e",
   "claims": [
     {
       "id": "claim_963822971b6d42aaad66333527580c8a",
@@ -150,11 +150,11 @@
     },
     {
       "id": "claim_81b14439394140b89ba90adc085b3171",
-      "statement": "scripts/ci.sh is the provider-agnostic single source of truth for whether the renderer builds and passes its checks; CI providers only check out the code, provide a Node toolchain, and run it, so the same checks run locally with ./scripts/ci.sh. It runs in order with set -euo pipefail: dependency install (npm ci with an npm install fallback, skippable with SKIP_INSTALL=1), typecheck, wiki link check (check:wiki), site link check (check:site), unit tests with coverage thresholds (npm run test:coverage), integration tests (npm run test:integration), and the vite build.",
+      "statement": "scripts/ci.sh is the provider-agnostic single source of truth for whether the renderer builds and passes its checks; CI providers only check out code, provide a Node toolchain, and run it, so the same checks run locally with ./scripts/ci.sh. It runs under set -euo pipefail in order: dependency install (npm ci with npm install fallback, skippable with SKIP_INSTALL=1), typecheck, wiki link check (check:wiki), site link check (check:site), unit tests with coverage thresholds (npm run test:coverage), integration tests (npm run test:integration), vite build, and a guard that fails when dist/ contains the demo data.",
       "evidence": [
         {
-          "resource": "repo://scripts/ci.sh",
-          "version": "repo-file-v1:sha256:c77ca6e5e6020d073122e0acc8e9ea43ee4029a5427a45c32c0bad12db2e25f9"
+          "resource": "repo://scripts/ci.sh#L16-L56",
+          "version": "repo-lines-v1:sha256:47ef8b0fd4b71dcaf8b6ae719b7c6aafb56c00861457a190c16a246a9d34fa62:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ1NzM5MWI1MzU3NGQxYmY3YmViZTRhNWFiYTdhM2NkYzU2MDg5OTJhNTM2YjY3YTQzN2FmODE5YWNjNTkzNjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjdlYjlmZDE1M2MxOGJjMGZlNWU4MzA2ZGIxMzE5ZTVhMWU0ODY2MDA3NTViZDUwZWM3YWIxOWNhZDk5MGU5NmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijg2ZWVhNWZkMzdiOWRlZjBiMjAzZWY1NDM5MmUxNTUyNjQ1YmM4OWZlNTk5YjE5NzE0NWUxMzRkYTEyZDJmYzgifQ"
         }
       ]
     },
@@ -292,7 +292,7 @@
       "evidence": [
         {
           "resource": "repo://src/platform/adapter.ts",
-          "version": "repo-file-v1:sha256:28dc2594d03b39b43fb2dc320b4f667580ce7c4376c10c735a47411513143f02"
+          "version": "repo-file-v1:sha256:5377036bf0f2870106b0bbda752b23cf8699f814147bef97f80ea43811ae1e8a"
         },
         {
           "resource": "repo://src/platform/index.ts",
@@ -543,6 +543,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-02T08:58:22.323Z"
+    "at": "2026-11-07T10:50:01.257Z"
   }
 }

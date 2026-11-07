@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:1573d420a44343b02d5ef33daece0fb804ec309c597d11d4e818d793a229f514",
+  "pageVersion": "sha256:1736b2a63b77a11027bf475527120cad823710609551fc14f4e0937c63165bbb",
   "claims": [
     {
       "id": "claim_0bfba0ad57324c858d4748e034707d01",
@@ -144,7 +144,7 @@
       "evidence": [
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -187,11 +187,11 @@
           "version": "repo-lines-v1:sha256:83628c8e32da37a1aa81719079de51d379cd4bd348686fa1de3669d2dab486ca:eyJzZWxlY3RlZExpbmVDb3VudCI6ODUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImZlODY4MDEwYTYzN2Q2MWMzNWUzNGMxM2YyNjk5MGE1NmI2NzA4N2ExZjgzYzFhYjMxYjlkMTc1ZWU3M2Q4YjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0NzdhMmI5NDM4ZjgyNWFiOWY1ZWIyOTJkNWYzYmY1YzRhZDBjMWVmZTcxMTZmMDA0OGE1OGIwMDg2NjAxYjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjQ3MjI2ODM0MGE4ZDA2YTIzMTYyODQ2OTAxMWZkMTNmY2Y2ZWViYzMxYWU2NGEyNjEyYTFhYTM3NmNmZDgzZGIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImU1NDE1ZWIyZTc1NzMxYWRlNDc1MDk5Nzg4MDRjYThiNGU0NmE0NTNiYzQ4ZjI0NmVkOTk1OWVhMWQ2ODg4ZmMifQ"
         },
         {
-          "resource": "repo://src/state/store.ts#L3882-L3929",
+          "resource": "repo://src/state/store.ts#L3881-L3928",
           "version": "repo-lines-v1:sha256:3d215009b6db3d5edfb7f4c2c47573132eb74d811564f8158aad5308c778d6cc:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMzYjEyOWZhNDNmYjU1YWFhYjU0NTJkMGRiNTIxMGM2NjBjYzA2OGZlZjgxOGNmMDQ4ZjlmYzFlNjk2ZGY0NzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliNjJmNjBkODU5MGE1NzljZjQ2ZjhkNjczNzhjNGM1NzJiOTYyY2VjY2RiOTBjN2E1ZjdiNDJiOTYwNzgyYTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJkMjU0NGE4YzVkN2UzMTU5NmU5NDRhOWEzZDQxZWE5NzliN2Q5YmU2MmQwYjQ2NDI2NWQ1YjJjZjllYWI3NmMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdmYTlmYzI5YWU5ZWQwZmRkNDVlMTIwNGU4MTMxMzBkZTA1Y2IzOTY1YWRmZDNlNGQ2NTQ0NjQyMzE0ZDQ5NzgifQ"
         },
         {
-          "resource": "repo://src/state/store.ts#L1195-L1197",
+          "resource": "repo://src/state/store.ts#L1194-L1196",
           "version": "repo-lines-v1:sha256:64bc056ce3b19a7c01c998a56b1cd1f772d1ed4c1906fd8ea9e842f5dd8b00a0:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTY4NjU3ZjMwZTgyMmI1NTI2NzZmYTM4NDI2MWMzNTBjNDE2MDQ5MGM5ZDg4MTExODAwMDFjZWQ4NTY0YmM5MSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzE4MDE1ZmY1ZjgzYTYyYTRlNDBiNTFmMzIxMGMzYWY2ZTdkMDk0ZTA2MjcxMmI1OWI2YWQ3NGEyNDkzNzcxOCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNGMwZGU4MjM0MGRlMjdlMDRlNzkwNjk5NzlmZWI5ZjYzNjUwYTM0Y2VjYTczOWFhNzIwODY2YWVmZmFlYjAxNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmVkYjU2OTlmNTdkMzhhNTZiNGUxZTU0ZGYwYzg0MmY3ZGFhYTE0YjgwY2YyNGU2NTU5MDhlZjJiZTQ3MGYxMCJ9"
         }
       ]
@@ -202,7 +202,7 @@
       "evidence": [
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -344,7 +344,7 @@
       "evidence": [
         {
           "resource": "repo://src/state/store.ts",
-          "version": "repo-file-v1:sha256:92247a642b4210e962ac81ec3c9a13909ba983cd62ed959a1673dafa4efd495a"
+          "version": "repo-file-v1:sha256:60d2b21c3e71aefc611532ef2047fc165131b7dafc9a4bb110b9f3a98cc1a7ca"
         }
       ]
     },
@@ -378,15 +378,15 @@
     },
     {
       "id": "claim_ef66ee897b9d46ee8591ddc9feef6889",
-      "statement": "Screening's PDF-highlight files use their own name family too: screening-marks-<n>.json and screening-marks-consolidated.json rather than marks-*.json. marksFileName and parseMarksFileName derive and recognize the name from the screening flag, with a screening project's pre-rename marks-*.json read as legacy; both read paths (assembleProject and projectFromFiles) process legacy files first so a file under the kind's own name wins, and assembleProject drops a legacy marks file when an annotation sibling sharing the folder lists the same paper id.",
+      "statement": "Screening's PDF-highlight files use their own name family too: screening-marks-<n>.json and screening-marks-consolidated.json rather than marks-*.json. marksFileName and parseMarksFileName derive and recognize the name from the screening flag, with a screening project's pre-rename marks-*.json read as legacy; both read paths (the assembler in assemble.ts, wrapped by assembleProject in tauri.ts, and projectFromFiles) process legacy files first so a file under the kind's own name wins, and the assembler drops a legacy marks file when an annotation sibling sharing the folder lists the same paper id.",
       "evidence": [
         {
           "resource": "repo://src/model/project.ts",
           "version": "repo-file-v1:sha256:bcc3fe8933108686e05a105260e451cef16f152ad4418b753caa5fb722fc9783"
         },
         {
-          "resource": "repo://src/platform/tauri.ts",
-          "version": "repo-file-v1:sha256:59380b0644211c58027139e71cbae8a016c4416e89cc02fafd75ee564891cb07"
+          "resource": "repo://src/platform/assemble.ts#L19-L55",
+          "version": "repo-lines-v1:sha256:bd3f1e78cdc5808861582b15a0d362a8d4c0f06f034120a1eb1c2dd453715ca9:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg5ZTMwZjgwYjczMmQxMjAwNzY1ZmM3N2JlY2ViNmY0MTU1M2M5MzEzMjQ5ZWM0ODQ4MzU4MWQ5M2E4ZGUyNmYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliNjJmNjBkODU5MGE1NzljZjQ2ZjhkNjczNzhjNGM1NzJiOTYyY2VjY2RiOTBjN2E1ZjdiNDJiOTYwNzgyYTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA0MGUwZjM1ZDRmZjY2YmM4MjkyOWExYTBhZGU4Yzc0MzZmMTY0NGQ5OTcxYTgxZTBhZDg1MjU4M2RjZGU4NGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjczNTBlNTRiNTgxYWZjMzRmZGY5NGM4NTVmZjlmNDlkOWY0MjVkOGUzZTNjMGQ5NmZhM2QxYjdhNTA0NDQ3ODAifQ"
         }
       ]
     },
@@ -427,11 +427,11 @@
           "version": "repo-lines-v1:sha256:355658478d2ebc8a2d47e6466f7b17995cea5aa770627287b1e08b235d54f7fa:eyJzZWxlY3RlZExpbmVDb3VudCI6MzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg1ODBiNzY1MThkYWU5NzlmYWViZDAyMzY3YTI5MjkyYTUwZDk3NjA5MjI1MWEzOGE2Y2UzMDg4MGJhNDI4MjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM5NDk0NmZiMmQyMzBlZThiNDZjNzkxNGY5MzRmODZiYjk1MDk2YWY3NTkyNDcxZmM4YjY2YTJiYjI5ZTRlZDIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjViOTRhOGFlOTM4ZDE5MThjMWFjMTlhMTRiNzY0NDk1NGQ2Yjg2OTkwZDI2YTFiZTZmMjc1ZDUxNTM0MTRmNTgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcyMmM4ZGFiZDQ2MmYwN2NjMmZhZTViY2ExNDQ0YzUwMGMxZTkxM2UzYTE2Zjg5MTlkMjNiMzNiZjIyMWU4MWYifQ"
         },
         {
-          "resource": "repo://src/state/store.ts#L3965-L4017",
+          "resource": "repo://src/state/store.ts#L3964-L4016",
           "version": "repo-lines-v1:sha256:7733f1e2637b33cafa87fb036c3fb038eaf4f989a654c93fa7ec318ef76a412f:eyJzZWxlY3RlZExpbmVDb3VudCI6NTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRiZTc3Nzg3YzExY2Y3MDVmYzdlM2I2MjNjZjk0MDk4NDJkNzkwZWRkZTAxYTY2NzI0OGRiMzFkYjNiY2M5ODgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY5YjE5ODJlOGRkNzQ4MTE4MTQ2YjM5YTJkMDA2MmY0MDgxZTM0Nzc5Yjg2NzVjMjM0YzRmYjEyNGRjMzkzOTAiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRlZDExYTIyNzQ1NGNhN2U1NDhiMDc3YzZiYWE1ZjZhYjNiYWM4YTVhYTY4NDdjZDg1YmI4NzAyMzllNTFjZmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk3MWZhOTJjNTJmYzA4Y2UwZDMyM2VhNmI4ODk4YzcyMWJhNzg4ODQ5ZWJiYzg2MjljYTE3M2ViYmU0MTZiNzMifQ"
         },
         {
-          "resource": "repo://src/state/store.ts#L895-L907",
+          "resource": "repo://src/state/store.ts#L894-L906",
           "version": "repo-lines-v1:sha256:a64dfe2613016983eee2374b270790dc53095db26bab782ae9eda32ae5543957:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjUwMjkwZWQ3NzczOWU1NDZmOWIxN2U4MjA4NmZlNzcyZDc3MmQzY2FlODJlOWJjZmQ5MTJjZWM0M2E2ZmIzZTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVmZjAxMjA1MjI2MGY3OTBkNmNkZTViNmIzZjc0OGY1MTM3NTkzNzkyODI2M2MzNGY0OTk2ZjcwZTUxYWUyNzciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlkN2ZjNzhlNjQxNjY2NDhlZmZhZWIyOWUzMzI4NGU4NThlNjQwNmYyMWEzOTQzZGFmNTQyNmU1ZDI3N2I4MjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQzOThjYjBkOTUwOWUxNzlmMDQxMDBkNzhkNWJlNjBhZmEwNTUwMjI4ZDIwZWNmYzQ5YjgwOWMyNDUzYTYyNzIifQ"
         }
       ]
@@ -463,7 +463,7 @@
           "version": "repo-lines-v1:sha256:73e953d5efd6615e59767371c7266b02ccac36e2af9fdb3192dce390781ac125:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYWEzMzBlNGVkNmFiZWU0YWQ4YmVjNTAxYmE5M2RlNzM5Njk4NzNlZTlmMGI4NjBmZmIzNzcxODYyNzk4Zjg5YyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiY2QxYjI0MTA2NDFiNDZmYjU1NDc5YmZhYzEzOGZlYTZmMTE4OTIyYjBiZmU3MmY4Y2ViNDhiOTg0Zjk0MWQ0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTQxZjlhZjgyZTMyYjViN2MzMDdlYTRhNDRiZTNmYjY3NjViYjg5OWU4YmE0YWQxMTQzYWNiODYyODE0NTkxMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOWQ5MTM3NTI3ZDAwMGQ1YWEwMTAzYTkyZDk0MmJjZGM4NDYzODZmNmM5MmE4YzJjODczZWRhYWFlYmQwZGMyNSJ9"
         },
         {
-          "resource": "repo://src/state/store.ts#L4475-L4495",
+          "resource": "repo://src/state/store.ts#L4474-L4494",
           "version": "repo-lines-v1:sha256:436de8737cc91f8d90b5fda3cf25dae7be28e18b5c5af4fc9a7f8802567f9741:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVhZjIyY2YwNzMyNTkyYzI0NzE0MWNiZTYxZWZhMTEwMTI2MTJmNWEzMTIyYjlhZjliYmFmNTJmNTcyNGQxOTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQyMzkyMjA4NGZjOWQzNmM1MWMxYzFiMzZlOTdiOWMyNTZlYzRmMTBiYzFmMzhlODgzNDVhYTY2NDMzNmRjYjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjdkMjZlNjM0NTUyM2Q3MmZiNDY3ZjhiYzE0NDhlNzNkMTk5M2YzZDBkYzg1NWUxNGJkYzQzMjZhNjIyNmQ3OWIifQ"
         }
       ]
@@ -471,6 +471,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-02T08:58:22.323Z"
+    "at": "2026-11-07T10:50:01.257Z"
   }
 }

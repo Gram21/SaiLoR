@@ -9,6 +9,8 @@ sources:
     resource: repo://.github/workflows/openwiki-update.yml
   - id: openwiki-source-6d3ac2bdfb0e76882a670989
     resource: repo://.github/workflows/openwiki.yml
+  - id: openwiki-source-5f219f204b3e870beec929d9
+    resource: repo://.github/workflows/pages.yml
   - id: openwiki-source-4d1d392666be6dfdd7a91a2e
     resource: repo://.github/workflows/release.yml
   - id: openwiki-source-b1eed8badb7e60418dbf126b
@@ -27,6 +29,8 @@ sources:
     resource: repo://package.json
   - id: openwiki-source-0744bbc5adcd6bd563690bde
     resource: repo://scripts/ci.sh
+  - id: openwiki-source-2f6e34c116f239a0a80c7cae
+    resource: repo://scripts/ci/pages.sh
   - id: openwiki-source-ca67060e890937010b96de80
     resource: repo://src-tauri/Cargo.toml
   - id: openwiki-source-0abfee918aaf0d7e3ea712fc
@@ -39,10 +43,10 @@ sources:
     resource: repo://vite.config.ts
   - id: openwiki-source-742c2ed7fe09ab88b9fb143a
     resource: repo://vite.probe.config.ts
-generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
+    at: 2026-11-07T10:50:01.257Z
 ---
 
 
@@ -61,13 +65,13 @@ migration notes live in `docs/tauri-migration.md`.
 ```mermaid
 flowchart TD
   PR["push to main/release or pull request"] --> CI["ci.yml"]
-  CI --> CiSh["build job: scripts/ci.sh<br/>install → typecheck → check:wiki → vitest unit<br/>→ integration → vite build"]
+  CI --> CiSh["build job: scripts/ci.sh<br/>install → typecheck → check:wiki → check:site<br/>→ vitest coverage → integration → vite build<br/>→ demo-data guard"]
   CI --> Rust["rust job: cargo fmt --check<br/>+ clippy -D warnings"]
-  CI --> TBuild["tauri-build matrix<br/>5 OS: cargo test + tauri build<br/>+ probe build and run"]
+  CI --> TBuild["tauri-build matrix<br/>6 OS: cargo test + tauri build<br/>+ probe build and run"]
   CI --> TE2E["tauri-e2e (ubuntu, windows)<br/>tauri-driver + node --test e2e"]
   Tag["push of a v* tag"] --> Rel["release.yml"]
   Rel --> Draft["release job: preflight checks<br/>+ draft release"]
-  Draft --> Matrix["build matrix: 4 targets<br/>tauri-action + release config"]
+  Draft --> Matrix["build matrix: 5 targets<br/>tauri-action + release config"]
   Matrix --> Feed["latest.json updater feed<br/>signed with TAURI_SIGNING_PRIVATE_KEY"]
   Pub["release published"] --> Zenodo["zenodo job: archive on Zenodo"]
 ```
@@ -161,15 +165,17 @@ Four jobs:
   checks"). It runs from the repo root under `set -euo pipefail` and executes,
   in order: install (`npm ci`, or `npm install` on a lockfile-less fresh clone;
   skippable with `SKIP_INSTALL=1`), typecheck (`tsc -b --noEmit`), the wiki-link
-  check (`npm run check:wiki`), `npm test` (unit), `npm run test:integration`,
-  and the SPA build (`npm run build`). Unlike the Electron era, integration
+  check (`npm run check:wiki`), the project site link check
+  (`npm run check:site`), `npm run test:coverage` (unit tests with coverage),
+  `npm run test:integration`, the SPA build (`npm run build`), and a guard that
+  fails when `dist/` holds the demo data (`KeimKaplan2026_ICSEBoF`). Unlike the Electron era, integration
   tests run in the main script too.
 - **`rust`** (ubuntu-latest) lints the shell: installs the Tauri system
   libraries, then `cargo fmt --check` and `cargo clippy --all-targets
   --all-features -- -D warnings`. Rust *tests* don't run here — they run per OS
   in `tauri-build`.
 - **`tauri-build`** — a `fail-fast: false` matrix over
-  `macos-15, macos-26, windows-latest, ubuntu-22.04, ubuntu-24.04`. Each runner
+  `macos-15, macos-26, windows-latest, ubuntu-22.04, ubuntu-24.04, ubuntu-24.04-arm`. Each runner
   installs the Linux Tauri libraries when applicable, runs
   `cargo test --manifest-path src-tauri/Cargo.toml`, builds the real installer
   bundle (`npx tauri build`) and reports installer sizes, then builds the probe
@@ -209,10 +215,10 @@ The jobs:
    AppImage/Windows/macOS builds update in-app, `.deb`/`.rpm` users update
    manually, and **users of 1.x must install this release once by hand**
    (the 1.x Electron app cannot auto-update across the 2.0 migration).
-2. **`build`** (`needs: release`, `fail-fast: false`) — a four-target matrix:
+2. **`build`** (`needs: release`, `fail-fast: false`) — a five-target matrix:
    `macos-15` × `aarch64-apple-darwin`, `macos-15` × `x86_64-apple-darwin`,
    `windows-latest` × `x86_64-pc-windows-msvc`, `ubuntu-22.04` ×
-   `x86_64-unknown-linux-gnu`. Each runner optionally sets up macOS
+   `x86_64-unknown-linux-gnu`, `ubuntu-22.04-arm` × `aarch64-unknown-linux-gnu`. Each runner optionally sets up macOS
    signing/notarization (`APPLE_SIGNING_IDENTITY` defaults to `-` for ad-hoc
    signing; empty `APPLE_*` secrets are deliberately not exported because an
    empty value makes the bundler attempt and fail signing) and optional Windows
@@ -288,6 +294,18 @@ the image carries only toolchain and the checkout supplies the code; the
 resulting bundles appear in `./src-tauri/target/release/bundle/` on the host.
 The container's `CMD` can be overridden for other tasks
 (`... run --rm tauri-linux <command>`).
+
+## Pages workflow: `.github/workflows/pages.yml`
+
+Publishes the project website (`site/`) and the online demo under `/demo/` to
+GitHub Pages. It runs on a push to `main` (and on `release/2.0.0` while that
+branch is in flight) and on `workflow_dispatch`. A `concurrency` group named
+`pages` never cancels a deployment in progress. The `build` job runs
+`npm ci` and `scripts/ci/pages.sh`, which runs `npm run build:demo`, copies
+`site/` and `dist-demo/` into `_site/` and checks the links with
+`scripts/check-site-links.js`. The `deploy` job then uploads `_site` and
+deploys it with `actions/deploy-pages`. `make ci-pages` runs the same build
+locally.
 
 ## Technical report workflow
 

@@ -1,14 +1,14 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:1eed8be2cd9353b61f68acdc0177a4dbaf7230d2557519a343ca674fefce5967",
+  "pageVersion": "sha256:5ae0df53000b8620409ab31477bc5713f6c66a19b3a65e026099cf260afb14b7",
   "claims": [
     {
       "id": "claim_26c0cd6920894404a6dd0ab6f699065a",
-      "statement": "buildGraph builds a graph of Paper, Author, Venue, Keyword, Choice and Answer nodes joined by authoredBy, publishedIn, hasKeyword, cites and hasAnswer edges; graphSource/graphTrees use consolidated answers when present, else one reviewer seat.",
+      "statement": "buildGraph builds a graph of Paper, Author, Venue, Keyword, Choice and Answer nodes joined by authoredBy, publishedIn, hasKeyword, cites and hasAnswer edges; graphSeats offers each reviewer seat plus the consolidation seat once a consolidation was saved (hasConsolidation), defaultGraphSeat picks the consolidation when it exists, else seat 1, and graphTrees reads the consolidated tree for a one-reviewer project or the consolidation seat, else the chosen reviewer's tree.",
       "evidence": [
         {
-          "resource": "repo://src/model/graph.ts",
-          "version": "repo-file-v1:sha256:e5c76a4dc116ed3612bab03f73e5d40fb694daec8a430b91547ec21c353555d6"
+          "resource": "repo://src/model/graph.ts#L169-L205",
+          "version": "repo-lines-v1:sha256:fa8a20d66baec705bf304e0b6a11edf4ad619a42608338473f8db4d7b5385d6a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIxNzc5NDRjMzgzY2IzOWYwODQxYTRhZDViMjU4OWFhM2M1NmE2NGUwNjQ3NzZiZjkwY2YwYWIxM2FhMjg1OTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkODQ2MzYzOThkMGY2MWU2ZjE1NjY2NzA5OWViN2E4NGZlMTQ4OTQ5ZjEwYWE5N2JlZWIxNGFkNDI4OWQzY2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhlMmNlM2ZkYzMyNTAzNjNhYmFlNzQwMGZlMTUzZWM4NTNiMmIwYTVhZTFlMDEyOTc2MTJiMGI3Y2JiNDMyN2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2NzlkNWE0MTdhNmI1N2RkNTdmYWEzYzQ4ZGMzZDc0NTU0ZjFmOWM2NzdjMWUxMmVmODJkZTk2MmU4OGVkNjYifQ"
         }
       ]
     },
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/GraphView.tsx",
-          "version": "repo-file-v1:sha256:91e25e10d2bd44ad9b95dfd7ce407e785a482785549bccea8d56ade2e26af11f"
+          "version": "repo-file-v1:sha256:78e4ae849f4f3c9e4a8933e7dc3db23679299df272c0ab6b711d92767ee17b94"
         },
         {
           "resource": "repo://src/model/graphLayout.ts",
@@ -32,7 +32,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/graphCanvas.ts",
-          "version": "repo-file-v1:sha256:384f37cd805d69037423643e1387f011cc5f80bedb65ed87289fc60ce46e476e"
+          "version": "repo-file-v1:sha256:b103e7b45d3d9dc3e020c843aacb9d0f0f13ef4697aca804baedda54824b4439"
         }
       ]
     },
@@ -42,7 +42,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/GraphView.tsx",
-          "version": "repo-file-v1:sha256:91e25e10d2bd44ad9b95dfd7ce407e785a482785549bccea8d56ade2e26af11f"
+          "version": "repo-file-v1:sha256:78e4ae849f4f3c9e4a8933e7dc3db23679299df272c0ab6b711d92767ee17b94"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/GraphView.tsx",
-          "version": "repo-file-v1:sha256:91e25e10d2bd44ad9b95dfd7ce407e785a482785549bccea8d56ade2e26af11f"
+          "version": "repo-file-v1:sha256:78e4ae849f4f3c9e4a8933e7dc3db23679299df272c0ab6b711d92767ee17b94"
         },
         {
           "resource": "repo://src/model/graphCypher.worker.ts",
@@ -86,17 +86,39 @@
       "evidence": [
         {
           "resource": "repo://src/components/ExportGraphDialog.tsx",
-          "version": "repo-file-v1:sha256:e1f6855a2216f401a49ffbbc3033f5a26b55a153f2a4982a7c6f70ad1c3073f0"
+          "version": "repo-file-v1:sha256:9ebb3157a77926db0520a706c236d70bcc4f66b0ac405c63d289a3e2f138142e"
         },
         {
           "resource": "repo://src/model/graph.ts",
-          "version": "repo-file-v1:sha256:e5c76a4dc116ed3612bab03f73e5d40fb694daec8a430b91547ec21c353555d6"
+          "version": "repo-file-v1:sha256:640c47d57f148be566bf27295782369303162ac84692d44b74a0de8bdd32ebf7"
+        }
+      ]
+    },
+    {
+      "id": "claim_fc1eab6b72fc40d1a047ba5e780ba6d8",
+      "statement": "The Graph toolbar menu holds Knowledge graph (opens GraphView) and the graph export item; GraphView's download panel (GraphDownload) saves the graph as SVG or PNG for the visible area or the whole graph, with imageFrame fitting the whole graph into at most MAX_SIDE (8192) pixels, writing SVG via writeTextFile and PNG via writeBinaryFile to a path picked by pickTextExportPath.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/GraphDownload.tsx",
+          "version": "repo-file-v1:sha256:02afc06809b389a29b96cb592f269698e8169652662932828bc6d958756712dc"
+        },
+        {
+          "resource": "repo://src/components/GraphView.tsx#L320-L340",
+          "version": "repo-lines-v1:sha256:360f0d65e4b92c0fdafd223b4cf48bfdffc3f88fd3b2a7a357a7e0aa5f293856:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVjZjJhYmI5MzNjYjJmMzk5NjEzMjBiNmFlNWRmNTAwMzNjNjllMmE3YTY1NDBhMDJkYmI4OTExZmVhNjU2NDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFjMzUzMzZiNzQ2ZjczZTMyMTExNmFkYWNmYWM0M2YwMGZlMTRmZGI2ZjFlODU0MTBlNDc5NzE0YzI5NDgzZjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEyZWY5MWMzNzAxZDZhNTg2Y2RmNTJhNmZmMWExZDEzNmIyNDQwYWYyZWRiMTE2YTVmNGFhMDMxODY3NDc0ZjcifQ"
+        },
+        {
+          "resource": "repo://src/components/Toolbar.tsx#L369-L379",
+          "version": "repo-lines-v1:sha256:a41987978526eece2b31ed264e0b968425a4b2251df93da3c33bdffe3adf0f83:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM0MjY4ZDQ2YmU2OGQ5NTlkZGMyYzI1M2ZhNzUxYzA5ZWJmZmQ0NmY0YzBhOGQyYjVhZWM4ZWFkMjQ3NGFhMTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwNjQ4Zjc3ZmQ1YTljNjNiM2NkZDBhZjQ5ZGFhMTI5OTIyMGI3NTQxZTg4Y2ExN2VmZTFhNmExMTRiOWZmMmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM3Zjg3N2E0NjQzNjc3MDRjMzc1YjNlMmU3Mjc3ZjQ5M2NhZTMyN2Q2NTUxYjNkNjY3MDZjNDk4YjZkMDViYmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhiZjQ3MTMzYzVlMmFhZmY0OWU0ZmJiYzYyOTNjNzAzNzIzZjkwODliZWVlNjEwYTQ0NmRiMzZlNDA3YzNiZTcifQ"
+        },
+        {
+          "resource": "repo://src/components/graphImage.ts#L28-L54",
+          "version": "repo-lines-v1:sha256:d248b1712fd0c459ff557c4015aa6dfbed2a9284856d52c66ba3c03b7c81524e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYxNWMzYTA5ZDgzZjQwZjM3NTkxNzU1NWI1NmE4Yzk0NmIyNTIwZmNlMTdhZmE5ZDkxNzkwNGJkODg2NGNhMjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIwMDRiNjk5YjY3OWE1ODA2ZDBmMjMwNTliZmNjZmMxNzU5OTZmNTNkY2JkMDUxYTQxNGJmMzk5MTY5M2EzZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiMTBlODRjYjE2YzU3MWIwZjIzY2I4NjM1ZWIzOTc4Y2Q2MGQ2MTdmMzc2MDMzY2ZkYmI0YmZhNDE2MGQ5ZjgifQ"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-02T08:58:22.323Z"
+    "at": "2026-11-07T10:50:01.257Z"
   }
 }

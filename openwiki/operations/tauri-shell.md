@@ -3,9 +3,6 @@ type: operations
 title: Tauri Shell, IPC and Self-Update
 description: The Rust desktop shell of SaiLoR 2.x — the TauriAdapter transport and its channel-to-command mapping, the session authorization model, the slr-file PDF protocol, LLM key handling, and the signed self-update flow.
 tags: [tauri, shell, ipc, security, self-update, pdf, keychain, ssrf]
-verified:
-  - by: openwiki/0.7.3
-    at: 2026-11-02T08:58:22.323Z
 sources:
   - id: openwiki-source-164e2da859b5277df81c7d94
     resource: repo://.github/workflows/ci.yml
@@ -51,11 +48,16 @@ sources:
     resource: repo://src-tauri/tauri.conf.json
   - id: openwiki-source-91abab17cd60dc4816614abd
     resource: repo://src/hooks/useCloseGuard.ts
+  - id: openwiki-source-bddbb7f6aca9d2392d629f42
+    resource: repo://src/platform/assemble.ts
   - id: openwiki-source-d1afade4641722495f434a61
     resource: repo://src/platform/desktop.ts
   - id: openwiki-source-6caeef66ec21bf4ae91fe55c
     resource: repo://src/platform/tauri.ts
-generated: { by: "claude-code", at: "2026-11-02T08:58:22.323Z" }
+generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
+verified:
+  - by: openwiki/0.7.3
+    at: 2026-11-07T10:50:01.257Z
 ---
 
 # Tauri Shell, IPC and Self-Update
@@ -115,13 +117,21 @@ renderer logic (recents, the `lastWritten` save baseline, git parse reuse) from 
 **`assembleProject` (RawProject assembly).** Rust does not build the whole-project JSON; project
 and git commands return a `RawProject` (`path`, `text` for the `project.json` text, `files` of
 `{relPath, text}` annotation entries, optional `siblings` for shared-annotations folders).
-`assembleProject` in `tauri.ts` reassembles it into the single-project text `loadProject` accepts:
-it parses `project.json`, derives the expected file names from the screening/annotation mode
+`assembleProject` in `tauri.ts` reassembles it into the single-project text `loadProject` accepts,
+using `assembler` from `src/platform/assemble.ts`. The opening of a project (`opened` in `tauri.ts`) does
+this in a worker: `offMain` runs an `open` job for the head and a `read` job for each batch (see
+[Progressive Loading](../concepts/progressive-loading.md)). The assembler
+parses `project.json`, derives the expected file names from the screening/annotation mode
 (`consolidated.json` / `reviewer-N.json` / mark files), drops legacy mark files whose paper is
 already covered by an annotation sibling, and pushes files that fail to `JSON.parse` into the
 `corrupt` list rather than failing the whole open. Git commands returning snapshots or merge
 sides (`gitPullBegin`, `gitLogDiff`, `gitHeadContent`, …) go through the same assembly so the
 renderer always sees post-assembled project text.
+
+**Binary export.** `export_write_bytes` (`pdf.rs`) writes bytes the renderer built, such as the graph
+PNG. Like `text_write`, it accepts only a path from an export dialog this session (`export_target`) and
+refuses a symlink. It is listed in `main.rs`, in `COMMANDS` in `build.rs`, and in
+`capabilities/default.json`.
 
 ## The command registry (`main.rs`)
 
@@ -134,7 +144,7 @@ grouped by module. The registry is the authoritative list of what the renderer c
 | **project** | `project_open`, `project_open_path`, `project_read_papers`, `project_save`, `project_set_dir`, `project_pick_save_path`, `project_peek`, `project_screening_source`, `reference_pick` (`project.rs`) |
 | **annotations** | `project_annotations_dir_users`, `project_shared_annotations`, `project_move_annotations_dir`, `project_split_annotations` (`annotations.rs`) |
 | **feedback** | `project_write_feedback`, `project_list_feedback` (`feedback.rs`) |
-| **pdf / text** | `pdf_pick`, `pdf_pick_folder`, `pdf_read`, `pdf_check_path`, `pdf_scan_folder`, `pdf_allow_path`, `pdf_pick_export_path`, `pdf_embed_marks`, `text_pick_export_path`, `text_write` (`pdf.rs`) |
+| **pdf / text** | `pdf_pick`, `pdf_pick_folder`, `pdf_read`, `pdf_check_path`, `pdf_scan_folder`, `pdf_allow_path`, `pdf_pick_export_path`, `pdf_embed_marks`, `text_pick_export_path`, `text_write`, `export_write_bytes` (`pdf.rs`) |
 | **paths** | `paths_relative`, `paths_rebase`, `paths_absolute`, `paths_sibling` (`paths.rs` — Node-compatible `path` semantics) |
 | **webfetch** | `web_fetch`, `web_abort` (`webfetch.rs`) |
 | **llm** | `llm_configs`, `llm_save_config`, `llm_delete_config`, `llm_call`, `llm_abort` (`llm.rs`) |
