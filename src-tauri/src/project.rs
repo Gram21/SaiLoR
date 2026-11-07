@@ -478,6 +478,12 @@ pub fn write_project_files(
         let target = resolve(&base, Path::new(&f.rel_path));
         let parent = dir_of(&target).to_path_buf();
         let Some(text) = &f.text else {
+            match parent.canonicalize() {
+                Ok(real) if !within(&real, &real_base) => return Err(outside_project(&f.rel_path)),
+                Err(e) if e.kind() != io::ErrorKind::NotFound => return Err(err(e)),
+                _ => {}
+            }
+            assert_not_symlink(&target)?;
             match read_lossy(&target) {
                 Ok(existing) if !deletable(&existing) => continue,
                 Err(e) if e.kind() != io::ErrorKind::NotFound => return Err(err(e)),
@@ -923,6 +929,39 @@ pub mod tests {
             .unwrap_err()
             .contains("symbolic link"));
         assert!(!outside.join("rc").exists());
+    }
+
+    // [utest->req~plt-70~1]
+    #[cfg(unix)]
+    #[test]
+    fn save_refuses_to_delete_through_symlinks() {
+        use std::os::unix::fs::symlink;
+        let d = tmp("symlink-delete");
+        let outside = tmp("symlink-delete-out");
+        let s = Mutex::new(Session::default());
+        let proj = d.join("p.json");
+        lock(&s).known_projects.insert(normalize(&proj));
+        fs::write(outside.join("reviewer-1.json"), "{}").unwrap();
+        fs::create_dir_all(d.join("annotations/p2")).unwrap();
+        symlink(&outside, d.join("annotations/p1")).unwrap();
+        assert!(
+            save(&s, &proj, Some(META), &[file("p1/reviewer-1.json", None)])
+                .unwrap_err()
+                .contains("outside")
+        );
+        assert!(outside.join("reviewer-1.json").exists());
+
+        symlink(
+            outside.join("reviewer-1.json"),
+            d.join("annotations/p2/reviewer-1.json"),
+        )
+        .unwrap();
+        assert!(
+            write_project_files(&s, &proj, Some(META), &[file("p2/reviewer-1.json", None)])
+                .unwrap_err()
+                .contains("symbolic link")
+        );
+        assert!(d.join("annotations/p2/reviewer-1.json").is_symlink());
     }
 
     #[test]

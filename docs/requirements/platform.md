@@ -86,10 +86,10 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-70: Refuse symlinked and escaping write targets
-- **Description:** The system shall refuse a file write whose target is a symbolic link or whose resolved path lies outside the project's `annotations/` directory.
+- **Description:** The system shall refuse a file write whose target is a symbolic link or whose resolved path lies outside the project's `annotations/` directory. The system shall apply the same checks before it deletes an annotation file.
 - **Type:** Non-functional (ISO 25010: Security)
 - **Evidence:** `src-tauri/src/project.rs` (`write_project_files`), `src-tauri/src/authz.rs` (`assert_not_symlink`, `within`)
-- **Verified by:** `src-tauri/src/project.rs` (`save_refuses_symlinks`, `save_refuses_escapes_and_feedback`)
+- **Verified by:** `src-tauri/src/project.rs` (`save_refuses_symlinks`, `save_refuses_to_delete_through_symlinks`, `save_refuses_escapes_and_feedback`)
 - **Status:** Implemented
 
 ### REQ-PLT-80: Save As with path rebasing
