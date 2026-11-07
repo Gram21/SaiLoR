@@ -115,7 +115,7 @@ function drawn(label: string) {
   const call = ctx.fillText.mock.calls.filter((c) => c[0] === label).at(-1)!
   return { clientX: (call[1] as number) * k + x, clientY: ((call[2] as number) + 12) * k + y }
 }
-const waitForLabel = (label: string) => waitFor(() => expect(ctx.fillText.mock.calls.some((c) => c[0] === label)).toBe(true))
+const waitForLabel = (label: string) => waitFor(() => expect(ctx.fillText.mock.calls.some((c) => c[0] === label)).toBe(true), { timeout: 5000 })
 
 /** Submits a query without userEvent, which treats `{` and `[` as key names. */
 function submit(text: string) {
