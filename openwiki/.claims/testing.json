@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:19e177f92afbbe2c6e106ffcd131713f9e2ddd6c318b5623bac1636000b5791e",
+  "pageVersion": "sha256:e3816fd5293cc8293d9207a0024b0e51d692b0b6bc8c509ff1403fea9f1eaeef",
   "claims": [
     {
       "id": "claim_963822971b6d42aaad66333527580c8a",
@@ -8,7 +8,7 @@
       "evidence": [
         {
           "resource": "repo://vite.config.ts",
-          "version": "repo-file-v1:sha256:7c9c2175d9997636b477451dd334f8918bf2368974eb1f3d270dbf7f66b31f0d"
+          "version": "repo-file-v1:sha256:1bc52fd8db5e5c9aa53a7fe30db286ab01ad3d3055ce715bd22fad087d787727"
         }
       ]
     },
@@ -314,7 +314,7 @@
         },
         {
           "resource": "repo://vite.config.ts",
-          "version": "repo-file-v1:sha256:7c9c2175d9997636b477451dd334f8918bf2368974eb1f3d270dbf7f66b31f0d"
+          "version": "repo-file-v1:sha256:1bc52fd8db5e5c9aa53a7fe30db286ab01ad3d3055ce715bd22fad087d787727"
         },
         {
           "resource": "repo://vitest.integration.config.ts",
@@ -543,6 +543,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-07T10:50:01.257Z"
+    "at": "2026-11-07T12:13:58.722Z"
   }
 }

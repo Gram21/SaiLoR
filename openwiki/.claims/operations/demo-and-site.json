@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:6e42e4722effd3a9214f54969f1494dc00a5b975b652bd38cea2d971d179b4dc",
+  "pageVersion": "sha256:c86ed5b409a53c5f076e46063dca801382a17c714c05da1d39c9cc29024e9fba",
   "claims": [
     {
       "id": "claim_a799479f74b040edb4ff5b74a4e0afe3",
@@ -11,8 +11,8 @@
           "version": "repo-file-v1:sha256:21ab7d415367cad3a3ca4987b7868a22de9df9a184dea061df7317af5d0048f8"
         },
         {
-          "resource": "repo://vite.config.ts#L8-L50",
-          "version": "repo-lines-v1:sha256:02e8ec228c757bb77a8f50735dcae0fd71d2fb55ca8590e03c80332c53c19a59:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmMGNkYjk3MmE3YmZiN2VkMjQ2ZjlmZjY3MjM4NWU1NWY0OTY4ZmMxMTA0M2RjNWI2ODRkNTFkZmEzMWRiY2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmZTViNGVkMDhmMjU3NTA1ZDY2NGE0MDgwZWQyODliMTQ1NGY1MjdiZjdkYjdiZTU5ZjkyNmVlOGFjODgwYTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk1MmM2MmFmMTE1ZWU5MzM5NDBlZmQwMGNhZGViYzQ0N2I5MDY3NjQ1ZGI3ODlkMzI5MDM3MjJlMTFjMDQ3OGYifQ"
+          "resource": "repo://vite.config.ts#L8-L52",
+          "version": "repo-lines-v1:sha256:cdf44c27d7c625339024d0bde935c561fea170b52ba9ca467093d44d831dda75:eyJzZWxlY3RlZExpbmVDb3VudCI6NDUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFmMGNkYjk3MmE3YmZiN2VkMjQ2ZjlmZjY3MjM4NWU1NWY0OTY4ZmMxMTA0M2RjNWI2ODRkNTFkZmEzMWRiY2IiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmZTViNGVkMDhmMjU3NTA1ZDY2NGE0MDgwZWQyODliMTQ1NGY1MjdiZjdkYjdiZTU5ZjkyNmVlOGFjODgwYTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk1MmM2MmFmMTE1ZWU5MzM5NDBlZmQwMGNhZGViYzQ0N2I5MDY3NjQ1ZGI3ODlkMzI5MDM3MjJlMTFjMDQ3OGYifQ"
         }
       ]
     },
@@ -60,15 +60,15 @@
     },
     {
       "id": "claim_c5e9e289fa46413eb6b936b12a2e3320",
-      "statement": "The demo PDFs live in src/demo/papers/ and are emitted by a Vite plugin only in the demo build as plain files rather than imported, so the normal build never contains them; their file names must match DEMO_PDF_FILES in src/demo/project.ts.",
+      "statement": "The demo PDFs live in samples/pdfs/ (shared with the sample projects) and are emitted by a Vite plugin only in the demo build as plain files rather than imported, skipping the test fixtures (paper-*, multipage*, A1-*), so the normal build never contains them; their file names must match DEMO_PDF_FILES in src/demo/project.ts.",
       "evidence": [
         {
-          "resource": "repo://src/demo/project.ts",
-          "version": "repo-file-v1:sha256:0536515280987cd793cdb2aa561255e499b302c375222467c127b33be1632725"
+          "resource": "repo://src/demo/project.ts#L10-L24",
+          "version": "repo-lines-v1:sha256:d6454a0fb6c807124d7ce952bd3d535c25f7cbf2d944a447569d8e00faae90d2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijk4N2I4ZDkyMTIyY2U1MzJmMWVjNzdkYjc5ZmI1NjVhZjIxNWY5OTFiZGEwNDAyNTExZDIzNGRjOTc2ZmFlNTciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYxNDNiOGY5Nzk2MGEyOWYxNDZjZDkxMWQ0NjdmNDI1NDU2NzVlMDI2OTVlMzNlOTE4OTM4ODA2MjI5NTJmYjgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEyMzgxZWQ3YzVkM2RhOGY3N2M3YWNiNjM4ZmQ0ZTBlN2Q3MGJjN2ViNWM3NDdhMjg3NTQzY2IzODA4ZTg0ZmMifQ"
         },
         {
-          "resource": "repo://vite.config.ts#L8-L36",
-          "version": "repo-lines-v1:sha256:61929594568694d67955b6bcb118bdca6c00fc537d6156f196cd53c7f92c4549:eyJzZWxlY3RlZExpbmVDb3VudCI6MjksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjZmYjI5ZTlhMzljMmFhODViZmUxOTgxZWNhNzg3YzMwNjA3MTVjN2YyMmE4ZjFhYmI0ZjFlNTI2ZTFhZDBhOTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjlmZTViNGVkMDhmMjU3NTA1ZDY2NGE0MDgwZWQyODliMTQ1NGY1MjdiZjdkYjdiZTU5ZjkyNmVlOGFjODgwYTYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQxMTIwNjY3ZmJkZTUzOGZjZmE2NjQ1YTgzNGEyYjA4ZGQzNjJkMzg5ZmJjODI0OTI0NTM4NGNiNzNlM2FmMTgifQ"
+          "resource": "repo://vite.config.ts#L14-L27",
+          "version": "repo-lines-v1:sha256:96d03b2c67ed75cfb1b37d40ac79a692ae22600b020e18894bd1b2ba0fb0a84a:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY4ZmIxM2E5MmUwNzBiOTQwYmIyN2Y5MGU3ZGQzMTI0NTM4OTA2NjQwNTkzZDcyZmI2MjNmNzAxNjJiN2U0MWYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjliNjJmNjBkODU5MGE1NzljZjQ2ZjhkNjczNzhjNGM1NzJiOTYyY2VjY2RiOTBjN2E1ZjdiNDJiOTYwNzgyYTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjRmMDYxOTE0NTY3ZDgxNTFlMDdmYWRlMWJlOWU3Yjg1YjYwMTZmYTcxNDY0Nzg0ZjM4NGY0NGNmMjE1ZTdkMDYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjU5MWZmMDYzZGU2MTkxZjA4MDcxYTk0ODI0NDZlOGE2YzIxM2E2MDUxYjdlOWJkNWE5ZmE4YzNiZDA3MzVjYTYifQ"
         }
       ]
     },
@@ -78,7 +78,7 @@
       "evidence": [
         {
           "resource": "repo://.github/workflows/pages.yml",
-          "version": "repo-file-v1:sha256:02d6714588555fa2f25508566abef0e9a6ce3d238b069707457a03fbc97aaa65"
+          "version": "repo-file-v1:sha256:692208782650b20e012018c74b2e1228f526bd457a0e1cf9bd493e675d342796"
         },
         {
           "resource": "repo://scripts/ci/pages.sh",
@@ -117,6 +117,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-07T10:50:01.257Z"
+    "at": "2026-11-07T12:13:58.722Z"
   }
 }

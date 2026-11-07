@@ -26,10 +26,10 @@ sources:
     resource: repo://src/platform/index.ts
   - id: openwiki-source-5e1b077422a94ae165e88e4e
     resource: repo://vite.config.ts
-generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
+generated: { by: "claude-code", at: "2026-11-07T12:13:58.722Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-07T10:50:01.257Z
+    at: 2026-11-07T12:13:58.722Z
 ---
 
 # Online Demo and Project Site
@@ -64,8 +64,9 @@ the schema hands the visitor a `project.json` file.
 `src/demo/project.ts` builds the demo project text from the project file, the reviewer seat files
 (`reviewer-*.json`) and the consolidated files (`consolidated.json`) under `src/demo/data/annotations/`, so
 the demo also shows the consolidation seat. There are seven demo papers with bundled PDFs in
-`src/demo/papers/`; their licences are listed in `src/demo/PDF-LICENSES.md`. The PDFs are not imported
-by the code. A small Vite plugin in the demo build emits them as plain files, so the normal build never
+`samples/pdfs/`, shared with the sample projects; their licences are listed in `src/demo/PDF-LICENSES.md`.
+The PDFs are not imported by the code. A small Vite plugin in the demo build emits every PDF in that folder
+as a plain file, except the test fixtures (`paper-*`, `multipage*`, `A1-*`), so the normal build never
 contains them, and the file names must match `DEMO_PDF_FILES` in `src/demo/project.ts`.
 
 ## Site and Pages deploy

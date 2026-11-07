@@ -77,7 +77,7 @@ sources:
 generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-07T10:50:01.257Z
+    at: 2026-11-07T12:13:58.722Z
 ---
 
 # SaiLoR — Quickstart
