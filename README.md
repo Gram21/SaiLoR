@@ -388,9 +388,13 @@ it) and the project works that way.
   identity take an already-claimed one. That protection only exists once git is in use and a seat has
   actually been claimed with it on — agree out of band who is Reviewer 1, Reviewer 2, … regardless.
 
-It is still **one file, with no locking**: two people saving the same JSON at once will overwrite
-each other. Pass it along, or take turns — or see [Git](#git) below, which is built for exactly
-this: independent copies, reconciled field by field instead of overwritten.
+Each seat of each paper has its own file under `annotations/`, so reviewers on different papers or
+seats do not write the same file. SaiLoR has **no file locking**. Instead, a save stops when a file
+that it would overwrite changed on disk since you opened or last saved the project. You then choose
+**Overwrite with my version**, **Keep theirs, drop my changes to these files**, **Combine both** (a
+field-by-field merge) or **Not now**. This check sees only what has reached your disk: copies sent
+by email, or a synced folder that has not synced yet, can still diverge. For independent copies, see
+[Git](#git) below. It reconciles the copies field by field instead of overwriting them.
 
 > 📖 Full details, including the exact file shape, are in
 > [§9 of the schema guide](docs/annotation-schema.md#9-multiple-reviewers--consolidation).
@@ -500,8 +504,9 @@ in the view.
 - Double-click a node to add its neighbours. The **Show neighbours** button in the side panel does
   the same.
 - The side panel shows the type, DOI, year and values of the selected node, and its neighbours.
-- The side panel lists every shown node as a button. Use this list as a keyboard alternative to the
-  canvas. Each list shows 200 entries first. **Show more** adds the next 200 entries.
+- The **Nodes** button opens a drawer that lists every shown node as a button. The drawer is closed
+  when the view opens. Use this list as a keyboard alternative to the canvas. Each list shows 200
+  entries first. **Show more** adds the next 200 entries.
 - The selected node, its edges and its neighbours stay strong. The other nodes and edges become dim.
 - The **Relations** legend has one checkbox per edge type. Clear a checkbox to hide the edges of
   that type.
