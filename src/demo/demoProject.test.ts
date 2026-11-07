@@ -68,7 +68,7 @@ describe('demo PDFs', () => {
     for (const paper of project.papers) {
       expect(demoPdfUrl(paper.pdf), paper.id).not.toBeNull()
       const file = paper.pdf.replace(/^pdfs\//, '')
-      expect(existsSync(join(process.cwd(), 'src', 'demo', 'papers', file)), paper.id).toBe(true)
+      expect(existsSync(join(process.cwd(), 'samples', 'pdfs', file)), paper.id).toBe(true)
     }
   })
 })

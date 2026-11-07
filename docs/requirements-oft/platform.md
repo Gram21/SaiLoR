@@ -975,7 +975,7 @@ The online demo shall bundle the PDF of every paper in the demo project, so that
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability)
-- **Evidence:** `src/demo/project.ts` (`DEMO_PDF_FILES`, `demoPdfUrl`), `src/platform/demoAdapter.ts` (`getPdfSource`), `vite.config.ts` (`slr-demo-pdfs`), `src/demo/papers/` (the PDF files), `src/demo/PDF-LICENSES.md`
+- **Evidence:** `src/demo/project.ts` (`DEMO_PDF_FILES`, `demoPdfUrl`), `src/platform/demoAdapter.ts` (`getPdfSource`), `vite.config.ts` (`slr-demo-pdfs`), `samples/pdfs/` (the PDF files), `src/demo/PDF-LICENSES.md`
 - **Verified by:** `src/demo/demoProject.test.ts` (`bundles a PDF file for every paper`), `src/platform/demoAdapter.test.ts` (`serves the bundled PDF of every demo paper and says why for any other path`)
 - **Status:** Implemented
 

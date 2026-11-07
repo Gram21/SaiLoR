@@ -451,7 +451,7 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 ### REQ-PLT-454: Bundle a PDF for every demo paper
 - **Description:** The online demo shall bundle the PDF of every paper in the demo project, so that each paper opens in the PDF viewer. The demo build shall write these PDFs to `papers/` next to the demo's `index.html`. The repository shall record the source URL, the licence and the download date of each bundled PDF in `src/demo/PDF-LICENSES.md`.
 - **Type:** Functional (ISO 25010: Usability)
-- **Evidence:** `src/demo/project.ts` (`DEMO_PDF_FILES`, `demoPdfUrl`), `src/platform/demoAdapter.ts` (`getPdfSource`), `vite.config.ts` (`slr-demo-pdfs`), `src/demo/papers/` (the PDF files), `src/demo/PDF-LICENSES.md`
+- **Evidence:** `src/demo/project.ts` (`DEMO_PDF_FILES`, `demoPdfUrl`), `src/platform/demoAdapter.ts` (`getPdfSource`), `vite.config.ts` (`slr-demo-pdfs`), `samples/pdfs/` (the PDF files), `src/demo/PDF-LICENSES.md`
 - **Verified by:** `src/demo/demoProject.test.ts` (`bundles a PDF file for every paper`), `src/platform/demoAdapter.test.ts` (`serves the bundled PDF of every demo paper and says why for any other path`)
 - **Status:** Implemented
 

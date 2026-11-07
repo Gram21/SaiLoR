@@ -13,14 +13,16 @@ export default defineConfig(({ mode }) => {
   const isDemo = mode === 'demo'
   // The demo's PDFs are written as plain files, not imported, so the normal build
   // never contains them. The file names must match DEMO_PDF_FILES in src/demo/project.ts.
+  // samples/pdfs/ also holds PDF fixtures for tests; the demo does not ship them.
+  const TEST_FIXTURE = /^(paper-|multipage)/
   const demoPdfs = {
     name: 'slr-demo-pdfs',
     generateBundle(this: { emitFile: (file: { type: 'asset'; fileName: string; source: Buffer }) => void }) {
-      for (const name of readdirSync('./src/demo/papers').filter((file) => file.endsWith('.pdf'))) {
+      for (const name of readdirSync('./samples/pdfs').filter((file) => file.endsWith('.pdf') && !TEST_FIXTURE.test(file))) {
         this.emitFile({
           type: 'asset',
           fileName: `papers/${name}`,
-          source: readFileSync(`./src/demo/papers/${name}`),
+          source: readFileSync(`./samples/pdfs/${name}`),
         })
       }
     },

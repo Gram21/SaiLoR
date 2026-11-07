@@ -4,7 +4,7 @@ import meta from './data/project.json'
 // [impl->req~plt-454~1]
 /**
  * The bundled demo PDFs, keyed by the `pdf` path in project.json. Each file is in
- * src/demo/papers/, and vite.config.ts writes every PDF there to `papers/` in the
+ * samples/pdfs/, and vite.config.ts writes the paper PDFs there to `papers/` in the
  * demo build. The licence of each file is in src/demo/PDF-LICENSES.md.
  */
 const DEMO_PDF_FILES = new Map<string, string>([

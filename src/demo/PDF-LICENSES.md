@@ -1,6 +1,6 @@
 # Demo PDF licences
 
-The online demo bundles one PDF per demo paper. Each file is a copy of the arXiv version named below. The files sit in `src/demo/papers/`. The demo build writes them to `papers/` (see `vite.config.ts`).
+The online demo bundles one PDF per demo paper. Each file is a copy of the arXiv version named below. The files sit in `samples/pdfs/`. The demo build writes them to `papers/` (see `vite.config.ts`).
 
 Licence text comes from the arXiv abstract page of each paper. The download date is the date of the copy.
 
