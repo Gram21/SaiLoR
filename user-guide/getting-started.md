@@ -361,7 +361,8 @@ See [AI evaluation](multi-reviewer.md#ai-evaluation) to compare the AI seat with
 The knowledge graph shows papers, authors, venues, keywords and answers as nodes.
 Edges connect each paper to its authors, venue, keywords, answers and cited papers.
 
-To open the graph view, click **Export ▾** and then **Explore knowledge graph**.
+To open the graph view, click **Graph ▾** and then **Explore knowledge graph**.
+The **Graph ▾** menu also has **Knowledge graph**, which exports the graph as a file. The **Save ▾** menu has the same item.
 
 <p align="center">
   <img src="screenshots/knowledge-graph-nodes.png" alt="The knowledge graph view with the Nodes drawer open on the left, one paper selected, and the side panel with its details and neighbours" width="900">
@@ -373,6 +374,8 @@ Use the view like this:
 - Click a node to select it. The side panel shows its details and its neighbours.
 - Double-click a node, or click **Show neighbours**, to add its neighbours to the view.
 - Clear a checkbox under **Relations:** to hide the edges of that type.
+- If the project has more than one reviewer, select the seat above the graph. Select **Consolidation** to see the consolidated answers. The list has **Consolidation** only after you save one. The view selects it at first.
+- Click **⤓ Download** at the top right of the graph area to save the graph as an image. Select **SVG** or **PNG**. Select **Visible section** to save what you see, or **Whole graph, including the part not visible**. The image shows the current filter, or the whole graph if there is no filter.
 - Click **Nodes** to open the node list. The list is closed when the view opens.
   The list is a keyboard alternative to the canvas. It shows 200 nodes; **Show more** adds 200 more.
 - Click **Export…** to save the graph as JSON-LD, RDF Turtle, GraphML or CSV.

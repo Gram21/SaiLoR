@@ -262,8 +262,8 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
 
 - **Open ▾ menu** — open a project file, or reopen one of the last 5 recent projects.
 - **Save ▾ menu** — Save or Save as…, with their shortcuts shown next to each item.
-- **Export ▾ menu** — **Knowledge graph** exports the papers, metadata and answers as a graph file.
-  **Explore knowledge graph** opens the graph view. See [Knowledge graph](#knowledge-graph).
+- **Graph ▾ menu** — **Explore knowledge graph** opens the graph view.
+  **Knowledge graph** exports the papers, metadata and answers as a graph file. The **Save ▾** menu has the same export item. See [Knowledge graph](#knowledge-graph).
 - **? (Help)** — opens a dialog describing the workflow and listing all keyboard shortcuts.
 - **Left pane** — collapsible list of papers (toggle with the ☰ button). A completeness dot next to
   each paper fills in proportionally as fields are completed (a fraction of required fields if any
@@ -473,12 +473,17 @@ carried over versus left behind. For a multi-reviewer screening project, "includ
 
 ## Knowledge graph
 
-The **Export ▾** menu in the toolbar has two items:
+The **Graph ▾** menu in the toolbar has two items. The **Save ▾** menu also has **Knowledge graph**.
 
 | Item | Action |
 |---|---|
-| **Knowledge graph** | Exports the graph as JSON-LD, RDF Turtle, GraphML or two CSV files (nodes and edges). |
 | **Explore knowledge graph** | Opens the graph view. The view shows the same graph as the export. |
+| **Knowledge graph** | Exports the graph as JSON-LD, RDF Turtle, GraphML or two CSV files (nodes and edges). |
+
+With more than one reviewer, the view and the export have a seat selector. The selector lists every reviewer seat
+and **Consolidation** once one paper has a consolidated answer. The consolidation is selected at first.
+The **⤓ Download** button at the top right of the graph area saves the graph as SVG or PNG. The user selects the visible
+section or the whole graph. The image shows the current filter. In the online demo, the image is not saved.
 
 The graph has these node types:
 
@@ -624,7 +629,7 @@ These features read all papers. They stay disabled until the last paper has load
 
 - **Save** and **Save as…**
 - **Validate** and **AI**
-- both items of the **Export ▾** menu
+- both items of the **Graph ▾** menu
 - **Rescan** (the PDF folder scan) and **Git**
 - **☰ Overview** and **⚠ Disagreements** in the annotation panel
 - **◧ Summary**, **⚖ Agreement**, **⚠ Disagreements** and **Adopt all** in a screening project
