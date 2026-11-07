@@ -74,7 +74,11 @@ function open(reviewers = 1) {
   )
 }
 
-const nodeList = () => within(screen.getByRole('heading', { name: 'Nodes' }).nextElementSibling as HTMLElement)
+const nodeList = () => {
+  const toggle = screen.getByRole('button', { name: /^Nodes \(/ })
+  if (toggle.getAttribute('aria-expanded') !== 'true') fireEvent.click(toggle)
+  return within(screen.getByRole('navigation', { name: 'Nodes' }).querySelector('ul') as HTMLElement)
+}
 const listed = () => nodeList().getAllByRole('button').map((b) => b.textContent)
 const canvas = () => screen.getByRole('img')
 
@@ -436,5 +440,18 @@ describe('GraphView', () => {
     expect(onClose).not.toHaveBeenCalled()
     await userEvent.keyboard('{Escape}')
     expect(onClose).toHaveBeenCalledTimes(1)
+  })
+})
+
+describe('node list drawer', () => {
+  it('is folded by default and toggles open', () => {
+    open()
+    render(<GraphView onClose={() => {}} />)
+    expect(screen.queryByRole('navigation', { name: 'Nodes' })).toBeNull()
+    const toggle = screen.getByRole('button', { name: /^Nodes \(/ })
+    expect(toggle.getAttribute('aria-expanded')).toBe('false')
+    fireEvent.click(toggle)
+    expect(screen.getByRole('navigation', { name: 'Nodes' })).toBeTruthy()
+    expect(toggle.getAttribute('aria-expanded')).toBe('true')
   })
 })

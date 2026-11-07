@@ -2797,6 +2797,7 @@ button.validation-search-case:hover {
   margin: 4px 16px;
 }
 .graph-body {
+  position: relative;
   display: flex;
   flex: 1;
   min-height: 0;
@@ -2810,6 +2811,25 @@ button.validation-search-case:hover {
   touch-action: none;
   cursor: grab;
   user-select: none;
+}
+.graph-nodes-toggle {
+  position: absolute;
+  inset-block-start: 8px;
+  inset-inline-start: 8px;
+  z-index: 2;
+}
+.graph-nodes {
+  position: absolute;
+  inset-block: 0;
+  inset-inline-start: 0;
+  z-index: 1;
+  width: 280px;
+  max-width: 80%;
+  overflow: auto;
+  padding: 44px 8px 8px;
+  background: var(--bg);
+  border-inline-end: 1px solid var(--border);
+  box-shadow: 2px 0 8px rgb(0 0 0 / 0.15);
 }
 .graph-side {
   width: 300px;

@@ -82,6 +82,7 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   const theme = useStore((s) => s.theme)
   const t = useT()
   const [seat, setSeat] = useState('1')
+  const [listOpen, setListOpen] = useState(false)
   const [input, setInput] = useState('')
   const [query, setQuery] = useState<GraphQuery | CypherQuery>(() => parseQuery(''))
   const [error, setError] = useState<CypherError | null>(null)
@@ -459,6 +460,30 @@ export function GraphView({ onClose }: { onClose: () => void }) {
               if (i >= 0) reveal(neighbours(index, scene.ids[i]))
             }}
           />
+          <button
+            type="button"
+            className="graph-nodes-toggle"
+            aria-expanded={listOpen}
+            aria-controls="graph-nodes-drawer"
+            onClick={() => setListOpen((o) => !o)}
+          >
+            {t('graphView.nodes')} ({sub.nodes.length})
+          </button>
+          {listOpen && (
+            <nav id="graph-nodes-drawer" className="graph-nodes" aria-label={t('graphView.nodes')}>
+              <PagedList
+                items={sub.nodes}
+                render={(n) => (
+                  <li key={n.id}>
+                    <button type="button" aria-pressed={selected === n.id} onClick={() => focusNode(n.id)}>
+                      <span className="graph-hint">{t(`graphView.type.${n.type}` as const)} </span>
+                      <span dir="auto">{n.label}</span>
+                    </button>
+                  </li>
+                )}
+              />
+            </nav>
+          )}
           <aside className="graph-side">
             {result && (
               <section aria-labelledby="graph-results-title">
@@ -543,18 +568,6 @@ export function GraphView({ onClose }: { onClose: () => void }) {
             ) : (
               <p className="graph-hint">{t('graphView.noSelection')}</p>
             )}
-            <h3>{t('graphView.nodes')}</h3>
-            <PagedList
-              items={sub.nodes}
-              render={(n) => (
-                <li key={n.id}>
-                  <button type="button" aria-pressed={selected === n.id} onClick={() => focusNode(n.id)}>
-                    <span className="graph-hint">{t(`graphView.type.${n.type}` as const)} </span>
-                    <span dir="auto">{n.label}</span>
-                  </button>
-                </li>
-              )}
-            />
           </aside>
         </div>
       </Modal>
