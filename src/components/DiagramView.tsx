@@ -36,6 +36,7 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** The diagrams of the answers: settings on the side, a live preview, and export as SVG, PNG or PDF. The data work runs in a worker. */
+// [impl->req~ui-280~1]
 export function DiagramView({ onClose }: { onClose: () => void }) {
   const project = useStore((s) => s.project)
   const t = useT()
