@@ -1,0 +1,106 @@
+{
+  "schemaVersion": 1,
+  "pageVersion": "sha256:cc500c6374dc4477475194d3a8fe4078ae1458343fb5211a33b3a4568342ef9e",
+  "claims": [
+    {
+      "id": "claim_adf2e008395d4d31988bab0c9c8d45f7",
+      "statement": "DiagramView runs diagram work in a Web Worker, falling back to the same diagramHost inline when Worker is undefined (jsdom).",
+      "evidence": [
+        {
+          "resource": "repo://src/components/DiagramView.tsx#L66-L78",
+          "version": "repo-lines-v1:sha256:ce36407c2d1b44982eb23ebdd694acf5d642cdbd4cd7cdecd9e60d406abae4ed:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5NjZmYmZhODg5OThkYTc0NjU2YzUwMTk0OTU2YzI1ZjA4NDk0NTc2NjBjMDA5ZmU2M2QxZTlmYTlkYzkzMWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0ODllYTg2MGZhYjg1YWYzODNmNDE4MzQzMjQ0ZjE3ODMwZTI2ZjBmOTY1NzVlNzEwYjdjMTliNjgzN2QwNDYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ1MmJhNDYyNmMyNWEwOTgzZGFmMzYyOWIzZDk0YTAyMWI0NWUxZTc2YTQ3NWRlYTVjZDJmYTdlOWJlOTI1N2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxZmIzNWMxZTBkYTk5MThlZjlhOTJlMzI0M2UzZWQ4NzEwMTFhNDI5ZTJjMjZhNDliZDJiODgwYzExZTI4ZmQifQ"
+        },
+        {
+          "resource": "repo://src/model/diagram.worker.ts",
+          "version": "repo-file-v1:sha256:715cbb175a0486f052ae0df1229ce41559043b135e513c8a29c66486a7d24352"
+        }
+      ]
+    },
+    {
+      "id": "claim_d1970994e02641509c86604151e9a1be",
+      "statement": "diagramHost builds the knowledge graph once per data message, then aggregates and renders per render message, replying with the SVG, series keys, category count and paper count, or an error.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/diagram.ts#L195-L211",
+          "version": "repo-lines-v1:sha256:08550d2954ec262a46a3a87ffa33e766d0be398df91ed0b733bc5d93f5a6ba56:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiNDgyMzViMDRhMTc4OTQxMGFiOTUzMGI2NDczMWU5ZDIwNTc4NTdkNDhhNzE5OTA3YjViMzM4ZTZmMWNmNDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUzOTgyNTM3YzE3NDJmMTI3YWQ2ZWZkMDg3ODVmNjY5MWMyYjNlYjYzOWRlYmYxZjAzYTE0Y2I5MWNjMTVkYzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_21216848f0374840892fa998bbd77055",
+      "statement": "Render requests are debounced by 120 ms and carry an increasing id; replies with a stale id are ignored.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/DiagramView.tsx#L66-L68",
+          "version": "repo-lines-v1:sha256:115b59cb9eebbd3047115b137508d0e59701f07e284889ba2c8c87facb343f7c:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTk2NmZiZmE4ODk5OGRhNzQ2NTZjNTAxOTQ5NTZjMjVmMDg0OTQ1NzY2MGMwMDlmZTYzZDFlOWZhOWRjOTMxYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGEwNDM1MmY1ZDVmYjhiNDg3ZjZhOGQ3YWU3YzU1NjU5ZGQ2NGY1MzYzNGRjNTNjNmQ5YjljZjNjNjk2ZWU2OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDUyYmE0NjI2YzI1YTA5ODNkYWYzNjI5YjNkOTRhMDIxYjQ1ZTFlNzZhNDc1ZGVhNWNkMmZhN2U5YmU5MjU3ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjg2MGM1NTM5ODQxMTc4MjdjMTZiYzMzYTM5ZDhjZDhjYmNlOGRmNDAyNzM1ZGVlNjlhYTk4NDQyN2FjNTIzZCJ9"
+        },
+        {
+          "resource": "repo://src/components/DiagramView.tsx#L84-L88",
+          "version": "repo-lines-v1:sha256:d2b3d21206488fc5a302e7edbb59250f0e55dcdf5a0623263d116ee1482f9b18:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTk2NmZiZmE4ODk5OGRhNzQ2NTZjNTAxOTQ5NTZjMjVmMDg0OTQ1NzY2MGMwMDlmZTYzZDFlOWZhOWRjOTMxYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWU3Y2ZhYWFhNGRlZDA3NWE3NDg3NmRhMTRjZDZmMDIyNTQ2MzcyNjhhZDIxNzIwMDFjNTE3YzEyNjEzNjhjMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjM3MDZmOWFjMWE3MTQ5Zjc4MmI4ZmU4MTQ4Zjg0MDcyMGEzMThjNDFhMGNkNzdkMjQ2OGQzYmM1ZTU3ODEyMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTA2YzNkNWQ3MjlhOWJiZTMwODc2ZmM2YmEwNjEyM2ZiZDFiOWNhODcyMmY2NjVjMzE2MWJhZDRkZjhmYzEwYiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_856d2020ebf94f1da0ab4cc454816af6",
+      "statement": "Diagram dimensions are read from the knowledge graph (year, venue, author and keyword edges, or schema fields through hasAnswer edges to Choice nodes), so diagrams see the same data as the graph view.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/diagram.ts#L98-L135",
+          "version": "repo-lines-v1:sha256:00839a03dd0fbee345845454f8c68629fb0cc2d01489cb7339d7ca00d7fda80e:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBjMDE5MzA3YjQzZTBmMzdhODUzNGYyNDcyMjYzYmZmOWRmYmVmYWU1NGNiMjM2OWE4MGI1NTEwMTA5ZDUzZDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5NDk3ZGRkOTNjNzJiMTYwYzU1OGU5YWI2YzNmNzc0YTJjZWUyZDU4MDQ3ZjZiYWU3MTIxYmU4MDhjZWVmYzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjMDkyYjFiN2ZlMWIwZjc3ZmJkMzM1Y2I3ODk5ODRjZjQxZDAyNjc3MWMzZGQ2YmQyM2I3OTY3OWE2MmEyMjkifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_14e9f1876af7432b91ce304dd1e876b9",
+      "statement": "Aggregation counts a paper once per value, optionally adds a (none) category, and merges categories and series beyond the limit into Other.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/diagram.ts#L140-L182",
+          "version": "repo-lines-v1:sha256:ebc10cc001416b0797d88b69f989e1f65ef49efc6edf2845db185bc717bc4490:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYjRkOWI4ZDc5ZDczYWU4MmUyOTBiY2Q3OGM3MGNjYjY0YTg5OGY1MjJjZTc0NDNiMWE0NzNhYmJiMWUzMmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZjMDgyODc4OTkxMDhkNWUzYzI1ZDdmZGY5NTZmYzc3NWZjODMyNTRlNGFlNzRmYjg5ZDg1Y2JkMWU2MWY2MDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzODQyY2VjZjZkYjNlMjU0NzFiMDI2M2MxYzM4ZTU3NWE5MzQ5MWI1YzllNjYxYTcyYzdiMjk0Y2YzNGNkZTAifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_9709ab6bc2aa48a79797189668873c42",
+      "statement": "The text() SVG helper adds the default fill only when the caller passes no fill attribute, so the SVG stays well-formed XML; tests parse every chart type with DOMParser.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/diagram.test.ts",
+          "version": "repo-file-v1:sha256:6a80b61f7a10506cd4d257c936f48ba67843156bbb441ea9dc04a08f6fbbf2bc"
+        },
+        {
+          "resource": "repo://src/model/diagramSvg.ts#L18-L21",
+          "version": "repo-lines-v1:sha256:99c62302a89b632d3909a70c6603c001d9c52cd7005bd6a245b6914fbb0e0173:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFmYmMwZmZmYjMyNzk1MjQ4ZjgyMmI4NzA0ZTk1ZGExYjUxOWMzY2NiMzM1OWRmNmEyYzI5ZDFmNjgwYWY0MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYjkwZWE2ZTA4MGM3OWFkOThiMzVkMzg3MGZlMzQ0MzhmOWUzYzZlM2M5ZTJmMTA3NDc2YTFhYjI3MjgxMjRjMSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTNmYmIxN2EyY2FhYjZhNWQyMzYxZWI2NTJmYTg5NmE5NGIyYmM0ZThhMzI5M2YyN2Q5ZmM3Yjk5Y2ExODQ0YSJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_5f2c3dbd5b2a43bdaa3f3a33973e82f6",
+      "statement": "PNG and PDF export rasterise the SVG through a canvas on the main thread; the PDF is a one-page raster image built by imagePdf from deflate-compressed RGB data, not vector.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/diagramExport.ts",
+          "version": "repo-file-v1:sha256:fc0f2faf3ce1cf971871c44a563d15bd7226d58c2ba89de26ba069274c406446"
+        },
+        {
+          "resource": "repo://src/model/imagePdf.ts",
+          "version": "repo-file-v1:sha256:93f2d75057dbccfb7bec199f83ab9959323c59b28eca17bb1a65e3b09e0af646"
+        }
+      ]
+    },
+    {
+      "id": "claim_951f921bd8e54e3eb2e916f2ea77c526",
+      "statement": "ResultView is one modal with the knowledge graph and Diagrams as tabs.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/ResultView.tsx",
+          "version": "repo-file-v1:sha256:1dafe8d42e655013c785488a53fecb25f4c729b5e734425b3ac1aa1d0e8d7799"
+        }
+      ]
+    }
+  ],
+  "verification": {
+    "by": "openwiki/0.7.3",
+    "at": "2026-11-08T19:43:29.846Z"
+  }
+}

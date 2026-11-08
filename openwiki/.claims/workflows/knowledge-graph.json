@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:5ae0df53000b8620409ab31477bc5713f6c66a19b3a65e026099cf260afb14b7",
+  "pageVersion": "sha256:26d09d03a1e6b8530b408501e8b5c1bf2b781e580e318bd8e9771e866e6602ce",
   "claims": [
     {
       "id": "claim_26c0cd6920894404a6dd0ab6f699065a",
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/GraphView.tsx",
-          "version": "repo-file-v1:sha256:78e4ae849f4f3c9e4a8933e7dc3db23679299df272c0ab6b711d92767ee17b94"
+          "version": "repo-file-v1:sha256:28e16e99ac27f7ffc064408bccb264d2345799888f3a3e148ea155204bf76cb9"
         },
         {
           "resource": "repo://src/model/graphLayout.ts",
@@ -42,7 +42,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/GraphView.tsx",
-          "version": "repo-file-v1:sha256:78e4ae849f4f3c9e4a8933e7dc3db23679299df272c0ab6b711d92767ee17b94"
+          "version": "repo-file-v1:sha256:28e16e99ac27f7ffc064408bccb264d2345799888f3a3e148ea155204bf76cb9"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/GraphView.tsx",
-          "version": "repo-file-v1:sha256:78e4ae849f4f3c9e4a8933e7dc3db23679299df272c0ab6b711d92767ee17b94"
+          "version": "repo-file-v1:sha256:28e16e99ac27f7ffc064408bccb264d2345799888f3a3e148ea155204bf76cb9"
         },
         {
           "resource": "repo://src/model/graphCypher.worker.ts",
@@ -96,29 +96,29 @@
     },
     {
       "id": "claim_fc1eab6b72fc40d1a047ba5e780ba6d8",
-      "statement": "The Graph toolbar menu holds Knowledge graph (opens GraphView) and the graph export item; GraphView's download panel (GraphDownload) saves the graph as SVG or PNG for the visible area or the whole graph, with imageFrame fitting the whole graph into at most MAX_SIDE (8192) pixels, writing SVG via writeTextFile and PNG via writeBinaryFile to a path picked by pickTextExportPath.",
+      "statement": "The toolbar Result view menu opens the graph and diagram tabs without an export item; graph export lives in the Save menu and in the graph view's Export… button, which opens ExportGraphDialog.",
       "evidence": [
         {
-          "resource": "repo://src/components/GraphDownload.tsx",
-          "version": "repo-file-v1:sha256:02afc06809b389a29b96cb592f269698e8169652662932828bc6d958756712dc"
+          "resource": "repo://src/components/GraphView.tsx#L409-L411",
+          "version": "repo-lines-v1:sha256:837943a5a2f59a2be90c8c631678a7c4073fcb93207acba05b0f7dfcb3cf3129:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjdhMmM2MzkzZTQwNjU5N2VjOGNhNWIxZTJiNzc2YjNhN2FjYjkzNDFlODZhYWFmYTkyNjY2OTcyNTVmZTdjOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDM3M2FkYjFmMTYwNTM0YzY0NDg1ZTEwMWQ2ZTQ1M2E2MTU4YzZlNzFiYTIxYTJmMzZlYjljNTA4NDc1Y2JiNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTk2OTk0MjVhNDk0NGZmODM1NDc0OTFlMzlmMGM0ZTMyNjRiYmNhOGFlNTQ0NzM5ODRlNTZlM2M1Nzc4Y2Q3NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmM5ZGRhYmRjMDdmMGQ4N2ViNDdkZDhlN2JlY2VjN2I4NTU3NzliOGNmMTQxZDAwYWM3ODkyYjZjOWU0ODkzMyJ9"
         },
         {
-          "resource": "repo://src/components/GraphView.tsx#L320-L340",
-          "version": "repo-lines-v1:sha256:360f0d65e4b92c0fdafd223b4cf48bfdffc3f88fd3b2a7a357a7e0aa5f293856:eyJzZWxlY3RlZExpbmVDb3VudCI6MjEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVjZjJhYmI5MzNjYjJmMzk5NjEzMjBiNmFlNWRmNTAwMzNjNjllMmE3YTY1NDBhMDJkYmI4OTExZmVhNjU2NDUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImFjMzUzMzZiNzQ2ZjczZTMyMTExNmFkYWNmYWM0M2YwMGZlMTRmZGI2ZjFlODU0MTBlNDc5NzE0YzI5NDgzZjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjEyZWY5MWMzNzAxZDZhNTg2Y2RmNTJhNmZmMWExZDEzNmIyNDQwYWYyZWRiMTE2YTVmNGFhMDMxODY3NDc0ZjcifQ"
+          "resource": "repo://src/components/GraphView.tsx#L581-L581",
+          "version": "repo-lines-v1:sha256:e09e2290d9979267eba24fa3b8e03f70025c3e5c514c68812fba0e64388f9bcc:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTA5ZTIyOTBkOTk3OTI2N2ViYTI0ZmEzYjhlMDNmNzAwMjVjM2U1YzUxNGM2ODgxMmZiYTBlNjQzODhmOWJjYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTA5ZTIyOTBkOTk3OTI2N2ViYTI0ZmEzYjhlMDNmNzAwMjVjM2U1YzUxNGM2ODgxMmZiYTBlNjQzODhmOWJjYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODJlOGQ4ZjVkOTc0MGJhMGU3MzAzOTAyOWVkNWU0MjQ4YTBjMTIyYmQwZmNhYzU3ZjE2ZDYwOGZmN2JkNmQ1NyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTNkMjRiNzRhY2ZiMGQ3MDE2NzQ1NTk1MjMzNWQwNjRlNDUyMzkyMjllNjk0YTliZTBkODdhOTgxOTRhZjI3NyJ9"
         },
         {
-          "resource": "repo://src/components/Toolbar.tsx#L369-L379",
-          "version": "repo-lines-v1:sha256:a41987978526eece2b31ed264e0b968425a4b2251df93da3c33bdffe3adf0f83:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM0MjY4ZDQ2YmU2OGQ5NTlkZGMyYzI1M2ZhNzUxYzA5ZWJmZmQ0NmY0YzBhOGQyYjVhZWM4ZWFkMjQ3NGFhMTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMwNjQ4Zjc3ZmQ1YTljNjNiM2NkZDBhZjQ5ZGFhMTI5OTIyMGI3NTQxZTg4Y2ExN2VmZTFhNmExMTRiOWZmMmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM3Zjg3N2E0NjQzNjc3MDRjMzc1YjNlMmU3Mjc3ZjQ5M2NhZTMyN2Q2NTUxYjNkNjY3MDZjNDk4YjZkMDViYmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhiZjQ3MTMzYzVlMmFhZmY0OWU0ZmJiYzYyOTNjNzAzNzIzZjkwODliZWVlNjEwYTQ0NmRiMzZlNDA3YzNiZTcifQ"
+          "resource": "repo://src/components/Toolbar.tsx#L325-L330",
+          "version": "repo-lines-v1:sha256:eabcd5be942e583f622b7a868e0cee4e2bb52adaf8f0e753aa0dbe10c93cb024:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMDkwODg1MzBjNmFmMDBjMDA4MjIyZmM3OGEyZmI5ODlhZjljNzFjODYyY2JhNWE2YjQzN2NlMWYwYWRjNmJjOSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjNhNDhkNTcyZTMwOWVlZTM5YjE4MGQxMDE1ZWYzMmVhYzI2MDQ0NzdjZjU4ZjEyYWZjZGZkN2E3NDI3N2M1NiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODAzNGFlOWZjMTgzNjc1MDY4MzA5MDA2ZDg5MjE3NmU2MTY1ODI2MzdlMmNlMzI1MWRiY2NlOWFjMzllNTgzMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNmQyYzQ2MDEyMDAzZDg4Y2MzYmZhNzJjOTRmYTQ0NjkyNWMwYWU3ZDE3NjhlNDNiZTEyODMxODFhZTA2NzExYiJ9"
         },
         {
-          "resource": "repo://src/components/graphImage.ts#L28-L54",
-          "version": "repo-lines-v1:sha256:d248b1712fd0c459ff557c4015aa6dfbed2a9284856d52c66ba3c03b7c81524e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImYxNWMzYTA5ZDgzZjQwZjM3NTkxNzU1NWI1NmE4Yzk0NmIyNTIwZmNlMTdhZmE5ZDkxNzkwNGJkODg2NGNhMjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImIwMDRiNjk5YjY3OWE1ODA2ZDBmMjMwNTliZmNjZmMxNzU5OTZmNTNkY2JkMDUxYTQxNGJmMzk5MTY5M2EzZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiMTBlODRjYjE2YzU3MWIwZjIzY2I4NjM1ZWIzOTc4Y2Q2MGQ2MTdmMzc2MDMzY2ZkYmI0YmZhNDE2MGQ5ZjgifQ"
+          "resource": "repo://src/components/Toolbar.tsx#L369-L390",
+          "version": "repo-lines-v1:sha256:7d0e42c74f09d5f7b4da1741776989d355ce77b9a1a07688d18394a79359d394:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM0MjY4ZDQ2YmU2OGQ5NTlkZGMyYzI1M2ZhNzUxYzA5ZWJmZmQ0NmY0YzBhOGQyYjVhZWM4ZWFkMjQ3NGFhMTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyNjczYTI1MGNmYzA3MjY2ZmQ4MTIzNjU5MGJiODYyZjJhZTJhNTkwMjNjNzAwMjVkZGY2YzM3Mjk4YTliNjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM3Zjg3N2E0NjQzNjc3MDRjMzc1YjNlMmU3Mjc3ZjQ5M2NhZTMyN2Q2NTUxYjNkNjY3MDZjNDk4YjZkMDViYmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiZDQzNjViMGMxNDk2ZDZiOWRhNmRkZjIyMjMzYWYxMmRiMDFjMjc0NjRlZGE0MzhhNmI2ZDBlMjY3YmM4NDgifQ"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-07T10:50:01.257Z"
+    "at": "2026-11-08T19:43:29.846Z"
   }
 }

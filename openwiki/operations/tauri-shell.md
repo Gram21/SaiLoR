@@ -54,10 +54,10 @@ sources:
     resource: repo://src/platform/desktop.ts
   - id: openwiki-source-6caeef66ec21bf4ae91fe55c
     resource: repo://src/platform/tauri.ts
-generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
+generated: { by: "claude-code", at: "2026-11-08T19:43:29.846Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-07T10:50:01.257Z
+    at: 2026-11-08T19:43:29.846Z
 ---
 
 # Tauri Shell, IPC and Self-Update
@@ -129,7 +129,8 @@ sides (`gitPullBegin`, `gitLogDiff`, `gitHeadContent`, …) go through the same 
 renderer always sees post-assembled project text.
 
 **Binary export.** `export_write_bytes` (`pdf.rs`) writes bytes the renderer built, such as the graph
-PNG. Like `text_write`, it accepts only a path from an export dialog this session (`export_target`) and
+PNG and the diagram PNG and PDF (see [diagrams](../workflows/diagrams.md)). The export dialogs accept
+only the extensions `txt`, `jsonld`, `ttl`, `graphml`, `csv`, `svg`, `png` and `pdf`. Like `text_write`, it accepts only a path from an export dialog this session (`export_target`) and
 refuses a symlink. It is listed in `main.rs`, in `COMMANDS` in `build.rs`, and in
 `capabilities/default.json`.
 

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:e3816fd5293cc8293d9207a0024b0e51d692b0b6bc8c509ff1403fea9f1eaeef",
+  "pageVersion": "sha256:d356c1766b73cfb080e94eb1186522ae676bec79624785a0b9ec735b707d89ce",
   "claims": [
     {
       "id": "claim_963822971b6d42aaad66333527580c8a",
@@ -511,8 +511,8 @@
       "statement": "Release installers are not gated by a test workflow: release.yml (triggered by a v* tag, workflow_dispatch, or a published release) does preflight checks, creates or finds a draft release, builds four targets via tauri-action with the release config and signed updater artifacts, checks latest.json lists all four platforms, and archives the published release on Zenodo — but runs no test suite. The test gates live entirely in ci.yml on pushes and pull requests.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/release.yml#L10-L168",
-          "version": "repo-lines-v1:sha256:b396141d193a446da0d464e069333cb6855008aace9b9b93cd82a578c7ca420f:eyJzZWxlY3RlZExpbmVDb3VudCI6MTU5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkMWIzM2U0N2Y1MGFiMDc3NTMzMWZiNmMwZjgxMmM3OWVjODcwMDA3NmNiZjQzZjRkZGNiMTljYWU2MjZmYjhjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1Y2U4YjgyZTM4MDVhM2ExODAwM2YyZmU0NWQ0ZjVkYmI0N2FmZGU4YzJkZGY1NTljZWQyYjRmZGM0ZjQwNjM5IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI0MzM2MmMxOWZhZWRkNzA0MzE1ZjU4ODgzMGU0YTVkMDgxOWU2OWQ4OTIwNzYwMmRjNjU3YWNlYWQ0M2E1MjFhIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwZTQ0ODE4YWQyNGRjYmU0MmFjYjM2Y2UxZmNjOTc4YjI1ODVkNDhiZThlMDZkMGY3ZDZkNzcxMjdmYWQyOGE5In0"
+          "resource": "repo://.github/workflows/release.yml#L10-L169",
+          "version": "repo-lines-v1:sha256:804f3d565d238e6f607a1baca992b079cb208259c25ac87bfb3ee8235b463aae:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJkMWIzM2U0N2Y1MGFiMDc3NTMzMWZiNmMwZjgxMmM3OWVjODcwMDA3NmNiZjQzZjRkZGNiMTljYWU2MjZmYjhjIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1Y2U4YjgyZTM4MDVhM2ExODAwM2YyZmU0NWQ0ZjVkYmI0N2FmZGU4YzJkZGY1NTljZWQyYjRmZGM0ZjQwNjM5IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI0MzM2MmMxOWZhZWRkNzA0MzE1ZjU4ODgzMGU0YTVkMDgxOWU2OWQ4OTIwNzYwMmRjNjU3YWNlYWQ0M2E1MjFhIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwZTQ0ODE4YWQyNGRjYmU0MmFjYjM2Y2UxZmNjOTc4YjI1ODVkNDhiZThlMDZkMGY3ZDZkNzcxMjdmYWQyOGE5In0"
         }
       ]
     },
@@ -539,10 +539,20 @@
           "version": "repo-file-v1:sha256:38f99c6176fe759859fcc7f22ff801c6a4790dccb9d8132d6f2a88108d9cf836"
         }
       ]
+    },
+    {
+      "id": "claim_f13811807530485d951cee3fc8216a6f",
+      "statement": "Diagram SVG output is regression-tested by parsing each chart type's SVG as XML, which guards against malformed markup such as duplicate attributes.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/diagram.test.ts",
+          "version": "repo-file-v1:sha256:6a80b61f7a10506cd4d257c936f48ba67843156bbb441ea9dc04a08f6fbbf2bc"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-07T12:13:58.722Z"
+    "at": "2026-11-08T19:43:29.846Z"
   }
 }

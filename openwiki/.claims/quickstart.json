@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:e3349f434c0c0698892e0fc3f6d1b14060e3b32229f41c6556358145dc6a6504",
+  "pageVersion": "sha256:25c93f7aa3ca4852570a2be33e226acbb114969c50f27c850ed9f4188a914a78",
   "claims": [
     {
       "id": "claim_73038aa7de1248059ddba1afcb29f3d4",
@@ -8,7 +8,7 @@
       "evidence": [
         {
           "resource": "repo://README.md",
-          "version": "repo-file-v1:sha256:0802bec33d90dd451a8e4fa1cbd329129870563409e99f147513696e58fc5c51"
+          "version": "repo-file-v1:sha256:f1e9388a08741393969f02aee4f958f553d38007046e0183c52ea1580d35a31b"
         },
         {
           "resource": "repo://src/model/project.ts",
@@ -22,7 +22,7 @@
       "evidence": [
         {
           "resource": "repo://README.md",
-          "version": "repo-file-v1:sha256:0802bec33d90dd451a8e4fa1cbd329129870563409e99f147513696e58fc5c51"
+          "version": "repo-file-v1:sha256:f1e9388a08741393969f02aee4f958f553d38007046e0183c52ea1580d35a31b"
         },
         {
           "resource": "repo://src-tauri/src/project.rs",
@@ -98,7 +98,7 @@
         },
         {
           "resource": "repo://src-tauri/src/pdf.rs",
-          "version": "repo-file-v1:sha256:2cd1fb9fd3f53e32b8f98c3743fe77e410a1af35e242195f8e2b904ddc1814d6"
+          "version": "repo-file-v1:sha256:bd49f745e3acec6793a21f636218e89ef60af656230503a811ce774678d60690"
         }
       ]
     },
@@ -349,10 +349,24 @@
           "version": "repo-file-v1:sha256:fb238395e2d5d474c8e8c192a62e909445dfbeeb0528ac9f036a1dd033fe3c4b"
         }
       ]
+    },
+    {
+      "id": "claim_84d9a0ec84e2483694b125b9af2e6ea6",
+      "statement": "The Result view diagrams page documents the Diagrams tab; its code lives in src/model/diagram*.ts, DiagramView.tsx and diagramExport.ts, with tests in diagram.test.ts and DiagramView.test.tsx.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/DiagramView.tsx",
+          "version": "repo-file-v1:sha256:d34bd1b66fe43d16ccd293642b47dfba5f200f9c7decf3eb5d3cc7caf5d4211a"
+        },
+        {
+          "resource": "repo://src/model/diagram.ts",
+          "version": "repo-file-v1:sha256:b7686c1e59de14410d07c104b255efc7475008f96623aab48cca0d75ac1f02ca"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-07T12:13:58.722Z"
+    "at": "2026-11-08T19:43:29.846Z"
   }
 }

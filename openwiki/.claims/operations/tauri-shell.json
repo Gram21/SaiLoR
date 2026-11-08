@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:87859d5bc1e95335fa11702acff7c68e8666fc695261ea2a6feb35cc85b257cb",
+  "pageVersion": "sha256:b550ff8d5457fd6b5d8e3f84a9be69c7628ed6469dd65ad791abc05d6e1959dc",
   "claims": [
     {
       "id": "claim_eaef87a5f139424fa5f75b41af39d806",
@@ -112,7 +112,7 @@
         },
         {
           "resource": "repo://src-tauri/src/pdf.rs",
-          "version": "repo-file-v1:sha256:2cd1fb9fd3f53e32b8f98c3743fe77e410a1af35e242195f8e2b904ddc1814d6"
+          "version": "repo-file-v1:sha256:bd49f745e3acec6793a21f636218e89ef60af656230503a811ce774678d60690"
         }
       ]
     },
@@ -285,10 +285,20 @@
           "version": "repo-lines-v1:sha256:b54850b33340a1f52c0fde737d1cc8d41c1faa255f4f635d8cdfd03f90fc368b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJjNjU5YWIyYjI2MjcxMzBhOWY4Y2FmYTkzNzQ3YTg3NmY3MzQwMTE1OTU3MjlmNGY0NTM3MzU2NzNlYTFhZDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwOGI1N2RhN2Q4MjU3OGYxNjQ4OTZlZTZkMmJmYzczYjE4OTg5OTE4ZjkwZjkxYmRmZTgyN2U1NWY5MTMyMjYifQ"
         }
       ]
+    },
+    {
+      "id": "claim_47c7ca9eb54646a986cd3ceced1596f4",
+      "statement": "The text/binary export dialogs in pdf.rs accept only a fixed extension allowlist (txt, jsonld, ttl, graphml, csv, svg, png, pdf); any other extension is rejected.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/src/pdf.rs#L288-L296",
+          "version": "repo-lines-v1:sha256:57e70e443e99c9d803814fc4ea8a9a3bc6a4d64db97443483a92ddade03842e2:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTc5YTNhZmMzZDQzOTA0ZmMyZDI1OGJiNzk1MGRiYmQ4YmY5NzRmNTJjMmNkYThjZDI0NzcxNzQ0ZjRkMjlhMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTk2ZjhjYjA4M2ZhODAwYTRkY2QyOTY5NzIyZDdiOTI2ODZhZGQ5ZWJlMzY1NTQ5MmZhNjcyYjFhN2NlZDI0MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjM0ZGY5Yjg5ZTA3NzljMzNhOWJiNjgxNWU3MDExMGZjMGQ3ZmI3OWEyNTk2OGRiZjc2ZDdkYjljZmZhYzhhNyJ9"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-07T10:50:01.257Z"
+    "at": "2026-11-08T19:43:29.846Z"
   }
 }

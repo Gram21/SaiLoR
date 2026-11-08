@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:5f3cd664824cacde3794b29983708fc3bc3c696fb1a5594ddefe47a6185dbac5",
+  "pageVersion": "sha256:95e632a96fb6775e7d4a920f31c652e4f084105851201ec5da21cf2e5430043a",
   "claims": [
     {
       "id": "claim_d512433d8b114757b964025df55ab19f",
@@ -189,8 +189,8 @@
       "statement": "`release.yml` triggers on a `v*` tag push, `workflow_dispatch`, and release publication; its `release` job (skipped on a publish event) preflights that the tag matches `v<package.json version>`, that `plugins.updater.pubkey` is set (not the `REPLACE_` placeholder) and that `TAURI_SIGNING_PRIVATE_KEY` exists, then finds or creates a DRAFT release whose notes state macOS 15+ support, manual updates for deb/rpm, and that 1.x users must install this release once by hand (no auto-update across the Electron-to-2.0 migration).",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/release.yml#L1-L97",
-          "version": "repo-lines-v1:sha256:148961352f08ccb600b565a25a099210952bde8c78c2c30acf6c8b574e8f5e69:eyJzZWxlY3RlZExpbmVDb3VudCI6OTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyZWVmOTAzMGQwYzcwMjkwMTBjNDYzNTY4OWY1ODMyOGQxMDllNmE4NWVkMWE5MjQ1YjIwZjM5NTViN2RiMzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlZTNjNjBkYjI1M2NiY2VhNzI0YWFkZDkxOGViOTQ2NjRmN2M2N2U3ODRmNzk2Zjc4NGNmMTAyMjA3ZDI2YmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE4MDY5YTJkMGVlODdhMTE3M2E2MzgyZjJlN2Y2YTA1NWQ5MGNiMWUyMmU1NGNlODBhNDdmNzZjNTcwMjNiNTAifQ"
+          "resource": "repo://.github/workflows/release.yml#L1-L98",
+          "version": "repo-lines-v1:sha256:0ab9cc20bc9c5c78680dd33aac39f98060c52f44dc75a280cda1054e28c9f1d8:eyJzZWxlY3RlZExpbmVDb3VudCI6OTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjEyZWVmOTAzMGQwYzcwMjkwMTBjNDYzNTY4OWY1ODMyOGQxMDllNmE4NWVkMWE5MjQ1YjIwZjM5NTViN2RiMzkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlZTNjNjBkYjI1M2NiY2VhNzI0YWFkZDkxOGViOTQ2NjRmN2M2N2U3ODRmNzk2Zjc4NGNmMTAyMjA3ZDI2YmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjE4MDY5YTJkMGVlODdhMTE3M2E2MzgyZjJlN2Y2YTA1NWQ5MGNiMWUyMmU1NGNlODBhNDdmNzZjNTcwMjNiNTAifQ"
         }
       ]
     },
@@ -199,7 +199,7 @@
       "statement": "The release `build` matrix runs tauri-action@v1 for four targets (macos-15 aarch64-apple-darwin and x86_64-apple-darwin, windows-latest x86_64-pc-windows-msvc, ubuntu-22.04 x86_64-unknown-linux-gnu) with `--config src-tauri/tauri.release.conf.json`, signing updater artifacts with TAURI_SIGNING_PRIVATE_KEY and attaching them to the draft release via the releaseId; macOS Apple secrets default to ad-hoc signing (`APPLE_SIGNING_IDENTITY` `-`, empty secrets deliberately not exported) and Windows Authenticode signing is optional, writing a tauri.windows.conf.json overlay only when WINDOWS_CERTIFICATE is set.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/release.yml#L99-L173",
+          "resource": "repo://.github/workflows/release.yml#L100-L174",
           "version": "repo-lines-v1:sha256:90544ee4ac5f740016cdb2846a7623f850397b7c27820937357a8c0782d96239:eyJzZWxlY3RlZExpbmVDb3VudCI6NzUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjVhMTNmYzNjNGY4YjNlYzk5ZGIzNzVjYmE1YjhmMTU1ZjNjOTRiZDZhNzkxYjEwYTEwYTI2ODA4ODBiNDY1NTMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFhMjhkNjcwNDI5ZTdmYTFhODAwYzQyZDk2YjQzNzNlM2I2MmNmYTkwYzgzY2I2YWZlNDFjNjFhZWU5NTU3YWUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImE0NTk2OGM2ZTAyNTcyMTUyMDMzYzBmNzgxODQ5ZmJjZTdlYzM3MGZjOGU5NTU2OGY2YTVkY2JjNzg1ZTg3Y2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJkNWE2NTJmODUyZjc2YzU4Y2U3OTQyMDkwODg4NDdkYTZhMmQ3YWY3MTkxNGMyY2YxYjdhYjI3NWE3OGQxZDIifQ"
         }
       ]
@@ -209,7 +209,7 @@
       "statement": "`release.yml` has a `check-updater-json` job that asserts the merged `latest.json` on the draft release lists all four platforms (darwin-aarch64, darwin-x86_64, windows-x86_64, linux-x86_64), because concurrent build jobs each merge their platform into the feed and a race can drop one.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/release.yml#L175-L190",
+          "resource": "repo://.github/workflows/release.yml#L176-L191",
           "version": "repo-lines-v1:sha256:d9a5140d065fb8ea528989bfd3eb46f151a00e535cd19c259f052819e1b6a383:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2Y2FmMGM2NzVhM2JkY2EzNThmZDE4NThlZTdkZmU0OGMyOGZkNzkwZDVmZTQ2ZTRmYjc5NzBjOGFkMzI3MWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE2MjQ0M2JhOTExMjkwMTE1M2IwMjk5MDY5ZDBmYjZkNzMzMjVjMDgxOWFhMDNlM2M4MjMwZTA2YjllMWExZWYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjE5Y2UwMDZhMTJiZWMzNGRiZTQ2ZGMyN2VlNTk2YmFhZjE2ODE1Mjk5ODIzMjE4YmRkYWU1OGI0ZjYzNzc5ODciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjkyYTQzNTc4YWYwYmE4OWQyYjk1NmJjNmQxMDRkNjU0MjEyMTlmMzkwMzZhYjIyMzU1MGMyODM2ZGQwZTdhYmUifQ"
         }
       ]
@@ -219,7 +219,7 @@
       "statement": "On a published release, `release.yml`'s `zenodo` job archives the release on Zenodo as a new version of the existing concept record (recid 23804729, shared concept DOI): a `git archive` source zip plus all release assets, with the GitHub release notes (rendered to markdown) as description, GPL-3.0-only license, and an isIdentifiedTo related identifier; a new version starts from the previous version's files and publishing on Zenodo is permanent.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/release.yml#L192-L310",
+          "resource": "repo://.github/workflows/release.yml#L193-L311",
           "version": "repo-lines-v1:sha256:5389272b26ebdb79cabb352f87b7e3ff8d0c86596453931e79aaa8b8285f6660:eyJzZWxlY3RlZExpbmVDb3VudCI6MTE5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIzMzM3MzM0YWVjMGRjYjI0ZTQwZTNjMjBkYzA5ZDU5YWY2NzQzZDAyN2RiZmY1MGMxYWNhMDg5NzQ3MTE3NjcwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJhNTBiM2EzNjEwOTJjOGFkOGEwODlkMDJmYzZiNjYyZDIxNjQ4OTc5MzMwNTA5MzEwOGVlYTZmOWUxN2FiNmYzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJiY2ExYjU4NmY5ZGVhOWExODdmNjliMWY2YzRkOGUxZGU2NzQyMmRjYzk2OGZkMTU1YjA2ODdkYWJlZTNkNWZlIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
@@ -275,7 +275,7 @@
           "version": "repo-lines-v1:sha256:51d2ae6050bef703cbfa525e1a8ccc479ce896bdd78342ff7d9303c655f7eee7:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTY2ODk3ZDQ5ODZhOWVkOGU5M2JjOTBlYTg2Njk3ZmI5NGE3NzI1ZmY1NjI0Mjc2MjA5OTBiYWVhNGE1YzQyMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjgyYjMxZGJjYTkyZjVjNDU0MWJhYjZiYTYwYTljOTIwOTE5MWFkY2M4MGNiZDhlNmU4ZjdiNWI1YjA1NGU4YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzhjYjM3YjIwZDgyMTRkODhlMzk4N2JhMTQ5ZmI1OGQ5ZWMzNmZmMDU0MDhjNGIyMzU3MjU1ZGUyMTE0ZmQyMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTBlYjY1ZjlmMDQ3ODhlNWEwMmRmNGNhYjUyYjNhOTNjNDEwMzZjYjdkNDJjOTI0NmI4OGZkZWNiMzlmNGEwNCJ9"
         },
         {
-          "resource": "repo://.github/workflows/release.yml#L96-L113",
+          "resource": "repo://.github/workflows/release.yml#L97-L114",
           "version": "repo-lines-v1:sha256:79bf764dd8e0d0f1a8205584b9b12e45d75c56df09eea10d8dd4a8b0423beeb2:eyJzZWxlY3RlZExpbmVDb3VudCI6MTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MmIzMWRiY2E5MmY1YzQ1NDFiYWI2YmE2MGE5YzkyMDkxOTFhZGNjODBjYmQ4ZTZlOGY3YjViNWIwNTRlOGMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhmN2JhNjc5YzI2NGYwMDhhOGMxZDJlMjdlMzEzZGQzYjI2MmI1NGNkOTE5N2MwNmI0NjY5NTRmZTNkODViZjUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjFmOGNkMDY2YWQyMzVkM2VkZGM4MDBiMjg3NzhmZmEyMDlkNzc4YzkzNjI2MThmM2ZhMGIzYjFjNTIxMDkzMWEifQ"
         }
       ]
@@ -283,6 +283,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-07T12:13:58.722Z"
+    "at": "2026-11-08T19:43:29.846Z"
   }
 }

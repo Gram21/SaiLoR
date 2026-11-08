@@ -8,10 +8,6 @@ sources:
     resource: repo://src/components/ExportGraphDialog.tsx
   - id: openwiki-source-c962bf9f3bb0b8a8f0500c3e
     resource: repo://src/components/graphCanvas.ts
-  - id: openwiki-source-0f756e2ec2a65b393c6520d6
-    resource: repo://src/components/GraphDownload.tsx
-  - id: openwiki-source-72ae9063e01aecc7279eb805
-    resource: repo://src/components/graphImage.ts
   - id: openwiki-source-8aa7502a33c2a1bd25289806
     resource: repo://src/components/GraphView.tsx
   - id: openwiki-source-9690f05ae6bd7e4ffa4bbeb8
@@ -26,10 +22,10 @@ sources:
     resource: repo://src/model/graphLayout.ts
   - id: openwiki-source-0cd6363bcc5b6192ad82d9e5
     resource: repo://src/model/graphQuery.ts
-generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
+generated: { by: "claude-code", at: "2026-11-08T19:43:29.846Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-07T10:50:01.257Z
+    at: 2026-11-08T19:43:29.846Z
 ---
 
 # Knowledge Graph View
@@ -64,10 +60,12 @@ Authors, venues and keywords are merged by normalised text, and DOIs are normali
 - `graphCanvas.ts` draws on a 2D canvas. `cull` skips off-screen items, labels show only above `LABEL_ZOOM` and below `LABEL_MAX` nodes, and edge types use different dash patterns.
 - `jsdom` has no `Worker`, so tests run the same host code inline.
 
-## Graph menu and image download
+## Result view menu and image download
 
-The toolbar has a **Graph** menu (`Toolbar.tsx`). It holds **Knowledge graph**, which opens `GraphView`,
-and the graph export item, which opens `ExportGraphDialog`. The **Save** menu keeps the export item too.
+The toolbar has a **Result view** menu (`Toolbar.tsx`). It holds **Explore knowledge graph**, which opens
+`ResultView` on the graph tab, and **Create diagrams** ([diagrams](diagrams.md)). The menu has no export item.
+The graph view has its own **Export…** button that opens `ExportGraphDialog`, and the **Save** menu keeps the
+graph export item too.
 `GraphDownload.tsx` adds a download panel to the graph view: the user picks SVG or PNG, and the visible
 area or the whole graph. `imageFrame` in `graphImage.ts` fits every placed node into an image of at most
 `MAX_SIDE` (8192) pixels. `sceneToSvg` draws the shown edge types, nodes, query marks and, when zoomed in

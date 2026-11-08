@@ -66,6 +66,8 @@ sources:
     resource: repo://src/git/merge.test.ts
   - id: openwiki-source-6522f2703f223ff98862dc04
     resource: repo://src/git/ref.test.ts
+  - id: openwiki-source-5824e047f87584585b2d048a
+    resource: repo://src/model/diagram.test.ts
   - id: openwiki-source-374a0a015f9404a7da5d05da
     resource: repo://src/model/model.test.ts
   - id: openwiki-source-24c09c3b54387889db23d752
@@ -106,10 +108,10 @@ sources:
     resource: repo://vitest.integration.config.ts
   - id: openwiki-source-6369b39e1545dd104877b6e7
     resource: repo://vitest.mutation.config.ts
-generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
+generated: { by: "claude-code", at: "2026-11-08T19:43:29.846Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-07T12:13:58.722Z
+    at: 2026-11-08T19:43:29.846Z
 ---
 
 # Testing Strategy
@@ -650,6 +652,7 @@ the tag points at.
 | Platform seam (`src/platform/*`) | `npm test` (`tauri.test.ts`, `desktop.test.ts`, `recents.test.ts`) |
 | Rust shell (`src-tauri/*`) | `make test-rust` **and** `make lint` (fmt + clippy `-D warnings`) |
 | `slr-file://` protocol, PDF serving, authz (`protocol.rs`, `pdf.rs`, `authz.rs`) | `cargo test`, then `make probe` and the probe run — the only tier that exercises the real WebView path |
+| Diagrams (`src/model/diagram*.ts`, `DiagramView.tsx`) | `npm test` — `diagram.test.ts` parses every chart type's SVG with `DOMParser`; `DiagramView.test.tsx` covers tabs, live title and save (see [diagrams](workflows/diagrams.md)) |
 | Scenario definitions (`samples/git-scenarios/*`) | `npm run test:integration` (the `gitScenarios` suite) and `npm run scenario -- readme` if the list changed |
 | Wiki pages (`openwiki/`, `user-guide/`) | `npm run check:wiki` |
 | Project site or demo (`site/`, `src/demo/*`) | `npm run check:site`, `make ci-pages` |
