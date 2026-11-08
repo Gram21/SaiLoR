@@ -2878,7 +2878,8 @@ button.validation-search-case:hover {
 }
 .diagram-image {
   max-width: 100%;
-  max-height: calc(100% - 32px);
+  height: auto;
+  flex: none;
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 12px;

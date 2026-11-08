@@ -383,7 +383,6 @@ export function Toolbar() {
       disabled: loading,
       onSelect: () => setResultOpen('diagram'),
     },
-    graphExportItem,
   ]
 
   return (

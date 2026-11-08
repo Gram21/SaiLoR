@@ -157,7 +157,7 @@ describe('toolbar entries that need a project or AI', () => {
     for (const name of names) expect(screen.getByRole('button', { name })).toBeInTheDocument()
   })
 
-  it('puts the knowledge graph export in the Result view and Save menus, not on the toolbar', async () => {
+  it('keeps the knowledge graph export out of the Result view menu and the toolbar', async () => {
     st().loadFromText(annotationProjectJson({ ai: false }), null, 'test.json')
     render(<Toolbar />)
     expect(screen.queryByRole('button', { name: 'Knowledge graph' })).not.toBeInTheDocument()
@@ -165,9 +165,7 @@ describe('toolbar entries that need a project or AI', () => {
     const items = screen.getAllByRole('menuitem').map((i) => i.textContent ?? '')
     expect(items[0]).toMatch(/^Explore knowledge graph/)
     expect(items[1]).toMatch(/^Create diagrams/)
-    expect(items[2]).toMatch(/^Knowledge graph/)
-    await userEvent.click(screen.getByRole('menuitem', { name: /^Knowledge graph/ }))
-    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(items).toHaveLength(2)
   })
 
   it('offers the graph export in the Save menu too', async () => {
@@ -371,7 +369,7 @@ describe('features over the whole project wait while it loads', () => {
       expect(item).toHaveAttribute('title', hint)
     }
     await userEvent.click(screen.getByRole('button', { name: /^Result view/ }))
-    for (const name of [/Explore knowledge graph/, /Create diagrams/, /^Knowledge graph/]) {
+    for (const name of [/Explore knowledge graph/, /Create diagrams/]) {
       const item = screen.getByRole('menuitem', { name })
       expect(item).toBeDisabled()
       expect(item).toHaveAttribute('title', hint)

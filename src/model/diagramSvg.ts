@@ -16,7 +16,8 @@ const clip = (s: string, max: number, size: number) => {
 }
 
 function text(x: number, y: number, s: string, size: number, extra = '') {
-  return `<text x="${num(x)}" y="${num(y)}" font-size="${size}" ${FONT} fill="${INK}" ${extra}>${xmlText(s)}</text>`
+  const fill = /\sfill="/.test(` ${extra}`) ? '' : ` fill="${INK}"`
+  return `<text x="${num(x)}" y="${num(y)}" font-size="${size}" ${FONT}${fill} ${extra}>${xmlText(s)}</text>`
 }
 
 /** A tick step of 1, 2 or 5 times a power of ten, so the axis has at most about `count` ticks. */
@@ -140,7 +141,7 @@ export function renderDiagram(data: DiagramData, config: DiagramConfig): string 
   const y = (v: number) => bottom - (v / yMax) * plotH
   for (let v = 0; v <= yMax; v += step) {
     out.push(`<line x1="${left}" y1="${num(y(v))}" x2="${num(left + plotW)}" y2="${num(y(v))}" stroke="${GRID}"/>`)
-    out.push(text(left - 6, y(v) + 4, String(v), 11, 'text-anchor="end" fill="' + MUTED + '"'))
+    out.push(text(left - 6, y(v) + 4, String(v), 11, `text-anchor="end" fill="${MUTED}"`))
   }
   out.push(`<line x1="${left}" y1="${num(bottom)}" x2="${num(left + plotW)}" y2="${num(bottom)}" stroke="${INK}"/>`)
 

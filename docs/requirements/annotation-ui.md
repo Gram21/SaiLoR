@@ -500,7 +500,7 @@ export. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-UI-270: Result view menu and tabs
-- **Description:** The toolbar shall have a "Result view" menu. The menu shall have the items "Explore knowledge graph", "Create diagrams" and the graph export of REQ-DAT-520, in this order. "Explore knowledge graph" shall open the result view on the "Knowledge graph" tab (REQ-UI-190). "Create diagrams" shall open the result view on the "Diagrams" tab (REQ-UI-280). The result view shall be one dialog named "Result view" with the tabs "Knowledge graph" and "Diagrams" in a tab list. The user shall switch the tab without closing the dialog. The dialog shall have a "Close" button. The "Export…" button of the knowledge graph shall be in the toolbar of the graph tab.
+- **Description:** The toolbar shall have a "Result view" menu. The menu shall have the items "Explore knowledge graph" and "Create diagrams", in this order. The menu shall not have the graph export; the Save menu has it (REQ-DAT-520). "Explore knowledge graph" shall open the result view on the "Knowledge graph" tab (REQ-UI-190). "Create diagrams" shall open the result view on the "Diagrams" tab (REQ-UI-280). The result view shall be one dialog named "Result view" with the tabs "Knowledge graph" and "Diagrams" in a tab list. The user shall switch the tab without closing the dialog. The dialog shall have a "Close" button. The knowledge graph tab shall have an "Export…" button in its toolbar that opens the export dialog of REQ-DAT-520.
 - **Type:** Functional (ISO 25010: Usability)
 - **Evidence:** `src/components/Toolbar.tsx` (`Toolbar`), `src/components/ResultView.tsx` (`ResultView`), `src/styles/index.css` (`.result-head`, `.result-tabs`), `src/locales/en.json` (`toolbar.graphMenu`, `resultView.*`)
 - **Verified by:** `src/components/Toolbar.test.tsx`, `src/components/DiagramView.test.tsx`
@@ -521,7 +521,7 @@ export. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-UI-300: Diagram rendering
-- **Description:** The system shall render a diagram as one standalone SVG document with a white background, the title, the axis labels, a grid with ticks of 1, 2 or 5 times a power of ten, the legend, value labels and a tooltip with the count for each mark. The system shall escape all text from the user and from the project. Series without a chosen colour shall use the palette in order. The palettes shall be colour-blind safe. The preview shall show the SVG as an image and not insert it into the page.
+- **Description:** The system shall render a diagram as one standalone, well-formed XML SVG document with a white background, the title, the axis labels, a grid with ticks of 1, 2 or 5 times a power of ten, the legend, value labels and a tooltip with the count for each mark. The system shall escape all text from the user and from the project. Series without a chosen colour shall use the palette in order. The palettes shall be colour-blind safe. The preview shall show the SVG as an image and not insert it into the page.
 - **Type:** Functional (ISO 25010: Functional Suitability, Security)
 - **Evidence:** `src/model/diagramSvg.ts` (`renderDiagram`, `niceStep`, `seriesColor`), `src/components/DiagramView.tsx` (`DiagramView`)
 - **Verified by:** `src/model/diagram.test.ts`

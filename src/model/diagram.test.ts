@@ -79,6 +79,15 @@ describe('renderDiagram', () => {
   })
 
   // [utest->req~ui-300~1]
+  it.each(['bar', 'stacked', 'line', 'pie', 'heatmap'] as const)('makes well-formed XML for %s with values and groups', (type) => {
+    for (const group of ['', '@venue']) {
+      const c = cfg({ type, group, values: true, title: 'A & B', xLabel: 'x', yLabel: 'y' })
+      const doc = new DOMParser().parseFromString(renderDiagram(aggregate(graph, c), c), 'image/svg+xml')
+      expect(doc.querySelector('parsererror')?.textContent).toBeUndefined()
+    }
+  })
+
+  // [utest->req~ui-300~1]
   it('escapes markup in the title and labels and applies colours', () => {
     const c = cfg({ title: '<b>"x" & y</b>', xLabel: 'A<', colors: { '': '#123456' } })
     const svg = renderDiagram(aggregate(graph, c), c)

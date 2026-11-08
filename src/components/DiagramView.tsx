@@ -264,7 +264,8 @@ export function DiagramView({ onClose }: { onClose: () => void }) {
             className="diagram-image"
             alt={effective.title || t('resultView.tab.diagram')}
             src={`data:image/svg+xml;charset=utf-8,${encodeURIComponent(shown.svg)}`}
-            style={{ aspectRatio: `${effective.width} / ${effective.height}` }}
+            width={effective.width}
+            height={effective.height}
           />
         )}
       </div>
