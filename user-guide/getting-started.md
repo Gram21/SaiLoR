@@ -399,6 +399,10 @@ Diagrams show how many papers have an answer, for example the papers of each met
 5. Under **Appearance**, set the title, the axis labels, the colours, the legend and the size.
 6. Click **SVG**, **PNG** or **PDF** to save the diagram.
 
+<p align="center">
+  <img src="screenshots/diagrams.png" alt="The diagrams tab with the settings on the left, a stacked bar diagram with a title and legend on the right, and the export buttons at the bottom left" width="900">
+</p>
+
 The diagram updates after each change. The window stays usable while it is made.
 If the project has more than one reviewer, select the seat above the settings.
 If no paper has a value, the view shows a message and you cannot save.
