@@ -155,7 +155,6 @@ describe('GraphView', () => {
   it('shows every node in the canvas and in the accessible list', async () => {
     open()
     render(<GraphView onClose={() => {}} />)
-    expect(screen.getByRole('dialog', { name: 'Knowledge graph' })).toBeInTheDocument()
     expect(listed()).toEqual(expect.arrayContaining(['Paper Graph Mining', 'Author Alan Turing', 'Choice Survey']))
     expect(canvas()).toHaveAccessibleName(/nodes, \d+ edges/)
     await waitForLabel('Alan Turing')

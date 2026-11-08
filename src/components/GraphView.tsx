@@ -19,7 +19,6 @@ import {
 import { layoutHost, type LayoutFrame, type LayoutMessage } from '../model/graphLayout'
 import { buildScene, drawScene, EDGE_DASH, EDGE_TYPES, edgeAt, fitView, hitTest, selectNode, zoomAt, type Palette, type Scene } from './graphCanvas'
 import { useT } from '../i18n'
-import { Modal } from './Modal'
 import { ExportGraphDialog } from './ExportGraphDialog'
 import { GraphSeatSelect } from './GraphSeatSelect'
 import { GraphDownload, type SaveResult } from './GraphDownload'
@@ -392,18 +391,7 @@ export function GraphView({ onClose }: { onClose: () => void }) {
 
   return (
     <>
-      <Modal className="graph-view" aria-label={t('graphView.title')}>
-        <div className="modal-head">
-          <strong>{t('graphView.title')}</strong>
-          <div className="modal-head-actions">
-            <button type="button" onClick={() => setExportOpen(true)}>
-              {t('graphView.export')}
-            </button>
-            <button type="button" className="icon-btn" title={t('common.close')} onClick={onClose} aria-label={t('common.close')}>
-              ×
-            </button>
-          </div>
-        </div>
+      <div className="result-pane">
         <div className="graph-toolbar">
           <form className="graph-query" onSubmit={run} role="search">
             <input
@@ -418,6 +406,9 @@ export function GraphView({ onClose }: { onClose: () => void }) {
             <button type="submit">{t('graphView.run')}</button>
           </form>
           <GraphSeatSelect project={project} value={seat} onChange={setSeat} />
+          <button type="button" onClick={() => setExportOpen(true)}>
+            {t('graphView.export')}
+          </button>
           <div className="graph-zoom" role="group" aria-label={t('graphView.zoom')}>
             <button type="button" onClick={() => zoom(1.25)} aria-label={t('graphView.zoomIn')} title={t('graphView.zoomIn')}>
               +
@@ -586,7 +577,7 @@ export function GraphView({ onClose }: { onClose: () => void }) {
             )}
           </aside>
         </div>
-      </Modal>
+      </div>
       {exportOpen && <ExportGraphDialog onClose={() => setExportOpen(false)} />}
     </>
   )

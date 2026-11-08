@@ -144,7 +144,7 @@ describe('the AI button in the toolbar', () => {
 // [utest->req~ui-160~1]
 // [utest->req~ui-170~1]
 describe('toolbar entries that need a project or AI', () => {
-  const names = [/Validate/, /Git/, /^Save/, /^Graph/]
+  const names = [/Validate/, /Git/, /^Save/, /^Result view/]
 
   it('hides project-only entries when no project is open', () => {
     render(<Toolbar />)
@@ -157,14 +157,15 @@ describe('toolbar entries that need a project or AI', () => {
     for (const name of names) expect(screen.getByRole('button', { name })).toBeInTheDocument()
   })
 
-  it('puts the knowledge graph export in the Graph and Save menus, not on the toolbar', async () => {
+  it('puts the knowledge graph export in the Result view and Save menus, not on the toolbar', async () => {
     st().loadFromText(annotationProjectJson({ ai: false }), null, 'test.json')
     render(<Toolbar />)
     expect(screen.queryByRole('button', { name: 'Knowledge graph' })).not.toBeInTheDocument()
-    await userEvent.click(screen.getByRole('button', { name: /^Graph/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Result view/ }))
     const items = screen.getAllByRole('menuitem').map((i) => i.textContent ?? '')
     expect(items[0]).toMatch(/^Explore knowledge graph/)
-    expect(items[1]).toMatch(/^Knowledge graph/)
+    expect(items[1]).toMatch(/^Create diagrams/)
+    expect(items[2]).toMatch(/^Knowledge graph/)
     await userEvent.click(screen.getByRole('menuitem', { name: /^Knowledge graph/ }))
     expect(screen.getByRole('dialog')).toBeInTheDocument()
   })
@@ -178,14 +179,25 @@ describe('toolbar entries that need a project or AI', () => {
   })
 
   // [utest->req~ui-190~1]
-  it('opens the knowledge graph view from the Graph menu', async () => {
+  it('opens the knowledge graph view from the Result view menu', async () => {
     st().loadFromText(annotationProjectJson({ ai: false }), null, 'test.json')
     render(<Toolbar />)
-    await userEvent.click(screen.getByRole('button', { name: /^Graph/ }))
+    await userEvent.click(screen.getByRole('button', { name: /^Result view/ }))
     await userEvent.click(screen.getByRole('menuitem', { name: /Explore knowledge graph/ }))
-    expect(screen.getByRole('dialog', { name: 'Knowledge graph' })).toBeInTheDocument()
+    expect(screen.getByRole('dialog', { name: 'Result view' })).toBeInTheDocument()
+    expect(screen.getByRole('tab', { name: 'Knowledge graph' })).toHaveAttribute('aria-selected', 'true')
     await userEvent.click(screen.getByRole('button', { name: 'Close' }))
     expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+  })
+
+  // [utest->req~ui-270~1]
+  it('opens the diagrams from the Result view menu', async () => {
+    st().loadFromText(annotationProjectJson({ ai: false }), null, 'test.json')
+    render(<Toolbar />)
+    await userEvent.click(screen.getByRole('button', { name: /^Result view/ }))
+    await userEvent.click(screen.getByRole('menuitem', { name: /Create diagrams/ }))
+    expect(screen.getByRole('tab', { name: 'Diagrams' })).toHaveAttribute('aria-selected', 'true')
+    expect(screen.getByRole('combobox', { name: /Count papers by/ })).toBeInTheDocument()
   })
 
   it('never shows the AI evaluation on the toolbar', () => {
@@ -358,8 +370,8 @@ describe('features over the whole project wait while it loads', () => {
       expect(item).toBeDisabled()
       expect(item).toHaveAttribute('title', hint)
     }
-    await userEvent.click(screen.getByRole('button', { name: /^Graph/ }))
-    for (const name of [/Explore knowledge graph/, /^Knowledge graph/]) {
+    await userEvent.click(screen.getByRole('button', { name: /^Result view/ }))
+    for (const name of [/Explore knowledge graph/, /Create diagrams/, /^Knowledge graph/]) {
       const item = screen.getByRole('menuitem', { name })
       expect(item).toBeDisabled()
       expect(item).toHaveAttribute('title', hint)

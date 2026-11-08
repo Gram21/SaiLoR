@@ -288,7 +288,7 @@ pub async fn pdf_pick_export_path(
 // [impl->req~dat-520~1]
 fn text_export_extension(extension: Option<&str>) -> Result<&'static str, String> {
     let ext = extension.unwrap_or("txt");
-    ["txt", "jsonld", "ttl", "graphml", "csv", "svg", "png"]
+    ["txt", "jsonld", "ttl", "graphml", "csv", "svg", "png", "pdf"]
         .into_iter()
         .find(|known| *known == ext)
         .ok_or_else(|| format!("\"{ext}\" is not a known export file type."))
@@ -723,6 +723,7 @@ mod tests {
         assert_eq!(text_export_extension(Some("graphml")), Ok("graphml"));
         assert_eq!(text_export_extension(Some("svg")), Ok("svg"));
         assert_eq!(text_export_extension(Some("png")), Ok("png"));
+        assert_eq!(text_export_extension(Some("pdf")), Ok("pdf"));
         assert!(text_export_extension(Some("exe")).is_err());
         assert!(text_export_extension(Some("csv;sh")).is_err());
     }

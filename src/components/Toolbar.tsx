@@ -24,7 +24,7 @@ import { aiSeatId, seatLabel } from '../model/project'
 import { canUpdateProject, metadataSeatKey } from '../model/metadata'
 import { MetadataDialog } from './MetadataDialog'
 import { ExportGraphDialog } from './ExportGraphDialog'
-import { GraphView } from './GraphView'
+import { ResultView, type ResultTab } from './ResultView'
 import { PdfFolderDialog } from './PdfFolderDialog'
 import { t, tp, useT, type MessageKey } from '../i18n'
 import { DEMO_MODE } from '../demo/mode'
@@ -215,7 +215,7 @@ export function Toolbar() {
   const [showSaved, setShowSaved] = useState(false)
   const [metadataOpen, setMetadataOpen] = useState(false)
   const [graphOpen, setGraphOpen] = useState(false)
-  const [graphViewOpen, setGraphViewOpen] = useState(false)
+  const [resultOpen, setResultOpen] = useState<ResultTab | null>(null)
   useEffect(() => {
     if (lastSavedAt === null) return
     setShowSaved(true)
@@ -373,7 +373,15 @@ export function Toolbar() {
       label: t('toolbar.graphView.label'),
       hint: loading ? loadingHint : t('toolbar.graphView.title'),
       disabled: loading,
-      onSelect: () => setGraphViewOpen(true),
+      onSelect: () => setResultOpen('graph'),
+    },
+    // [impl->req~ui-270~1]
+    {
+      type: 'item',
+      label: t('toolbar.diagram.label'),
+      hint: loading ? loadingHint : t('toolbar.diagram.title'),
+      disabled: loading,
+      onSelect: () => setResultOpen('diagram'),
     },
     graphExportItem,
   ]
@@ -628,7 +636,7 @@ export function Toolbar() {
         </div>
         {metadataOpen && <MetadataDialog onClose={() => setMetadataOpen(false)} />}
         {graphOpen && <ExportGraphDialog onClose={() => setGraphOpen(false)} />}
-        {graphViewOpen && <GraphView onClose={() => setGraphViewOpen(false)} />}
+        {resultOpen && <ResultView initial={resultOpen} onClose={() => setResultOpen(null)} />}
         {pdfDialogOpen && !editorOpen && <PdfFolderDialog />}
 
         <div className="toolbar-view">
