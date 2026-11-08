@@ -2264,5 +2264,14 @@
   "diagram.rendering": "Creazione del diagramma…",
   "diagram.error": "Impossibile creare il diagramma: {message}",
   "diagram.noData": "Nessun articolo ha un valore per queste impostazioni.",
-  "diagram.count": "{papers} articoli in {cats} categorie"
+  "diagram.count": "{papers} articoli in {cats} categorie",
+  "diagram.filter": "Solo articoli in cui",
+  "diagram.filter.none": "Nessun filtro",
+  "diagram.filterText": "Il valore contiene",
+  "diagram.horizontal": "Barre orizzontali",
+  "diagram.percent": "Mostra quote del 100 %",
+  "diagram.export.csv": "CSV",
+  "diagram.table": "Mostra tabella dei dati",
+  "graphView.openPaper": "Apri articolo",
+  "graphView.cypher.saveCsv": "Salva tabella come CSV"
 }

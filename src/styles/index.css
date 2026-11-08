@@ -3787,3 +3787,18 @@ kbd {
   color: var(--text);
   font-weight: 600;
 }
+.diagram-table {
+  margin-top: 16px;
+  max-width: 100%;
+  font-size: 0.9rem;
+}
+.diagram-table table {
+  border-collapse: collapse;
+  margin-top: 8px;
+}
+.diagram-table th,
+.diagram-table td {
+  border: 1px solid var(--border);
+  padding: 3px 10px;
+  text-align: left;
+}

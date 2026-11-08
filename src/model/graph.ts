@@ -418,7 +418,7 @@ export function csvCell(s: string): string {
   return `"${safe.replace(/"/g, '""')}"`
 }
 
-const csv = (rows: string[][]) => rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n'
+export const csv = (rows: string[][]) => rows.map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n'
 
 // [impl->req~dat-500~1]
 export function toCsvNodes(graph: Graph): string {

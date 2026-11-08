@@ -1,7 +1,7 @@
 // [utest->req~ui-280~1]
 import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, vi } from 'vitest'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
 const saved = vi.hoisted(() => ({ picks: [] as unknown[][], writes: [] as unknown[][] }))
@@ -68,5 +68,43 @@ describe('ResultView diagrams', () => {
     render(<ResultView initial="diagram" onClose={onClose} />)
     await userEvent.keyboard('{Escape}')
     expect(onClose).toHaveBeenCalled()
+  })
+
+  // [utest->req~ui-270~1]
+  it('keeps the settings when the tab changes', async () => {
+    open()
+    render(<ResultView initial="diagram" onClose={() => {}} />)
+    await userEvent.type(screen.getByRole('textbox', { name: /^Title/ }), 'Kept')
+    await userEvent.click(screen.getByRole('tab', { name: 'Knowledge graph' }))
+    await userEvent.click(screen.getByRole('tab', { name: 'Diagrams' }))
+    expect(screen.getByRole('textbox', { name: /^Title/ })).toHaveValue('Kept')
+  })
+
+  // [utest->req~ui-330~1]
+  it('filters the papers and changes the bar direction', async () => {
+    open()
+    render(<ResultView initial="diagram" onClose={() => {}} />)
+    await userEvent.selectOptions(screen.getByRole('combobox', { name: /Only papers where/ }), 'Method')
+    await userEvent.type(screen.getByRole('textbox', { name: /Value contains/ }), 'survey')
+    await waitFor(() => expect(screen.getByRole('status')).toHaveTextContent('1 papers'))
+    await userEvent.click(screen.getByRole('checkbox', { name: 'Horizontal bars' }))
+    await waitFor(() => expect(decodeURIComponent(String(document.querySelector('img.diagram-image')!.getAttribute('src')))).toContain('rotate(-90'))
+    expect(screen.queryByRole('checkbox', { name: /shares of 100/ })).toBeNull()
+    await userEvent.click(screen.getByRole('radio', { name: 'Stacked bar' }))
+    expect(screen.getByRole('checkbox', { name: /shares of 100/ })).toBeInTheDocument()
+  })
+
+  // [utest->req~ui-340~1]
+  it('shows the data as a table and saves it as CSV', async () => {
+    open()
+    saved.picks.length = saved.writes.length = 0
+    render(<ResultView initial="diagram" onClose={() => {}} />)
+    await waitFor(() => expect(screen.getByText('Show data table')).toBeInTheDocument())
+    const table = within(screen.getByRole('table'))
+    expect(table.getAllByRole('rowheader').map((c) => c.textContent)).toEqual(['2019', '2020'])
+    await userEvent.click(screen.getByRole('button', { name: 'CSV' }))
+    await waitFor(() => expect(saved.writes).toHaveLength(1))
+    expect(saved.picks[0][0]).toBe('diagram.csv')
+    expect(String(saved.writes[0][1])).toContain('"2019","1"')
   })
 })

@@ -2264,5 +2264,14 @@
   "diagram.rendering": "Creating the diagram…",
   "diagram.error": "The diagram could not be created: {message}",
   "diagram.noData": "No paper has a value for these settings.",
-  "diagram.count": "{papers} papers in {cats} categories"
+  "diagram.count": "{papers} papers in {cats} categories",
+  "diagram.filter": "Only papers where",
+  "diagram.filter.none": "No filter",
+  "diagram.filterText": "Value contains",
+  "diagram.horizontal": "Horizontal bars",
+  "diagram.percent": "Show shares of 100 %",
+  "diagram.export.csv": "CSV",
+  "diagram.table": "Show data table",
+  "graphView.openPaper": "Open paper",
+  "graphView.cypher.saveCsv": "Save table as CSV"
 }

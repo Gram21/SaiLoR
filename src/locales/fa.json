@@ -2264,5 +2264,14 @@
   "diagram.rendering": "در حال ایجاد نمودار…",
   "diagram.error": "نمودار ایجاد نشد: {message}",
   "diagram.noData": "هیچ مقاله‌ای مقدار این تنظیمات را ندارد.",
-  "diagram.count": "{papers} مقاله در {cats} دسته"
+  "diagram.count": "{papers} مقاله در {cats} دسته",
+  "diagram.filter": "فقط مقاله‌هایی که",
+  "diagram.filter.none": "بدون فیلتر",
+  "diagram.filterText": "مقدار شامل",
+  "diagram.horizontal": "میله‌های افقی",
+  "diagram.percent": "نمایش سهم از ۱۰۰ ٪",
+  "diagram.export.csv": "CSV",
+  "diagram.table": "نمایش جدول داده‌ها",
+  "graphView.openPaper": "باز کردن مقاله",
+  "graphView.cypher.saveCsv": "ذخیره جدول به‌صورت CSV"
 }

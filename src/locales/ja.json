@@ -2264,5 +2264,14 @@
   "diagram.rendering": "図を作成中…",
   "diagram.error": "図を作成できませんでした：{message}",
   "diagram.noData": "この設定の値を持つ論文がありません。",
-  "diagram.count": "{papers} 件の論文、{cats} カテゴリ"
+  "diagram.count": "{papers} 件の論文、{cats} カテゴリ",
+  "diagram.filter": "次の条件の論文のみ",
+  "diagram.filter.none": "フィルターなし",
+  "diagram.filterText": "値に含まれる文字",
+  "diagram.horizontal": "横棒",
+  "diagram.percent": "100 % の割合で表示",
+  "diagram.export.csv": "CSV",
+  "diagram.table": "データ表を表示",
+  "graphView.openPaper": "論文を開く",
+  "graphView.cypher.saveCsv": "表を CSV で保存"
 }

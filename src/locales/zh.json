@@ -2264,5 +2264,14 @@
   "diagram.rendering": "正在创建图表…",
   "diagram.error": "无法创建图表：{message}",
   "diagram.noData": "没有论文具有该设置的值。",
-  "diagram.count": "{cats} 个类别中共 {papers} 篇论文"
+  "diagram.count": "{cats} 个类别中共 {papers} 篇论文",
+  "diagram.filter": "仅限符合以下条件的论文",
+  "diagram.filter.none": "无筛选",
+  "diagram.filterText": "值包含",
+  "diagram.horizontal": "横向条形",
+  "diagram.percent": "显示 100 % 占比",
+  "diagram.export.csv": "CSV",
+  "diagram.table": "显示数据表",
+  "graphView.openPaper": "打开论文",
+  "graphView.cypher.saveCsv": "将表格保存为 CSV"
 }

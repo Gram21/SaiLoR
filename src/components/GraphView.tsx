@@ -2,7 +2,7 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent, type ReactNode } from 'react'
 import { useStore } from '../state/store'
 import { getPlatform } from '../platform'
-import { buildGraph, defaultGraphSeat, graphTrees, type Graph } from '../model/graph'
+import { buildGraph, csv, defaultGraphSeat, graphTrees, type Graph } from '../model/graph'
 import { indexGraph, neighbours, parseQuery, selectSubgraph, type GraphQuery, type SubGraph } from '../model/graphQuery'
 import {
   CypherError,
@@ -82,6 +82,7 @@ function PagedList<T>({ items, render }: { items: T[]; render: (item: T, i: numb
 export function GraphView({ onClose }: { onClose: () => void }) {
   const project = useStore((s) => s.project)
   const theme = useStore((s) => s.theme)
+  const selectPaper = useStore((s) => s.selectPaper)
   const t = useT()
   const [seat, setSeat] = useState(() => (project ? defaultGraphSeat(project) : '1'))
   const [listOpen, setListOpen] = useState(false)
@@ -95,6 +96,7 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   const [selected, setSelected] = useState<string | null>(null)
   const [hidden, setHidden] = useState(0)
   const [exportOpen, setExportOpen] = useState(false)
+  const [note, setNote] = useState<SaveResult>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const view = useRef({ x: 0, y: 0, k: 1 }).current
   const sceneRef = useRef<Scene | null>(null)
@@ -337,6 +339,20 @@ export function GraphView({ onClose }: { onClose: () => void }) {
     }
   }
 
+  // [impl->req~ui-350~1]
+  const saveRows = async () => {
+    if (!result) return
+    try {
+      const platform = getPlatform()
+      const path = await platform.pickTextExportPath('cypher-results.csv', 'csv')
+      if (!path) return
+      const res = await platform.writeTextFile(path, csv([result.columns, ...result.rows.map((r) => r.map((v) => String(v ?? '')))]))
+      setNote(res.ok ? { ok: true, text: t('app.export.saved', { path: res.path }) } : { ok: false, text: t('app.export.saveFailed', { error: res.error }) })
+    } catch (err) {
+      setNote({ ok: false, text: t('app.export.saveFailed', { error: String(err) }) })
+    }
+  }
+
   const onPointerDown = (e: PointerEvent<HTMLCanvasElement>) => {
     drag.current = { i: nodeAt(e), x: e.clientX, y: e.clientY, moved: false }
     e.currentTarget.setPointerCapture?.(e.pointerId)
@@ -497,6 +513,14 @@ export function GraphView({ onClose }: { onClose: () => void }) {
                 <h3 id="graph-results-title">{t('graphView.cypher.results', { count: result.rows.length })}</h3>
                 {result.truncated && <p className="graph-hint">{t('graphView.cypher.truncated', { max: MAX_ROWS })}</p>}
                 {result.rows.length > LIST_PAGE && <p className="graph-hint">{t('graphView.cypher.shown', { shown: LIST_PAGE })}</p>}
+                <button type="button" onClick={() => void saveRows()}>
+                  {t('graphView.cypher.saveCsv')}
+                </button>
+                {note && (
+                  <p className={note.ok ? 'graph-hint' : 'graph-hint graph-error'} role="status">
+                    {note.text}
+                  </p>
+                )}
                 <div className="graph-results">
                   <table>
                     <thead>
@@ -555,6 +579,17 @@ export function GraphView({ onClose }: { onClose: () => void }) {
                 <button type="button" onClick={() => reveal(neighbours(index, node.id))}>
                   {t('graphView.expand')}
                 </button>
+                {node.type === 'Paper' && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      selectPaper(node.id.slice('paper:'.length))
+                      onClose()
+                    }}
+                  >
+                    {t('graphView.openPaper')}
+                  </button>
+                )}
                 <h4>{t('graphView.neighbours')}</h4>
                 <PagedList
                   key={node.id}

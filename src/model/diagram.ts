@@ -2,7 +2,7 @@ import type { Paper, Project } from './project'
 import type { ResolvedDef } from './schema'
 import { isField } from './schema'
 import type { AnnotationValueTree } from './annotations'
-import { buildGraph, type Graph, type GraphEdgeType } from './graph'
+import { buildGraph, csvCell, type Graph, type GraphEdgeType } from './graph'
 import { renderDiagram } from './diagramSvg'
 
 export type ChartType = 'bar' | 'stacked' | 'line' | 'pie' | 'heatmap'
@@ -36,6 +36,13 @@ export interface DiagramConfig {
   limit: number
   /** Count the papers without a value as one category. */
   empty: boolean
+  /** Draw bars from the left, for long category names. Bar and stacked bar only. */
+  horizontal: boolean
+  /** Show each stacked bar as shares of 100 %. */
+  percent: boolean
+  /** A dimension id; with `filterText`, only the papers that have a matching value are counted. Empty for no filter. */
+  filterDim: string
+  filterText: string
   width: number
   height: number
 }
@@ -54,6 +61,10 @@ export const DEFAULT_CONFIG: DiagramConfig = {
   sort: 'label',
   limit: 12,
   empty: false,
+  horizontal: false,
+  percent: false,
+  filterDim: '',
+  filterText: '',
   width: 800,
   height: 500,
 }
@@ -145,8 +156,11 @@ function topKeys(keys: string[], weight: Map<string, number>, limit: number): st
 }
 
 // [impl->req~ui-290~1]
-export function aggregate(graph: Graph, config: Pick<DiagramConfig, 'x' | 'group' | 'sort' | 'limit' | 'empty' | 'type'>): DiagramData {
+// [impl->req~ui-330~1]
+export function aggregate(graph: Graph, config: Pick<DiagramConfig, 'x' | 'group' | 'sort' | 'limit' | 'empty' | 'type'> & Partial<Pick<DiagramConfig, 'filterDim' | 'filterText'>>): DiagramData {
   const xs = paperValues(graph, config.x)
+  const needle = (config.filterText ?? '').trim().toLowerCase()
+  const filter = config.filterDim && needle ? paperValues(graph, config.filterDim) : null
   const gs = config.group ? paperValues(graph, config.group) : null
   const cell = new Map<string, number>()
   const xTotal = new Map<string, number>()
@@ -154,6 +168,7 @@ export function aggregate(graph: Graph, config: Pick<DiagramConfig, 'x' | 'group
   const key = (x: string, g: string) => JSON.stringify([x, g])
   let papers = 0
   for (const [id, xv] of xs) {
+    if (filter && !filter.get(id)!.some((v) => v.toLowerCase().includes(needle))) continue
     const xl = xv.length ? xv : config.empty ? [NONE] : []
     const gv = gs ? (gs.get(id)!.length ? gs.get(id)! : config.empty ? [NONE] : []) : ['']
     if (!xl.length || !gv.length) continue
@@ -181,10 +196,18 @@ export function aggregate(graph: Graph, config: Pick<DiagramConfig, 'x' | 'group
   return { cats, series, counts, papers }
 }
 
+// [impl->req~ui-340~1]
+/** The counts as CSV: one row per category, one column per series. */
+export function diagramCsv(data: DiagramData, xLabel: string, valueLabel: string): string {
+  const head = [xLabel, ...data.series.map((s) => s || valueLabel)]
+  const rows = data.cats.map((c, i) => [c, ...data.counts[i].map(String)])
+  return [head, ...rows].map((r) => r.map(csvCell).join(',')).join('\r\n') + '\r\n'
+}
+
 export type DiagramRequest =
   | { type: 'data'; project: Pick<Project, 'schema' | 'papers'>; trees: Record<string, AnnotationValueTree | undefined> }
   | { type: 'render'; id: number; config: DiagramConfig }
-export type DiagramReply = { id: number; svg: string; keys: string[]; categories: number; papers: number } | { id: number; error: string }
+export type DiagramReply = { id: number; svg: string; keys: string[]; categories: number; papers: number; data: DiagramData } | { id: number; error: string }
 
 /** The request without the parts a diagram never reads: abstracts, annotations and reviews. Smaller to copy to a worker. */
 export const slimProject = (project: Pick<Project, 'schema' | 'papers'>): Pick<Project, 'schema' | 'papers'> => ({
@@ -203,7 +226,7 @@ export function diagramHost(post: (reply: DiagramReply) => void) {
     try {
       if (!graph) throw new Error('No data')
       const data = aggregate(graph, m.config)
-      post({ id: m.id, svg: renderDiagram(data, m.config), keys: m.config.type === 'pie' ? data.cats : data.series, categories: data.cats.length, papers: data.papers })
+      post({ id: m.id, svg: renderDiagram(data, m.config), keys: m.config.type === 'pie' ? data.cats : data.series, categories: data.cats.length, papers: data.papers, data })
     } catch (e) {
       post({ id: m.id, error: String(e) })
     }

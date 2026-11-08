@@ -3,7 +3,7 @@ import { resolveSchema, type AnnotationDef } from './schema'
 import type { AnnotationValueTree } from './annotations'
 import type { Paper } from './project'
 import { buildGraph } from './graph'
-import { aggregate, diagramHost, schemaDimensions, paperValues, DEFAULT_CONFIG, OTHER, NONE, type DiagramConfig, type DiagramReply } from './diagram'
+import { aggregate, diagramCsv, diagramHost, schemaDimensions, paperValues, DEFAULT_CONFIG, OTHER, NONE, type DiagramConfig, type DiagramReply } from './diagram'
 import { renderDiagram, niceStep } from './diagramSvg'
 import { imagePdf } from './imagePdf'
 
@@ -150,5 +150,58 @@ describe('diagram axis', () => {
     const svg = renderDiagram({ cats: ['a', 'b'], series: [''], counts: [[1], [1]], papers: 2 }, c)
     expect(svg).toContain('>Papers<')
     expect(svg).not.toContain('…<')
+  })
+})
+
+describe('diagram options', () => {
+  const grouped = { cats: ['a', 'b'], series: ['x', 'y'], counts: [[1, 3], [2, 2]], papers: 8 }
+  const wellFormed = (svg: string) => expect(new DOMParser().parseFromString(svg, 'image/svg+xml').querySelector('parsererror')).toBeNull()
+
+  // [utest->req~ui-330~1]
+  it('keeps only the papers whose filter dimension contains the text', () => {
+    const d = aggregate(graph, cfg({ filterDim: '@venue', filterText: ' icse ' }))
+    expect(d.cats).toEqual(['2019', '2020'])
+    expect(d.counts).toEqual([[1], [1]])
+    expect(d.papers).toBe(2)
+    expect(aggregate(graph, cfg({ filterDim: '@venue', filterText: '' })).papers).toBe(3)
+    expect(aggregate(graph, cfg({ filterDim: '@venue', filterText: 'nothing' })).papers).toBe(0)
+  })
+
+  // [utest->req~ui-330~1]
+  it('draws horizontal bars with the category names on the left', () => {
+    for (const type of ['bar', 'stacked'] as const) {
+      const svg = renderDiagram(grouped, cfg({ type, horizontal: true, xLabel: 'Venue', yLabel: 'Papers' }))
+      wellFormed(svg)
+      expect(svg).toMatch(/text-anchor="end"[^>]*>a</)
+      expect(svg).toContain('rotate(-90')
+      expect(svg.match(/<rect /g)!.length).toBe(1 + 2 + 4)
+    }
+  })
+
+  // [utest->req~ui-330~1]
+  it('shows stacked bars as shares of 100 percent', () => {
+    for (const horizontal of [false, true]) {
+      const svg = renderDiagram(grouped, cfg({ type: 'stacked', percent: true, horizontal }))
+      wellFormed(svg)
+      expect(svg).toContain('100%')
+      expect(svg).toContain('25%')
+      expect(svg).toContain('75%')
+      expect(svg).toContain('a / y: 3 (75%)')
+    }
+  })
+
+  // [utest->req~ui-340~1]
+  it('writes the counts as CSV and neutralises formulas', () => {
+    expect(diagramCsv(grouped, 'Venue', 'Papers')).toBe('"Venue","x","y"\r\n"a","1","3"\r\n"b","2","2"\r\n')
+    expect(diagramCsv({ cats: ['=1+1'], series: [''], counts: [[2]], papers: 2 }, 'X', 'Papers')).toBe('"X","Papers"\r\n"\'=1+1","2"\r\n')
+  })
+
+  // [utest->req~ui-340~1]
+  it('returns the data with the diagram', () => {
+    const out: DiagramReply[] = []
+    const host = diagramHost((r) => out.push(r))
+    host({ type: 'data', project, trees })
+    host({ type: 'render', id: 1, config: cfg() })
+    expect(out[0]).toMatchObject({ data: { cats: ['2019', '2020'], counts: [[1], [2]] } })
   })
 })

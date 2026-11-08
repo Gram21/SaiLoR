@@ -232,6 +232,9 @@ inspection only.
 | REQ-UI-300 | Diagram rendering | Functional · Functional Suitability, Security | `src/model/diagramSvg.ts` (`renderDiagram`, `niceStep`, `seriesColor`) | `src/model/diagram.test.ts` | — | — |
 | REQ-UI-310 | Diagram creation in a background worker | Non-functional · Performance Efficiency | `src/model/diagram.ts` (`diagramHost`, `slimProject`)<br>`src/model/diagram.worker.ts`<br>`src/components/DiagramView.tsx` | `src/model/diagram.test.ts`<br>`src/components/DiagramView.test.tsx` | — | — |
 | REQ-UI-320 | Diagram export | Functional · Functional Suitability, Usability | `src/components/diagramExport.ts` (`svgToPng`, `svgToPdf`)<br>`src/model/imagePdf.ts` (`imagePdf`)<br>`src-tauri/src/pdf.rs` (`text_export_extension`) | `src/components/DiagramView.test.tsx`<br>`src/model/diagram.test.ts`<br>`src-tauri/src/pdf.rs` (`text_export_extension_allows_known_extensions`) | — | — |
+| REQ-UI-330 | Diagram filter, bar direction and shares | Functional · Functional Suitability, Usability | `src/model/diagram.ts` (`aggregate`)<br>`src/model/diagramSvg.ts` (`renderDiagram`)<br>`src/components/DiagramView.tsx` | `src/model/diagram.test.ts`<br>`src/components/DiagramView.test.tsx` | — | — |
+| REQ-UI-340 | Diagram data table and CSV | Functional · Functional Suitability, Usability | `src/model/diagram.ts` (`diagramCsv`)<br>`src/components/DiagramView.tsx` | `src/model/diagram.test.ts`<br>`src/components/DiagramView.test.tsx` | — | — |
+| REQ-UI-350 | Knowledge graph shortcuts | Functional · Functional Suitability, Usability | `src/components/GraphView.tsx` (`GraphView`)<br>`src/model/graph.ts` (`csv`) | `src/components/GraphView.test.tsx` | — | — |
 
 ## Screening ([screening.md](screening.md))
 

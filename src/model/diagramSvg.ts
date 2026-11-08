@@ -135,13 +135,60 @@ export function renderDiagram(data: DiagramData, config: DiagramConfig): string 
   }
 
   const stacked = type === 'stacked'
-  const rowMax = counts.map((r) => (stacked ? r.reduce((a, b) => a + b, 0) : Math.max(...r)))
+  const pct = stacked && config.percent
+  const vals = counts.map((r) => {
+    const total = r.reduce((a, b) => a + b, 0) || 1
+    return pct ? r.map((v) => (v / total) * 100) : r
+  })
+  const label = (i: number, j: number) => (pct ? `${Math.round(vals[i][j])}%` : String(counts[i][j]))
+  const tip = (i: number, j: number) => `${cats[i]}${grouped ? ` / ${series[j]}` : ''}: ${counts[i][j]}${pct ? ` (${Math.round(vals[i][j])}%)` : ''}`
+  const rowMax = vals.map((r) => (stacked ? r.reduce((a, b) => a + b, 0) : Math.max(...r)))
   const step = Math.max(1, niceStep(Math.max(...rowMax), 6))
-  const yMax = Math.max(step, Math.ceil(Math.max(...rowMax) / step) * step)
+  const yMax = Math.max(step, Math.ceil(Math.max(...rowMax) / step - 1e-9) * step)
+  const tick = (v: number) => `${v}${pct ? '%' : ''}`
+
+  if (config.horizontal && (type === 'bar' || stacked)) {
+    const labelW = Math.min(160, Math.max(...cats.map((c) => textWidth(c, 11))))
+    const hLeft = 20 + (config.xLabel ? 22 : 0) + labelW + 8
+    const hBottom = H - 20 - (config.yLabel ? 22 : 0) - 18
+    const hW = Math.max(40, right - hLeft - 14)
+    const hH = Math.max(40, hBottom - top)
+    const hBand = hH / cats.length
+    const x = (v: number) => hLeft + (v / yMax) * hW
+    for (let v = 0; v <= yMax; v += step) {
+      out.push(`<line x1="${num(x(v))}" y1="${top}" x2="${num(x(v))}" y2="${num(hBottom)}" stroke="${GRID}"/>`)
+      out.push(text(x(v), hBottom + 16, tick(v), 11, `text-anchor="middle" fill="${MUTED}"`))
+    }
+    out.push(`<line x1="${hLeft}" y1="${top}" x2="${hLeft}" y2="${num(hBottom)}" stroke="${INK}"/>`)
+    const thick = Math.min(hBand * 0.8, 40 * series.length) / (stacked ? 1 : series.length)
+    cats.forEach((c, i) => {
+      const mid = top + hBand * (i + 0.5)
+      out.push(text(hLeft - 6, mid + 4, clip(c, labelW, 11), 11, 'text-anchor="end"'))
+      let acc = 0
+      series.forEach((_, j) => {
+        const v = vals[i][j]
+        if (!counts[i][j]) return
+        const y0 = stacked ? mid - thick / 2 : mid - (thick * series.length) / 2 + thick * j
+        const w = (v / yMax) * hW
+        const x0 = stacked ? x(acc) : hLeft
+        out.push(`<rect x="${num(x0)}" y="${num(y0)}" width="${num(w)}" height="${num(Math.max(1, thick))}" fill="${attr(color(j))}"><title>${xmlText(tip(i, j))}</title></rect>`)
+        if (config.values) {
+          if (!stacked) out.push(text(x0 + w + 4, y0 + thick / 2 + 4, label(i, j), 11))
+          else if (w >= 26) out.push(text(x0 + w / 2, y0 + thick / 2 + 4, label(i, j), 11, 'text-anchor="middle" fill="#ffffff" paint-order="stroke" stroke="#00000066" stroke-width="2"'))
+        }
+        acc += v
+      })
+    })
+    if (config.xLabel) out.push(text(18, (top + hBottom) / 2, config.xLabel, 13, `text-anchor="middle" transform="rotate(-90 18 ${num((top + hBottom) / 2)})"`))
+    if (config.yLabel) out.push(text((hLeft + right) / 2, H - 10, config.yLabel, 13, 'text-anchor="middle"'))
+    out.push('</svg>')
+    return out.join('\n') + '\n'
+  }
+
   const y = (v: number) => bottom - (v / yMax) * plotH
   for (let v = 0; v <= yMax; v += step) {
     out.push(`<line x1="${left}" y1="${num(y(v))}" x2="${num(left + plotW)}" y2="${num(y(v))}" stroke="${GRID}"/>`)
-    out.push(text(left - 6, y(v) + 4, String(v), 11, `text-anchor="end" fill="${MUTED}"`))
+    out.push(text(left - 6, y(v) + 4, tick(v), 11, `text-anchor="end" fill="${MUTED}"`))
   }
   out.push(`<line x1="${left}" y1="${num(bottom)}" x2="${num(left + plotW)}" y2="${num(bottom)}" stroke="${INK}"/>`)
 
@@ -149,25 +196,25 @@ export function renderDiagram(data: DiagramData, config: DiagramConfig): string 
     series.forEach((_, j) => {
       const pts = cats.map((_, i) => `${num(left + band * (i + 0.5))},${num(y(counts[i][j]))}`)
       out.push(`<polyline points="${pts.join(' ')}" fill="none" stroke="${attr(color(j))}" stroke-width="2.5" stroke-linejoin="round"/>`)
-      cats.forEach((c, i) => {
+      cats.forEach((_, i) => {
         const cx = left + band * (i + 0.5)
-        out.push(`<circle cx="${num(cx)}" cy="${num(y(counts[i][j]))}" r="4" fill="${attr(color(j))}"><title>${xmlText(`${c}${grouped ? ` / ${series[j]}` : ''}: ${counts[i][j]}`)}</title></circle>`)
+        out.push(`<circle cx="${num(cx)}" cy="${num(y(counts[i][j]))}" r="4" fill="${attr(color(j))}"><title>${xmlText(tip(i, j))}</title></circle>`)
         if (config.values) out.push(text(cx, y(counts[i][j]) - 8, String(counts[i][j]), 11, 'text-anchor="middle"'))
       })
     })
   } else {
     const inner = Math.min(band * 0.8, 60 * series.length) / (stacked ? 1 : series.length)
     const barW = Math.max(1, inner)
-    cats.forEach((c, i) => {
+    cats.forEach((_, i) => {
       let acc = 0
-      series.forEach((s, j) => {
-        const v = counts[i][j]
-        if (!v) return
+      series.forEach((_, j) => {
+        const v = vals[i][j]
+        if (!counts[i][j]) return
         const x = stacked ? left + band * (i + 0.5) - barW / 2 : left + band * (i + 0.5) - (barW * series.length) / 2 + barW * j
         const y0 = stacked ? y(acc + v) : y(v)
         const h = (v / yMax) * plotH
-        out.push(`<rect x="${num(x)}" y="${num(y0)}" width="${num(barW)}" height="${num(h)}" fill="${attr(color(j))}"><title>${xmlText(`${c}${grouped ? ` / ${s}` : ''}: ${v}`)}</title></rect>`)
-        if (config.values && (!stacked || h >= 14)) out.push(text(x + barW / 2, stacked ? y0 + h / 2 + 4 : y0 - 5, String(v), 11, `text-anchor="middle"${stacked ? ' fill="#ffffff" paint-order="stroke" stroke="#00000066" stroke-width="2"' : ''}`))
+        out.push(`<rect x="${num(x)}" y="${num(y0)}" width="${num(barW)}" height="${num(h)}" fill="${attr(color(j))}"><title>${xmlText(tip(i, j))}</title></rect>`)
+        if (config.values && (!stacked || h >= 14)) out.push(text(x + barW / 2, stacked ? y0 + h / 2 + 4 : y0 - 5, label(i, j), 11, `text-anchor="middle"${stacked ? ' fill="#ffffff" paint-order="stroke" stroke="#00000066" stroke-width="2"' : ''}`))
         acc += v
       })
     })

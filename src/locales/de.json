@@ -2264,5 +2264,14 @@
   "diagram.rendering": "Diagramm wird erstellt…",
   "diagram.error": "Diagramm konnte nicht erstellt werden: {message}",
   "diagram.noData": "Kein Paper hat einen Wert für diese Einstellungen.",
-  "diagram.count": "{papers} Paper in {cats} Kategorien"
+  "diagram.count": "{papers} Paper in {cats} Kategorien",
+  "diagram.filter": "Nur Artikel, bei denen",
+  "diagram.filter.none": "Kein Filter",
+  "diagram.filterText": "Wert enthält",
+  "diagram.horizontal": "Horizontale Balken",
+  "diagram.percent": "Anteile von 100 % zeigen",
+  "diagram.export.csv": "CSV",
+  "diagram.table": "Datentabelle anzeigen",
+  "graphView.openPaper": "Artikel öffnen",
+  "graphView.cypher.saveCsv": "Tabelle als CSV speichern"
 }

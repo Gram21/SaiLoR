@@ -1,5 +1,5 @@
 // [impl->req~ui-270~1]
-import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react'
+import { useEffect, useMemo, useRef, useState, type Dispatch, type ReactNode, type SetStateAction } from 'react'
 import { useStore } from '../state/store'
 import { getPlatform } from '../platform'
 import { defaultGraphSeat, graphTrees } from '../model/graph'
@@ -8,6 +8,7 @@ import {
   CHART_TYPES,
   DEFAULT_CONFIG,
   PALETTES,
+  diagramCsv,
   diagramHost,
   schemaDimensions,
   slimProject,
@@ -37,11 +38,10 @@ function Section({ title, children }: { title: string; children: ReactNode }) {
 
 /** The diagrams of the answers: settings on the side, a live preview, and export as SVG, PNG or PDF. The data work runs in a worker. */
 // [impl->req~ui-280~1]
-export function DiagramView({ onClose }: { onClose: () => void }) {
+export function DiagramView({ config, setConfig, onClose }: { config: DiagramConfig; setConfig: Dispatch<SetStateAction<DiagramConfig>>; onClose: () => void }) {
   const project = useStore((s) => s.project)
   const t = useT()
   const [seat, setSeat] = useState(() => (project ? defaultGraphSeat(project) : '1'))
-  const [config, setConfig] = useState<DiagramConfig>(DEFAULT_CONFIG)
   const [shown, setShown] = useState<Shown>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
@@ -101,7 +101,7 @@ export function DiagramView({ onClose }: { onClose: () => void }) {
   const keys = shown && 'keys' in shown ? shown.keys : []
 
   // [impl->req~ui-320~1]
-  const save = async (format: DiagramFormat) => {
+  const save = async (format: DiagramFormat | 'csv') => {
     if (!shown || !('svg' in shown)) return
     setBusy(true)
     setMessage(null)
@@ -112,8 +112,8 @@ export function DiagramView({ onClose }: { onClose: () => void }) {
       const { svg } = shown
       const { width, height } = effective
       const res =
-        format === 'svg'
-          ? await platform.writeTextFile(path, svg)
+        format === 'svg' || format === 'csv'
+          ? await platform.writeTextFile(path, format === 'csv' ? diagramCsv(shown.data, effective.xLabel, t('diagram.papers')) : svg)
           : await platform.writeBinaryFile(path, format === 'png' ? await svgToPng(svg, width, height) : await svgToPdf(svg, width, height))
       setMessage(res.ok ? { ok: true, text: t('app.export.saved', { path: res.path }) } : { ok: false, text: t('app.export.saveFailed', { error: res.error }) })
     } catch (err) {
@@ -171,6 +171,16 @@ export function DiagramView({ onClose }: { onClose: () => void }) {
             <input type="checkbox" checked={config.empty} onChange={(e) => set('empty', e.target.checked)} />
             {t('diagram.empty')}
           </label>
+          <label>
+            {t('diagram.filter')}
+            {dimensionSelect(config.filterDim, (v) => set('filterDim', v), t('diagram.filter.none'))}
+          </label>
+          {config.filterDim && (
+            <label>
+              {t('diagram.filterText')}
+              <input type="text" value={config.filterText} dir="auto" onChange={(e) => set('filterText', e.target.value)} />
+            </label>
+          )}
         </Section>
         <Section title={t('diagram.section.look')}>
           <label>
@@ -212,6 +222,18 @@ export function DiagramView({ onClose }: { onClose: () => void }) {
               </label>
             ))}
           </div>
+          {(config.type === 'bar' || config.type === 'stacked') && (
+            <label className="inline">
+              <input type="checkbox" checked={config.horizontal} onChange={(e) => set('horizontal', e.target.checked)} />
+              {t('diagram.horizontal')}
+            </label>
+          )}
+          {config.type === 'stacked' && (
+            <label className="inline">
+              <input type="checkbox" checked={config.percent} onChange={(e) => set('percent', e.target.checked)} />
+              {t('diagram.percent')}
+            </label>
+          )}
           <label className="inline">
             <input type="checkbox" checked={config.legend} onChange={(e) => set('legend', e.target.checked)} />
             {t('diagram.legend')}
@@ -241,6 +263,9 @@ export function DiagramView({ onClose }: { onClose: () => void }) {
                 {t(`diagram.export.${f}` as const)}
               </button>
             ))}
+            <button type="button" disabled={!ready || busy} onClick={() => void save('csv')}>
+              {t('diagram.export.csv')}
+            </button>
           </div>
           <p className="graph-hint">{t('diagram.exportHint')}</p>
           {message && (
@@ -268,6 +293,35 @@ export function DiagramView({ onClose }: { onClose: () => void }) {
             width={effective.width}
             height={effective.height}
           />
+        )}
+        {ready && (
+          <details className="diagram-table">
+            <summary>{t('diagram.table')}</summary>
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">{effective.xLabel}</th>
+                  {shown.data.series.map((k, j) => (
+                    <th key={j} scope="col" dir="auto">
+                      {k || t('diagram.papers')}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {shown.data.cats.map((c, i) => (
+                  <tr key={i}>
+                    <th scope="row" dir="auto">
+                      {c}
+                    </th>
+                    {shown.data.counts[i].map((v, j) => (
+                      <td key={j}>{v}</td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </details>
         )}
       </div>
     </div>

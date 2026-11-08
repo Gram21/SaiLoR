@@ -488,3 +488,38 @@ describe('node list drawer', () => {
     expect(toggle.getAttribute('aria-expanded')).toBe('true')
   })
 })
+
+describe('graph shortcuts', () => {
+  // [utest->req~ui-350~1]
+  it('opens the selected paper in the annotation view and closes the graph', async () => {
+    open()
+    const onClose = vi.fn()
+    render(<GraphView onClose={onClose} />)
+    fireEvent.click(nodeList().getByRole('button', { name: /Testing Things/ }))
+    expect(screen.queryByRole('button', { name: 'Open paper' })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('button', { name: 'Open paper' }))
+    expect(useStore.getState().currentPaperId).toBe('p2')
+    expect(onClose).toHaveBeenCalled()
+  })
+
+  // [utest->req~ui-350~1]
+  it('offers no paper button for other nodes', async () => {
+    open()
+    render(<GraphView onClose={() => {}} />)
+    fireEvent.click(nodeList().getByRole('button', { name: /Alan Turing/ }))
+    expect(screen.queryByRole('button', { name: 'Open paper' })).toBeNull()
+  })
+
+  // [utest->req~ui-350~1]
+  it('saves the Cypher result table as CSV', async () => {
+    open()
+    render(<GraphView onClose={() => {}} />)
+    const box = screen.getByRole('searchbox', { name: 'Graph query' })
+    fireEvent.change(box, { target: { value: "match (p:Paper)-[:authoredBy]->(a:Author {label: 'Alan Turing'}) RETURN p.label AS title, a" } })
+    fireEvent.submit(box.closest('form')!)
+    fireEvent.click(screen.getByRole('button', { name: 'Save table as CSV' }))
+    await waitFor(() => expect(saved.writes).toHaveLength(1))
+    expect(saved.picks[0]).toEqual(['cypher-results.csv', 'csv'])
+    expect(saved.writes[0][1]).toBe('"title","a"\r\n"Testing Things","Alan Turing"\r\n')
+  })
+})

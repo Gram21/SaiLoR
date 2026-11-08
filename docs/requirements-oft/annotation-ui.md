@@ -1204,3 +1204,48 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Functional_Suitability, Usability
+
+### REQ-UI-330: Diagram filter, bar direction and shares
+`req~ui-330~1`
+
+The "Diagrams" tab shall let the user count only some papers. The user shall select a dimension and enter a text, "Only papers where [dimension] contains [text]". The system shall count a paper only if one of its values for that dimension contains the text, ignoring case and surrounding spaces. An empty text or "No filter" shall count all papers. For the chart types "Bar" and "Stacked bar" the panel shall have a "Horizontal bars" option that draws the bars from the left with the category names at the left. For the chart type "Stacked bar" the panel shall have a "Show shares of 100 %" option that scales each bar to 100 % and shows percentages in the axis, the value labels and the tooltips. The panel shall keep all settings when the user switches to the "Knowledge graph" tab and back.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/model/diagram.ts` (`aggregate`, `DiagramConfig`), `src/model/diagramSvg.ts` (`renderDiagram`), `src/components/DiagramView.tsx` (`DiagramView`), `src/components/ResultView.tsx` (`ResultView`), `src/locales/en.json` (`diagram.filter`, `diagram.horizontal`, `diagram.percent`)
+- **Verified by:** `src/model/diagram.test.ts`, `src/components/DiagramView.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Usability
+
+### REQ-UI-340: Diagram data table and CSV
+`req~ui-340~1`
+
+The "Diagrams" tab shall show the counts of the diagram in a table that the user can open under the preview, with one row per category and one column per series. The table shall be a text alternative to the image. The panel shall have a "CSV" button that saves the same counts as a CSV file through the save dialog of the system (REQ-PLT-260). The CSV file shall have a header row and shall neutralise cells that start with a formula character like REQ-DAT-510.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/model/diagram.ts` (`diagramCsv`, `DiagramReply`), `src/components/DiagramView.tsx` (`DiagramView`), `src/locales/en.json` (`diagram.table`, `diagram.export.csv`)
+- **Verified by:** `src/model/diagram.test.ts`, `src/components/DiagramView.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Usability
+
+### REQ-UI-350: Knowledge graph shortcuts
+`req~ui-350~1`
+
+If the selected node of the knowledge graph is a paper, the detail panel shall have an "Open paper" button. The button shall select that paper in the annotation view and close the result view. If a Cypher query shows a result table, the panel shall have a "Save table as CSV" button that saves the columns and rows through the save dialog of the system (REQ-PLT-260), with the cell rules of REQ-DAT-510.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/components/GraphView.tsx` (`GraphView`), `src/model/graph.ts` (`csv`), `src/locales/en.json` (`graphView.openPaper`, `graphView.cypher.saveCsv`)
+- **Verified by:** `src/components/GraphView.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Usability

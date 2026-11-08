@@ -4,6 +4,7 @@ import { useT } from '../i18n'
 import { Modal } from './Modal'
 import { GraphView } from './GraphView'
 import { DiagramView } from './DiagramView'
+import { DEFAULT_CONFIG, type DiagramConfig } from '../model/diagram'
 
 export type ResultTab = 'graph' | 'diagram'
 const TABS: ResultTab[] = ['graph', 'diagram']
@@ -12,6 +13,7 @@ const TABS: ResultTab[] = ['graph', 'diagram']
 export function ResultView({ initial = 'graph', onClose }: { initial?: ResultTab; onClose: () => void }) {
   const t = useT()
   const [tab, setTab] = useState<ResultTab>(initial)
+  const [diagram, setDiagram] = useState<DiagramConfig>(DEFAULT_CONFIG)
   return (
     <Modal className="graph-view result-view" aria-label={t('resultView.title')}>
       <div className="modal-head result-head">
@@ -29,7 +31,7 @@ export function ResultView({ initial = 'graph', onClose }: { initial?: ResultTab
           </button>
         </div>
       </div>
-      {tab === 'graph' ? <GraphView onClose={onClose} /> : <DiagramView onClose={onClose} />}
+      {tab === 'graph' ? <GraphView onClose={onClose} /> : <DiagramView config={diagram} setConfig={setDiagram} onClose={onClose} />}
     </Modal>
   )
 }
