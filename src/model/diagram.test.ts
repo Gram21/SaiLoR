@@ -135,3 +135,20 @@ describe('imagePdf', () => {
     offsets.forEach((o, i) => expect(s.slice(o, o + 7)).toBe(`${i + 1} 0 obj`))
   })
 })
+
+describe('diagram axis', () => {
+  // [utest->req~ui-300~1]
+  it('uses whole-number ticks for small counts', () => {
+    const svg = renderDiagram({ cats: ['a', 'b'], series: [''], counts: [[1], [1]], papers: 2 }, cfg())
+    const ticks = [...svg.matchAll(/text-anchor="end"[^>]*>([^<]*)</g)].map((m) => m[1])
+    expect(ticks).toEqual(['0', '1'])
+  })
+
+  // [utest->req~ui-300~1]
+  it('keeps heat map row labels clear of the axis title', () => {
+    const c = cfg({ type: 'heatmap', yLabel: 'Papers' })
+    const svg = renderDiagram({ cats: ['a', 'b'], series: [''], counts: [[1], [1]], papers: 2 }, c)
+    expect(svg).toContain('>Papers<')
+    expect(svg).not.toContain('…<')
+  })
+})

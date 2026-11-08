@@ -95,7 +95,7 @@ export function renderDiagram(data: DiagramData, config: DiagramConfig): string 
   const rotate = cats.some((c) => textWidth(c, 11) > (right - 70) / cats.length - 4)
   const longest = rotate ? Math.min(140, Math.max(...cats.map((c) => textWidth(c, 11)))) : 0
   const bottom = H - 20 - (config.xLabel ? 22 : 0) - (rotate ? longest * 0.7 + 8 : 18)
-  const left = 28 + (config.yLabel ? 22 : 0) + (type === 'heatmap' ? Math.min(160, Math.max(...series.map((s) => textWidth(s, 11)))) : 28)
+  const left = 28 + (config.yLabel ? 22 : 0) + (type === 'heatmap' ? Math.min(160, Math.max(...series.map((s, j) => textWidth(s || name(j), 11)))) : 28)
   const plotW = Math.max(40, right - left - 10)
   const plotH = Math.max(40, bottom - top)
   const band = plotW / cats.length
@@ -118,7 +118,7 @@ export function renderDiagram(data: DiagramData, config: DiagramConfig): string 
     const rowH = plotH / series.length
     const max = Math.max(1, ...counts.flat())
     const base = color(0)
-    series.forEach((s, j) => out.push(text(left - 6, top + rowH * (j + 0.5) + 4, clip(s || name(j), left - 40, 11), 11, 'text-anchor="end"')))
+    series.forEach((s, j) => out.push(text(left - 6, top + rowH * (j + 0.5) + 4, clip(s || name(j), left - (config.yLabel ? 50 : 28), 11), 11, 'text-anchor="end"')))
     cats.forEach((c, i) =>
       series.forEach((s, j) => {
         const v = counts[i][j]
@@ -136,7 +136,7 @@ export function renderDiagram(data: DiagramData, config: DiagramConfig): string 
 
   const stacked = type === 'stacked'
   const rowMax = counts.map((r) => (stacked ? r.reduce((a, b) => a + b, 0) : Math.max(...r)))
-  const step = niceStep(Math.max(...rowMax), 6)
+  const step = Math.max(1, niceStep(Math.max(...rowMax), 6))
   const yMax = Math.max(step, Math.ceil(Math.max(...rowMax) / step) * step)
   const y = (v: number) => bottom - (v / yMax) * plotH
   for (let v = 0; v <= yMax; v += step) {

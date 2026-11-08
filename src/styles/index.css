@@ -2807,10 +2807,21 @@ button.validation-search-case:hover {
   flex-direction: column;
   gap: 8px;
   margin: 0;
+  min-width: 0;
   padding: 10px 12px 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--panel-bg);
+}
+.diagram-settings > .diagram-section:last-child {
+  position: sticky;
+  bottom: 0;
+}
+.diagram-settings input:not([type='checkbox'], [type='color']),
+.diagram-settings select {
+  box-sizing: border-box;
+  width: 100%;
+  min-width: 0;
 }
 .diagram-section legend {
   padding: 0 6px;
@@ -2843,7 +2854,7 @@ button.validation-search-case:hover {
 }
 .diagram-colors {
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
   gap: 4px 8px;
 }
 .diagram-colors span {
@@ -2866,6 +2877,7 @@ button.validation-search-case:hover {
 }
 .diagram-size label {
   flex: 1;
+  min-width: 0;
 }
 .diagram-stage {
   flex: 1;
