@@ -121,7 +121,7 @@ The system prompt tells the model to never follow instructions from such data.
 
 % Context
 A mapping study can start with tens of thousands of candidate papers.
-For such projects, opening the project, drawing the knowledge graph, and running a query can block the user interface.
+For such projects, opening the project, drawing the knowledge graph, running a query, and making a diagram can block the user interface.
 Therefore, we moved this work out of the critical path.
 
 % Progressive loading
@@ -158,6 +158,17 @@ After 2,000,000 evaluation steps, \SaiLoR stops the query and marks the result a
 These limits keep a query from blocking the tool, for example, a query that joins every node with every other node.
 On a generated graph with 150,000 nodes and 600,000 relationships, the tests require less than 1~s for a filter by label, 3~s for a join over one relationship, and 5~s for a count per year.
 In one run on a laptop under load, the copy and the index took about 1.0~s, and the three queries took about 15~ms, 79~ms, and 123~ms.
+
+% Diagrams
+The diagrams run in a third web worker.
+The worker receives the schema, the papers without abstracts, annotations, and reviews, and the answers of the selected seat, once per project and seat.
+It builds the knowledge graph, counts the papers per category, and draws the diagram as an SVG text.
+The counts reuse the graph, so a diagram and a query see the same answers.
+The view waits 120~ms after the last change of a setting and ignores the reply to an older request.
+It shows the SVG as an image from a data URI, so text from the project cannot run as markup.
+The SVG export saves this text.
+The PNG and \PDF exports draw the SVG on a canvas of the main thread and need no further dependency.
+The \PDF contains one page with the image compressed by the deflate stream of the browser.
 
 \subsection{Controlled \acs{LLM} Assistance}\label{sec:architecture-llm}
 

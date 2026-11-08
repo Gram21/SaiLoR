@@ -198,6 +198,17 @@ For example, the query \texttt{MATCH (p:Paper)-[:cites]->(q:Paper)} \texttt{RETU
 \autoref{fig:graph} shows a query for the papers of one author in the online demo, with the drawer open.
 \autoref{sec:architecture-scale} describes how \SaiLoR keeps the view and the queries fast for large graphs.
 
+% Result view and diagrams
+Both the graph view and the diagrams are tabs of one result view, which reviewers open from the \enquote{Result view} menu.
+The diagrams answer questions such as how many papers of each method appeared per year.
+Reviewers choose a chart type (bar, stacked bar, line, pie, or heat map) and a dimension to count.
+A dimension is the year, venue, author, or keyword of a paper, or any field of the annotation schema.
+A second dimension splits the papers into series.
+A settings panel changes the title, the axis labels, the palette, the color of each series, the legend, the value labels, and the size.
+The preview updates after each change.
+Reviewers export the diagram as SVG, PNG, or \PDF.
+The SVG file is a vector image, whereas the PNG and \PDF files contain a raster image.
+
 \begin{figure*}[t]
     \centering
     \screenshot{\shotGraph}{0.85\textwidth}

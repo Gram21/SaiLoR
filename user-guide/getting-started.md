@@ -35,7 +35,7 @@ Some features need all papers. SaiLoR disables them until the last paper has loa
 
 - save, save as and autosave
 - validation and AI evaluation
-- the knowledge graph export and view
+- the knowledge graph export, the graph view and the diagrams
 - the PDF folder scan and the Git panel
 - the consolidation overview, the disagreement lists and the screening summary
 
@@ -361,8 +361,9 @@ See [AI evaluation](multi-reviewer.md#ai-evaluation) to compare the AI seat with
 The knowledge graph shows papers, authors, venues, keywords and answers as nodes.
 Edges connect each paper to its authors, venue, keywords, answers and cited papers.
 
-To open the graph view, click **Graph ▾** and then **Explore knowledge graph**.
-The **Graph ▾** menu also has **Knowledge graph**, which exports the graph as a file. The **Save ▾** menu has the same item.
+To open the graph view, click **Result view ▾** and then **Explore knowledge graph**.
+The result view has the tabs **Knowledge graph** and **Diagrams**. Click a tab to switch.
+The **Save ▾** menu has the item **Knowledge graph**, which exports the graph as a file.
 
 <p align="center">
   <img src="screenshots/knowledge-graph-nodes.png" alt="The knowledge graph view with the Nodes drawer open on the left, one paper selected, and the side panel with its details and neighbours" width="900">
@@ -378,7 +379,7 @@ Use the view like this:
 - Click **⤓ Download** at the top right of the graph area to save the graph as an image. Select **SVG** or **PNG**. Select **Visible section** to save what you see, or **Whole graph, including the part not visible**. The image shows the current filter, or the whole graph if there is no filter.
 - Click **Nodes** to open the node list. The list is closed when the view opens.
   The list is a keyboard alternative to the canvas. It shows 200 nodes; **Show more** adds 200 more.
-- Click **Export…** to save the graph as JSON-LD, RDF Turtle, GraphML or CSV.
+- Click **Export…** in the graph toolbar to save the graph as JSON-LD, RDF Turtle, GraphML or CSV.
 - Press Escape or click × to close the view.
 
 <p align="center">
@@ -386,6 +387,26 @@ Use the view like this:
 </p>
 
 The view uses the consolidated answers if they exist.
+
+## Creating diagrams
+
+Diagrams show how many papers have an answer, for example the papers of each method per year.
+
+1. Click **Result view ▾** and then **Create diagrams**.
+2. Under **Diagram type**, select Bar, Stacked bar, Line, Pie or Heat map.
+3. Under **Count papers by**, select the year, venue, author, keyword or a field of your schema.
+4. To compare groups, select a second dimension under **Split by**.
+5. Under **Appearance**, set the title, the axis labels, the colours, the legend and the size.
+6. Click **SVG**, **PNG** or **PDF** to save the diagram.
+
+The diagram updates after each change. The window stays usable while it is made.
+If the project has more than one reviewer, select the seat above the settings.
+If no paper has a value, the view shows a message and you cannot save.
+
+Use **Count papers without a value** to count papers without an answer as "(none)".
+If a dimension has many values, set **Most categories shown**. The rest merge into "Other".
+The SVG file is a vector image. Use it for papers and slides. The PDF file has one page with a raster image.
+Click **Reset settings** to go back to the defaults.
 If no consolidated answers exist and the project has several reviewers, select the **Seat** in the view.
 
 ### Graph queries

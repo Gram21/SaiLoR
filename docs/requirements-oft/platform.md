@@ -1056,4 +1056,4 @@ Comment:
 
 Needs: impl, utest
 
-Tags: NonFunctional, Performance, Usability
+Tags: NonFunctional, Performance_Efficiency, Usability

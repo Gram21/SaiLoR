@@ -262,8 +262,9 @@ Two optional top-level keys exist specifically to be safe from that `config` reb
 
 - **Open ▾ menu** — open a project file, or reopen one of the last 5 recent projects.
 - **Save ▾ menu** — Save or Save as…, with their shortcuts shown next to each item.
-- **Graph ▾ menu** — **Explore knowledge graph** opens the graph view.
-  **Knowledge graph** exports the papers, metadata and answers as a graph file. The **Save ▾** menu has the same export item. See [Knowledge graph](#knowledge-graph).
+- **Result view ▾ menu** — **Explore knowledge graph** opens the result view on the knowledge graph.
+  **Create diagrams** opens it on the diagrams. See [Knowledge graph](#knowledge-graph) and [Diagrams](#diagrams).
+  The **Save ▾ menu** has the **Knowledge graph** export item.
 - **? (Help)** — opens a dialog describing the workflow and listing all keyboard shortcuts.
 - **Left pane** — collapsible list of papers (toggle with the ☰ button). A completeness dot next to
   each paper fills in proportionally as fields are completed (a fraction of required fields if any
@@ -473,12 +474,15 @@ carried over versus left behind. For a multi-reviewer screening project, "includ
 
 ## Knowledge graph
 
-The **Graph ▾** menu in the toolbar has two items. The **Save ▾** menu also has **Knowledge graph**.
+The **Result view ▾** menu in the toolbar has two items. Both open the result view, one dialog with the tabs **Knowledge graph** and **Diagrams**.
 
 | Item | Action |
 |---|---|
-| **Explore knowledge graph** | Opens the graph view. The view shows the same graph as the export. |
-| **Knowledge graph** | Exports the graph as JSON-LD, RDF Turtle, GraphML or two CSV files (nodes and edges). |
+| **Explore knowledge graph** | Opens the result view on the knowledge graph. The view shows the same graph as the export. |
+| **Create diagrams** | Opens the result view on the diagrams (see [Diagrams](#diagrams)). |
+
+The **Save ▾** menu has the item **Knowledge graph**. The **Export…** button in the graph view opens the same dialog.
+It exports the graph as JSON-LD, RDF Turtle, GraphML or two CSV files (nodes and edges).
 
 With more than one reviewer, the view and the export have a seat selector. The selector lists every reviewer seat
 and **Consolidation** once one paper has a consolidated answer. The consolidation is selected at first.
@@ -614,6 +618,28 @@ query…". A new query or closing the view stops the running query.
 If a query stops at the row limit or the work limit, the view tells you that the result is not
 complete. If a query runs longer than 20 seconds, SaiLoR stops it and shows an error.
 
+## Diagrams
+
+Open **Result view ▾** and then **Create diagrams**. The view counts papers from the answers and draws a diagram.
+The settings are on the left. The preview on the right updates after each change.
+
+| Setting | Use |
+|---|---|
+| **Diagram type** | Bar, stacked bar, line, pie or heat map. |
+| **Count papers by** | Year, venue, author, keyword, or any field of the annotation schema (shown by its path). |
+| **Split by** | A second dimension that makes the series. Choose "No split" for one series. |
+| **Order**, **Most categories shown** | Order by name or number, or by paper count. The rest of the categories merge into "Other". |
+| **Count papers without a value** | Counts these papers as "(none)". |
+| **Title**, **Horizontal axis label**, **Vertical axis label** | Texts of the diagram. An empty axis label uses the name of the dimension. |
+| **Colors**, colour of each series | Colour-blind safe, varied or blue palettes, and a colour input for each series. |
+| **Show legend**, **Show values**, **Width (px)**, **Height (px)** | Show or hide the legend and the value labels. Set the size in pixels. |
+| **Reset settings** | Sets every setting back to its default. |
+
+With more than one reviewer, the view has a seat selector like the graph view.
+The **SVG**, **PNG** and **PDF** buttons save the diagram. The SVG file is a vector image.
+The PNG file has twice the size of the preview. The PDF file has one page with a raster image at three times the size.
+The work runs in a background worker, so the window stays usable. In the online demo, the file is not saved.
+
 ## Opening a large project
 
 SaiLoR opens a project in the split layout (`project.json` and `annotations/`) in two steps:
@@ -631,7 +657,7 @@ These features read all papers. They stay disabled until the last paper has load
 
 - **Save** and **Save as…**
 - **Validate** and **AI**
-- both items of the **Graph ▾** menu
+- both items of the **Result view ▾** menu
 - **Rescan** (the PDF folder scan) and **Git**
 - **☰ Overview** and **⚠ Disagreements** in the annotation panel
 - **◧ Summary**, **⚖ Agreement**, **⚠ Disagreements** and **Adopt all** in a screening project
@@ -865,7 +891,8 @@ have no updater files. macOS and Windows installers must be built on their nativ
 - `src/model/` — schema types + zod validation, project load/normalize/serialize (including the
   `project.json` + `annotations/` split and legacy-format migration), annotation instance-tree
   helpers, and the knowledge graph (`graph.ts`, the text query in `graphQuery.ts`, the Cypher subset
-  in `graphCypher.ts`, the force layout in `graphLayout.ts`; the last two run in workers)
+  in `graphCypher.ts`, the force layout in `graphLayout.ts`; the last two run in workers), and diagrams
+  (`diagram.ts` counts the papers, `diagramSvg.ts` draws the SVG, `diagram.worker.ts` runs both in a worker)
   (unit-tested).
 - `src/screening/` — the derived screening schema, tri-state decision/reason reading, PRISMA-style
   counts, and the two cross-field validation rules screening needs (unit-tested).

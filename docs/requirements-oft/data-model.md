@@ -879,7 +879,7 @@ Tags: Functional, Security, Functional_Suitability
 ### REQ-DAT-520: Graph export dialog
 `req~dat-520~1`
 
-The Graph menu and the Save menu of the toolbar shall have a "Knowledge graph" item that opens the export dialog. In the dialog, the user shall select the format. If the project has more than one reviewer, the user shall select the seat: a reviewer seat or, if it exists, the consolidation. The consolidation shall be selected at first if it exists. The system shall save each file through the save dialog of the system, with the file extension of the format. For CSV, the system shall ask for the node file first and then for the edge file. If the user cancels the edge file dialog after the node file is saved, the system shall show that the export is incomplete. The system shall show the path of each saved file or the error.
+The Save menu of the toolbar shall have a "Knowledge graph" item that opens the export dialog. The knowledge graph view shall have an "Export…" button that opens the same dialog. In the dialog, the user shall select the format. If the project has more than one reviewer, the user shall select the seat: a reviewer seat or, if it exists, the consolidation. The consolidation shall be selected at first if it exists. The system shall save each file through the save dialog of the system, with the file extension of the format. For CSV, the system shall ask for the node file first and then for the edge file. If the user cancels the edge file dialog after the node file is saved, the system shall show that the export is incomplete. The system shall show the path of each saved file or the error.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability)
