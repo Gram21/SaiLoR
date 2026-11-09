@@ -489,6 +489,15 @@ and **Consolidation** once one paper has a consolidated answer. The consolidatio
 The **⤓ Download** button at the top right of the graph area saves the graph as SVG or PNG. The user selects the visible
 section or the whole graph. The image shows the current filter. In the online demo, the image is not saved.
 
+The side panel has more tools:
+
+- **Node types:** One check box for each node type in the graph. Clear a box to hide the nodes of that type and their edges.
+- **Statistics:** Shows the number of nodes and edges, the average degree, the number of connected components, the largest component and the five nodes with most edges. The numbers cover only the shown nodes and edges. Click a listed node to select it.
+- **Open paper:** A selected paper node has this button. It selects the paper in the annotation view and closes the result view.
+- **Save table as CSV:** A Cypher query that shows a table has this button.
+
+The result view keeps the edge filter and the node-type filter. The next start of the application uses the same values.
+
 The graph has these node types:
 
 | Node type | Made from |
@@ -636,8 +645,12 @@ The settings are on the left. The preview on the right updates after each change
 | **Reset settings** | Sets every setting back to its default. |
 
 With more than one reviewer, the view has a seat selector like the graph view.
-The **SVG**, **PNG** and **PDF** buttons save the diagram. The SVG file is a vector image.
-The PNG file has twice the size of the preview. The PDF file has one page with a raster image at three times the size.
+The **SVG**, **PNG**, **PDF** and **CSV** buttons save the diagram. The SVG file is a vector image.
+The PNG file has twice the size of the preview. The PDF file has one page with vector graphics and selectable text.
+If the diagram has a character that the PDF fonts lack (for example Chinese or Persian), the PDF has a raster image at three times the size.
+The CSV file has the counts. **Show data table** shows the same counts under the diagram.
+The panel also has **Only papers where** with **Value contains** to count only some papers, **Horizontal bars** for the bar types and **Show shares of 100 %** for stacked bars.
+The view keeps all settings across tabs and across application starts.
 The work runs in a background worker, so the window stays usable. In the online demo, the file is not saved.
 
 ## Opening a large project

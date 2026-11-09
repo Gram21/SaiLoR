@@ -375,6 +375,10 @@ Use the view like this:
 - Click a node to select it. The side panel shows its details and its neighbours.
 - Double-click a node, or click **Show neighbours**, to add its neighbours to the view.
 - Clear a checkbox under **Relations:** to hide the edges of that type.
+- Clear a checkbox under **Node types:** to hide the nodes of that type and their edges.
+- Open **Statistics** to see the number of nodes and edges, the average degree, the components and the five nodes with most edges. Click a listed node to select it.
+- If the selected node is a paper, click **Open paper** to select it in the annotation view.
+- If a Cypher query shows a table, click **Save table as CSV** to save it.
 - If the project has more than one reviewer, select the seat above the graph. Select **Consolidation** to see the consolidated answers. The list has **Consolidation** only after you save one. The view selects it at first.
 - Click **⤓ Download** at the top right of the graph area to save the graph as an image. Select **SVG** or **PNG**. Select **Visible section** to save what you see, or **Whole graph, including the part not visible**. The image shows the current filter, or the whole graph if there is no filter.
 - Click **Nodes** to open the node list. The list is closed when the view opens.
@@ -387,6 +391,7 @@ Use the view like this:
 </p>
 
 The view uses the consolidated answers if they exist.
+The view keeps the **Relations:** and **Node types:** filters when you close and open the application.
 
 ## Creating diagrams
 
@@ -397,13 +402,18 @@ Diagrams show how many papers have an answer, for example the papers of each met
 3. Under **Count papers by**, select the year, venue, author, keyword or a field of your schema.
 4. To compare groups, select a second dimension under **Split by**.
 5. Under **Appearance**, set the title, the axis labels, the colours, the legend and the size.
-6. Click **SVG**, **PNG** or **PDF** to save the diagram.
+6. To count only some papers, select a dimension under **Only papers where** and enter a text under **Value contains**.
+7. For bar types, select **Horizontal bars**. For stacked bars, select **Show shares of 100 %**.
+8. Click **SVG**, **PNG** or **PDF** to save the diagram. Click **CSV** to save the counts.
 
 <p align="center">
   <img src="screenshots/diagrams.png" alt="The diagrams tab with the settings on the left, a stacked bar diagram with a title and legend on the right, and the export buttons at the bottom left" width="900">
 </p>
 
 The diagram updates after each change. The window stays usable while it is made.
+The PDF has vector graphics and selectable text. If the diagram has characters that PDF fonts lack, such as Chinese or Persian, the PDF has an image.
+Select **Show data table** to see the counts.
+The view keeps all settings when you switch tabs or close the application.
 If the project has more than one reviewer, select the seat above the settings.
 If no paper has a value, the view shows a message and you cannot save.
 
