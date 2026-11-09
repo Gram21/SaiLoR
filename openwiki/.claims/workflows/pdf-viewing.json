@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:35717a56e06d1b96244d8fd8b6140e4a5cfcdfd0113e671cc7bbe5ffc662abb3",
+  "pageVersion": "sha256:c8d104b97c0b9c6934da0ba9eb4342524e8413ca86036a7b5a4dfdaee2460896",
   "claims": [
     {
       "id": "claim_b410c03b2c5e4183ab4744569122404e",
@@ -91,11 +91,11 @@
       "statement": "PdfViewer mounts one react-pdf Page element per page with no virtualization, each with its own canvas/text/annotation layer and pageRefs entry. onLoadSuccess caps the mounted count at MAX_PDF_PAGES (5000) and records overflow in truncatedPages, because a hostile 2.4 KB PDF whose page tree is a DAG can claim 16 million pages and crash the renderer. Page elements are memoized and the onRenderTextLayerSuccess callback is a stable useCallback so unrelated re-renders keep pdf.js text layers intact.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L1454-L1454",
+          "resource": "repo://src/components/PdfViewer.tsx#L1491-L1491",
           "version": "repo-lines-v1:sha256:89fb6751d62f20ea53e0ce4473a38138cda56788cfc3ee4c9678d765cbe0121e:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODlmYjY3NTFkNjJmMjBlYTUzZTBjZTQ0NzNhMzgxMzhjZGE1Njc4OGNmYzNlZTRjOTY3OGQ3NjVjYmUwMTIxZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODlmYjY3NTFkNjJmMjBlYTUzZTBjZTQ0NzNhMzgxMzhjZGE1Njc4OGNmYzNlZTRjOTY3OGQ3NjVjYmUwMTIxZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGRkMjZlNDIxZDI3YWRmMGJiMzU0N2EyOWI4ZjRiODlmZTMyYTZkNzE2YjhkNzg0MzQ2Yjc3ZWIwYzcyZTFiMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWVhOWUxMzFiYjgzNzQ5ZTljNWYwMWNhNzUyMTg4N2ViYzRhNzdlZTRmNWFmY2FkY2VhOWE3ZTVlOTMzY2IwYSJ9"
         },
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L1859-L1867",
+          "resource": "repo://src/components/PdfViewer.tsx#L1906-L1914",
           "version": "repo-lines-v1:sha256:aa9996876574b7dafae87c049a7a990e4a39344073e13bd43207ce7aa5dfb0d0:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGUwMGIxN2QyYmFjMWY5NmUzNTZlODk0Y2JmZjE5YjE0ZWY4YzkxMWQ3OTA4NDFmOTJlZTQ3MmM5ODczNzlmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDUwMTAwYzljYTVjZmQ5Yjg4MWVjMzE0MDg5NjQ2MGRhZTI3NmRmOGE4ODAxZmRiYTQ2ZjQ4NGFlZDhhYjNmMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjk1ZjY4ODc1Y2M3Zjg0OWRkZjE0ZTI1MjViOTg2YmUyOWRhZDg2NzE2NDQyNWQyMTFjYTM1Y2I4YjFjZDQ4NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDMwYTU0YzNlYjJjMmIyY2JkMDVmNTUyOTEzMmRjNGJjZGY0MDllODhkOTAwNzgwNjcyZWUxNDVhNDI2Yzc2NyJ9"
         }
       ]
@@ -105,7 +105,7 @@
       "statement": "PDF zoom lives in the Zustand store (pdfZoom, clamped 0.4-3) so keyboard shortcuts can drive it too; the page renders at fit-to-width base size scaled by the zoom factor. Ctrl/Cmd+wheel zooms via a native non-passive wheel listener (React's synthetic handler is passive by default and preventDefault would warn) instead of scrolling.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L487-L493",
+          "resource": "repo://src/components/PdfViewer.tsx#L498-L504",
           "version": "repo-lines-v1:sha256:e73258f7d6a74f329ae05d92769bdd261d4707442cb1e2f5b8068d1817cfcc0f:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODk2ZGIzYzViNDUxOWJlZTI1ZTAwMGEyOTg2ZGIxMzUzZDdkMmIwNmFkNjhiZDIyMjUzM2Q1MTUwMTJiNWQyNyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYTFkYWYwZWQyZWM0MjQyNGE0M2U1YjQ3MmJiMTJkZjhkY2YwMGQyOWNjYmYwM2Y2YzEyYzEzNTRmNzEzZGUwYSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODlkMTBiMzg3NDk0YTVjZTlhOWY1OGI4MGZlOTM3ZmNkOWI0YzYzODI3MTg4OWQ5MmM3ZDJkNmNjZTIzMWRlNiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMDU2NGQyZTFhOTRkZTZkZTM3NGZlNGRjYjdlOTUyZGQ2OWIxNDRiMDcwMGYzZmYwNmNmOWRlMTY0MzhhZjJmNiJ9"
         }
       ]
@@ -115,15 +115,15 @@
       "statement": "In-PDF search opens on Ctrl/Cmd+F, walks every rendered page's text layer with a TreeWalker building a Range per match (concatenating text nodes so matches can span pdf.js spans), debounces the query 150 ms, and tints matches via the CSS Custom Highlight API (CSS.highlights + Highlight) so it never mutates react-pdf's text-layer DOM, degrading gracefully when unavailable. The active match is centered in the scroll container.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L1424-L1431",
+          "resource": "repo://src/components/PdfViewer.tsx#L1459-L1466",
           "version": "repo-lines-v1:sha256:f1ea1e0a3b16a0ff218150161ec2a62029294119d343a701cc1ded8c55585f78:eyJzZWxlY3RlZExpbmVDb3VudCI6OCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTBjNGJlZjE4ZDU4ODJlYzFjZGM4MTQ3MjU3ZjNkYWJlY2Q0YmVmMTJiMGY2MDVkMDk4YWEzZDA5YWNkYTJiNSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMTIxYzgxM2I3MGRmMGQ0N2RhOTY4MTc4Mzg4NWJlNWY0ZjlkYTZjY2JiNjI1NGRmOTVjYzU1NmMxYTZhNGM2OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzkwZWYzOGJlZTNjMWZhN2E1ODEwZjBkZmNmNjUxOTQ0ODViYzc5NzE4NzhhMTM1MmJlM2VlMGM1NmY4MTE0YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNGNlOTJkNjc0MTFkMjY5MmU5YTU3ZDQ2OGU2MDQ1ODQ5MWZlNmUwZmYyYmQ5NDJmZDZhYjZiNzUwODhmZDI4ZSJ9"
         },
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L1490-L1511",
-          "version": "repo-lines-v1:sha256:37d18644fa88e422a33ac1abb50e46633b8fa65d13e6f0cbbbc901a76db9e209:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2NzdkMmYwMzFlOThiNWU5MTFjNWFkNGZiOWIyMTg2YTkzMjUyMmU4ZjQ2ZWU0MGJhYmZhZTNkYTAwZmMxMjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQ4ODcyMjg2Y2YxNTc1OWU5YjUxZjkyMDljNzdiNDdhMzdmNWY0Mzk4ODQ1ODU3OTYyYWFlMDQzMjMzYzgyMjQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYyNGM3NjIzMjc0NWM4ODQwMjEwZDlhMDJkOTlmNTU0ZWVmNDIzMDIxN2IyNWYwYjYwNmM5NTExYWZjM2YyMTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZlOThlZGI4ZjA5MGRhZGQ3ZDYyNGEyODNlNjNiMDAwM2Q2YzVlMGViOGExZmE2MDI3MzExYjZiNWJiZGEzYWUifQ"
+          "resource": "repo://src/components/PdfViewer.tsx#L1527-L1549",
+          "version": "repo-lines-v1:sha256:db4ee215c4d5d9d58133f6e33be49f0b2cef74d4e00949dd3634006acaa65f43:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImU2NzdkMmYwMzFlOThiNWU5MTFjNWFkNGZiOWIyMTg2YTkzMjUyMmU4ZjQ2ZWU0MGJhYmZhZTNkYTAwZmMxMjEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4ZWExOTcyMWZhZDdmYzY0ODA4ZGQ2MzlkZTgwMTRkMzMxNmRiOWJlYWVjY2Y5NTQ2YjVlNzQ2YmIzYTg4YzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImYyNGM3NjIzMjc0NWM4ODQwMjEwZDlhMDJkOTlmNTU0ZWVmNDIzMDIxN2IyNWYwYjYwNmM5NTExYWZjM2YyMTIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImZlOThlZGI4ZjA5MGRhZGQ3ZDYyNGEyODNlNjNiMDAwM2Q2YzVlMGViOGExZmE2MDI3MzExYjZiNWJiZGEzYWUifQ"
         },
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L98-L143",
+          "resource": "repo://src/components/PdfViewer.tsx#L99-L144",
           "version": "repo-lines-v1:sha256:ff368487b217cecae62e03d6ea2bb41f4a6b354dc246cfa650455f53f640c870:eyJzZWxlY3RlZExpbmVDb3VudCI6NDYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxNTZmMWZiOWI3ZmI3ODMwYWFmMWI2NzFiMTE3NzdiMWE3Y2U1MDg1NDEzZGRlMmJkZWU4YWVlNDY5OGUwMzYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImNhZGYzOTk2ZTZjNGQ3ZWNmMDU1NTY1YWQ4MDA2YjczZmI2YjA0OTgxMTQzNGU4Mzk2YTZiZDk1YWVjMTAxNjMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjcyYWJlYThlYWQ2MzQwNzkyYTZmMDMzODlmNTc4MTFiNzg4OWM4NTdhMGZiN2RlYThiZTJjODE0NGNiOTNlMWQiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjExZGQ2MDM5NmE4ODQ2ZjFiMDg4N2FlZjAzMTJlZjE1YWE2ODMyN2M5NTI4N2FhOGRhN2JmZWNlYTY3NGNhZTEifQ"
         }
       ]
@@ -138,7 +138,7 @@
         },
         {
           "resource": "repo://src/components/PdfViewer.tsx",
-          "version": "repo-file-v1:sha256:0f67a6d57f2a4672586cfedcc72ced109cbeaffd4a694d0fa1b39e52951bb32f"
+          "version": "repo-file-v1:sha256:57d719b4452f1d6ff0e1634194ffdd3a08b842d467c85e75a6f27ee2ac266f12"
         }
       ]
     },
@@ -147,7 +147,7 @@
       "statement": "dedupeOverlappingRects folds near-duplicate rects from Range.getClientRects (a cross-browser quirk that can report the same line twice) into their union when overlap exceeds 0.6, while leaving genuinely side-by-side rects on the same line (which overlap ~0) alone.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L78-L94",
+          "resource": "repo://src/components/PdfViewer.tsx#L79-L95",
           "version": "repo-lines-v1:sha256:c608baa90eda30999939d18f25520db65e6a25b50fdfb05dfd1fbce5aa5ef2ca:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMzZTI3OGY5ZmE1NjRlNGI1Y2U1NTVjMmY1ZGRiNjNkZTIwNGYxMjUyNWQ3NWEyZjJjZmVmNmQ4MDM3ZDFmM2EiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjNhNTU0ODhkNzkyOGRjNzljNzMyMGYzMDMzOTRlMDA4NTliOGNmNTYyMjZkYzlmMTg1ZmQ2NzJiM2RjMzdiNGEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjcyYWJlYThlYWQ2MzQwNzkyYTZmMDMzODlmNTc4MTFiNzg4OWM4NTdhMGZiN2RlYThiZTJjODE0NGNiOTNlMWQifQ"
         }
       ]
@@ -158,7 +158,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/PdfViewer.tsx",
-          "version": "repo-file-v1:sha256:0f67a6d57f2a4672586cfedcc72ced109cbeaffd4a694d0fa1b39e52951bb32f"
+          "version": "repo-file-v1:sha256:57d719b4452f1d6ff0e1634194ffdd3a08b842d467c85e75a6f27ee2ac266f12"
         }
       ]
     },
@@ -167,7 +167,7 @@
       "statement": "Hovering an internal PDF link previews its destination by copying a crop from the destination page's already-rendered canvas (no extra pdf.js render). resolveLinkPreview resolves the destination, fits a crop box to the destination's own entry via detectEntryBox (a SumatraPDF DetectEntryBox port), copies it at full backing-store resolution and scales down only at display time, and flips above the link when cramped. linkHoverTokenRef invalidates any in-flight resolution when the hover ends.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L1221-L1338",
+          "resource": "repo://src/components/PdfViewer.tsx#L1233-L1350",
           "version": "repo-lines-v1:sha256:02b3716a765e766f48d3baf53a0d070b74e945607f560126aefe64efdde26c8b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTE4LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI3OTRlMzgxYmFkMWRhOWExMTliMjJmYjU0ZDViMmUyZmQwNTExOWRhYWUxYjU4NjM5NDA0MDM1Yzc2ZjEyYjMwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIyN2U1Nzg4ZDVkOWQ3M2QyNGE4MWRiYzBhNWE3NGJmYTgyYzljM2IzYWY5OWU1MmFmNzk2ZTkwYjQ2OGE4YTNkIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJhOGMxMzZhMDA4MGE5OTQ3Nzg3ZmZjYjk3MmE0ZGE5Mjg5MzY3OGY5NzU0ZmEwMjJiZTViOGViOTlkNWFmZWQxIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiIwZjZkNjQ3NjY0M2E3NzIzM2I5NzRmN2UzOWQ0OWMxOTgxN2FkNzljNDgyYTBiODM0NGQ0MjFmMDI1MDlmODRmIn0"
         },
         {
@@ -181,7 +181,7 @@
       "statement": "destinationPoint decodes a pdf.js explicit destination array into x/y in PDF user space (null for an axis a FitH/FitV/Fit destination leaves unspecified), and is the pure, unit-testable piece of the preview flow.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L202-L220",
+          "resource": "repo://src/components/PdfViewer.tsx#L203-L221",
           "version": "repo-lines-v1:sha256:6a3c48a5f5bd6ae659e0645909164d827b7310a78fa4ee880f74d9ec6d3a061e:eyJzZWxlY3RlZExpbmVDb3VudCI6MTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFjNDg3MDQyZjczNTdiZDhmMTIzMDk0YzRkZTU1YTNlMGE0NmRkNDBhYjUxY2I2ODdiMDUyZGIyODk3ODk2MTEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA2NTIwZjc1ZmE3NWVjMzdmY2Y5MDUyZWNiZDdkMDFjYTNlYTVjM2EyOTEwZThiNTRhMDBiYmZkYzBhNmMwY2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImE4OWE2ODg1YTU5ODQ0MjY2NDM5ZWRhZWE4MDYzNGM5YmVkYTIyZTUwOGY5YjA2ZDIwN2Q4ZDZlNTkzN2RiNDQifQ"
         }
       ]
@@ -215,7 +215,7 @@
       "statement": "Reading position (paper, page, scroll offset as a fraction of the page's rendered height) is stored in localStorage keyed by the project's file path (slr.readingPosition.<path>), never in the shared project JSON where it would be diff noise. noteReadingPosition is debounced 500 ms from PdfViewer and takes paperId explicitly because the reviewer may have switched papers by the time the debounced call fires; it is a no-op with no stable save location. readOffsetFraction uses the same zoom-independent fraction convention as MarkRect.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L641-L671",
+          "resource": "repo://src/components/PdfViewer.tsx#L653-L683",
           "version": "repo-lines-v1:sha256:acb3ef0196c6bdc69c976d0e5b46ae209dcf3984c5fed5023eb3ff95136edfe5:eyJzZWxlY3RlZExpbmVDb3VudCI6MzEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImE4OWVjZmQwMjcyMjcwZjNmMjY5NjRlMmEyMGVkYjM4M2YzMDEwOTRhOTI2ODY1OWQwZTNiYWM0ODZmZTM4OWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImY2NjQzNDNlYzk0MGFhZTM0NmM2NTVjNWQzNTE0NWIwYzUwZmMyNmIzMjgwMzYyY2E1YzY5YjU2ZTAzZTQ5NmEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImRiYjQyYzg4YTMyOTM3MDU0NGExNGM0ZjY0MWYzMTFlMDJjYjgzM2E5OWI3NTdhOTI5ZWM0ZTU3OWZmYzAxYWIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijk0YTg3YmM1MTEwOWM2MzFjMGZiNmJmNzgzZGU5OGUwMmY1MDI4MWNjZDQ1ZjVmZDBhYjRlNGU0OTE4OGIzMDkifQ"
         }
       ]
@@ -225,7 +225,7 @@
       "statement": "On project load loadReadingPosition is used only if the named paper still exists, else it falls back to the first unfinished paper; the result populates session-only initialPdfPosition. PdfViewer consumes it once pages mount via a single combined scrollTop delta computed from the same rects scrollToMark uses, and re-snaps on every textRenderTick (each page's text layer finishing) because pages are still at loading-placeholder height when numPages first becomes known and earlier pages growing would otherwise push the target away. The request is dropped after a short idle window and discarded if the reviewer navigated to a different paper before it ran.",
       "evidence": [
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L520-L556",
+          "resource": "repo://src/components/PdfViewer.tsx#L531-L567",
           "version": "repo-lines-v1:sha256:364a308568a3986e397df7fddd7b39221987311cfbca0304bc52df17892c91a1:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiZDg3NzRkYjNhZGUzN2FhNGM0N2YzNmFhOTczYWY2MWZiNjMxZGQwYTgzMGM4NzUzNzQ2ZjJkNWNjZTk1MWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRiZjFlZjYwOWJkOTJiYjQxMDQyNWNkNWU3NDA5MDUzZTY0N2Q5YjBlMGJlNTY4ZjVmMjdkZTMzMTk1OGY3NDMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhNjY5YTZhZjA2ZTNkODVkNGQyZmQwMDcwMjhlYTg1ZmZhYjZhNDAwZTAwYjQ5YmRhNDhkNjIwYTBjNWM1YTMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImYyODVhNWI1N2U4MDZjYzA2YjliZThlMjgzNjg2MzhmNjIzZjUxNTdlOGZjODljZDZhYmQ3ZTc5MzdkZjg2NzYifQ"
         }
       ]
@@ -348,7 +348,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/PdfViewer.tsx",
-          "version": "repo-file-v1:sha256:0f67a6d57f2a4672586cfedcc72ced109cbeaffd4a694d0fa1b39e52951bb32f"
+          "version": "repo-file-v1:sha256:57d719b4452f1d6ff0e1634194ffdd3a08b842d467c85e75a6f27ee2ac266f12"
         },
         {
           "resource": "repo://src/model/annotationSplit.ts",
@@ -398,7 +398,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/PdfViewer.tsx",
-          "version": "repo-file-v1:sha256:0f67a6d57f2a4672586cfedcc72ced109cbeaffd4a694d0fa1b39e52951bb32f"
+          "version": "repo-file-v1:sha256:57d719b4452f1d6ff0e1634194ffdd3a08b842d467c85e75a6f27ee2ac266f12"
         },
         {
           "resource": "repo://src/demo/text.ts",
@@ -419,10 +419,20 @@
           "version": "repo-lines-v1:sha256:d402af8150ed5a728987ab0f2d670f1123c55120935542baa3f2f2c801c0a2c0:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxZmZhMGIwOWUxN2E0ODdiOWZhNjA5NDRkYWNhNzNlMzY2OTdmNjkwMDBjZjA3ZjQ2N2Y0YTZiMjYyYmEyYjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNkMjMzMjFmMTllNzY3ODM1ZjY3NmIxZGEyZjVmYTBjZDg5MzkwYWJjZmJkM2VmMGQxNGQzZmMzYTc2M2JhMTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwOGI1N2RhN2Q4MjU3OGYxNjQ4OTZlZTZkMmJmYzczYjE4OTg5OTE4ZjkwZjkxYmRmZTgyN2U1NWY5MTMyMjYifQ"
         }
       ]
+    },
+    {
+      "id": "claim_1bbc82b2f34442df8bac048c68382fec",
+      "statement": "In single-page view PdfViewer keeps all pages mounted but hides all but the current page, fits one page to the pane, and flips pages with the mouse wheel only when the pane is scrolled to its bottom or top edge, throttled to one flip per 300 ms; the setting persists in localStorage.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/PdfViewer.tsx",
+          "version": "repo-file-v1:sha256:57d719b4452f1d6ff0e1634194ffdd3a08b842d467c85e75a6f27ee2ac266f12"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-08T19:43:29.846Z"
+    "at": "2026-11-09T08:29:20.744Z"
   }
 }

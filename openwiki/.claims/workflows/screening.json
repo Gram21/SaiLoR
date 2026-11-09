@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:1736b2a63b77a11027bf475527120cad823710609551fc14f4e0937c63165bbb",
+  "pageVersion": "sha256:683ae99b7b78331a8686f2b85ce52f37d22441108fc4d8277b757c84f68d715a",
   "claims": [
     {
       "id": "claim_0bfba0ad57324c858d4748e034707d01",
@@ -372,7 +372,7 @@
         },
         {
           "resource": "repo://src/components/PdfViewer.tsx",
-          "version": "repo-file-v1:sha256:0f67a6d57f2a4672586cfedcc72ced109cbeaffd4a694d0fa1b39e52951bb32f"
+          "version": "repo-file-v1:sha256:57d719b4452f1d6ff0e1634194ffdd3a08b842d467c85e75a6f27ee2ac266f12"
         }
       ]
     },
@@ -471,6 +471,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-07T10:50:01.257Z"
+    "at": "2026-11-09T08:29:20.744Z"
   }
 }

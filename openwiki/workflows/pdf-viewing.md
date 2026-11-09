@@ -48,10 +48,10 @@ sources:
     resource: repo://src/platform/tauri.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
-generated: { by: "claude-code", at: "2026-11-08T19:43:29.846Z" }
+generated: { by: "claude-code", at: "2026-11-09T08:29:20.744Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-08T19:43:29.846Z
+    at: 2026-11-09T08:29:20.744Z
 ---
 
 # PDF Viewer and Marks
@@ -148,6 +148,16 @@ Plain-text `[N]` citations (PDFs without link annotations) get the same preview 
 `destinationPoint` decodes a pdf.js explicit destination array into an `x`/`y` in PDF user space (with `null` for an axis a `FitH`/`FitV`/`Fit` destination leaves unspecified, and `FitR` anchored at the rectangle's top-left), and is the only piece of the preview flow that's pure and unit-testable without a live document.
 
 `src/model/refPreview.ts`'s `detectEntryBox` is a compact port of SumatraPDF's `DetectEntryBox`: it clusters the destination page's text items into lines by y, anchors on the line nearest the destination, expands it into a gap-bounded run that never crosses a column gutter (gutters are wider than word spacing), then walks following lines until the next entry starts (a line back at the entry's left margin, or a hanging-indent continuation ends it) or a paragraph gap. It returns `null` when the page is too sparse/image-only to fit an entry, in which case `resolveLinkPreview` falls back to a page-wide window below the destination.
+
+### Single-page view
+
+A **▯** toggle next to the zoom group switches `PdfViewer` to single-page view. All `Page` elements stay mounted,
+but every page except the current one gets the `pdf-page-hidden` class (`display: none`). The render width is
+the smaller of the pane width and the pane height times the page aspect ratio, so one page fits the pane at 100 %
+zoom. The scroll-based current-page tracking is off in this mode. A non-Ctrl wheel handler (`passive: false`)
+lets the pane scroll first; only at the bottom (or top) edge does it flip to the next (or previous) page, at most
+once per 300 ms, and the pane then shows the top (or bottom) of the new page. The setting is stored in
+`localStorage` under `slr.pdf.singlePage`.
 
 ## PDF marks
 

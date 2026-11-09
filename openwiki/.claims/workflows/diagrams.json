@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:cc500c6374dc4477475194d3a8fe4078ae1458343fb5211a33b3a4568342ef9e",
+  "pageVersion": "sha256:867b25a020e79bed7b9c2629860742c76ce685b1ddd7125fc972c0d90792435e",
   "claims": [
     {
       "id": "claim_adf2e008395d4d31988bab0c9c8d45f7",
@@ -18,11 +18,11 @@
     },
     {
       "id": "claim_d1970994e02641509c86604151e9a1be",
-      "statement": "diagramHost builds the knowledge graph once per data message, then aggregates and renders per render message, replying with the SVG, series keys, category count and paper count, or an error.",
+      "statement": "diagramHost builds the knowledge graph once per data message, then aggregates and renders per render message, replying with the SVG, series keys, category count, paper count and counted data, or an error.",
       "evidence": [
         {
-          "resource": "repo://src/model/diagram.ts#L195-L211",
-          "version": "repo-lines-v1:sha256:08550d2954ec262a46a3a87ffa33e766d0be398df91ed0b733bc5d93f5a6ba56:eyJzZWxlY3RlZExpbmVDb3VudCI6MTcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjFiNDgyMzViMDRhMTc4OTQxMGFiOTUzMGI2NDczMWU5ZDIwNTc4NTdkNDhhNzE5OTA3YjViMzM4ZTZmMWNmNDIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjUzOTgyNTM3YzE3NDJmMTI3YWQ2ZWZkMDg3ODVmNjY5MWMyYjNlYjYzOWRlYmYxZjAzYTE0Y2I5MWNjMTVkYzIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://src/model/diagram.ts#L219-L234",
+          "version": "repo-lines-v1:sha256:b4fbd30b8cc79832f58cab4d0934ad424e918a93496b0bcdd4328e92139fffa3:eyJzZWxlY3RlZExpbmVDb3VudCI6MTYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU4NjkwMWZmMWVlODZhY2UwMTdlODc2MTJmZWNiMTVkNTI2ZmRlMGI3ZDlkZDg4ZTBlYjQ3MWRlZjVhMzIwZjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImVmODEwMzJkMjQ3M2EyMzViMTM0NTA1YTkxZTlhYzAwM2VmNTI1NDAyOGMwNjdkOTg2YTYyNjYyZDI2ZTVmZWUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
     },
@@ -35,7 +35,7 @@
           "version": "repo-lines-v1:sha256:115b59cb9eebbd3047115b137508d0e59701f07e284889ba2c8c87facb343f7c:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTk2NmZiZmE4ODk5OGRhNzQ2NTZjNTAxOTQ5NTZjMjVmMDg0OTQ1NzY2MGMwMDlmZTYzZDFlOWZhOWRjOTMxYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGEwNDM1MmY1ZDVmYjhiNDg3ZjZhOGQ3YWU3YzU1NjU5ZGQ2NGY1MzYzNGRjNTNjNmQ5YjljZjNjNjk2ZWU2OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDUyYmE0NjI2YzI1YTA5ODNkYWYzNjI5YjNkOTRhMDIxYjQ1ZTFlNzZhNDc1ZGVhNWNkMmZhN2U5YmU5MjU3ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjg2MGM1NTM5ODQxMTc4MjdjMTZiYzMzYTM5ZDhjZDhjYmNlOGRmNDAyNzM1ZGVlNjlhYTk4NDQyN2FjNTIzZCJ9"
         },
         {
-          "resource": "repo://src/components/DiagramView.tsx#L84-L88",
+          "resource": "repo://src/components/DiagramView.tsx#L91-L95",
           "version": "repo-lines-v1:sha256:d2b3d21206488fc5a302e7edbb59250f0e55dcdf5a0623263d116ee1482f9b18:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTk2NmZiZmE4ODk5OGRhNzQ2NTZjNTAxOTQ5NTZjMjVmMDg0OTQ1NzY2MGMwMDlmZTYzZDFlOWZhOWRjOTMxYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWU3Y2ZhYWFhNGRlZDA3NWE3NDg3NmRhMTRjZDZmMDIyNTQ2MzcyNjhhZDIxNzIwMDFjNTE3YzEyNjEzNjhjMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjM3MDZmOWFjMWE3MTQ5Zjc4MmI4ZmU4MTQ4Zjg0MDcyMGEzMThjNDFhMGNkNzdkMjQ2OGQzYmM1ZTU3ODEyMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTA2YzNkNWQ3MjlhOWJiZTMwODc2ZmM2YmEwNjEyM2ZiZDFiOWNhODcyMmY2NjVjMzE2MWJhZDRkZjhmYzEwYiJ9"
         }
       ]
@@ -45,7 +45,7 @@
       "statement": "Diagram dimensions are read from the knowledge graph (year, venue, author and keyword edges, or schema fields through hasAnswer edges to Choice nodes), so diagrams see the same data as the graph view.",
       "evidence": [
         {
-          "resource": "repo://src/model/diagram.ts#L98-L135",
+          "resource": "repo://src/model/diagram.ts#L109-L146",
           "version": "repo-lines-v1:sha256:00839a03dd0fbee345845454f8c68629fb0cc2d01489cb7339d7ca00d7fda80e:eyJzZWxlY3RlZExpbmVDb3VudCI6MzgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBjMDE5MzA3YjQzZTBmMzdhODUzNGYyNDcyMjYzYmZmOWRmYmVmYWU1NGNiMjM2OWE4MGI1NTEwMTA5ZDUzZDciLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImU5NDk3ZGRkOTNjNzJiMTYwYzU1OGU5YWI2YzNmNzc0YTJjZWUyZDU4MDQ3ZjZiYWU3MTIxYmU4MDhjZWVmYzgiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjMDkyYjFiN2ZlMWIwZjc3ZmJkMzM1Y2I3ODk5ODRjZjQxZDAyNjc3MWMzZGQ2YmQyM2I3OTY3OWE2MmEyMjkifQ"
         }
       ]
@@ -55,8 +55,8 @@
       "statement": "Aggregation counts a paper once per value, optionally adds a (none) category, and merges categories and series beyond the limit into Other.",
       "evidence": [
         {
-          "resource": "repo://src/model/diagram.ts#L140-L182",
-          "version": "repo-lines-v1:sha256:ebc10cc001416b0797d88b69f989e1f65ef49efc6edf2845db185bc717bc4490:eyJzZWxlY3RlZExpbmVDb3VudCI6NDMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYjRkOWI4ZDc5ZDczYWU4MmUyOTBiY2Q3OGM3MGNjYjY0YTg5OGY1MjJjZTc0NDNiMWE0NzNhYmJiMWUzMmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZjMDgyODc4OTkxMDhkNWUzYzI1ZDdmZGY5NTZmYzc3NWZjODMyNTRlNGFlNzRmYjg5ZDg1Y2JkMWU2MWY2MDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzODQyY2VjZjZkYjNlMjU0NzFiMDI2M2MxYzM4ZTU3NWE5MzQ5MWI1YzllNjYxYTcyYzdiMjk0Y2YzNGNkZTAifQ"
+          "resource": "repo://src/model/diagram.ts#L151-L205",
+          "version": "repo-lines-v1:sha256:50eeb12576da2bf85b2bbe6bd0bbb74c2f048987283ff891f692b8cf14a6eea4:eyJzZWxlY3RlZExpbmVDb3VudCI6NTUsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImVkYjRkOWI4ZDc5ZDczYWU4MmUyOTBiY2Q3OGM3MGNjYjY0YTg5OGY1MjJjZTc0NDNiMWE0NzNhYmJiMWUzMmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjZjMDgyODc4OTkxMDhkNWUzYzI1ZDdmZGY5NTZmYzc3NWZjODMyNTRlNGFlNzRmYjg5ZDg1Y2JkMWU2MWY2MDciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImMzODQyY2VjZjZkYjNlMjU0NzFiMDI2M2MxYzM4ZTU3NWE5MzQ5MWI1YzllNjYxYTcyYzdiMjk0Y2YzNGNkZTAifQ"
         }
       ]
     },
@@ -66,7 +66,7 @@
       "evidence": [
         {
           "resource": "repo://src/model/diagram.test.ts",
-          "version": "repo-file-v1:sha256:6a80b61f7a10506cd4d257c936f48ba67843156bbb441ea9dc04a08f6fbbf2bc"
+          "version": "repo-file-v1:sha256:51891c89ebb1e9e96aab3293989fcafb92fb8f176679980788f24d2c16ce86f2"
         },
         {
           "resource": "repo://src/model/diagramSvg.ts#L18-L21",
@@ -76,15 +76,19 @@
     },
     {
       "id": "claim_5f2c3dbd5b2a43bdaa3f3a33973e82f6",
-      "statement": "PNG and PDF export rasterise the SVG through a canvas on the main thread; the PDF is a one-page raster image built by imagePdf from deflate-compressed RGB data, not vector.",
+      "statement": "PDF export first tries svgToVectorPdf, which writes vector shapes and Helvetica text and returns null if a character is outside WinAnsi; then a canvas-rasterised one-page PDF built by imagePdf is the fallback. Both share pdfDocument.",
       "evidence": [
         {
           "resource": "repo://src/components/diagramExport.ts",
-          "version": "repo-file-v1:sha256:fc0f2faf3ce1cf971871c44a563d15bd7226d58c2ba89de26ba069274c406446"
+          "version": "repo-file-v1:sha256:41a8375a3ce76522b877f6f9a86b7095c27dc52cb6eed2e9e794a6b44a4db765"
         },
         {
           "resource": "repo://src/model/imagePdf.ts",
-          "version": "repo-file-v1:sha256:93f2d75057dbccfb7bec199f83ab9959323c59b28eca17bb1a65e3b09e0af646"
+          "version": "repo-file-v1:sha256:2b3526efc29a7921a15f49c88e768a8843311da950944a265f81a78b3c905528"
+        },
+        {
+          "resource": "repo://src/model/vectorPdf.ts",
+          "version": "repo-file-v1:sha256:26d874137c8126ecc7f2fb2902b9fdb5caa5402f05be7491f35f03219c17c88b"
         }
       ]
     },
@@ -94,13 +98,23 @@
       "evidence": [
         {
           "resource": "repo://src/components/ResultView.tsx",
-          "version": "repo-file-v1:sha256:1dafe8d42e655013c785488a53fecb25f4c729b5e734425b3ac1aa1d0e8d7799"
+          "version": "repo-file-v1:sha256:790c2026bfb59d0758081a4653d5eaf88c00f9be794d0ff332f483dcf46bd43e"
+        }
+      ]
+    },
+    {
+      "id": "claim_80bf5a72600b432d83fa153f02194353",
+      "statement": "The diagram settings are loaded from and saved to localStorage by resultSettings, which validates each stored value and falls back to defaults.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/resultSettings.ts",
+          "version": "repo-file-v1:sha256:4ccb6c2260eae3d41465ba736da8491266018d1466c75b72512258ad00e51899"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-08T19:43:29.846Z"
+    "at": "2026-11-09T08:29:20.744Z"
   }
 }

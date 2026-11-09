@@ -22,10 +22,14 @@ sources:
     resource: repo://src/model/graphLayout.ts
   - id: openwiki-source-0cd6363bcc5b6192ad82d9e5
     resource: repo://src/model/graphQuery.ts
-generated: { by: "claude-code", at: "2026-11-08T19:43:29.846Z" }
+  - id: openwiki-source-936c4881244ab6ad1599744e
+    resource: repo://src/model/graphStats.ts
+  - id: openwiki-source-e29db6bd8a5de35acbd207c6
+    resource: repo://src/state/resultSettings.ts
+generated: { by: "claude-code", at: "2026-11-09T08:29:20.744Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-08T19:43:29.846Z
+    at: 2026-11-09T08:29:20.744Z
 ---
 
 # Knowledge Graph View
@@ -100,6 +104,17 @@ A query that starts with `match` goes to a small Cypher engine in `src/model/gra
 - `cypherSubgraph` turns the result rows back into a subgraph so the canvas can draw it.
 
 Error messages are i18n keys under `graphView.cypher.*`.
+
+## Node-type filter, statistics and saved filters
+
+The side panel has a **Node types** list with one check box per type present in the graph (`NODE_TYPES` in
+`src/model/graph.ts`). `GraphView` drops nodes of hidden types and their edges from the shown subgraph.
+The **Statistics** section runs `graphStats` (`src/model/graphStats.ts`) on that subgraph only when it is open.
+It uses union-find for components and returns node and edge counts, average degree, the largest component and
+the five highest-degree nodes; a click on a hub focuses that node. A selected paper has **Open paper**, and a
+Cypher table has **Save table as CSV**.
+The edge-type bitmask and the hidden node types are loaded from and saved to `localStorage` by
+`src/state/resultSettings.ts` (key `slr.result.graph`).
 
 ## Export
 

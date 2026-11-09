@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:d356c1766b73cfb080e94eb1186522ae676bec79624785a0b9ec735b707d89ce",
+  "pageVersion": "sha256:a452fd8ae01b8c5b4be06622eecfa8a5a87ff79b183e2e7661a9a84da4b4cddf",
   "claims": [
     {
       "id": "claim_963822971b6d42aaad66333527580c8a",
@@ -546,13 +546,23 @@
       "evidence": [
         {
           "resource": "repo://src/model/diagram.test.ts",
-          "version": "repo-file-v1:sha256:6a80b61f7a10506cd4d257c936f48ba67843156bbb441ea9dc04a08f6fbbf2bc"
+          "version": "repo-file-v1:sha256:51891c89ebb1e9e96aab3293989fcafb92fb8f176679980788f24d2c16ce86f2"
+        }
+      ]
+    },
+    {
+      "id": "claim_da26498eb8df44558ac7ff860626ecf2",
+      "statement": "Vector PDF output is regression-tested by checking that the xref offsets point at the objects, that rotated text and transparency are emitted, and that non-Latin text falls back to null.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/vectorPdf.test.ts",
+          "version": "repo-file-v1:sha256:3c81c4ebeebe8e5752b1b42774fcf31f03be8ef034f04f991a2da92cf2339283"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-08T19:43:29.846Z"
+    "at": "2026-11-09T08:29:20.744Z"
   }
 }

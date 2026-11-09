@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:26d09d03a1e6b8530b408501e8b5c1bf2b781e580e318bd8e9771e866e6602ce",
+  "pageVersion": "sha256:deb3611be683360291f3a562067d2ca013ff4330d6f46d9bc7df89b5dd3c78a0",
   "claims": [
     {
       "id": "claim_26c0cd6920894404a6dd0ab6f699065a",
       "statement": "buildGraph builds a graph of Paper, Author, Venue, Keyword, Choice and Answer nodes joined by authoredBy, publishedIn, hasKeyword, cites and hasAnswer edges; graphSeats offers each reviewer seat plus the consolidation seat once a consolidation was saved (hasConsolidation), defaultGraphSeat picks the consolidation when it exists, else seat 1, and graphTrees reads the consolidated tree for a one-reviewer project or the consolidation seat, else the chosen reviewer's tree.",
       "evidence": [
         {
-          "resource": "repo://src/model/graph.ts#L169-L205",
+          "resource": "repo://src/model/graph.ts#L170-L206",
           "version": "repo-lines-v1:sha256:fa8a20d66baec705bf304e0b6a11edf4ad619a42608338473f8db4d7b5385d6a:eyJzZWxlY3RlZExpbmVDb3VudCI6MzcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIxNzc5NDRjMzgzY2IzOWYwODQxYTRhZDViMjU4OWFhM2M1NmE2NGUwNjQ3NzZiZjkwY2YwYWIxM2FhMjg1OTkiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjRkODQ2MzYzOThkMGY2MWU2ZjE1NjY2NzA5OWViN2E4NGZlMTQ4OTQ5ZjEwYWE5N2JlZWIxNGFkNDI4OWQzY2EiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhlMmNlM2ZkYzMyNTAzNjNhYmFlNzQwMGZlMTUzZWM4NTNiMmIwYTVhZTFlMDEyOTc2MTJiMGI3Y2JiNDMyN2IiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6Ijc2NzlkNWE0MTdhNmI1N2RkNTdmYWEzYzQ4ZGMzZDc0NTU0ZjFmOWM2NzdjMWUxMmVmODJkZTk2MmU4OGVkNjYifQ"
         }
       ]
@@ -18,7 +18,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/GraphView.tsx",
-          "version": "repo-file-v1:sha256:28e16e99ac27f7ffc064408bccb264d2345799888f3a3e148ea155204bf76cb9"
+          "version": "repo-file-v1:sha256:ed1cb7d9046a2958a869e37040bde45e0c70d9ccea74aa7b1c53fec00e27a5b7"
         },
         {
           "resource": "repo://src/model/graphLayout.ts",
@@ -42,7 +42,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/GraphView.tsx",
-          "version": "repo-file-v1:sha256:28e16e99ac27f7ffc064408bccb264d2345799888f3a3e148ea155204bf76cb9"
+          "version": "repo-file-v1:sha256:ed1cb7d9046a2958a869e37040bde45e0c70d9ccea74aa7b1c53fec00e27a5b7"
         }
       ]
     },
@@ -72,7 +72,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/GraphView.tsx",
-          "version": "repo-file-v1:sha256:28e16e99ac27f7ffc064408bccb264d2345799888f3a3e148ea155204bf76cb9"
+          "version": "repo-file-v1:sha256:ed1cb7d9046a2958a869e37040bde45e0c70d9ccea74aa7b1c53fec00e27a5b7"
         },
         {
           "resource": "repo://src/model/graphCypher.worker.ts",
@@ -90,7 +90,7 @@
         },
         {
           "resource": "repo://src/model/graph.ts",
-          "version": "repo-file-v1:sha256:640c47d57f148be566bf27295782369303162ac84692d44b74a0de8bdd32ebf7"
+          "version": "repo-file-v1:sha256:3ed4e8a1ade55bcd5e40c208b3caaa239f845993fd77cbfda0b48f69fc25d439"
         }
       ]
     },
@@ -99,11 +99,11 @@
       "statement": "The toolbar Result view menu opens the graph and diagram tabs without an export item; graph export lives in the Save menu and in the graph view's Export… button, which opens ExportGraphDialog.",
       "evidence": [
         {
-          "resource": "repo://src/components/GraphView.tsx#L409-L411",
+          "resource": "repo://src/components/GraphView.tsx#L438-L440",
           "version": "repo-lines-v1:sha256:837943a5a2f59a2be90c8c631678a7c4073fcb93207acba05b0f7dfcb3cf3129:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZjdhMmM2MzkzZTQwNjU5N2VjOGNhNWIxZTJiNzc2YjNhN2FjYjkzNDFlODZhYWFmYTkyNjY2OTcyNTVmZTdjOCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDM3M2FkYjFmMTYwNTM0YzY0NDg1ZTEwMWQ2ZTQ1M2E2MTU4YzZlNzFiYTIxYTJmMzZlYjljNTA4NDc1Y2JiNiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTk2OTk0MjVhNDk0NGZmODM1NDc0OTFlMzlmMGM0ZTMyNjRiYmNhOGFlNTQ0NzM5ODRlNTZlM2M1Nzc4Y2Q3NiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYmM5ZGRhYmRjMDdmMGQ4N2ViNDdkZDhlN2JlY2VjN2I4NTU3NzliOGNmMTQxZDAwYWM3ODkyYjZjOWU0ODkzMyJ9"
         },
         {
-          "resource": "repo://src/components/GraphView.tsx#L581-L581",
+          "resource": "repo://src/components/GraphView.tsx#L682-L682",
           "version": "repo-lines-v1:sha256:e09e2290d9979267eba24fa3b8e03f70025c3e5c514c68812fba0e64388f9bcc:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZTA5ZTIyOTBkOTk3OTI2N2ViYTI0ZmEzYjhlMDNmNzAwMjVjM2U1YzUxNGM2ODgxMmZiYTBlNjQzODhmOWJjYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZTA5ZTIyOTBkOTk3OTI2N2ViYTI0ZmEzYjhlMDNmNzAwMjVjM2U1YzUxNGM2ODgxMmZiYTBlNjQzODhmOWJjYyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiODJlOGQ4ZjVkOTc0MGJhMGU3MzAzOTAyOWVkNWU0MjQ4YTBjMTIyYmQwZmNhYzU3ZjE2ZDYwOGZmN2JkNmQ1NyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNTNkMjRiNzRhY2ZiMGQ3MDE2NzQ1NTk1MjMzNWQwNjRlNDUyMzkyMjllNjk0YTliZTBkODdhOTgxOTRhZjI3NyJ9"
         },
         {
@@ -115,10 +115,34 @@
           "version": "repo-lines-v1:sha256:7d0e42c74f09d5f7b4da1741776989d355ce77b9a1a07688d18394a79359d394:eyJzZWxlY3RlZExpbmVDb3VudCI6MjIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImM0MjY4ZDQ2YmU2OGQ5NTlkZGMyYzI1M2ZhNzUxYzA5ZWJmZmQ0NmY0YzBhOGQyYjVhZWM4ZWFkMjQ3NGFhMTQiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImMyNjczYTI1MGNmYzA3MjY2ZmQ4MTIzNjU5MGJiODYyZjJhZTJhNTkwMjNjNzAwMjVkZGY2YzM3Mjk4YTliNjYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM3Zjg3N2E0NjQzNjc3MDRjMzc1YjNlMmU3Mjc3ZjQ5M2NhZTMyN2Q2NTUxYjNkNjY3MDZjNDk4YjZkMDViYmEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjZiZDQzNjViMGMxNDk2ZDZiOWRhNmRkZjIyMjMzYWYxMmRiMDFjMjc0NjRlZGE0MzhhNmI2ZDBlMjY3YmM4NDgifQ"
         }
       ]
+    },
+    {
+      "id": "claim_2c690ee953bf412eb27a3f654f1820dd",
+      "statement": "graphStats computes node and edge counts, average degree, connected components via union-find, the largest component and the five highest-degree nodes, and GraphView computes it only while the Statistics section is open, on the subgraph left after the edge and node-type filters.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/GraphView.tsx",
+          "version": "repo-file-v1:sha256:ed1cb7d9046a2958a869e37040bde45e0c70d9ccea74aa7b1c53fec00e27a5b7"
+        },
+        {
+          "resource": "repo://src/model/graphStats.ts",
+          "version": "repo-file-v1:sha256:48de63f44938ceb2245617c85541bfdaad93925164739a590db98ac1c6ede1db"
+        }
+      ]
+    },
+    {
+      "id": "claim_d8a8fba28e4e4bc6b0e583844626d8c5",
+      "statement": "The graph's edge-type filter and hidden node types are persisted in localStorage through loadGraphFilters and saveGraphFilters.",
+      "evidence": [
+        {
+          "resource": "repo://src/state/resultSettings.ts",
+          "version": "repo-file-v1:sha256:4ccb6c2260eae3d41465ba736da8491266018d1466c75b72512258ad00e51899"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-08T19:43:29.846Z"
+    "at": "2026-11-09T08:29:20.744Z"
   }
 }

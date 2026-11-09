@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:25c93f7aa3ca4852570a2be33e226acbb114969c50f27c850ed9f4188a914a78",
+  "pageVersion": "sha256:dd258e86340c6fcf398ea9198cd2cdd51dcea1f3d83294c332f7115d1e189b3d",
   "claims": [
     {
       "id": "claim_73038aa7de1248059ddba1afcb29f3d4",
@@ -8,7 +8,7 @@
       "evidence": [
         {
           "resource": "repo://README.md",
-          "version": "repo-file-v1:sha256:f1e9388a08741393969f02aee4f958f553d38007046e0183c52ea1580d35a31b"
+          "version": "repo-file-v1:sha256:95e558de53ca669e9b631ff78c656c8403e93ba0e6d0dcb70efb2b0442ac2c6b"
         },
         {
           "resource": "repo://src/model/project.ts",
@@ -22,7 +22,7 @@
       "evidence": [
         {
           "resource": "repo://README.md",
-          "version": "repo-file-v1:sha256:f1e9388a08741393969f02aee4f958f553d38007046e0183c52ea1580d35a31b"
+          "version": "repo-file-v1:sha256:95e558de53ca669e9b631ff78c656c8403e93ba0e6d0dcb70efb2b0442ac2c6b"
         },
         {
           "resource": "repo://src-tauri/src/project.rs",
@@ -356,17 +356,17 @@
       "evidence": [
         {
           "resource": "repo://src/components/DiagramView.tsx",
-          "version": "repo-file-v1:sha256:d34bd1b66fe43d16ccd293642b47dfba5f200f9c7decf3eb5d3cc7caf5d4211a"
+          "version": "repo-file-v1:sha256:90c1432a44518e6edf5ae282b4a3f1933706b184abee6cdc4547e852094eb925"
         },
         {
           "resource": "repo://src/model/diagram.ts",
-          "version": "repo-file-v1:sha256:b7686c1e59de14410d07c104b255efc7475008f96623aab48cca0d75ac1f02ca"
+          "version": "repo-file-v1:sha256:899a3b2960772b05fd9ab717df2246484b4354373c387bf771267616f6c36532"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-08T19:43:29.846Z"
+    "at": "2026-11-09T08:29:20.744Z"
   }
 }
