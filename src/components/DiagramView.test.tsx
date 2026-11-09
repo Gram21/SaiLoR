@@ -8,6 +8,7 @@ const saved = vi.hoisted(() => ({ picks: [] as unknown[][], writes: [] as unknow
 
 vi.mock('../platform', () => ({
   getPlatform: () => ({
+    readSystemFont: async () => null,
     pickTextExportPath: async (...a: unknown[]) => (saved.picks.push(a), '/out/diagram.svg'),
     writeTextFile: async (...a: unknown[]) => (saved.writes.push(a), { ok: true, path: '/out/diagram.svg' }),
     kind: 'electron',
@@ -62,6 +63,22 @@ describe('ResultView diagrams', () => {
     await waitFor(() => expect(saved.writes).toHaveLength(1))
     expect(saved.picks[0][0]).toBe('diagram.svg')
     expect(String(saved.writes[0][1])).toContain('My title')
+  })
+
+  // [utest->req~ui-370~1]
+  it('asks before a PDF with characters the PDF fonts lack, and saves SVG instead when only that is possible', async () => {
+    open()
+    render(<ResultView initial="diagram" onClose={() => {}} />)
+    await userEvent.type(screen.getByRole('textbox', { name: /^Title/ }), '中文')
+    await waitFor(() => expect(decodeURIComponent(String(document.querySelector('img.diagram-image')!.getAttribute('src')))).toContain('中文'))
+    await userEvent.click(screen.getByRole('button', { name: /PDF/ }))
+    const dialog = await screen.findByRole('dialog', { name: 'Fonts for the PDF' })
+    expect(within(dialog).getByText(/Only SVG is offered/)).toBeInTheDocument()
+    const picked = saved.picks.length
+    await userEvent.click(within(dialog).getByRole('button', { name: 'Save as SVG' }))
+    await waitFor(() => expect(saved.picks).toHaveLength(picked + 1))
+    expect(saved.picks[picked][0]).toBe('diagram.svg')
+    expect(String(saved.writes.at(-1)?.[1])).toContain('中文')
   })
 
   it('closes on Escape', async () => {

@@ -1,5 +1,6 @@
 // [impl->req~ui-320~1]
-import { svgToVectorPdf } from '../model/vectorPdf'
+import { svgToVectorPdf, type PdfFont } from '../model/vectorPdf'
+import { parseTrueType } from '../model/ttf'
 
 export type DiagramFormat = 'svg' | 'png' | 'pdf'
 
@@ -37,7 +38,38 @@ function measureText(text: string, size: number, bold: boolean): number {
   return ctx.measureText(text).width
 }
 
-/** The diagram as a one-page vector PDF. `replaced` counts characters the PDF fonts lack, drawn as `?`. */
-export function svgToPdf(svg: string): { pdf: Uint8Array; replaced: number } {
-  return svgToVectorPdf(svg, measureText)
+/** Characters that need text shaping (Hebrew, Arabic, Indic and similar scripts); a PDF cannot set them one glyph per character. */
+const SHAPED = /[\u0590-\u0dff\ufb1d-\ufefc]/
+
+export type FontSearch =
+  | { found: { font: Uint8Array } }
+  | { missing: string[]; why: 'shaping' | 'no-font' | 'uncovered' }
+
+/** The first installed font (as `read` gives them, by index) that has every one of `chars`; else why none can be embedded. */
+export async function findPdfFont(chars: string[], read: (index: number) => Promise<Uint8Array | null>): Promise<FontSearch> {
+  const shaped = chars.filter((ch) => SHAPED.test(ch))
+  if (shaped.length) return { missing: shaped, why: 'shaping' }
+  let best: string[] | undefined
+  for (let i = 0; ; i++) {
+    const bytes = await read(i)
+    if (!bytes) break
+    const ttf = parseTrueType(bytes)
+    if (!ttf) continue
+    const missing = chars.filter((ch) => !ttf.glyph(ch.codePointAt(0) ?? 0))
+    if (!missing.length) return { found: { font: bytes } }
+    if (!best || missing.length < best.length) best = missing
+  }
+  return best ? { missing: best, why: 'uncovered' } : { missing: chars, why: 'no-font' }
+}
+
+async function deflate(bytes: Uint8Array): Promise<Uint8Array> {
+  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate'))
+  return new Uint8Array(await new Response(stream).arrayBuffer())
+}
+
+/** The diagram as a one-page vector PDF. With `font` (a TrueType file), texts the PDF fonts lack are set in it, embedded. */
+export async function svgToPdf(svg: string, font?: Uint8Array): Promise<Uint8Array> {
+  const ttf = font && parseTrueType(font)
+  const embed: PdfFont | undefined = font && ttf ? { ttf, file: await deflate(font), length: font.length } : undefined
+  return svgToVectorPdf(svg, measureText, embed).pdf
 }

@@ -20,7 +20,9 @@ import {
 import { seriesColor } from '../model/diagramSvg'
 import { useT } from '../i18n'
 import { GraphSeatSelect } from './GraphSeatSelect'
-import { svgToPdf, svgToPng, type DiagramFormat } from './diagramExport'
+import { findPdfFont, svgToPdf, svgToPng, type DiagramFormat, type FontSearch } from './diagramExport'
+import { nonWinAnsiChars } from '../model/vectorPdf'
+import { PdfFontDialog, type FontChoice } from './PdfFontDialog'
 
 const FORMATS: DiagramFormat[] = ['svg', 'png', 'pdf']
 const RENDER_DELAY_MS = 120
@@ -45,6 +47,7 @@ export function DiagramView({ config, setConfig, onClose }: { config: DiagramCon
   const [shown, setShown] = useState<Shown>(null)
   const [busy, setBusy] = useState(false)
   const [message, setMessage] = useState<{ ok: boolean; text: string } | null>(null)
+  const [fontAsk, setFontAsk] = useState<{ chars: string[]; search: FontSearch; choose: (c: FontChoice) => void } | null>(null)
   const post = useRef<(m: DiagramRequest) => void>(() => {})
   const latest = useRef(0)
 
@@ -114,21 +117,26 @@ export function DiagramView({ config, setConfig, onClose }: { config: DiagramCon
     setMessage(null)
     try {
       const platform = getPlatform()
-      const path = await platform.pickTextExportPath(`diagram.${format}`, format)
-      if (!path) return
       const { svg } = shown
       const { width, height } = effective
-      let pdf: { replaced: number } | undefined
+      let kind = format
+      let font: Uint8Array | undefined
+      const chars = format === 'pdf' ? nonWinAnsiChars(svg) : []
+      if (chars.length) {
+        const search = await findPdfFont(chars, (i) => platform.readSystemFont(i))
+        const choice = await new Promise<FontChoice>((choose) => setFontAsk({ chars, search, choose }))
+        setFontAsk(null)
+        if (!choice) return
+        if (choice === 'svg') kind = 'svg'
+        else if ('found' in search) font = search.found.font
+      }
+      const path = await platform.pickTextExportPath(`diagram.${kind}`, kind)
+      if (!path) return
       const res =
-        format === 'svg' || format === 'csv'
-          ? await platform.writeTextFile(path, format === 'csv' ? diagramCsv(shown.data, effective.xLabel, t('diagram.papers')) : svg)
-          : await platform.writeBinaryFile(path, format === 'png' ? await svgToPng(svg, width, height) : (pdf = svgToPdf(svg)).pdf)
-      const saved = t('app.export.saved', { path: res.ok ? res.path : '' })
-      setMessage(
-        res.ok
-          ? { ok: true, text: pdf && pdf.replaced > 0 ? `${saved} ${t('diagram.pdfReplaced', { count: pdf.replaced })}` : saved }
-          : { ok: false, text: t('app.export.saveFailed', { error: res.error }) },
-      )
+        kind === 'svg' || kind === 'csv'
+          ? await platform.writeTextFile(path, kind === 'csv' ? diagramCsv(shown.data, effective.xLabel, t('diagram.papers')) : svg)
+          : await platform.writeBinaryFile(path, kind === 'png' ? await svgToPng(svg, width, height) : await svgToPdf(svg, font))
+      setMessage(res.ok ? { ok: true, text: t('app.export.saved', { path: res.path }) } : { ok: false, text: t('app.export.saveFailed', { error: res.error }) })
     } catch (err) {
       setMessage({ ok: false, text: t('app.export.saveFailed', { error: String(err) }) })
     } finally {
@@ -285,6 +293,7 @@ export function DiagramView({ config, setConfig, onClose }: { config: DiagramCon
           )}
         </Section>
       </aside>
+      {fontAsk && <PdfFontDialog chars={fontAsk.chars} search={fontAsk.search} onChoose={fontAsk.choose} />}
       <div className="diagram-stage">
         <p className="graph-hint" role="status">
           {shown === null

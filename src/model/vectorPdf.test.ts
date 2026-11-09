@@ -1,5 +1,7 @@
 import { describe, it, expect } from 'vitest'
-import { svgToVectorPdf } from './vectorPdf'
+import { nonWinAnsiChars, svgToVectorPdf, type PdfFont } from './vectorPdf'
+import { parseTrueType } from './ttf'
+import { tinyFont } from './ttf.fixture'
 import { renderDiagram } from './diagramSvg'
 import { DEFAULT_CONFIG, type DiagramConfig } from './diagram'
 
@@ -46,5 +48,42 @@ describe('svgToVectorPdf', () => {
   it('keeps Latin-1 letters as single bytes', () => {
     const s = latin1(svgToVectorPdf(renderDiagram(data, cfg({ title: 'Größe…' })), measure).pdf)
     expect(s).toContain('(Größe…) Tj')
+  })
+
+  const embedded = (): PdfFont => {
+    const bytes = tinyFont()
+    return { ttf: parseTrueType(bytes)!, file: bytes, length: bytes.length }
+  }
+
+  // [utest->req~ui-370~1]
+  it('lists the characters the built-in fonts lack', () => {
+    expect(nonWinAnsiChars(renderDiagram(data, cfg({ title: '日本 é 日' })))).toEqual(['日', '本'])
+    expect(nonWinAnsiChars(renderDiagram(data, cfg()))).toEqual([])
+  })
+
+  // [utest->req~ui-370~1]
+  it('embeds the font for a text with such a character and sets it as glyph ids', () => {
+    const { pdf, replaced } = svgToVectorPdf(renderDiagram(data, cfg({ title: '中' })), measure, embedded())
+    const s = latin1(pdf)
+    expect(replaced).toBe(0)
+    expect(s).toContain('<0004> Tj')
+    expect(s).toContain('/Subtype /CIDFontType2')
+    expect(s).toContain('/Encoding /Identity-H')
+    expect(s).toContain('/W [4 [600]')
+    expect(s).toMatch(/\/FontFile2 10 0 R/)
+    expect(s).toMatch(/\/Filter \/FlateDecode \/Length1 \d+/)
+    expect(s).toContain('/F3 7 0 R')
+    expect(s).toContain('/F1 ')
+    const start = Number(/startxref\s+(\d+)/.exec(s)![1])
+    const offsets = [...s.slice(start).matchAll(/^(\d{10}) 00000 n/gm)].map((m) => Number(m[1]))
+    expect(offsets).toHaveLength(10)
+    offsets.forEach((o, i) => expect(s.startsWith(`${i + 1} 0 obj`, o)).toBe(true))
+  })
+
+  // [utest->req~ui-370~1]
+  it('adds no font objects when no text needs the font, and counts glyphs the font lacks', () => {
+    const plain = latin1(svgToVectorPdf(renderDiagram(data, cfg()), measure, embedded()).pdf)
+    expect(plain).not.toContain('CIDFontType2')
+    expect(svgToVectorPdf(renderDiagram(data, cfg({ title: '本' })), measure, embedded()).replaced).toBe(1)
   })
 })

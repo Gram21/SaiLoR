@@ -419,7 +419,7 @@ If no paper has a value, the view shows a message and you cannot save.
 
 Use **Count papers without a value** to count papers without an answer as "(none)".
 If a dimension has many values, set **Most categories shown**. The rest merge into "Other".
-The SVG file is a vector image. Use it for papers and slides. The PDF file is a vector image too. It has one page. Its text can be selected. The PDF fonts lack some characters, for example other scripts. The PDF shows them as `?` and the app tells you how many. Use SVG to keep them.
+The SVG file is a vector image. Use it for papers and slides. The PDF file is a vector image too. It has one page. Its text can be selected. If the diagram has characters that the PDF fonts lack, for example other scripts, the app asks first. Choose **Embed font** to put a system font in the PDF. The PDF then grows by the size of the font. Choose **Save as SVG** to keep the characters without a font. If no font can be embedded, the app offers only SVG and tells you why.
 Click **Reset settings** to go back to the defaults.
 If no consolidated answers exist and the project has several reviewers, select the **Seat** in the view.
 

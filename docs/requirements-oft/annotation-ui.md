@@ -1208,7 +1208,7 @@ Tags: NonFunctional, Performance_Efficiency
 ### REQ-UI-320: Diagram export
 `req~ui-320~1`
 
-The view shall have the buttons "SVG", "PNG" and "PDF". Each button shall save the shown diagram through the save dialog of the system and show the saved path or the error. SVG shall save the SVG document as text. PNG shall save a raster image at twice the diagram size. PDF shall save one page that has the size of the diagram. The page shall hold vector graphics and text (REQ-UI-370). The system shall write the file only to a path that the save dialog returned (REQ-PLT-260). The system shall make the raster images on the main thread from the SVG. The export section shall stay at the bottom of the settings panel, inside a frame with an accent border that sets it apart from the other sections. The buttons "SVG", "PNG" and "PDF" shall be in one row and the button "CSV" (REQ-UI-340) shall be in a second row. All four buttons shall have the same style.
+The view shall have the buttons "SVG", "PNG" and "PDF". Each button shall save the shown diagram through the save dialog of the system and show the saved path or the error. SVG shall save the SVG document as text. PNG shall save a raster image at twice the diagram size. PDF shall save one page that has the size of the diagram. The page shall hold vector graphics and text (REQ-UI-370). If the PDF needs a font for characters outside Helvetica, the system shall first ask the user whether to embed a font or to save SVG instead (REQ-UI-370). The system shall write the file only to a path that the save dialog returned (REQ-PLT-260). The system shall make the raster images on the main thread from the SVG. The export section shall stay at the bottom of the settings panel, inside a frame with an accent border that sets it apart from the other sections. The buttons "SVG", "PNG" and "PDF" shall be in one row and the button "CSV" (REQ-UI-340) shall be in a second row. All four buttons shall have the same style.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability)
@@ -1283,12 +1283,12 @@ Tags: Functional, Functional_Suitability, Usability
 ### REQ-UI-370: Vector PDF export of diagrams
 `req~ui-370~1`
 
-The PDF button of the diagram view shall save a PDF with vector graphics and text that the user can select and zoom without loss. The system shall draw the SVG shapes (rectangle, line, polyline, circle, path, text) with the PDF fonts Helvetica and Helvetica-Bold. The PDF shall never hold a raster image. If the diagram has a character that the fonts lack, the system shall draw it as "?" and, after saving, tell the user how many characters it replaced. The user can use SVG to keep such characters (REQ-UI-320).
+The PDF button of the diagram view shall save a PDF with vector graphics and text that the user can select and zoom without loss. The system shall draw the SVG shapes (rectangle, line, polyline, circle, path, text) with the PDF fonts Helvetica and Helvetica-Bold. The PDF shall never hold a raster image. If the diagram has a character that Helvetica lacks, the system shall ask the user before it saves: "Embed a font, or save as SVG instead?" If the user chooses to embed, the system shall embed one TrueType system font that holds all these characters, in full, and set the text that needs it in this font. The system shall not offer a font that forbids embedding in its licence. If no font can be embedded, the dialog shall offer only SVG and shall state the reason: the characters need text shaping (for example Arabic, Hebrew or Indic scripts), the computer has no usable font, or no installed font holds all the characters. Cancel shall save nothing.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Portability)
-- **Evidence:** `src/model/vectorPdf.ts` (`svgToVectorPdf`), `src/model/imagePdf.ts` (`pdfDocument`), `src/components/diagramExport.ts` (`svgToPdf`)
-- **Verified by:** `src/model/vectorPdf.test.ts`
+- **Evidence:** `src/model/vectorPdf.ts` (`svgToVectorPdf`, `nonWinAnsiChars`), `src/model/ttf.ts` (`parseTrueType`), `src/model/imagePdf.ts` (`pdfDocument`), `src/components/diagramExport.ts` (`svgToPdf`, `findPdfFont`), `src/components/PdfFontDialog.tsx`
+- **Verified by:** `src/model/vectorPdf.test.ts`, `src/model/ttf.test.ts`, `src/components/diagramExport.test.ts`, `src/components/PdfFontDialog.test.tsx`, `src/components/DiagramView.test.tsx`
 - **Status:** Implemented
 
 Needs: impl, utest

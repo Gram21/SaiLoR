@@ -1,4 +1,5 @@
-import { latin1, pdfDocument } from './imagePdf'
+import { latin1, pdfDocument, type PdfObject } from './imagePdf'
+import type { TrueTypeFont } from './ttf'
 
 // [impl->req~ui-370~1]
 /** Characters of the two built-in PDF fonts (WinAnsi); other scripts need an embedded font. */
@@ -6,6 +7,21 @@ const WIN_ANSI: Record<string, number> = { '…': 0x85, '–': 0x96, '—': 0x97
 const winAnsi = (ch: string): number | undefined => {
   const c = ch.charCodeAt(0)
   return c >= 0x20 && c <= 0x7e ? c : c >= 0xa0 && c <= 0xff ? c : WIN_ANSI[ch]
+}
+
+/** The characters of the SVG's texts that the built-in fonts lack. */
+export function nonWinAnsiChars(svg: string): string[] {
+  const root = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement
+  const found = new Set<string>()
+  for (const el of root.querySelectorAll('text')) for (const ch of el.textContent ?? '') if (winAnsi(ch) === undefined) found.add(ch)
+  return [...found]
+}
+
+/** A TrueType font to embed: `file` is the font file, deflated; `length` its size before deflating. */
+export interface PdfFont {
+  ttf: TrueTypeFont
+  file: Uint8Array
+  length: number
 }
 
 const n = (v: number) => String(Math.round(v * 1000) / 1000)
@@ -77,13 +93,19 @@ function pathOps(d: string): string {
 
 /**
  * A one-page vector PDF of an SVG diagram: rectangles, lines, circles, paths, polylines and text, with the two built-in
- * Helvetica fonts. A character those fonts lack becomes `?`; `replaced` counts them. Throws if `svg` is not an SVG document.
- * `measure` gives the width of a text in pixels, for the centred and right-aligned labels.
+ * Helvetica fonts. A text with a character those fonts lack is set in `font`, which is embedded; without `font` that
+ * character becomes `?`. `replaced` counts the characters drawn as `?` or as the font's missing-glyph box. Throws if
+ * `svg` is not an SVG document. `measure` gives the width of a text in pixels, for the centred and right-aligned labels.
  */
-export function svgToVectorPdf(svg: string, measure: (text: string, size: number, bold: boolean) => number): { pdf: Uint8Array; replaced: number } {
+export function svgToVectorPdf(
+  svg: string,
+  measure: (text: string, size: number, bold: boolean) => number,
+  font?: PdfFont,
+): { pdf: Uint8Array; replaced: number } {
   const root = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement
   if (root.localName !== 'svg' || root.querySelector('parsererror')) throw new Error('Not an SVG document')
   let replaced = 0
+  const glyphWidths = new Map<number, number>()
   const W = num(root, 'width')
   const H = num(root, 'height')
   const alphas = new Map<number, string>()
@@ -125,24 +147,37 @@ export function svgToVectorPdf(svg: string, measure: (text: string, size: number
       emit(el, (e) => pathOps(e.getAttribute('d') ?? ''))
     } else {
       const s = el.textContent ?? ''
-      const bytes = [...s].map((ch) => winAnsi(ch) ?? (replaced++, 0x3f))
       const size = num(el, 'font-size', 12)
       const bold = el.getAttribute('font-weight') === 'bold'
       const anchor = el.getAttribute('text-anchor')
-      const w = measure(s, size, bold)
+      const embedded = font && [...s].some((ch) => winAnsi(ch) === undefined)
+      let shown: string
+      let w: number
+      if (font && embedded) {
+        const glyphs = [...s].map((ch) => font.ttf.glyph(ch.codePointAt(0) ?? 0))
+        for (const g of glyphs) glyphWidths.set(g, Math.round((font.ttf.advance(g) * 1000) / font.ttf.unitsPerEm))
+        replaced += glyphs.filter((g) => !g).length
+        shown = `<${glyphs.map((g) => g.toString(16).padStart(4, '0')).join('')}>`
+        w = (glyphs.reduce((sum, g) => sum + font.ttf.advance(g), 0) * size) / font.ttf.unitsPerEm
+      } else {
+        const bytes = [...s].map((ch) => winAnsi(ch) ?? (replaced++, 0x3f))
+        shown = `(${String.fromCharCode(...bytes).replace(/[\\()]/g, '\\$&')})`
+        w = measure(s, size, bold)
+      }
       const x = num(el, 'x') - (anchor === 'middle' ? w / 2 : anchor === 'end' ? w : 0)
       const y = num(el, 'y')
       const rot = /rotate\(\s*(-?[\d.]+)\s+(-?[\d.]+)\s+(-?[\d.]+)\s*\)/.exec(el.getAttribute('transform') ?? '')
       const turn = rot ? ((Number(rot[1]) * Math.PI) / 180) : 0
       const [c, sn, rx, ry] = rot ? [Math.cos(turn), Math.sin(turn), Number(rot[2]), Number(rot[3])] : [1, 0, 0, 0]
       const matrix = rot ? `${n(c)} ${n(sn)} ${n(-sn)} ${n(c)} ${n(rx - c * rx + sn * ry)} ${n(ry - sn * rx - c * ry)} cm ` : ''
-      const string = `(${String.fromCharCode(...bytes).replace(/[\\()]/g, '\\$&')}) Tj`
+      const string = `${shown} Tj`
       const fill = colour(el.getAttribute('fill') ?? '#000000')
       const halo = colour(el.getAttribute('stroke'))
-      const font = `/${bold ? 'F2' : 'F1'} ${n(size)} Tf 1 0 0 -1 ${n(x)} ${n(y)} Tm`
+      const face = `/${embedded ? 'F3' : bold ? 'F2' : 'F1'} ${n(size)} Tf 1 0 0 -1 ${n(x)} ${n(y)} Tm`
+      const faux = embedded && bold ? `${fill?.rgb ?? '0 0 0'} RG ${n(size * 0.03)} w 2 Tr ` : ''
       const parts = [`q ${matrix}BT`]
-      if (halo && el.getAttribute('paint-order') === 'stroke') parts.push(`${state(halo.alpha)}${halo.rgb} RG ${n(num(el, 'stroke-width', 1))} w 1 Tr ${font} ${string} 0 Tr`)
-      parts.push(`${state(fill?.alpha ?? 1)}${fill?.rgb ?? '0 0 0'} rg ${font} ${string} ET Q`)
+      if (halo && el.getAttribute('paint-order') === 'stroke') parts.push(`${state(halo.alpha)}${halo.rgb} RG ${n(num(el, 'stroke-width', 1))} w 1 Tr ${face} ${string} 0 Tr`)
+      parts.push(`${state(fill?.alpha ?? 1)}${fill?.rgb ?? '0 0 0'} rg ${faux}${face} ${string} ET Q`)
       out.push(parts.join(' '))
     }
   }
@@ -150,13 +185,26 @@ export function svgToVectorPdf(svg: string, measure: (text: string, size: number
   const content = latin1(`0.75 0 0 0.75 0 0 cm\n${out.join('\n')}`)
   const w = n(W * 0.75)
   const h = n(H * 0.75)
+  const extra: PdfObject[] = []
+  if (font && glyphWidths.size) {
+    const scale = 1000 / font.ttf.unitsPerEm
+    const [x0, y0, x1, y1] = font.ttf.bbox.map((v) => Math.round(v * scale))
+    const widths = [...glyphWidths].map(([g, width]) => `${g} [${width}]`).join(' ')
+    extra.push(
+      '<< /Type /Font /Subtype /Type0 /BaseFont /EmbeddedFont /Encoding /Identity-H /DescendantFonts [8 0 R] >>',
+      `<< /Type /Font /Subtype /CIDFontType2 /BaseFont /EmbeddedFont /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor 9 0 R /DW 1000 /W [${widths}] /CIDToGIDMap /Identity >>`,
+      `<< /Type /FontDescriptor /FontName /EmbeddedFont /Flags 4 /FontBBox [${x0} ${y0} ${x1} ${y1}] /ItalicAngle 0 /Ascent ${Math.round(font.ttf.ascent * scale)} /Descent ${Math.round(font.ttf.descent * scale)} /CapHeight ${Math.round(font.ttf.ascent * scale)} /StemV 80 /FontFile2 10 0 R >>`,
+      { data: font.file, dict: `/Filter /FlateDecode /Length1 ${font.length}` },
+    )
+  }
   const pdf = pdfDocument([
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> /ExtGState << ${gs} >> >> /Contents 4 0 R >>`,
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Resources << /Font << /F1 5 0 R /F2 6 0 R${extra.length ? ' /F3 7 0 R' : ''} >> /ExtGState << ${gs} >> >> /Contents 4 0 R >>`,
     { data: content, dict: '' },
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>',
+    ...extra,
   ])
   return { pdf, replaced }
 }
