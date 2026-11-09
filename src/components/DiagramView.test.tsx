@@ -1,6 +1,6 @@
 // [utest->req~ui-280~1]
 import '@testing-library/jest-dom/vitest'
-import { describe, it, expect, vi } from 'vitest'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { render, screen, waitFor, within } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 
@@ -38,6 +38,8 @@ function open() {
 }
 
 describe('ResultView diagrams', () => {
+  beforeEach(() => globalThis.localStorage?.clear())
+
   // [utest->req~ui-270~1]
   it('switches between the knowledge graph and the diagrams', async () => {
     open()
