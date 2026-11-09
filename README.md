@@ -32,14 +32,22 @@ Either [install a release](#installing-a-release) or [clone this repository and 
 
 ### Installing a release
 
-Grab the file for your system from the [releases page](https://github.com/Gram21/SaiLoR/releases):
+Open the [latest release](https://github.com/Gram21/SaiLoR/releases/latest) and download the file for your system:
 
 | System | File |
 |---|---|
-| macOS 15 or later, Apple Silicon | `SaiLoR_<version>_aarch64.dmg` |
+| macOS 15 or later, Apple Silicon (M1 and newer) | `SaiLoR_<version>_aarch64.dmg` |
 | macOS 15 or later, Intel | `SaiLoR_<version>_x64.dmg` |
-| Windows | `SaiLoR_<version>_x64-setup.exe` |
-| Linux | `SaiLoR_<version>_amd64.AppImage`, `.deb` or `.rpm` |
+| Windows, 64 bit | `SaiLoR_<version>_x64-setup.exe` |
+| Linux, any distribution, 64 bit Intel/AMD | `SaiLoR_<version>_amd64.AppImage` |
+| Linux, any distribution, 64 bit ARM | `SaiLoR_<version>_aarch64.AppImage` |
+| Debian and Ubuntu, Intel/AMD | `SaiLoR_<version>_amd64.deb` |
+| Debian and Ubuntu, ARM | `SaiLoR_<version>_arm64.deb` |
+| Fedora, RHEL and openSUSE, Intel/AMD | `SaiLoR-<version>-1.x86_64.rpm` |
+| Fedora, RHEL and openSUSE, ARM | `SaiLoR-<version>-1.aarch64.rpm` |
+
+Ignore the other files in the release. The in-app updater uses the `.sig` files, `latest.json` and the
+`.app.tar.gz` files. `SHA256SUMS.txt` lists checksums, and the `sbom-*.cdx.json` files list the dependencies.
 
 The app requires macOS 15 (Sequoia) or later.
 
