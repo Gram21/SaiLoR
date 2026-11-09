@@ -723,7 +723,7 @@ Tags: Functional, Functional_Suitability
 ### REQ-PDF-190: Single-page view
 `req~pdf-190~1`
 
-The PDF toolbar shall have a "▯" toggle next to the zoom controls. If the toggle is on, the viewer shall show only the current page, fitted to the pane at zoom 100 %. The mouse wheel shall flip to the next page when the page is at its bottom edge and to the previous page when it is at its top edge. If the page is zoomed in and can scroll, the wheel shall scroll inside the page first. The system shall keep the setting in the local storage of the application.
+The PDF toolbar shall have a page-icon toggle next to the zoom controls. If the toggle is on, the viewer shall show only the current page, fitted to the pane at zoom 100 %. The mouse wheel shall flip to the next page when the page is at its bottom edge and to the previous page when it is at its top edge. If the page is zoomed in and can scroll, the wheel shall scroll inside the page first. The system shall keep the setting in the local storage of the application.
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability)

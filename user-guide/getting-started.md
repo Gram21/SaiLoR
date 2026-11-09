@@ -86,7 +86,7 @@ scroll the page to close the box without deleting anything.
 
 Hovering a highlight or note (without clicking) shows its comment — or, for a highlight with no
 comment, the text it covers — plus any fields it's linked to, in a small tooltip, so you can check
-what a mark is without opening it. **Ctrl/Cmd+scroll** zooms the PDF in and out. Click **▯** in the PDF toolbar for the single-page view. It fits one page to the pane, and the mouse wheel flips to the next or previous page. If the page is zoomed in, the wheel scrolls inside the page first. The application remembers the setting. Deleting a highlight
+what a mark is without opening it. **Ctrl/Cmd+scroll** zooms the PDF in and out. Click the page icon in the PDF toolbar for the single-page view. It fits one page to the pane, and the mouse wheel flips to the next or previous page. If the page is zoomed in, the wheel scrolls inside the page first. The application remembers the setting. Deleting a highlight
 or note that's linked to one or more fields asks you to confirm first, naming which fields would lose
 their evidence.
 

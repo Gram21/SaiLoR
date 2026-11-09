@@ -321,7 +321,7 @@ export. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PDF-190: Single-page view
-- **Description:** The PDF toolbar shall have a "▯" toggle next to the zoom controls. If the toggle is on, the viewer shall show only the current page, fitted to the pane at zoom 100 %. The mouse wheel shall flip to the next page when the page is at its bottom edge and to the previous page when it is at its top edge. If the page is zoomed in and can scroll, the wheel shall scroll inside the page first. The system shall keep the setting in the local storage of the application.
+- **Description:** The PDF toolbar shall have a page-icon toggle next to the zoom controls. If the toggle is on, the viewer shall show only the current page, fitted to the pane at zoom 100 %. The mouse wheel shall flip to the next page when the page is at its bottom edge and to the previous page when it is at its top edge. If the page is zoomed in and can scroll, the wheel shall scroll inside the page first. The system shall keep the setting in the local storage of the application.
 - **Type:** Functional (ISO 25010: Usability)
 - **Evidence:** `src/components/PdfViewer.tsx` (`PdfViewer`), `src/locales/en.json` (`pdf.singlePage`)
 - **Verified by:** `src/components/PdfViewer.chrome.test.tsx`
