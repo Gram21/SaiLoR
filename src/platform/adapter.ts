@@ -319,6 +319,9 @@ export interface PlatformAdapter {
   /** Write `bytes` to `absPath`, a path from `pickTextExportPath`. Never throws — failures come back as `{ ok: false, error }`. */
   writeBinaryFile(absPath: string, bytes: Uint8Array): Promise<{ ok: true; path: string } | { ok: false; error: string }>
 
+  /** Bytes of the index-th installed TrueType font the app may embed in a PDF; null when there is none or none more. */
+  readSystemFont(index: number): Promise<Uint8Array | null>
+
   // ---- Self-update ----
   // Where the bundle can self-update (see src-tauri/src/update.rs); other
   // bundles stay on the check-only banner. `supported: false` means don't offer the download/install UI.

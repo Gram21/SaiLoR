@@ -71,6 +71,8 @@ export interface SlrBridge {
   pickReferenceFile(): Promise<{ text: string; name: string } | null>
   /** Raw bytes of a PDF by absolute path (for reading its title/authors). */
   readPdf(path: string): Promise<Uint8Array>
+  /** Bytes of the index-th installed TrueType font; empty when there is none or none more. */
+  readSystemFont(index: number): Promise<Uint8Array>
   /** Same traversal/symlink guard `registerPdfProtocol` enforces when serving the file,
    *  checked first so a blocked/missing PDF gets an honest reason instead of pdf.js's opaque failure. */
   checkPdfPath(rel: string): Promise<{ ok: true } | { ok: false; reason: 'no-project' | 'escapes' | 'not-found' }>

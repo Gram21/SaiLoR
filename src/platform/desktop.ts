@@ -560,6 +560,11 @@ export class DesktopAdapter implements PlatformAdapter {
     return bridge().writeTextFile(absPath, text)
   }
 
+  async readSystemFont(index: number): Promise<Uint8Array | null> {
+    const bytes = await bridge().readSystemFont(index)
+    return bytes.length ? bytes : null
+  }
+
   writeBinaryFile(absPath: string, bytes: Uint8Array): Promise<{ ok: true; path: string } | { ok: false; error: string }> {
     return bridge().writeBinaryFile(absPath, Array.from(bytes))
   }

@@ -227,6 +227,54 @@ pub async fn pdf_read(
     fs::read(&file_path).map(Response::new).map_err(err)
 }
 
+// [impl->req~plt-460~1]
+#[cfg(target_os = "macos")]
+fn font_candidates() -> Vec<PathBuf> {
+    [
+        "/System/Library/Fonts/Supplemental/Arial Unicode.ttf",
+        "/Library/Fonts/Arial Unicode.ttf",
+        "/System/Library/Fonts/Supplemental/Arial.ttf",
+    ]
+    .map(PathBuf::from)
+    .to_vec()
+}
+
+#[cfg(target_os = "windows")]
+fn font_candidates() -> Vec<PathBuf> {
+    let dir = PathBuf::from(std::env::var_os("WINDIR").unwrap_or_else(|| "C:\\Windows".into()))
+        .join("Fonts");
+    ["arial.ttf", "segoeui.ttf", "ARIALUNI.TTF"]
+        .map(|f| dir.join(f))
+        .to_vec()
+}
+
+#[cfg(all(unix, not(target_os = "macos")))]
+fn font_candidates() -> Vec<PathBuf> {
+    [
+        "/usr/share/fonts/truetype/dejavu/DejaVuSans.ttf",
+        "/usr/share/fonts/TTF/DejaVuSans.ttf",
+        "/usr/share/fonts/truetype/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/liberation/LiberationSans-Regular.ttf",
+        "/usr/share/fonts/truetype/noto/NotoSans-Regular.ttf",
+        "/usr/share/fonts/truetype/droid/DroidSansFallbackFull.ttf",
+    ]
+    .map(PathBuf::from)
+    .to_vec()
+}
+
+fn nth_readable_font(candidates: &[PathBuf], index: usize) -> Vec<u8> {
+    candidates
+        .iter()
+        .filter_map(|p| fs::read(p).ok())
+        .nth(index)
+        .unwrap_or_default()
+}
+
+#[tauri::command]
+pub async fn pdf_system_font(index: usize) -> Result<Response, String> {
+    Ok(Response::new(nth_readable_font(&font_candidates(), index)))
+}
+
 // [impl->req~plt-200~1]
 #[tauri::command]
 pub async fn pdf_allow_path(
@@ -654,6 +702,18 @@ fn embed_marks(
 mod tests {
     use super::*;
     use crate::project::tests::tmp;
+
+    // [utest->req~plt-460~1]
+    #[test]
+    fn pdf_system_font_picks_nth_readable_candidate() {
+        let d = tmp("sysfont");
+        fs::write(d.join("a.ttf"), [1]).unwrap();
+        fs::write(d.join("b.ttf"), [2]).unwrap();
+        let c = [d.join("a.ttf"), d.join("missing.ttf"), d.join("b.ttf")];
+        assert_eq!(nth_readable_font(&c, 0), vec![1]);
+        assert_eq!(nth_readable_font(&c, 1), vec![2]);
+        assert!(nth_readable_font(&c, 2).is_empty());
+    }
 
     fn ints(v: &[i64]) -> Object {
         Object::Array(v.iter().copied().map(Object::from).collect())

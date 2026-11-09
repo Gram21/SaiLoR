@@ -1,0 +1,11 @@
+# Automatically generated - DO NOT EDIT!
+
+[[permission]]
+identifier = "allow-pdf-system-font"
+description = "Enables the pdf_system_font command without any pre-configured scope."
+commands.allow = ["pdf_system_font"]
+
+[[permission]]
+identifier = "deny-pdf-system-font"
+description = "Denies the pdf_system_font command without any pre-configured scope."
+commands.deny = ["pdf_system_font"]

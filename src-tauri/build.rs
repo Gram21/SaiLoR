@@ -23,6 +23,7 @@ fn main() {
         "pdf_pick",
         "pdf_pick_folder",
         "pdf_read",
+        "pdf_system_font",
         "pdf_check_path",
         "pdf_scan_folder",
         "pdf_allow_path",

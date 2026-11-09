@@ -1057,3 +1057,18 @@ Comment:
 Needs: impl, utest
 
 Tags: NonFunctional, Performance_Efficiency, Usability
+
+### REQ-PLT-460: Read system fonts for the diagram PDF
+`req~plt-460~1`
+
+The desktop shell shall return the bytes of the n-th readable font file from a fixed list of system font paths for the operating system, and nothing if n is past the end of the list. The shell shall read no path outside this list. The demo shall return no font.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Security)
+- **Evidence:** `src-tauri/src/pdf.rs` (`pdf_system_font`, `font_candidates`, `nth_readable_font`), `src/platform/tauri.ts`, `src/platform/desktop.ts` (`readSystemFont`)
+- **Verified by:** `src-tauri/src/pdf.rs` (`pdf_system_font_picks_nth_readable_candidate`), `src/platform/tauri.test.ts` (`invokes exactly the commands main.rs registers`)
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Security

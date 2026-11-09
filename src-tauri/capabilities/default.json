@@ -26,6 +26,7 @@
     "allow-pdf-pick",
     "allow-pdf-pick-folder",
     "allow-pdf-read",
+    "allow-pdf-system-font",
     "allow-pdf-check-path",
     "allow-pdf-scan-folder",
     "allow-pdf-allow-path",

@@ -97,6 +97,7 @@ export function createDemoAdapter(): PlatformAdapter {
     pickPdfExportPath: async () => null,
     pickTextExportPath: async () => null,
     writeTextFile: async () => ({ ok: false, error: DEMO_NOT_SAVED }),
+    readSystemFont: async () => null,
     writeBinaryFile: async () => ({ ok: false, error: DEMO_NOT_SAVED }),
     checkForNativeUpdate: async () => ({ supported: false }),
     downloadNativeUpdate: async () => {},

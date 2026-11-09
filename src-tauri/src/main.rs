@@ -130,6 +130,7 @@ fn main() {
             pdf::pdf_pick,
             pdf::pdf_pick_folder,
             pdf::pdf_read,
+            pdf::pdf_system_font,
             pdf::pdf_check_path,
             pdf::pdf_scan_folder,
             pdf::pdf_allow_path,

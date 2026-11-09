@@ -67,6 +67,14 @@ describe('tauriBridge', () => {
     expect(invokeMock).toHaveBeenCalledWith('pdf_read', { filePath: '/a.pdf' })
   })
 
+  it('returns system font bytes as a Uint8Array', async () => {
+    invokeMock.mockResolvedValue([4, 5])
+    const bytes = await tauriBridge.readSystemFont(1)
+    expect(bytes).toBeInstanceOf(Uint8Array)
+    expect([...bytes]).toEqual([4, 5])
+    expect(invokeMock).toHaveBeenCalledWith('pdf_system_font', { index: 1 })
+  })
+
   it('delivers event payloads and unsubscribes', async () => {
     const unlisten = vi.fn()
     listenMock.mockResolvedValue(unlisten)
