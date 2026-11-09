@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c8d104b97c0b9c6934da0ba9eb4342524e8413ca86036a7b5a4dfdaee2460896",
+  "pageVersion": "sha256:c5937c18ddba0e139dee760345f68c60d12dc115a318cbb27b901fd779055929",
   "claims": [
     {
       "id": "claim_b410c03b2c5e4183ab4744569122404e",
@@ -95,7 +95,7 @@
           "version": "repo-lines-v1:sha256:89fb6751d62f20ea53e0ce4473a38138cda56788cfc3ee4c9678d765cbe0121e:eyJzZWxlY3RlZExpbmVDb3VudCI6MSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiODlmYjY3NTFkNjJmMjBlYTUzZTBjZTQ0NzNhMzgxMzhjZGE1Njc4OGNmYzNlZTRjOTY3OGQ3NjVjYmUwMTIxZSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODlmYjY3NTFkNjJmMjBlYTUzZTBjZTQ0NzNhMzgxMzhjZGE1Njc4OGNmYzNlZTRjOTY3OGQ3NjVjYmUwMTIxZSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGRkMjZlNDIxZDI3YWRmMGJiMzU0N2EyOWI4ZjRiODlmZTMyYTZkNzE2YjhkNzg0MzQ2Yjc3ZWIwYzcyZTFiMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMWVhOWUxMzFiYjgzNzQ5ZTljNWYwMWNhNzUyMTg4N2ViYzRhNzdlZTRmNWFmY2FkY2VhOWE3ZTVlOTMzY2IwYSJ9"
         },
         {
-          "resource": "repo://src/components/PdfViewer.tsx#L1906-L1914",
+          "resource": "repo://src/components/PdfViewer.tsx#L1920-L1928",
           "version": "repo-lines-v1:sha256:aa9996876574b7dafae87c049a7a990e4a39344073e13bd43207ce7aa5dfb0d0:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNGUwMGIxN2QyYmFjMWY5NmUzNTZlODk0Y2JmZjE5YjE0ZWY4YzkxMWQ3OTA4NDFmOTJlZTQ3MmM5ODczNzlmMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiZDUwMTAwYzljYTVjZmQ5Yjg4MWVjMzE0MDg5NjQ2MGRhZTI3NmRmOGE4ODAxZmRiYTQ2ZjQ4NGFlZDhhYjNmMCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZjk1ZjY4ODc1Y2M3Zjg0OWRkZjE0ZTI1MjViOTg2YmUyOWRhZDg2NzE2NDQyNWQyMTFjYTM1Y2I4YjFjZDQ4NCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZDMwYTU0YzNlYjJjMmIyY2JkMDVmNTUyOTEzMmRjNGJjZGY0MDllODhkOTAwNzgwNjcyZWUxNDVhNDI2Yzc2NyJ9"
         }
       ]
@@ -138,7 +138,7 @@
         },
         {
           "resource": "repo://src/components/PdfViewer.tsx",
-          "version": "repo-file-v1:sha256:57d719b4452f1d6ff0e1634194ffdd3a08b842d467c85e75a6f27ee2ac266f12"
+          "version": "repo-file-v1:sha256:2e50051bb215257f435082411ff8863466fab36be46a37ea0007e6eaf7b77b5e"
         }
       ]
     },
@@ -158,7 +158,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/PdfViewer.tsx",
-          "version": "repo-file-v1:sha256:57d719b4452f1d6ff0e1634194ffdd3a08b842d467c85e75a6f27ee2ac266f12"
+          "version": "repo-file-v1:sha256:2e50051bb215257f435082411ff8863466fab36be46a37ea0007e6eaf7b77b5e"
         }
       ]
     },
@@ -348,7 +348,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/PdfViewer.tsx",
-          "version": "repo-file-v1:sha256:57d719b4452f1d6ff0e1634194ffdd3a08b842d467c85e75a6f27ee2ac266f12"
+          "version": "repo-file-v1:sha256:2e50051bb215257f435082411ff8863466fab36be46a37ea0007e6eaf7b77b5e"
         },
         {
           "resource": "repo://src/model/annotationSplit.ts",
@@ -398,7 +398,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/PdfViewer.tsx",
-          "version": "repo-file-v1:sha256:57d719b4452f1d6ff0e1634194ffdd3a08b842d467c85e75a6f27ee2ac266f12"
+          "version": "repo-file-v1:sha256:2e50051bb215257f435082411ff8863466fab36be46a37ea0007e6eaf7b77b5e"
         },
         {
           "resource": "repo://src/demo/text.ts",
@@ -426,13 +426,13 @@
       "evidence": [
         {
           "resource": "repo://src/components/PdfViewer.tsx",
-          "version": "repo-file-v1:sha256:57d719b4452f1d6ff0e1634194ffdd3a08b842d467c85e75a6f27ee2ac266f12"
+          "version": "repo-file-v1:sha256:2e50051bb215257f435082411ff8863466fab36be46a37ea0007e6eaf7b77b5e"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-09T08:29:20.744Z"
+    "at": "2026-11-09T08:42:42.469Z"
   }
 }

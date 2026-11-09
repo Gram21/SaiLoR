@@ -71,7 +71,7 @@ sources:
 generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-09T08:29:20.744Z
+    at: 2026-11-09T08:42:42.469Z
 ---
 
 # Screening Mode

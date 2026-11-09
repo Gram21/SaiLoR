@@ -48,10 +48,10 @@ sources:
     resource: repo://src/platform/tauri.ts
   - id: openwiki-source-89409d7a9c0280067e058c1a
     resource: repo://src/state/store.ts
-generated: { by: "claude-code", at: "2026-11-09T08:29:20.744Z" }
+generated: { by: "claude-code", at: "2026-11-09T08:42:42.469Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-09T08:29:20.744Z
+    at: 2026-11-09T08:42:42.469Z
 ---
 
 # PDF Viewer and Marks
@@ -151,7 +151,7 @@ Plain-text `[N]` citations (PDFs without link annotations) get the same preview 
 
 ### Single-page view
 
-A **▯** toggle next to the zoom group switches `PdfViewer` to single-page view. All `Page` elements stay mounted,
+A page-icon toggle next to the zoom group (one tall page in single-page view, a short page above a half page in scroll view) switches `PdfViewer` to single-page view. All `Page` elements stay mounted,
 but every page except the current one gets the `pdf-page-hidden` class (`display: none`). The render width is
 the smaller of the pane width and the pane height times the page aspect ratio, so one page fits the pane at 100 %
 zoom. The scroll-based current-page tracking is off in this mode. A non-Ctrl wheel handler (`passive: false`)
