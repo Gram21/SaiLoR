@@ -3,6 +3,8 @@ name: Docs links
 # Documentation-only changes skip the full CI workflow (see paths-ignore in ci.yml).
 # This light workflow checks the links in the wiki and the user guide instead.
 # It runs scripts/check-wiki-links.js, which needs no installed dependencies.
+# It skips itself when a changed file lies outside the CI ignore list, because the
+# full CI workflow runs then and already checks the links.
 
 on:
   push:
@@ -34,11 +36,31 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          fetch-depth: 0
+
+      - name: Check whether the full CI runs
+        id: ci
+        env:
+          BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
+        run: |
+          # Keep this pattern in step with paths-ignore in ci.yml.
+          ignored='^(technical-report/|openwiki/|user-guide/|docs/screenshots/|docs/building\.md$|README\.md$)'
+          if [ -z "$BASE" ] || [ "$BASE" = 0000000000000000000000000000000000000000 ] \
+            || ! git diff --name-only "$BASE" "$GITHUB_SHA" > changed.txt; then
+            echo "full=false" >> "$GITHUB_OUTPUT"
+          elif grep -qvE "$ignored" changed.txt; then
+            echo "full=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "full=false" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up Node.js
+        if: steps.ci.outputs.full == 'false'
         uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
         with:
           node-version: 24
 
       - name: Check wiki and user guide links
+        if: steps.ci.outputs.full == 'false'
         run: node scripts/check-wiki-links.js
