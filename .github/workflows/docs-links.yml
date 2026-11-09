@@ -44,8 +44,10 @@ jobs:
         env:
           BASE: ${{ github.event.pull_request.base.sha || github.event.before }}
         run: |
-          # Keep this pattern in step with paths-ignore in ci.yml.
-          ignored='^(technical-report/|openwiki/|user-guide/|docs/screenshots/|docs/building\.md$|README\.md$)'
+          # Build the pattern from the first paths-ignore line of ci.yml (push trigger),
+          # so both workflows share one list. 'dir/**' matches a prefix, 'file' matches exactly.
+          ignored=$(grep -m1 'paths-ignore' .github/workflows/ci.yml | grep -o "'[^']*'" | tr -d "'" \
+            | sed -e 's/\./\\./g' -e 's#/\*\*$#/#' -e 's/.*[^/]$/&$/' -e 's/^/^/' | paste -sd'|' -)
           if [ -z "$BASE" ] || [ "$BASE" = 0000000000000000000000000000000000000000 ] \
             || ! git diff --name-only "$BASE" "$GITHUB_SHA" > changed.txt; then
             echo "full=false" >> "$GITHUB_OUTPUT"
