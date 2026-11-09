@@ -64,31 +64,7 @@ jobs:
               echo "::error::Release $TAG is already published"; exit 1
             fi
           else
-            notes=$(cat <<EOF
-          SaiLoR $VERSION. Requires macOS 15 or later.
-
-          Highlights:
-          - New Tauri desktop shell. It replaces the Electron shell.
-          - Strict mode with named persons, edit locks and a consolidation gate.
-          - Merge safety: dry-run summary, backup of HEAD and Undo last merge.
-          - Metadata correction with PDF and Crossref proposals.
-          - PDF folder scan by file hash. Papers that share a PDF merge.
-          - AI evidence checks, per-project prompt overrides and AI evaluation export.
-          - Knowledge graph export (JSON-LD, Turtle, GraphML, CSV).
-          - Knowledge graph view with canvas rendering for large graphs.
-          - Result view with diagrams (bar, stacked bar, line, pie, heat map) made in a background worker, exported as SVG, PNG or PDF.
-          - Knowledge graph queries: text queries and read-only Cypher queries, run in a background worker.
-          - Large projects open progressively. Papers load in batches of 2000. Saving waits until all papers have loaded.
-          - Nine interface languages. The non-English texts are drafts.
-          - Security hardening: atomic writes, path validation, network guards and capped responses.
-
-          Update:
-          - The AppImage, Windows and macOS builds update in-app.
-          - Update the .deb and .rpm packages manually.
-          - Users of 1.x install this release once by hand.
-          - API keys, UI settings and recent projects reset. Enter each API key again in the AI settings.
-          EOF
-            )
+            notes="Release notes for $VERSION. TODO: replace this text before you publish the draft."
             gh release create "$TAG" --draft --target "$GITHUB_SHA" \
               --title "SaiLoR $VERSION" --notes "$notes"
             json=$(gh release view "$TAG" --json databaseId,isDraft)
