@@ -3916,3 +3916,21 @@ kbd {
   background: var(--accent, #2563eb);
   color: #fff;
 }
+.graph-query-help {
+  align-self: flex-start;
+  min-width: 2em;
+  border-radius: 50%;
+  font-weight: bold;
+}
+.graph-help-examples div {
+  margin: 0 0 8px;
+}
+.graph-help-examples dt code {
+  display: block;
+  overflow-x: auto;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+}
+.graph-help-examples dd {
+  margin: 0 0 0 12px;
+}

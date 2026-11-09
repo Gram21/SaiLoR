@@ -554,6 +554,22 @@ describe('query box', () => {
   })
 })
 
+describe('query help', () => {
+  // [utest->req~ui-400~1]
+  it('opens from the ? button with examples and closes on Escape without closing the view', async () => {
+    open()
+    const onClose = vi.fn()
+    render(<GraphView onClose={onClose} />)
+    await userEvent.click(screen.getByRole('button', { name: 'Query help' }))
+    const dialog = screen.getByRole('dialog', { name: 'How to search the graph' })
+    expect(within(dialog).getByText('Method=Survey')).toBeInTheDocument()
+    expect(within(dialog).getByText('MATCH (p:Paper) RETURN p.year AS year, count(*)')).toBeInTheDocument()
+    await userEvent.keyboard('{Escape}')
+    expect(screen.queryByRole('dialog', { name: 'How to search the graph' })).toBeNull()
+    expect(onClose).not.toHaveBeenCalled()
+  })
+})
+
 describe('node types and statistics', () => {
   // [utest->req~ui-390~1]
   it('hides the nodes of an unticked type from the graph and the list', async () => {

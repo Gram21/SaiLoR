@@ -6,6 +6,7 @@ import { buildGraph, csv, defaultGraphSeat, graphTrees, NODE_TYPES, type Graph, 
 import { graphStats } from '../model/graphStats'
 import { loadGraphFilters, saveGraphFilters } from '../state/resultSettings'
 import { GraphQueryBox } from './GraphQueryBox'
+import { GraphQueryHelp } from './GraphQueryHelp'
 import { cypherProps } from '../model/graphSuggest'
 import { indexGraph, neighbours, parseQuery, selectSubgraph, type GraphQuery, type SubGraph } from '../model/graphQuery'
 import {
@@ -102,6 +103,7 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   const [hiddenTypes, setHiddenTypes] = useState<GraphNodeType[]>(() => loadGraphFilters().nodeTypes)
   const [statsOpen, setStatsOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
+  const [helpOpen, setHelpOpen] = useState(false)
   const [note, setNote] = useState<SaveResult>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const view = useRef({ x: 0, y: 0, k: 1 }).current
@@ -289,13 +291,13 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   }, [view, requestDraw])
 
   useEffect(() => {
-    if (exportOpen) return
+    if (exportOpen || helpOpen) return
     const onKey = (e: KeyboardEvent) => {
       if (e.key === 'Escape') onClose()
     }
     document.addEventListener('keydown', onKey)
     return () => document.removeEventListener('keydown', onKey)
-  }, [onClose, exportOpen])
+  }, [onClose, exportOpen, helpOpen])
 
   if (!project) return null
   const node = selected ? index.byId.get(selected) : undefined
@@ -441,6 +443,9 @@ export function GraphView({ onClose }: { onClose: () => void }) {
               hideLiveError={error !== null}
             />
             <button type="submit">{t('graphView.run')}</button>
+            <button type="button" className="graph-query-help" onClick={() => setHelpOpen(true)} aria-label={t('graphView.helpOpen')} title={t('graphView.helpOpen')}>
+              ?
+            </button>
           </form>
           <GraphSeatSelect project={project} value={seat} onChange={setSeat} />
           <button type="button" onClick={() => setExportOpen(true)}>
@@ -687,6 +692,7 @@ export function GraphView({ onClose }: { onClose: () => void }) {
           </aside>
         </div>
       </div>
+      {helpOpen && <GraphQueryHelp onClose={() => setHelpOpen(false)} />}
       {exportOpen && <ExportGraphDialog onClose={() => setExportOpen(false)} />}
     </>
   )
