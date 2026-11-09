@@ -198,7 +198,8 @@ button.primary.danger {
   cursor: pointer;
 }
 .app-title .tb-icon {
-  color: inherit;
+  color: var(--muted);
+  margin-inline-start: 8px;
 }
 .app-title:hover {
   filter: brightness(1.15);
