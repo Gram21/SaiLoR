@@ -1,0 +1,44 @@
+name: Docs links
+
+# Documentation-only changes skip the full CI workflow (see paths-ignore in ci.yml).
+# This light workflow checks the links in the wiki and the user guide instead.
+# It runs scripts/check-wiki-links.js, which needs no installed dependencies.
+
+on:
+  push:
+    branches: [main, 'release/**']
+    paths:
+      - 'openwiki/**'
+      - 'user-guide/**'
+      - 'scripts/check-wiki-links.js'
+      - '.github/workflows/docs-links.yml'
+  pull_request:
+    paths:
+      - 'openwiki/**'
+      - 'user-guide/**'
+      - 'scripts/check-wiki-links.js'
+      - '.github/workflows/docs-links.yml'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  links:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+
+      - name: Set up Node.js
+        uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7
+        with:
+          node-version: 24
+
+      - name: Check wiki and user guide links
+        run: node scripts/check-wiki-links.js
