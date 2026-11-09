@@ -2,6 +2,7 @@ name: Technical report
 
 on:
   push:
+    branches: [main]
     paths:
       - 'technical-report/**'
       - 'user-guide/screenshots/**'
