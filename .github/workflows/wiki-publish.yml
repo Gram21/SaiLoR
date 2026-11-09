@@ -154,7 +154,7 @@ jobs:
           # becoming Llm/Pdf. Folded into OPENWIKI_PAGES so the cross-link rewrite loop
           # below (which already knows how to turn `(concepts/data-model.md` into
           # `(Concepts-Data-Model`) handles these exactly like any other openwiki page.
-          SUBWIKI_PAGES="concepts/annotation-schema:Concepts-Annotation-Schema concepts/data-model:Concepts-Data-Model operations/build-release:Operations-Build-Release operations/electron-shell:Operations-Electron-Shell workflows/consolidation:Workflows-Consolidation workflows/git-integration:Workflows-Git-Integration workflows/llm-annotation:Workflows-LLM-Annotation workflows/pdf-viewing:Workflows-PDF-Viewing workflows/screening:Workflows-Screening"
+          SUBWIKI_PAGES="concepts/annotation-schema:Concepts-Annotation-Schema concepts/data-model:Concepts-Data-Model concepts/progressive-loading:Concepts-Progressive-Loading operations/build-release:Operations-Build-Release operations/demo-and-site:Operations-Demo-And-Site operations/tauri-shell:Operations-Tauri-Shell workflows/ai-screening:Workflows-AI-Screening workflows/consolidation:Workflows-Consolidation workflows/diagrams:Workflows-Diagrams workflows/git-integration:Workflows-Git-Integration workflows/knowledge-graph:Workflows-Knowledge-Graph workflows/llm-annotation:Workflows-LLM-Annotation workflows/local-models:Workflows-Local-Models workflows/pdf-viewing:Workflows-PDF-Viewing workflows/screening:Workflows-Screening"
           for pair in $SUBWIKI_PAGES; do
             cp "openwiki/${pair%%:*}.md" "stage/${pair#*:}.md"
             OPENWIKI_PAGES="$OPENWIKI_PAGES $pair"

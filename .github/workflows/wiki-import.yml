@@ -118,7 +118,7 @@ jobs:
           # page back under its real openwiki/ subdirectory, before the general openwiki
           # rsync at the bottom — which only expects flat files, not this section's own
           # naming scheme.
-          SUBWIKI_PAGES="concepts/annotation-schema:Concepts-Annotation-Schema concepts/data-model:Concepts-Data-Model operations/build-release:Operations-Build-Release operations/electron-shell:Operations-Electron-Shell workflows/consolidation:Workflows-Consolidation workflows/git-integration:Workflows-Git-Integration workflows/llm-annotation:Workflows-LLM-Annotation workflows/pdf-viewing:Workflows-PDF-Viewing workflows/screening:Workflows-Screening"
+          SUBWIKI_PAGES="concepts/annotation-schema:Concepts-Annotation-Schema concepts/data-model:Concepts-Data-Model concepts/progressive-loading:Concepts-Progressive-Loading operations/build-release:Operations-Build-Release operations/demo-and-site:Operations-Demo-And-Site operations/tauri-shell:Operations-Tauri-Shell workflows/ai-screening:Workflows-AI-Screening workflows/consolidation:Workflows-Consolidation workflows/diagrams:Workflows-Diagrams workflows/git-integration:Workflows-Git-Integration workflows/knowledge-graph:Workflows-Knowledge-Graph workflows/llm-annotation:Workflows-LLM-Annotation workflows/local-models:Workflows-Local-Models workflows/pdf-viewing:Workflows-PDF-Viewing workflows/screening:Workflows-Screening"
 
           # Each SUBWIKI_PAGES page's own cross-links, once on the wiki, use the flat
           # alias throughout — including a same-subsection sibling and a root-level or
