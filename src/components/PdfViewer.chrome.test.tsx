@@ -40,16 +40,18 @@ vi.mock('react-pdf', () => ({
     pageNumber,
     children,
     inputRef,
+    className,
     onRenderTextLayerSuccess,
   }: {
     pageNumber: number
+    className?: string
     children?: ReactNode
     inputRef?: (el: HTMLDivElement | null) => void
     onRenderTextLayerSuccess?: () => void
   }) => {
     useEffect(() => onRenderTextLayerSuccess?.(), [])
     return (
-      <div data-testid={`pdf-page-${pageNumber}`} ref={inputRef} className="react-pdf__Page">
+      <div data-testid={`pdf-page-${pageNumber}`} ref={inputRef} className={`react-pdf__Page ${className ?? ''}`}>
         <div className="react-pdf__Page__textContent">
           <span>Page {pageNumber} sample text</span>
         </div>
@@ -182,5 +184,27 @@ describe('PdfViewer: page navigation (REQ-PDF-30)', () => {
 
     await userEvent.click(screen.getByRole('button', { name: 'Next page' }))
     await waitFor(() => expect(pageInput.value).toBe('2'))
+  })
+})
+
+describe('PdfViewer: single-page view (REQ-PDF-190)', () => {
+  // [utest->req~pdf-190~1]
+  it('shows one page and flips with the wheel only at the edge of the page', async () => {
+    Element.prototype.scrollIntoView = vi.fn()
+    render(<PdfViewer />)
+    await screen.findByTestId('pdf-document')
+    await userEvent.click(screen.getByRole('button', { name: 'Single-page view' }))
+    expect(screen.getByTestId('pdf-page-1').className).not.toContain('pdf-page-hidden')
+    expect(screen.getByTestId('pdf-page-2').className).toContain('pdf-page-hidden')
+    const scroll = document.querySelector('.pdf-scroll') as HTMLElement
+    const metrics = { scrollTop: 0, clientHeight: 100, scrollHeight: 300 }
+    for (const [k, v] of Object.entries(metrics)) Object.defineProperty(scroll, k, { value: v, writable: true, configurable: true })
+    act(() => void scroll.dispatchEvent(new WheelEvent('wheel', { deltaY: 100, cancelable: true })))
+    expect(screen.getByTestId('pdf-page-1').className).not.toContain('pdf-page-hidden')
+    scroll.scrollTop = 200
+    act(() => void scroll.dispatchEvent(new WheelEvent('wheel', { deltaY: 100, cancelable: true })))
+    expect(screen.getByTestId('pdf-page-2').className).not.toContain('pdf-page-hidden')
+    expect(screen.getByTestId('pdf-page-1').className).toContain('pdf-page-hidden')
+    expect(scroll.scrollTop).toBe(0)
   })
 })

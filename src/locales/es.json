@@ -650,6 +650,8 @@
   "pdf.resetZoom": "Restablecer el zoom",
   "pdf.zoomIn": "Acercar",
   "pdf.zoomInTitle": "Acercar (Ctrl++)",
+  "pdf.singlePage": "Vista de una página",
+  "pdf.singlePageTitle": "Vista de una página: una página se ajusta al panel, la rueda del ratón cambia de página",
   "pdf.searchPlaceholder": "Buscar en el PDF…",
   "pdf.caseSensitiveOn": "Se distinguen mayúsculas y minúsculas (p. ej., «IA» ya no coincide con «media»). Haz clic para volver a ignorarlas.",
   "pdf.caseSensitiveOff": "Se ignoran mayúsculas y minúsculas (p. ej., «IA» también coincide con «media»). Haz clic para distinguirlas.",

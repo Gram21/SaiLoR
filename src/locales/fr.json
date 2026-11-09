@@ -650,6 +650,8 @@
   "pdf.resetZoom": "Réinitialiser le zoom",
   "pdf.zoomIn": "Zoom avant",
   "pdf.zoomInTitle": "Zoom avant (Ctrl++)",
+  "pdf.singlePage": "Vue page unique",
+  "pdf.singlePageTitle": "Vue page unique : une page tient dans le volet, la molette change de page",
   "pdf.searchPlaceholder": "Rechercher dans le PDF…",
   "pdf.caseSensitiveOn": "Correspondance exacte de la casse (p. ex. « IA » ne trouve plus « contraint »). Cliquez pour ignorer à nouveau la casse.",
   "pdf.caseSensitiveOff": "Casse ignorée (p. ex. « IA » trouve aussi « contraint »). Cliquez pour respecter la casse exacte.",

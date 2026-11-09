@@ -1124,6 +1124,9 @@ button.paper-search-clear:hover {
   box-shadow: 0 1px 4px rgba(0, 0, 0, 0.2);
   margin-bottom: 4px;
 }
+.pdf-scroll .react-pdf__Page.pdf-page-hidden {
+  display: none;
+}
 .pdf-scroll .react-pdf__Page__canvas {
   background: #ffffff;
 }

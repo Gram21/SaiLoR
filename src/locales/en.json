@@ -650,6 +650,8 @@
   "pdf.resetZoom": "Reset zoom",
   "pdf.zoomIn": "Zoom in",
   "pdf.zoomInTitle": "Zoom in (Ctrl++)",
+  "pdf.singlePage": "Single-page view",
+  "pdf.singlePageTitle": "Single-page view: one page fits the pane, the mouse wheel flips pages",
   "pdf.searchPlaceholder": "Search in PDF…",
   "pdf.caseSensitiveOn": "Matching exact case (e.g. \"AI\" no longer matches \"contains\"). Click to ignore case again.",
   "pdf.caseSensitiveOff": "Ignoring case (e.g. \"AI\" also matches \"contains\"). Click to match exact case instead.",

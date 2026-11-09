@@ -650,6 +650,8 @@
   "pdf.resetZoom": "重置缩放",
   "pdf.zoomIn": "放大",
   "pdf.zoomInTitle": "放大（Ctrl++）",
+  "pdf.singlePage": "单页视图",
+  "pdf.singlePageTitle": "单页视图：一页适应窗格，鼠标滚轮翻页",
   "pdf.searchPlaceholder": "在 PDF 中搜索…",
   "pdf.caseSensitiveOn": "正在区分大小写匹配（例如 “AI” 不再匹配 “contains”）。单击可再次忽略大小写。",
   "pdf.caseSensitiveOff": "正在忽略大小写（例如 “AI” 也会匹配 “contains”）。单击可改为区分大小写匹配。",

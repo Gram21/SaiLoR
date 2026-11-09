@@ -320,6 +320,13 @@ export. See the [index](index.md) for the glossary.
 - **Verified by:** `src/model/screeningMarks.test.ts`, `src/state/store.screeningMarks.test.ts`, `src/components/AnnotationPanel.test.tsx` (`offers the box only on a paper the screening marked`), `src-tauri/src/project.rs` (`screening_source_reads_only_a_plain_sibling`)
 - **Status:** Implemented
 
+### REQ-PDF-190: Single-page view
+- **Description:** The PDF toolbar shall have a "▯" toggle next to the zoom controls. If the toggle is on, the viewer shall show only the current page, fitted to the pane at zoom 100 %. The mouse wheel shall flip to the next page when the page is at its bottom edge and to the previous page when it is at its top edge. If the page is zoomed in and can scroll, the wheel shall scroll inside the page first. The system shall keep the setting in the local storage of the application.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/PdfViewer.tsx` (`PdfViewer`), `src/locales/en.json` (`pdf.singlePage`)
+- **Verified by:** `src/components/PdfViewer.chrome.test.tsx`
+- **Status:** Implemented
+
 ### REQ-UI-10: Global keyboard shortcuts
 - **Description:** The system shall provide keyboard shortcuts for save (Ctrl/Cmd+S), save-as (Ctrl/Cmd+Shift+S), open (Ctrl/Cmd+O), undo/redo, help (F1), settings (Ctrl/Cmd+,), PDF zoom, and application font size, suppressing bare-key shortcuts while typing or while a modal is open, and shall document all shortcuts in a Help dialog with mode-specific tables.
 - **Type:** Functional (ISO 25010: Functional Suitability)

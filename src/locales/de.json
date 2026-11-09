@@ -650,6 +650,8 @@
   "pdf.resetZoom": "Zoom zurücksetzen",
   "pdf.zoomIn": "Vergrößern",
   "pdf.zoomInTitle": "Vergrößern (Strg++)",
+  "pdf.singlePage": "Einzelseitenansicht",
+  "pdf.singlePageTitle": "Einzelseitenansicht: eine Seite passt in den Bereich, das Mausrad blättert",
   "pdf.searchPlaceholder": "PDF durchsuchen…",
   "pdf.caseSensitiveOn": "Exakte Groß-/Kleinschreibung (z. B. „AI“ findet nicht „contains“). Klicken, um die Groß-/Kleinschreibung wieder zu ignorieren.",
   "pdf.caseSensitiveOff": "Groß-/Kleinschreibung wird ignoriert (z. B. findet „AI“ auch „contains“). Klicken, um exakt zu suchen.",

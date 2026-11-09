@@ -650,6 +650,8 @@
   "pdf.resetZoom": "Reimposta lo zoom",
   "pdf.zoomIn": "Ingrandisci",
   "pdf.zoomInTitle": "Ingrandisci (Ctrl++)",
+  "pdf.singlePage": "Vista a pagina singola",
+  "pdf.singlePageTitle": "Vista a pagina singola: una pagina si adatta al riquadro, la rotellina cambia pagina",
   "pdf.searchPlaceholder": "Cerca nel PDF…",
   "pdf.caseSensitiveOn": "Distinzione tra maiuscole e minuscole attiva (es. “IA” non corrisponde più a “via”). Fai clic per ignorare di nuovo maiuscole e minuscole.",
   "pdf.caseSensitiveOff": "Maiuscole e minuscole ignorate (es. “IA” corrisponde anche a “via”). Fai clic per distinguere tra maiuscole e minuscole.",

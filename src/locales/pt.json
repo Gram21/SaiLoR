@@ -650,6 +650,8 @@
   "pdf.resetZoom": "Redefinir zoom",
   "pdf.zoomIn": "Aumentar zoom",
   "pdf.zoomInTitle": "Aumentar zoom (Ctrl++)",
+  "pdf.singlePage": "Vista de página única",
+  "pdf.singlePageTitle": "Vista de página única: uma página cabe no painel, a roda do rato muda de página",
   "pdf.searchPlaceholder": "Pesquisar no PDF…",
   "pdf.caseSensitiveOn": "Diferenciando maiúsculas e minúsculas (p. ex., “IA” não corresponde mais a “ia”). Clique para voltar a ignorar maiúsculas e minúsculas.",
   "pdf.caseSensitiveOff": "Ignorando maiúsculas e minúsculas (p. ex., “IA” também corresponde a “ia”). Clique para diferenciar maiúsculas e minúsculas.",

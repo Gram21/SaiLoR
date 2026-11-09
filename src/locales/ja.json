@@ -650,6 +650,8 @@
   "pdf.resetZoom": "ズームをリセット",
   "pdf.zoomIn": "拡大",
   "pdf.zoomInTitle": "拡大（Ctrl++）",
+  "pdf.singlePage": "単一ページ表示",
+  "pdf.singlePageTitle": "単一ページ表示: 1ページをペインに合わせ、マウスホイールでページを切り替えます",
   "pdf.searchPlaceholder": "PDF 内を検索…",
   "pdf.caseSensitiveOn": "大文字と小文字を区別しています（例：「AI」は「contains」に一致しません）。クリックすると、再び区別しなくなります。",
   "pdf.caseSensitiveOff": "大文字と小文字を区別していません（例：「AI」は「contains」にも一致します）。クリックすると、区別して検索します。",

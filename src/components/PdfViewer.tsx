@@ -14,6 +14,7 @@ import { detectEntryBox, detectNumericCitation, findNumericReference, type Previ
 import { getPlatform } from '../platform'
 import { normalize } from '../llm/verify'
 import { useT, tp } from '../i18n'
+import { safeGet, safeSet } from '../state/settings'
 import { DEMO_MODE } from '../demo/mode'
 import { DEMO_NO_PDF, DEMO_READ_ON_ARXIV, demoArxivUrl } from '../demo/text'
 // Side-effect import: configures the pdf.js worker.
@@ -328,6 +329,8 @@ function MarkOverlayItem({
   )
 }
 
+const SINGLE_PAGE_KEY = 'slr.pdf.singlePage'
+
 /** Middle pane: renders the current paper's PDF and captures text selection. */
 export function PdfViewer() {
   // Subscribe to primitive fields only — the whole paper object changes
@@ -399,6 +402,13 @@ export function PdfViewer() {
   const [currentPage, setCurrentPage] = useState(1)
   const [pageInput, setPageInput] = useState('1')
   const [width, setWidth] = useState(600)
+  const [paneHeight, setPaneHeight] = useState(800)
+  const [aspect, setAspect] = useState(0.77)
+  // [impl->req~pdf-190~1]
+  const [single, setSingle] = useState(() => safeGet(SINGLE_PAGE_KEY) === '1')
+  const flipToBottom = useRef(false)
+  const lastFlip = useRef(0)
+  useEffect(() => safeSet(SINGLE_PAGE_KEY, single ? '1' : '0'), [single])
   const containerRef = useRef<HTMLDivElement>(null)
   const pageRefs = useRef<(HTMLDivElement | null)[]>([])
   const pageInputRef = useRef<HTMLInputElement>(null)
@@ -469,7 +479,8 @@ export function PdfViewer() {
   const zoomOut = useStore((s) => s.zoomOutPdf)
   const resetZoom = useStore((s) => s.resetPdfZoom)
   // The page renders at the fit-to-width base size scaled by the zoom factor.
-  const renderWidth = Math.round(width * zoom)
+  // Single-page view fits the whole page into the pane at zoom 100 %.
+  const renderWidth = Math.round((single ? Math.min(width, Math.max(120, (paneHeight - 28) * aspect)) : width) * zoom)
 
   // Resolve the PDF source only when the paper identity or its pdf path changes.
   useEffect(() => {
@@ -572,6 +583,7 @@ export function PdfViewer() {
       // [impl->req~pdf-30~1]
       const w = entries[0]?.contentRect.width ?? 600
       setWidth(Math.max(240, Math.floor(w - 24)))
+      setPaneHeight(Math.floor(entries[0]?.contentRect.height ?? 800))
     })
     ro.observe(el)
     return () => ro.disconnect()
@@ -582,7 +594,7 @@ export function PdfViewer() {
   const updateCurrentPage = () => {
     // [impl->req~pdf-30~1]
     const root = containerRef.current
-    if (!root) return
+    if (!root || single) return
     const rootTop = root.getBoundingClientRect().top
     const threshold = root.clientHeight * 0.3
     let cur = 1
@@ -1356,14 +1368,37 @@ export function PdfViewer() {
     const root = containerRef.current
     if (!root) return
     const onWheel = (e: WheelEvent) => {
-      if (!e.ctrlKey && !e.metaKey) return
+      if (!e.ctrlKey && !e.metaKey) {
+        if (!single || e.deltaY === 0) return
+        const down = e.deltaY > 0
+        const atEdge = down
+          ? root.scrollTop + root.clientHeight >= root.scrollHeight - 1
+          : root.scrollTop <= 0
+        if (!atEdge) return
+        e.preventDefault()
+        const now = Date.now()
+        if (now - lastFlip.current < 300) return
+        lastFlip.current = now
+        flipToBottom.current = !down
+        scrollToPage(currentPage + (down ? 1 : -1))
+        return
+      }
       e.preventDefault()
       if (e.deltaY < 0) zoomIn()
       else if (e.deltaY > 0) zoomOut()
     }
     root.addEventListener('wheel', onWheel, { passive: false })
     return () => root.removeEventListener('wheel', onWheel)
-  }, [zoomIn, zoomOut])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [zoomIn, zoomOut, single, currentPage, numPages])
+
+  // After a flip in single-page view, show the top of the next page or the bottom of the previous one.
+  useEffect(() => {
+    const root = containerRef.current
+    if (!single || !root) return
+    root.scrollTop = flipToBottom.current ? root.scrollHeight : 0
+    flipToBottom.current = false
+  }, [single, currentPage])
 
   // Clear highlights when the viewer unmounts.
   useEffect(() => clearHighlights, [])
@@ -1446,6 +1481,8 @@ export function PdfViewer() {
             key={i}
             pageNumber={pageNumber}
             width={renderWidth}
+            className={single && pageNumber !== currentPage ? 'pdf-page-hidden' : undefined}
+            onLoadSuccess={pageNumber === 1 ? (pg: { width: number; height: number }) => setAspect(pg.width / pg.height) : undefined}
             inputRef={(el) => {
               pageRefs.current[i] = el
             }}
@@ -1488,7 +1525,7 @@ export function PdfViewer() {
           </Page>
         )
       }),
-    [numPages, renderWidth, onTextLayerRendered, marks, screeningMarks, flashMarkId],
+    [numPages, renderWidth, single, currentPage, onTextLayerRendered, marks, screeningMarks, flashMarkId],
   )
 
   // Paint the highlights and scroll the active match into view.
@@ -1691,6 +1728,16 @@ export function PdfViewer() {
               +
             </button>
           </div>
+          <button
+            type="button"
+            className={`icon-btn${single ? ' active' : ''}`}
+            title={t('pdf.singlePageTitle')}
+            aria-label={t('pdf.singlePage')}
+            aria-pressed={single}
+            onClick={() => setSingle((v) => !v)}
+          >
+            ▯
+          </button>
         </div>
       </div>
       {searchOpen && (
