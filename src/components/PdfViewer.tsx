@@ -1736,7 +1736,21 @@ export function PdfViewer() {
             aria-pressed={single}
             onClick={() => setSingle((v) => !v)}
           >
-            ▯
+            <svg width="16" height="16" viewBox="0 0 16 16" fill="none" stroke="currentColor" strokeWidth="1.2" aria-hidden="true">
+              {single ? (
+                <>
+                  <rect x="3.5" y="1.5" width="9" height="13" rx="1" />
+                  <path d="M5.5 5h5M5.5 7.5h5M5.5 10h5" />
+                </>
+              ) : (
+                <>
+                  <rect x="3.5" y="1.5" width="9" height="6" rx="1" />
+                  <path d="M5.5 4.5h5" />
+                  <path d="M3.5 15v-5.5a1 1 0 0 1 1-1h7a1 1 0 0 1 1 1V15" />
+                  <path d="M5.5 12h5" />
+                </>
+              )}
+            </svg>
           </button>
         </div>
       </div>
