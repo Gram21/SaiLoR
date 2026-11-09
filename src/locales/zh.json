@@ -2260,7 +2260,7 @@
   "diagram.export.svg": "SVG",
   "diagram.export.png": "PNG",
   "diagram.export.pdf": "PDF",
-  "diagram.exportHint": "SVG 为矢量图像。PNG 和 PDF 包含高分辨率图像。",
+  "diagram.exportHint": "SVG 和 PDF 为矢量图像。如果文本含有 PDF 字体没有的字符,PDF 会包含图像。PNG 包含高分辨率图像。",
   "diagram.rendering": "正在创建图表…",
   "diagram.error": "无法创建图表：{message}",
   "diagram.noData": "没有论文具有该设置的值。",
@@ -2273,5 +2273,13 @@
   "diagram.export.csv": "CSV",
   "diagram.table": "显示数据表",
   "graphView.openPaper": "打开论文",
-  "graphView.cypher.saveCsv": "将表格保存为 CSV"
+  "graphView.cypher.saveCsv": "将表格保存为 CSV",
+  "graphView.nodeTypes": "节点类型:",
+  "graphView.stats": "统计",
+  "graphView.stats.nodes": "节点",
+  "graphView.stats.edges": "关系",
+  "graphView.stats.degree": "每个节点的链接数(平均)",
+  "graphView.stats.components": "连通组",
+  "graphView.stats.largest": "最大组",
+  "graphView.stats.hubs": "连接最多"
 }

@@ -2260,7 +2260,7 @@
   "diagram.export.svg": "SVG",
   "diagram.export.png": "PNG",
   "diagram.export.pdf": "PDF",
-  "diagram.exportHint": "SVG is a vector image. PNG and PDF contain a high-resolution image.",
+  "diagram.exportHint": "SVG and PDF are vector images. A PDF holds an image if the text has characters that PDF fonts lack. PNG holds a high-resolution image.",
   "diagram.rendering": "Creating the diagram…",
   "diagram.error": "The diagram could not be created: {message}",
   "diagram.noData": "No paper has a value for these settings.",
@@ -2273,5 +2273,13 @@
   "diagram.export.csv": "CSV",
   "diagram.table": "Show data table",
   "graphView.openPaper": "Open paper",
-  "graphView.cypher.saveCsv": "Save table as CSV"
+  "graphView.cypher.saveCsv": "Save table as CSV",
+  "graphView.nodeTypes": "Node types:",
+  "graphView.stats": "Statistics",
+  "graphView.stats.nodes": "Nodes",
+  "graphView.stats.edges": "Relations",
+  "graphView.stats.degree": "Links per node (average)",
+  "graphView.stats.components": "Connected groups",
+  "graphView.stats.largest": "Largest group",
+  "graphView.stats.hubs": "Best connected"
 }

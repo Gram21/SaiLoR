@@ -523,3 +523,31 @@ describe('graph shortcuts', () => {
     expect(saved.writes[0][1]).toBe('"title","a"\r\n"Testing Things","Alan Turing"\r\n')
   })
 })
+
+describe('node types and statistics', () => {
+  // [utest->req~ui-390~1]
+  it('hides the nodes of an unticked type from the graph and the list', async () => {
+    open()
+    render(<GraphView onClose={() => {}} />)
+    const before = screen.getByRole('status', { name: '' }).textContent
+    expect(nodeList().queryByRole('button', { name: /Alan Turing/ })).toBeInTheDocument()
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Author' }))
+    expect(nodeList().queryByRole('button', { name: /Alan Turing/ })).toBeNull()
+    expect(nodeList().queryByRole('button', { name: /Testing Things/ })).toBeInTheDocument()
+    expect(screen.getAllByRole('status').some((s) => s.textContent !== before)).toBe(true)
+    fireEvent.click(screen.getByRole('checkbox', { name: 'Author' }))
+    expect(nodeList().queryByRole('button', { name: /Alan Turing/ })).toBeInTheDocument()
+  })
+
+  // [utest->req~ui-360~1]
+  it('shows statistics of the shown graph and jumps to a best connected node', async () => {
+    open()
+    render(<GraphView onClose={() => {}} />)
+    fireEvent.click(screen.getByText('Statistics'))
+    await screen.findByText('Connected groups')
+    const stats = within(document.querySelector('.graph-stats') as HTMLElement)
+    expect(stats.getByText('Best connected')).toBeInTheDocument()
+    fireEvent.click(stats.getAllByRole('button')[0])
+    expect(document.querySelector('#graph-detail-title')).not.toBeNull()
+  })
+})

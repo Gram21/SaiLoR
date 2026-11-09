@@ -2,7 +2,9 @@
 import { useCallback, useEffect, useLayoutEffect, useMemo, useRef, useState, type FormEvent, type PointerEvent, type ReactNode } from 'react'
 import { useStore } from '../state/store'
 import { getPlatform } from '../platform'
-import { buildGraph, csv, defaultGraphSeat, graphTrees, type Graph } from '../model/graph'
+import { buildGraph, csv, defaultGraphSeat, graphTrees, NODE_TYPES, type Graph, type GraphNodeType } from '../model/graph'
+import { graphStats } from '../model/graphStats'
+import { loadGraphFilters, saveGraphFilters } from '../state/resultSettings'
 import { indexGraph, neighbours, parseQuery, selectSubgraph, type GraphQuery, type SubGraph } from '../model/graphQuery'
 import {
   CypherError,
@@ -94,7 +96,9 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   const [running, setRunning] = useState(false)
   const [extra, setExtra] = useState<string[]>([])
   const [selected, setSelected] = useState<string | null>(null)
-  const [hidden, setHidden] = useState(0)
+  const [hidden, setHidden] = useState(() => loadGraphFilters().edges)
+  const [hiddenTypes, setHiddenTypes] = useState<GraphNodeType[]>(() => loadGraphFilters().nodeTypes)
+  const [statsOpen, setStatsOpen] = useState(false)
   const [exportOpen, setExportOpen] = useState(false)
   const [note, setNote] = useState<SaveResult>(null)
   const canvasRef = useRef<HTMLCanvasElement>(null)
@@ -115,10 +119,19 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   const result = 'chains' in query && cypher?.graph === index.graph ? cypher.out : null
   /** The Cypher query to run: a new one, or the shown one again after the graph changed. */
   const job = pending ?? ('chains' in query && !result ? query : null)
-  const sub = useMemo(
+  const found = useMemo(
     () => (result ? cypherSubgraph(index, result, extra) : 'chains' in query ? NOTHING : selectSubgraph(index, query, extra)),
     [index, query, result, extra],
   )
+  // [impl->req~ui-390~1]
+  const sub = useMemo(() => {
+    if (hiddenTypes.length === 0) return found
+    const nodes = found.nodes.filter((n) => !hiddenTypes.includes(n.type))
+    const keep = new Set(nodes.map((n) => n.id))
+    return { nodes, edges: found.edges.filter((e) => keep.has(e.source) && keep.has(e.target)), seeds: found.seeds }
+  }, [found, hiddenTypes])
+  const stats = useMemo(() => (statsOpen ? graphStats(sub) : null), [statsOpen, sub])
+  useEffect(() => saveGraphFilters({ edges: hidden, nodeTypes: hiddenTypes }), [hidden, hiddenTypes])
   const scene = useMemo(
     () => buildScene(sub, 'chains' in query || query.terms.length > 0, sceneRef.current, (id) => neighbours(index, id)),
     [sub, query, index],
@@ -450,6 +463,19 @@ export function GraphView({ onClose }: { onClose: () => void }) {
             </label>
           ))}
         </fieldset>
+        <fieldset className="graph-legend">
+          <legend>{t('graphView.nodeTypes')}</legend>
+          {NODE_TYPES.filter((type) => index.graph.nodes.some((n) => n.type === type)).map((type) => (
+            <label key={type}>
+              <input
+                type="checkbox"
+                checked={!hiddenTypes.includes(type)}
+                onChange={() => setHiddenTypes((h) => (h.includes(type) ? h.filter((x) => x !== type) : [...h, type]))}
+              />
+              {t(`graphView.type.${type}` as const)}
+            </label>
+          ))}
+        </fieldset>
         <p id="graph-query-help" className="graph-hint">
           {t('graphView.help')} {t('graphView.cypherHelp')}
         </p>
@@ -508,6 +534,46 @@ export function GraphView({ onClose }: { onClose: () => void }) {
             </nav>
           )}
           <aside className="graph-side">
+            <details className="graph-stats" open={statsOpen} onToggle={(e) => setStatsOpen(e.currentTarget.open)}>
+              <summary>{t('graphView.stats')}</summary>
+              {stats && (
+                <>
+                  <dl className="graph-values">
+                    <dt>{t('graphView.stats.nodes')}</dt>
+                    <dd>{stats.nodes}</dd>
+                    <dt>{t('graphView.stats.edges')}</dt>
+                    <dd>{stats.edges}</dd>
+                    <dt>{t('graphView.stats.degree')}</dt>
+                    <dd>{stats.averageDegree}</dd>
+                    <dt>{t('graphView.stats.components')}</dt>
+                    <dd>{stats.components}</dd>
+                    <dt>{t('graphView.stats.largest')}</dt>
+                    <dd>{stats.largest}</dd>
+                    {NODE_TYPES.filter((type) => stats.byType[type]).map((type) => (
+                      <div key={type}>
+                        <dt>{t(`graphView.type.${type}` as const)}</dt>
+                        <dd>{stats.byType[type]}</dd>
+                      </div>
+                    ))}
+                  </dl>
+                  {stats.hubs.length > 0 && (
+                    <>
+                      <h4>{t('graphView.stats.hubs')}</h4>
+                      <ul className="graph-list">
+                        {stats.hubs.map((h) => (
+                          <li key={h.node.id}>
+                            <button type="button" onClick={() => focusNode(h.node.id)}>
+                              <span className="graph-hint">{h.degree} </span>
+                              <span dir="auto">{h.node.label}</span>
+                            </button>
+                          </li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </>
+              )}
+            </details>
             {result && (
               <section aria-labelledby="graph-results-title">
                 <h3 id="graph-results-title">{t('graphView.cypher.results', { count: result.rows.length })}</h3>

@@ -2260,7 +2260,7 @@
   "diagram.export.svg": "SVG",
   "diagram.export.png": "PNG",
   "diagram.export.pdf": "PDF",
-  "diagram.exportHint": "SVG はベクター画像です。PNG と PDF は高解像度の画像を含みます。",
+  "diagram.exportHint": "SVG と PDF はベクター画像です。PDF フォントにない文字がある場合、PDF は画像を含みます。PNG は高解像度の画像を含みます。",
   "diagram.rendering": "図を作成中…",
   "diagram.error": "図を作成できませんでした：{message}",
   "diagram.noData": "この設定の値を持つ論文がありません。",
@@ -2273,5 +2273,13 @@
   "diagram.export.csv": "CSV",
   "diagram.table": "データ表を表示",
   "graphView.openPaper": "論文を開く",
-  "graphView.cypher.saveCsv": "表を CSV で保存"
+  "graphView.cypher.saveCsv": "表を CSV で保存",
+  "graphView.nodeTypes": "ノードの種類:",
+  "graphView.stats": "統計",
+  "graphView.stats.nodes": "ノード",
+  "graphView.stats.edges": "関係",
+  "graphView.stats.degree": "ノードあたりのリンク数(平均)",
+  "graphView.stats.components": "連結グループ",
+  "graphView.stats.largest": "最大のグループ",
+  "graphView.stats.hubs": "最も多くつながるノード"
 }

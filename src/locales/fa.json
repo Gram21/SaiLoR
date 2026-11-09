@@ -2260,7 +2260,7 @@
   "diagram.export.svg": "SVG",
   "diagram.export.png": "PNG",
   "diagram.export.pdf": "PDF",
-  "diagram.exportHint": "SVG تصویر برداری است. PNG و PDF شامل تصویر با وضوح بالا هستند.",
+  "diagram.exportHint": "SVG و PDF تصویر برداری هستند. اگر متن نویسه‌ای داشته باشد که قلم‌های PDF ندارند، PDF یک تصویر دارد. PNG شامل تصویر با وضوح بالا است.",
   "diagram.rendering": "در حال ایجاد نمودار…",
   "diagram.error": "نمودار ایجاد نشد: {message}",
   "diagram.noData": "هیچ مقاله‌ای مقدار این تنظیمات را ندارد.",
@@ -2273,5 +2273,13 @@
   "diagram.export.csv": "CSV",
   "diagram.table": "نمایش جدول داده‌ها",
   "graphView.openPaper": "باز کردن مقاله",
-  "graphView.cypher.saveCsv": "ذخیره جدول به‌صورت CSV"
+  "graphView.cypher.saveCsv": "ذخیره جدول به‌صورت CSV",
+  "graphView.nodeTypes": "نوع گره‌ها:",
+  "graphView.stats": "آمار",
+  "graphView.stats.nodes": "گره‌ها",
+  "graphView.stats.edges": "رابطه‌ها",
+  "graphView.stats.degree": "پیوند به ازای هر گره (میانگین)",
+  "graphView.stats.components": "گروه‌های متصل",
+  "graphView.stats.largest": "بزرگ‌ترین گروه",
+  "graphView.stats.hubs": "پرارتباط‌ترین‌ها"
 }

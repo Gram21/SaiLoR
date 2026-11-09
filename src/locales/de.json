@@ -2260,7 +2260,7 @@
   "diagram.export.svg": "SVG",
   "diagram.export.png": "PNG",
   "diagram.export.pdf": "PDF",
-  "diagram.exportHint": "SVG ist ein Vektorbild. PNG und PDF enthalten ein hochauflösendes Bild.",
+  "diagram.exportHint": "SVG und PDF sind Vektorbilder. Ein PDF enthält ein Bild, wenn der Text Zeichen hat, die PDF-Schriften nicht kennen. PNG enthält ein hochauflösendes Bild.",
   "diagram.rendering": "Diagramm wird erstellt…",
   "diagram.error": "Diagramm konnte nicht erstellt werden: {message}",
   "diagram.noData": "Kein Paper hat einen Wert für diese Einstellungen.",
@@ -2273,5 +2273,13 @@
   "diagram.export.csv": "CSV",
   "diagram.table": "Datentabelle anzeigen",
   "graphView.openPaper": "Artikel öffnen",
-  "graphView.cypher.saveCsv": "Tabelle als CSV speichern"
+  "graphView.cypher.saveCsv": "Tabelle als CSV speichern",
+  "graphView.nodeTypes": "Knotentypen:",
+  "graphView.stats": "Statistik",
+  "graphView.stats.nodes": "Knoten",
+  "graphView.stats.edges": "Beziehungen",
+  "graphView.stats.degree": "Verbindungen pro Knoten (Mittel)",
+  "graphView.stats.components": "Zusammenhängende Gruppen",
+  "graphView.stats.largest": "Größte Gruppe",
+  "graphView.stats.hubs": "Am stärksten verbunden"
 }

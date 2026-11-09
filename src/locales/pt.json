@@ -2260,7 +2260,7 @@
   "diagram.export.svg": "SVG",
   "diagram.export.png": "PNG",
   "diagram.export.pdf": "PDF",
-  "diagram.exportHint": "SVG é uma imagem vetorial. PNG e PDF contêm uma imagem de alta resolução.",
+  "diagram.exportHint": "SVG e PDF são imagens vetoriais. Um PDF contém uma imagem se o texto tiver caracteres que as fontes PDF não têm. PNG contém uma imagem de alta resolução.",
   "diagram.rendering": "Criando diagrama…",
   "diagram.error": "Não foi possível criar o diagrama: {message}",
   "diagram.noData": "Nenhum artigo tem valor para estas configurações.",
@@ -2273,5 +2273,13 @@
   "diagram.export.csv": "CSV",
   "diagram.table": "Mostrar tabela de dados",
   "graphView.openPaper": "Abrir artigo",
-  "graphView.cypher.saveCsv": "Salvar tabela como CSV"
+  "graphView.cypher.saveCsv": "Salvar tabela como CSV",
+  "graphView.nodeTypes": "Tipos de nó:",
+  "graphView.stats": "Estatísticas",
+  "graphView.stats.nodes": "Nós",
+  "graphView.stats.edges": "Relações",
+  "graphView.stats.degree": "Ligações por nó (média)",
+  "graphView.stats.components": "Grupos conectados",
+  "graphView.stats.largest": "Maior grupo",
+  "graphView.stats.hubs": "Mais conectados"
 }
