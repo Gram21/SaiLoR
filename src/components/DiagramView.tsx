@@ -77,6 +77,13 @@ export function DiagramView({ config, setConfig, onClose }: { config: DiagramCon
     return () => worker?.terminate()
   }, [])
 
+  // Settings saved for another project can name a field this schema lacks.
+  useEffect(() => {
+    if (!project) return
+    const known = new Set([...BUILTIN_DIMENSIONS, ...schemaDimensions(project.schema).map((d) => d.id)] as string[])
+    setConfig((c) => (known.has(c.x) && (!c.group || known.has(c.group)) && (!c.filterDim || known.has(c.filterDim)) ? c : { ...c, x: known.has(c.x) ? c.x : DEFAULT_CONFIG.x, group: known.has(c.group) ? c.group : '', filterDim: known.has(c.filterDim) ? c.filterDim : '' }))
+  }, [project, setConfig])
+
   useEffect(() => {
     if (project) post.current({ type: 'data', project: slimProject(project), trees: graphTrees(project, seat) })
   }, [project, seat])

@@ -1,10 +1,11 @@
 // [impl->req~ui-270~1]
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useT } from '../i18n'
 import { Modal } from './Modal'
 import { GraphView } from './GraphView'
 import { DiagramView } from './DiagramView'
-import { DEFAULT_CONFIG, type DiagramConfig } from '../model/diagram'
+import type { DiagramConfig } from '../model/diagram'
+import { loadDiagramConfig, saveDiagramConfig } from '../state/resultSettings'
 
 export type ResultTab = 'graph' | 'diagram'
 const TABS: ResultTab[] = ['graph', 'diagram']
@@ -13,7 +14,8 @@ const TABS: ResultTab[] = ['graph', 'diagram']
 export function ResultView({ initial = 'graph', onClose }: { initial?: ResultTab; onClose: () => void }) {
   const t = useT()
   const [tab, setTab] = useState<ResultTab>(initial)
-  const [diagram, setDiagram] = useState<DiagramConfig>(DEFAULT_CONFIG)
+  const [diagram, setDiagram] = useState<DiagramConfig>(loadDiagramConfig)
+  useEffect(() => saveDiagramConfig(diagram), [diagram])
   return (
     <Modal className="graph-view result-view" aria-label={t('resultView.title')}>
       <div className="modal-head result-head">

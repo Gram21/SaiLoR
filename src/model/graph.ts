@@ -5,6 +5,7 @@ import type { AnnotationValueTree, FieldValue } from './annotations'
 import { hasAnnotations, isFieldVisible, isRecordedAnswer } from './annotations'
 
 export type GraphNodeType = 'Paper' | 'Author' | 'Venue' | 'Keyword' | 'Choice' | 'Answer'
+export const NODE_TYPES: GraphNodeType[] = ['Paper', 'Author', 'Venue', 'Keyword', 'Choice', 'Answer']
 export type GraphEdgeType = 'authoredBy' | 'publishedIn' | 'hasKeyword' | 'cites' | 'hasAnswer'
 
 export interface GraphNode {
