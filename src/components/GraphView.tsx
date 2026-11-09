@@ -5,6 +5,7 @@ import { getPlatform } from '../platform'
 import { buildGraph, csv, defaultGraphSeat, graphTrees, NODE_TYPES, type Graph, type GraphNodeType } from '../model/graph'
 import { graphStats } from '../model/graphStats'
 import { loadGraphFilters, saveGraphFilters } from '../state/resultSettings'
+import { GraphQueryBox } from './GraphQueryBox'
 import { indexGraph, neighbours, parseQuery, selectSubgraph, type GraphQuery, type SubGraph } from '../model/graphQuery'
 import {
   CypherError,
@@ -115,6 +116,10 @@ export function GraphView({ onClose }: { onClose: () => void }) {
   const index = useMemo(
     () => indexGraph(project ? buildGraph(project, graphTrees(project, seat)) : { nodes: [], edges: [] }),
     [project, seat],
+  )
+  const fieldNames = useMemo(
+    () => [...new Set(index.graph.nodes.flatMap((n) => (n.type === 'Choice' && n.field ? [n.field.split('/').pop()!] : [])))].sort(),
+    [index],
   )
   const result = 'chains' in query && cypher?.graph === index.graph ? cypher.out : null
   /** The Cypher query to run: a new one, or the shown one again after the graph changed. */
@@ -423,14 +428,14 @@ export function GraphView({ onClose }: { onClose: () => void }) {
       <div className="result-pane">
         <div className="graph-toolbar">
           <form className="graph-query" onSubmit={run} role="search">
-            <input
-              type="search"
+            <GraphQueryBox
               value={input}
-              onChange={(e) => setInput(e.target.value)}
+              onChange={setInput}
+              fields={fieldNames}
               placeholder={t('graphView.placeholder')}
-              aria-label={t('graphView.query')}
-              aria-describedby="graph-query-help"
-              dir="auto"
+              label={t('graphView.query')}
+              describedBy="graph-query-help"
+              hideLiveError={error !== null}
             />
             <button type="submit">{t('graphView.run')}</button>
           </form>

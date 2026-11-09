@@ -1324,3 +1324,18 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Functional_Suitability, Usability
+
+### REQ-UI-400: Knowledge graph query box
+`req~ui-400~1`
+
+The query box of the knowledge graph shall be a multi-line text area. The box shall grow with its text up to 10 lines. After 10 lines the box shall scroll. The user can drag the lower edge of the box to make it taller, up to 10 lines. The Enter key shall run the query. The Shift and Enter keys shall add a new line. The box shall show the language of the query, "Text" or "Cypher". The language is Cypher if the first word is `MATCH`. The box shall offer completions for the word before the cursor. For a Cypher query, the completions shall be keywords, node labels after `:` in a node pattern, and relationship types after `:` or `|` in brackets. For a text query, the completions shall be the keys `type:`, `author:`, `venue:`, `keyword:`, `choice:`, `answer:`, `field:` and `depth:`, the node types after `type:`, and the field names of the schema. The Ctrl and Space keys shall open the completions for an empty word. The Tab key and the Enter key shall accept the selected completion. The Escape key shall close the completions without closing the view. While the user types a Cypher query, the box shall show the error of REQ-UI-230 and REQ-UI-240 below the box and mark the box as invalid.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/GraphQueryBox.tsx` (`GraphQueryBox`), `src/model/graphSuggest.ts` (`suggest`), `src/components/GraphView.tsx` (`GraphView`), `src/locales/en.json` (`graphView.lang`, `graphView.suggestions`)
+- **Verified by:** `src/model/graphSuggest.test.ts`, `src/components/GraphView.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Usability

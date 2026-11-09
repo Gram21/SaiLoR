@@ -3862,3 +3862,57 @@ kbd {
   padding: 3px 10px;
   text-align: left;
 }
+.graph-query-box {
+  position: relative;
+  display: flex;
+  flex: 1;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: 4px;
+}
+.graph-query-box textarea {
+  flex: 1;
+  min-width: 0;
+  resize: vertical;
+  max-height: calc(10 * 1.4em + 12px);
+  line-height: 1.4;
+  font: inherit;
+  font-family: ui-monospace, monospace;
+  overflow-y: auto;
+}
+.graph-query-box textarea[aria-invalid='true'] {
+  border-color: var(--danger, #c0392b);
+}
+.graph-query-box .graph-hint {
+  flex-basis: 100%;
+  margin: 0;
+}
+.graph-query-lang {
+  align-self: center;
+  padding: 1px 6px;
+  border: 1px solid var(--border, #888);
+  border-radius: 8px;
+  font-size: 0.75em;
+}
+.graph-suggest {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  z-index: 20;
+  min-width: 200px;
+  margin: 2px 0 0;
+  padding: 2px;
+  list-style: none;
+  background: var(--bg, #fff);
+  border: 1px solid var(--border, #888);
+  border-radius: 4px;
+  box-shadow: 0 2px 8px rgb(0 0 0 / 0.2);
+}
+.graph-suggest li {
+  padding: 2px 8px;
+  cursor: pointer;
+}
+.graph-suggest li[aria-selected='true'] {
+  background: var(--accent, #2563eb);
+  color: #fff;
+}

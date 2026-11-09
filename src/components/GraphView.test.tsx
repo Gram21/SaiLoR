@@ -121,13 +121,13 @@ const waitForLabel = (label: string) => waitFor(() => expect(ctx.fillText.mock.c
 
 /** Submits a query without userEvent, which treats `{` and `[` as key names. */
 function submit(text: string) {
-  const box = screen.getByRole('searchbox', { name: 'Graph query' })
+  const box = screen.getByRole('textbox', { name: 'Graph query' })
   fireEvent.change(box, { target: { value: text } })
   fireEvent.submit(box.closest('form')!)
 }
 
 async function query(text: string) {
-  const box = screen.getByRole('searchbox', { name: 'Graph query' })
+  const box = screen.getByRole('textbox', { name: 'Graph query' })
   await userEvent.clear(box)
   await userEvent.type(box, `${text}{Enter}`)
 }
@@ -180,7 +180,7 @@ describe('GraphView', () => {
   it('runs a Cypher query, lists its results and shows parse errors', async () => {
     open()
     render(<GraphView onClose={() => {}} />)
-    const box = screen.getByRole('searchbox', { name: 'Graph query' })
+    const box = screen.getByRole('textbox', { name: 'Graph query' })
     const cypher = (text: string) => {
       fireEvent.change(box, { target: { value: text } })
       fireEvent.submit(box.closest('form')!)
@@ -448,7 +448,7 @@ describe('GraphView', () => {
     expect(listed()).toContain('Choice Survey')
   })
 
-  // [utest->req~ui-260~1]
+  // [utest->req~ui-400~1]
   it('saves the graph as an SVG of the whole graph from the download button', async () => {
     open()
     render(<GraphView onClose={() => {}} />)
@@ -514,13 +514,43 @@ describe('graph shortcuts', () => {
   it('saves the Cypher result table as CSV', async () => {
     open()
     render(<GraphView onClose={() => {}} />)
-    const box = screen.getByRole('searchbox', { name: 'Graph query' })
+    const box = screen.getByRole('textbox', { name: 'Graph query' })
     fireEvent.change(box, { target: { value: "match (p:Paper)-[:authoredBy]->(a:Author {label: 'Alan Turing'}) RETURN p.label AS title, a" } })
     fireEvent.submit(box.closest('form')!)
     fireEvent.click(screen.getByRole('button', { name: 'Save table as CSV' }))
     await waitFor(() => expect(saved.writes).toHaveLength(1))
     expect(saved.picks[0]).toEqual(['cypher-results.csv', 'csv'])
     expect(saved.writes[0][1]).toBe('"title","a"\r\n"Testing Things","Alan Turing"\r\n')
+  })
+})
+
+describe('query box', () => {
+  // [utest->req~ui-400~1]
+  it('names the language, completes with Tab, and shows a Cypher error while typing', async () => {
+    open()
+    render(<GraphView onClose={() => {}} />)
+    const box = screen.getByRole('textbox', { name: 'Graph query' }) as HTMLTextAreaElement
+    expect(screen.getByText('Text')).toBeInTheDocument()
+    await userEvent.type(box, 'MATCH (p:Pa')
+    expect(screen.getByText('Cypher')).toBeInTheDocument()
+    expect(screen.getByRole('option', { name: 'Paper' })).toBeInTheDocument()
+    await userEvent.keyboard('{Tab}')
+    expect(box.value).toBe('MATCH (p:Paper')
+    fireEvent.change(box, { target: { value: 'MATCH (p:Paper) RETURN q' } })
+    expect(screen.getByText(/Unknown variable q/)).toBeInTheDocument()
+    expect(box).toHaveAttribute('aria-invalid', 'true')
+  })
+
+  // [utest->req~ui-400~1]
+  it('submits on Enter and keeps a new line on Shift+Enter', async () => {
+    open()
+    render(<GraphView onClose={() => {}} />)
+    const box = screen.getByRole('textbox', { name: 'Graph query' }) as HTMLTextAreaElement
+    await userEvent.type(box, 'type:paper{Shift>}{Enter}{/Shift}depth:0')
+    expect(box.value).toBe('type:paper\ndepth:0')
+    await userEvent.type(box, '{Enter}')
+    expect(box.value).toBe('type:paper\ndepth:0')
+    expect(screen.getByText(/\d+ nodes?/)).toBeInTheDocument()
   })
 })
 
