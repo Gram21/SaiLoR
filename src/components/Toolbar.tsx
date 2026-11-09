@@ -417,9 +417,8 @@ export function Toolbar() {
           aria-label={t('toolbar.settings.label')}
           onClick={() => setUserSettingsOpen(true)}
         >
-          <Icon name="sliders" size={15} />
           SaiLoR
-          <Icon name="chevron" size={13} />
+          <Icon name="sliders" size={15} />
         </button>
 
         <div className="toolbar-actions">

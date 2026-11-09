@@ -192,18 +192,16 @@ button.primary.danger {
   font-weight: 700;
   letter-spacing: 0.02em;
   color: var(--accent);
-  background: var(--accent-weak);
-  border: 1px solid transparent;
-  border-radius: 999px;
-  padding: 3px 10px;
+  background: none;
+  border: 0;
+  padding: 3px 4px;
   cursor: pointer;
 }
 .app-title .tb-icon {
   color: inherit;
 }
-.app-title:hover,
-.app-title:focus-visible {
-  border-color: var(--accent);
+.app-title:hover {
+  filter: brightness(1.15);
 }
 .toolbar-actions {
   display: flex;
@@ -2716,8 +2714,11 @@ button.validation-search-case:hover {
   overflow: auto;
 }
 .modal-body h3 {
-  margin: 16px 0 6px;
-  font-size: 0.95rem;
+  margin: 24px 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 1.2rem;
+  font-weight: 700;
 }
 .modal-body h3:first-child {
   margin-top: 4px;
@@ -2753,11 +2754,12 @@ button.validation-search-case:hover {
   background: var(--panel-bg);
 }
 .settings-dialog .modal-body .settings-card h3 {
-  margin: 0 0 8px;
-  font-size: 0.75rem;
-  text-transform: uppercase;
-  letter-spacing: 0.06em;
-  color: var(--muted);
+  margin: 0 0 10px;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text);
 }
 .settings-card .settings-row:first-of-type {
   margin-top: 0;
