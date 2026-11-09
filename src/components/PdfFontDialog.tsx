@@ -10,8 +10,8 @@ const SHOWN = 12
 /** Asks whether to embed a font in the PDF or to save SVG instead, and says why only SVG is offered when no font can be embedded. */
 export function PdfFontDialog({ chars, search, onChoose }: { chars: string[]; search: FontSearch; onChoose: (choice: FontChoice) => void }) {
   const t = useT()
+  const found = 'found' in search
   const list = (all: string[]) => all.slice(0, SHOWN).join(' ') + (all.length > SHOWN ? ' …' : '')
-  const found = 'found' in search ? search.found : null
   return (
     <Modal onClose={() => onChoose(null)} aria-label={t('diagram.font.title')}>
       <div className="modal-head">
@@ -19,7 +19,7 @@ export function PdfFontDialog({ chars, search, onChoose }: { chars: string[]; se
       </div>
       <div className="modal-body">
         <p>{t('diagram.font.intro', { chars: list(chars) })}</p>
-        {found ? (
+        {'found' in search ? (
           <>
             <p>{t('diagram.font.embedOffer')}</p>
             <p>{t('diagram.font.svgOffer')}</p>

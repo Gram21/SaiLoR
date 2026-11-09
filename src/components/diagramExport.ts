@@ -63,7 +63,7 @@ export async function findPdfFont(chars: string[], read: (index: number) => Prom
 }
 
 async function deflate(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([bytes]).stream().pipeThrough(new CompressionStream('deflate'))
+  const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new CompressionStream('deflate'))
   return new Uint8Array(await new Response(stream).arrayBuffer())
 }
 
