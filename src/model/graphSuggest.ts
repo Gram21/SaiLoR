@@ -21,8 +21,8 @@ const pick = (all: string[], prefix: string) => {
   return all.filter((x) => x.toLowerCase().startsWith(p) && x.toLowerCase() !== p).slice(0, MAX_ITEMS)
 }
 
-/** Completion proposals for the word before `caret`; `fields` are the schema field names. */
-export function suggest(input: string, caret: number, fields: string[], force = false): Suggestion | null {
+/** Completion proposals for the word before `caret`; `fields` are the schema field names, `props` the Cypher property names. */
+export function suggest(input: string, caret: number, fields: string[], props: string[] = [], force = false): Suggestion | null {
   const before = input.slice(0, caret)
   const prefix = WORD.exec(before)![0]
   const from = caret - prefix.length
@@ -32,7 +32,8 @@ export function suggest(input: string, caret: number, fields: string[], force = 
   if (isCypher(input)) {
     if (/\[[^\]]*[:|]\s*$/.test(head)) return done(pick(EDGE_TYPES, prefix))
     if (/\([^(){}]*:\s*$/.test(head)) return done(pick(NODE_LABELS, prefix))
-    if (/[\p{L}\p{N}_]\.$/u.test(head) || /['"`]/.test(head.slice(-1))) return null
+    if (/[\p{L}\p{N}_]\.$/u.test(head) || /\{(?:[^{}]*,)?\s*$/.test(head)) return done(pick(props, prefix))
+    if (/['"`]/.test(head.slice(-1))) return null
     return prefix || force ? done(pick(CYPHER_WORDS, prefix)) : null
   }
 
@@ -45,4 +46,12 @@ export function suggest(input: string, caret: number, fields: string[], force = 
   }
   if (!prefix && !force) return null
   return done(pick([...TEXT_KEYS, ...fields.map((f) => `${f}=`), 'MATCH'], prefix.replace(/^-/, '')))
+}
+
+const BUILT_IN_PROPS = ['id', 'type', 'label', 'field', 'doi', 'year', 'abstract']
+
+/** Cypher property names: the built-in ones, then the answer keys of the graph (in backticks if not a plain name). */
+export function cypherProps(answerKeys: Iterable<string>): string[] {
+  const extra = [...new Set(answerKeys)].filter((k) => !BUILT_IN_PROPS.includes(k)).sort()
+  return [...BUILT_IN_PROPS, ...extra.map((k) => (/^[\p{L}_][\p{L}\p{N}_]*$/u.test(k) ? k : `\`${k.replace(/`/g, '``')}\``))]
 }

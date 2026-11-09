@@ -8,6 +8,7 @@ interface Props {
   value: string
   onChange: (value: string) => void
   fields: string[]
+  props: string[]
   placeholder: string
   label: string
   describedBy: string
@@ -16,7 +17,7 @@ interface Props {
 }
 
 /** Query input: grows to 10 lines, offers completions, names the detected language and shows Cypher errors while typing. */
-export function GraphQueryBox({ value, onChange, fields, placeholder, label, describedBy, hideLiveError }: Props) {
+export function GraphQueryBox({ value, onChange, fields, props, placeholder, label, describedBy, hideLiveError }: Props) {
   const t = useT()
   const id = useId()
   const area = useRef<HTMLTextAreaElement>(null)
@@ -44,7 +45,7 @@ export function GraphQueryBox({ value, onChange, fields, placeholder, label, des
     }
   }, [cypher, value, t])
 
-  const sug = closed ? null : suggest(value, caret, fields, forced)
+  const sug = closed ? null : suggest(value, caret, fields, props, forced)
   const open = sug !== null
 
   const accept = (item: string) => {

@@ -6,6 +6,7 @@ import { buildGraph, csv, defaultGraphSeat, graphTrees, NODE_TYPES, type Graph, 
 import { graphStats } from '../model/graphStats'
 import { loadGraphFilters, saveGraphFilters } from '../state/resultSettings'
 import { GraphQueryBox } from './GraphQueryBox'
+import { cypherProps } from '../model/graphSuggest'
 import { indexGraph, neighbours, parseQuery, selectSubgraph, type GraphQuery, type SubGraph } from '../model/graphQuery'
 import {
   CypherError,
@@ -121,6 +122,7 @@ export function GraphView({ onClose }: { onClose: () => void }) {
     () => [...new Set(index.graph.nodes.flatMap((n) => (n.type === 'Choice' && n.field ? [n.field.split('/').pop()!] : [])))].sort(),
     [index],
   )
+  const propNames = useMemo(() => cypherProps(index.graph.nodes.flatMap((n) => Object.keys(n.values))), [index])
   const result = 'chains' in query && cypher?.graph === index.graph ? cypher.out : null
   /** The Cypher query to run: a new one, or the shown one again after the graph changed. */
   const job = pending ?? ('chains' in query && !result ? query : null)
@@ -432,6 +434,7 @@ export function GraphView({ onClose }: { onClose: () => void }) {
               value={input}
               onChange={setInput}
               fields={fieldNames}
+              props={propNames}
               placeholder={t('graphView.placeholder')}
               label={t('graphView.query')}
               describedBy="graph-query-help"
