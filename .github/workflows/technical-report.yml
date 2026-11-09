@@ -29,14 +29,14 @@ jobs:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
 
       - name: Compile report
-        uses: xu-cheng/latex-action@e2f99d4b3685b0da93f97e1b86ad8fab81105098 # v3
+        uses: xu-cheng/latex-action@6549dc21effb2730855a1281407ecfcececc6c1b # v4.1.0
         with:
           working_directory: technical-report
           root_file: main.tex
           latexmk_use_xelatex: false
           args: -pdf -file-line-error -halt-on-error -interaction=nonstopmode -jobname=SaiLoR-technical-report
 
-      - uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         with:
           name: SaiLoR-technical-report
           path: technical-report/SaiLoR-technical-report.pdf
