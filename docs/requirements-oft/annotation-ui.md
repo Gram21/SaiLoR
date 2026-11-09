@@ -1193,7 +1193,7 @@ Tags: NonFunctional, Performance_Efficiency
 ### REQ-UI-320: Diagram export
 `req~ui-320~1`
 
-The view shall have the buttons "SVG", "PNG" and "PDF". Each button shall save the shown diagram through the save dialog of the system and show the saved path or the error. SVG shall save the SVG document as text. PNG shall save a raster image at twice the diagram size. PDF shall save one page that has the size of the diagram and holds a raster image at three times the diagram size. The system shall write the file only to a path that the save dialog returned (REQ-PLT-260). The system shall make the raster images on the main thread from the SVG.
+The view shall have the buttons "SVG", "PNG" and "PDF". Each button shall save the shown diagram through the save dialog of the system and show the saved path or the error. SVG shall save the SVG document as text. PNG shall save a raster image at twice the diagram size. PDF shall save one page that has the size of the diagram. The page shall hold vector graphics and text (REQ-UI-370). The system shall write the file only to a path that the save dialog returned (REQ-PLT-260). The system shall make the raster images on the main thread from the SVG.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability)
@@ -1243,6 +1243,66 @@ If the selected node of the knowledge graph is a paper, the detail panel shall h
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability)
 - **Evidence:** `src/components/GraphView.tsx` (`GraphView`), `src/model/graph.ts` (`csv`), `src/locales/en.json` (`graphView.openPaper`, `graphView.cypher.saveCsv`)
+- **Verified by:** `src/components/GraphView.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Usability
+
+### REQ-UI-360: Knowledge graph statistics
+`req~ui-360~1`
+
+The detail panel of the knowledge graph shall have a collapsible "Statistics" section. The section shall show, for the nodes and edges that the graph shows, the number of nodes, the number of edges, the average degree, the number of connected components and the size of the largest component. The section shall list the five nodes with the highest degree. A click on a listed node shall select that node in the graph. The system shall ignore edges to unknown nodes.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/model/graphStats.ts` (`graphStats`), `src/components/GraphView.tsx` (`GraphView`), `src/locales/en.json` (`graphView.stats`)
+- **Verified by:** `src/model/graphStats.test.ts`, `src/components/GraphView.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Usability
+
+### REQ-UI-370: Vector PDF export of diagrams
+`req~ui-370~1`
+
+The PDF button of the diagram view shall save a PDF with vector graphics and text that the user can select and zoom without loss. The system shall draw the SVG shapes (rectangle, line, polyline, circle, path, text) with the PDF fonts Helvetica and Helvetica-Bold. If the diagram has a character that the fonts lack, the system shall save a PDF that holds a raster image (REQ-UI-320).
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Portability)
+- **Evidence:** `src/model/vectorPdf.ts` (`svgToVectorPdf`), `src/model/imagePdf.ts` (`pdfDocument`), `src/components/diagramExport.ts` (`svgToPdf`)
+- **Verified by:** `src/model/vectorPdf.test.ts`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Functional_Suitability, Portability
+
+### REQ-UI-380: Result view settings kept across sessions
+`req~ui-380~1`
+
+The system shall store the diagram settings and the knowledge graph filters (edge types and node types) in the local storage of the application. At the next start the result view shall use the stored values. The system shall check each stored value and use the default for a value that is invalid or broken. If the stored settings name a field that the schema of the open project lacks, the diagram view shall use the default for that field.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/state/resultSettings.ts`, `src/components/ResultView.tsx`, `src/components/DiagramView.tsx`, `src/components/GraphView.tsx`
+- **Verified by:** `src/state/resultSettings.test.ts`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Usability
+
+### REQ-UI-390: Knowledge graph node-type filter
+`req~ui-390~1`
+
+The detail panel of the knowledge graph shall have a "Node types" list with one check box for each node type in the graph. If the user clears a box, the graph shall hide the nodes of that type and the edges of those nodes. The statistics (REQ-UI-360) shall count only the shown nodes and edges.
+
+Comment:
+- **Type:** Functional (ISO 25010: Functional Suitability, Usability)
+- **Evidence:** `src/components/GraphView.tsx` (`GraphView`), `src/model/graph.ts` (`NODE_TYPES`), `src/locales/en.json` (`graphView.nodeTypes`)
 - **Verified by:** `src/components/GraphView.test.tsx`
 - **Status:** Implemented
 

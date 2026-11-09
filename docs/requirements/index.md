@@ -172,6 +172,6 @@ per category so requirements can be inserted without renumbering.
 - **Knowledge graph menu and image (2026-11-07).** REQ-UI-260 added for the image download (SVG, PNG; visible section or whole graph).
   REQ-UI-160 and REQ-UI-190 revised: the Export menu is now the Graph menu with the view first, and the Save menu has the graph export.
   REQ-DAT-490 and REQ-DAT-520 revised: the consolidation is a selectable seat. The coverage counts above were not recounted.
-- **Result view and diagrams (2026-11-08).** REQ-UI-270 to REQ-UI-350 added: the Graph menu is now the Result view menu with the tabs
-  "Knowledge graph" and "Diagrams"; diagrams are counted from the knowledge graph in a worker and export to SVG, PNG, PDF and CSV. Diagrams have a paper filter, horizontal bars and shares of 100 %; the graph opens a paper and saves Cypher tables.
+- **Result view and diagrams (2026-11-08).** REQ-UI-270 to REQ-UI-390 added: the Graph menu is now the Result view menu with the tabs
+  "Knowledge graph" and "Diagrams"; diagrams are counted from the knowledge graph in a worker and export to SVG, PNG, PDF and CSV. Diagrams have a paper filter, horizontal bars and shares of 100 %; the graph opens a paper, saves Cypher tables, filters node types and shows statistics; diagrams export as vector PDF; the result view keeps its settings across sessions.
   REQ-UI-190 revised. The coverage counts above were not recounted.

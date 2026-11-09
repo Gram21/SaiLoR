@@ -235,6 +235,10 @@ inspection only.
 | REQ-UI-330 | Diagram filter, bar direction and shares | Functional · Functional Suitability, Usability | `src/model/diagram.ts` (`aggregate`)<br>`src/model/diagramSvg.ts` (`renderDiagram`)<br>`src/components/DiagramView.tsx` | `src/model/diagram.test.ts`<br>`src/components/DiagramView.test.tsx` | — | — |
 | REQ-UI-340 | Diagram data table and CSV | Functional · Functional Suitability, Usability | `src/model/diagram.ts` (`diagramCsv`)<br>`src/components/DiagramView.tsx` | `src/model/diagram.test.ts`<br>`src/components/DiagramView.test.tsx` | — | — |
 | REQ-UI-350 | Knowledge graph shortcuts | Functional · Functional Suitability, Usability | `src/components/GraphView.tsx` (`GraphView`)<br>`src/model/graph.ts` (`csv`) | `src/components/GraphView.test.tsx` | — | — |
+| REQ-UI-360 | Knowledge graph statistics | Functional · Functional Suitability, Usability | `src/model/graphStats.ts` (`graphStats`)<br>`src/components/GraphView.tsx` (`GraphView`) | `src/model/graphStats.test.ts`<br>`src/components/GraphView.test.tsx` | — | — |
+| REQ-UI-370 | Vector PDF export of diagrams | Functional · Functional Suitability, Portability | `src/model/vectorPdf.ts` (`svgToVectorPdf`)<br>`src/model/imagePdf.ts` (`pdfDocument`)<br>`src/components/diagramExport.ts` (`svgToPdf`) | `src/model/vectorPdf.test.ts` | — | — |
+| REQ-UI-380 | Result view settings kept across sessions | Functional · Usability | `src/state/resultSettings.ts`<br>`src/components/ResultView.tsx` | `src/state/resultSettings.test.ts` | — | — |
+| REQ-UI-390 | Knowledge graph node-type filter | Functional · Functional Suitability, Usability | `src/components/GraphView.tsx` (`GraphView`)<br>`src/model/graph.ts` (`NODE_TYPES`) | `src/components/GraphView.test.tsx` | — | — |
 
 ## Screening ([screening.md](screening.md))
 
