@@ -2265,7 +2265,7 @@
   "diagram.exportHint": "SVG と PDF はベクター画像です。PNG は高解像度の画像です。PDF に他の文字体系用のフォントが必要な場合は、SaiLoR が先に確認します。",
   "diagram.font.title": "PDF のフォント",
   "diagram.font.intro": "図に、PDF の標準フォントにない文字があります: {chars}",
-  "diagram.font.embedOffer": "SaiLoR は、インストール済みのフォントを PDF に埋め込めます。すると PDF にこれらの文字が表示されます。フォントファイルにより PDF は約 {size} MB 大きくなります。",
+  "diagram.font.embedOffer": "SaiLoR は、インストール済みのフォントを PDF に埋め込めます。すると PDF にこれらの文字が表示されます。SaiLoR はダイアグラムで使う字形だけを埋め込むので、PDF は小さいままです。",
   "diagram.font.svgOffer": "別の方法として、図を SVG で保存できます。SVG はすべての文字を保持し、サイズも小さいままです。",
   "diagram.font.onlySvg": "次の理由により、SVG のみ選択できます:",
   "diagram.font.shaping": "これらの文字は、アラビア語、ヘブライ語、インド系文字のように、テキストシェーピングが必要な文字体系に属します。SaiLoR の PDF は 1 文字につき 1 グリフを配置します。そのため、これらの文字が誤った形や順序で表示されます。",

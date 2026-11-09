@@ -97,3 +97,108 @@ function lookup12(view: DataView, at: number, cp: number): number {
   }
   return 0
 }
+
+const KEPT_TABLES = ['cvt ', 'fpgm', 'glyf', 'head', 'hhea', 'hmtx', 'loca', 'maxp', 'prep']
+const up4 = (n: number) => (n + 3) & ~3
+
+function checksum(bytes: Uint8Array): number {
+  let sum = 0
+  for (let i = 0; i < bytes.length; i += 4) {
+    sum = (sum + (((bytes[i] << 24) | ((bytes[i + 1] ?? 0) << 16) | ((bytes[i + 2] ?? 0) << 8) | (bytes[i + 3] ?? 0)) >>> 0)) >>> 0
+  }
+  return sum
+}
+
+/**
+ * A copy of a TrueType font that keeps the outlines of `glyphs` (and of the glyphs that composites among them use) and
+ * gives every other glyph an empty outline. Glyph ids stay the same, so a PDF can keep its Identity glyph mapping. The
+ * `cmap`, `name`, `OS/2` and `post` tables are dropped. Null if the font is damaged.
+ */
+export function subsetTrueType(bytes: Uint8Array, glyphs: Iterable<number>): Uint8Array | null {
+  try {
+    const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength)
+    const tables = new Map<string, Uint8Array>()
+    for (let i = 0, count = view.getUint16(4); i < count; i++) {
+      const at = 12 + i * 16
+      const offset = view.getUint32(at + 8)
+      const length = view.getUint32(at + 12)
+      if (offset + length > bytes.length) return null
+      tables.set(String.fromCharCode(...bytes.subarray(at, at + 4)), bytes.subarray(offset, offset + length))
+    }
+    const table = (tag: string) => {
+      const t = tables.get(tag)
+      if (!t) throw new Error(`No ${tag} table`)
+      return t
+    }
+    const dv = (b: Uint8Array) => new DataView(b.buffer, b.byteOffset, b.byteLength)
+    const [head, hhea, maxp, loca, glyf, hmtx] = ['head', 'hhea', 'maxp', 'loca', 'glyf', 'hmtx'].map(table)
+    const count = dv(maxp).getUint16(4)
+    const long = dv(head).getInt16(50) === 1
+    const locaView = dv(loca)
+    const glyfView = dv(glyf)
+    const start = (g: number) => (long ? locaView.getUint32(g * 4) : locaView.getUint16(g * 2) * 2)
+    const used = new Set<number>()
+    const add = (g: number) => {
+      if (used.has(g) || g >= count) return
+      used.add(g)
+      const from = start(g)
+      if (start(g + 1) - from < 10 || glyfView.getInt16(from) >= 0) return
+      for (let at = from + 10; ; ) {
+        const flags = glyfView.getUint16(at)
+        add(glyfView.getUint16(at + 2))
+        if (!(flags & 0x20)) break
+        at += 4 + (flags & 1 ? 4 : 2) + (flags & 8 ? 2 : flags & 0x40 ? 4 : flags & 0x80 ? 8 : 0)
+      }
+    }
+    add(0)
+    for (const g of glyphs) add(g)
+
+    const order = [...used].sort((a, b) => a - b)
+    const newLoca = new DataView(new ArrayBuffer((count + 1) * 4))
+    let size = 0
+    for (let g = 0, next = 0; g <= count; g++) {
+      newLoca.setUint32(g * 4, size)
+      if (order[next] === g) {
+        size += up4(start(g + 1) - start(g))
+        next++
+      }
+    }
+    const newGlyf = new Uint8Array(size)
+    for (const g of order) newGlyf.set(glyf.subarray(start(g), start(g + 1)), newLoca.getUint32(g * 4))
+
+    const metrics = dv(hhea).getUint16(34)
+    const newHmtx = new Uint8Array(hmtx.length)
+    for (const g of [...order, metrics - 1]) {
+      const [from, length] = g < metrics ? [g * 4, 4] : [metrics * 4 + (g - metrics) * 2, 2]
+      if (from + length <= hmtx.length) newHmtx.set(hmtx.subarray(from, from + length), from)
+    }
+    const newHead = Uint8Array.from(head)
+    dv(newHead).setUint32(8, 0)
+    dv(newHead).setInt16(50, 1)
+
+    const out = new Map(tables)
+    out.set('head', newHead).set('loca', new Uint8Array(newLoca.buffer)).set('glyf', newGlyf).set('hmtx', newHmtx)
+    const tags = KEPT_TABLES.filter((t) => out.has(t))
+    const entry = Math.floor(Math.log2(tags.length))
+    const file = new Uint8Array(12 + tags.length * 16 + tags.reduce((sum, t) => sum + up4(out.get(t)!.length), 0))
+    const fv = new DataView(file.buffer)
+    fv.setUint32(0, 0x00010000)
+    fv.setUint16(4, tags.length)
+    fv.setUint16(6, 16 << entry)
+    fv.setUint16(8, entry)
+    fv.setUint16(10, tags.length * 16 - (16 << entry))
+    let at = 12 + tags.length * 16
+    tags.forEach((tag, i) => {
+      const data = out.get(tag)!
+      file.set(data, at)
+      for (let c = 0; c < 4; c++) file[12 + i * 16 + c] = tag.charCodeAt(c)
+      fv.setUint32(12 + i * 16 + 4, checksum(file.subarray(at, at + up4(data.length))))
+      fv.setUint32(12 + i * 16 + 8, at)
+      fv.setUint32(12 + i * 16 + 12, data.length)
+      at += up4(data.length)
+    })
+    return file
+  } catch {
+    return null
+  }
+}

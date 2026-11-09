@@ -12,7 +12,6 @@ export function PdfFontDialog({ chars, search, onChoose }: { chars: string[]; se
   const t = useT()
   const list = (all: string[]) => all.slice(0, SHOWN).join(' ') + (all.length > SHOWN ? ' …' : '')
   const found = 'found' in search ? search.found : null
-  const size = found ? (found.font.length / 1_048_576).toFixed(1) : ''
   return (
     <Modal onClose={() => onChoose(null)} aria-label={t('diagram.font.title')}>
       <div className="modal-head">
@@ -22,7 +21,7 @@ export function PdfFontDialog({ chars, search, onChoose }: { chars: string[]; se
         <p>{t('diagram.font.intro', { chars: list(chars) })}</p>
         {found ? (
           <>
-            <p>{t('diagram.font.embedOffer', { size })}</p>
+            <p>{t('diagram.font.embedOffer')}</p>
             <p>{t('diagram.font.svgOffer')}</p>
           </>
         ) : (

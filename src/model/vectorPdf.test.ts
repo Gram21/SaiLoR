@@ -86,4 +86,16 @@ describe('svgToVectorPdf', () => {
     expect(plain).not.toContain('CIDFontType2')
     expect(svgToVectorPdf(renderDiagram(data, cfg({ title: '本' })), measure, embedded()).replaced).toBe(1)
   })
+
+  // [utest->req~ui-370~1]
+  it.each([['normal', '/F1 '], ['bold', '/F2 ']])('sets the same WinAnsi characters in the built-in %s face', (weight, face) => {
+    const latin = 'Äöüß é ñ ç € “quoted” – … ™ • ¼ © Š ž Œ ‰ † ‹'
+    const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="100" height="50"><text x="1" y="9" font-weight="${weight}">${latin}</text></svg>`
+    const { pdf, replaced } = svgToVectorPdf(svg, measure, embedded())
+    expect(replaced).toBe(0)
+    expect(latin1(pdf)).toContain(face)
+    expect(latin1(pdf)).not.toContain('CIDFontType2')
+    expect(nonWinAnsiChars(svg)).toEqual([])
+    expect(nonWinAnsiChars(svg.replace(latin, 'α Ж 中 ŝ'))).toEqual(['α', 'Ж', '中', 'ŝ'])
+  })
 })

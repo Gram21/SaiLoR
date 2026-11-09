@@ -8,11 +8,11 @@ import { PdfFontDialog } from './PdfFontDialog'
 const chars = ['中', '文']
 
 describe('PdfFontDialog', () => {
-  it('offers to embed a font or to save SVG, and tells the size of the font', async () => {
+  it('offers to embed a font or to save SVG', async () => {
     const onChoose = vi.fn()
-    render(<PdfFontDialog chars={chars} search={{ found: { font: new Uint8Array(3 * 1_048_576) } }} onChoose={onChoose} />)
+    render(<PdfFontDialog chars={chars} search={{ found: { font: new Uint8Array(3) } }} onChoose={onChoose} />)
     expect(screen.getByText(/中 文/)).toBeInTheDocument()
-    expect(screen.getByText(/about 3\.0 MB/)).toBeInTheDocument()
+    expect(screen.getByText(/only the glyphs that the diagram uses/)).toBeInTheDocument()
     await userEvent.click(screen.getByRole('button', { name: 'Embed font' }))
     await userEvent.click(screen.getByRole('button', { name: 'Save as SVG' }))
     await userEvent.click(screen.getByRole('button', { name: 'Cancel' }))

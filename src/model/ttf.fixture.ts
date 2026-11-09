@@ -3,6 +3,9 @@ const u16 = (...v: number[]) => v.flatMap((x) => [(x >> 8) & 0xff, x & 0xff])
 const u32 = (...v: number[]) => v.flatMap((x) => [(x >>> 24) & 0xff, (x >> 16) & 0xff, (x >> 8) & 0xff, x & 0xff])
 const pad = (bytes: number[], size: number) => [...bytes, ...new Array(Math.max(0, size - bytes.length)).fill(0)]
 
+/** Five glyphs of 12 bytes each, except glyph 3, a composite of glyph 2 (16 bytes).  The last byte of a simple glyph is its id. */
+const GLYF = [0, 1, 2, 3, 4].flatMap((g) => (g === 3 ? [...u16(0xffff, 0, 0, 0, 0, 0, 2), ...u16(0)] : [...pad([0, 1], 11), g]))
+
 /** A tiny TrueType font: A-C map to glyphs 1-3 (format 4), U+4E2D to glyph 4 (format 12); glyph 0 is 500 wide, the others 600. */
 export function tinyFont(opts: { fsType?: number; version?: number; format12?: boolean } = {}): Uint8Array {
   const format4 = [...u16(4, 32, 0, 4, 4, 1, 0), ...u16(0x43, 0xffff), ...u16(0), ...u16(0x41, 0xffff), ...u16((1 - 0x41) & 0xffff, 1), ...u16(0, 0)]
@@ -25,7 +28,9 @@ export function tinyFont(opts: { fsType?: number; version?: number; format12?: b
   const tables: [string, number[]][] = [
     ['OS/2', pad(u16(), 78).map((b, i) => (i === 8 ? ((opts.fsType ?? 0) >> 8) & 0xff : i === 9 ? (opts.fsType ?? 0) & 0xff : b))],
     ['cmap', [...header, ...body]],
-    ['glyf', [0, 0, 0, 0]],
+    ['glyf', GLYF],
+    ['loca', u16(0, 6, 12, 18, 26, 32)],
+    ['maxp', pad(u16(), 6).map((b, i) => (i === 5 ? 5 : b))],
     ['head', head],
     ['hhea', hhea],
     ['hmtx', [...u16(500, 0, 600, 0)]],

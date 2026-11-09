@@ -2265,7 +2265,7 @@
   "diagram.exportHint": "SVG 和 PDF 是矢量图。PNG 是高分辨率图像。如果 PDF 需要其他文字的字体，SaiLoR 会先询问。",
   "diagram.font.title": "PDF 字体",
   "diagram.font.intro": "图中有 PDF 标准字体没有的字符：{chars}",
-  "diagram.font.embedOffer": "SaiLoR 可以把已安装的字体嵌入 PDF。这样 PDF 就能显示这些字符。字体文件会使 PDF 增大约 {size} MB。",
+  "diagram.font.embedOffer": "SaiLoR 可以把已安装的字体嵌入 PDF。这样 PDF 就能显示这些字符。SaiLoR 只嵌入图表用到的字形，因此 PDF 仍然很小。",
   "diagram.font.svgOffer": "另一种方式是把图保存为 SVG。SVG 保留所有字符，文件也很小。",
   "diagram.font.onlySvg": "因以下原因，只提供 SVG：",
   "diagram.font.shaping": "这些字符属于需要文本整形的文字，例如阿拉伯文、希伯来文或印度系文字。SaiLoR 生成的 PDF 每个字符只放一个字形，这些字符会以错误的形状或顺序显示。",

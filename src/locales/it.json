@@ -2265,7 +2265,7 @@
   "diagram.exportHint": "SVG e PDF sono immagini vettoriali. PNG contiene un'immagine ad alta risoluzione. Se il PDF richiede un font per altre scritture, SaiLoR chiede prima.",
   "diagram.font.title": "Font del PDF",
   "diagram.font.intro": "Il diagramma contiene caratteri che mancano nei font standard del PDF: {chars}",
-  "diagram.font.embedOffer": "SaiLoR può incorporare un font installato nel PDF. Il PDF mostra allora questi caratteri. Il file del font aggiunge circa {size} MB al PDF.",
+  "diagram.font.embedOffer": "SaiLoR può incorporare un font installato nel PDF. Il PDF mostra allora questi caratteri. SaiLoR incorpora solo i glifi usati dal diagramma, quindi il PDF resta leggero.",
   "diagram.font.svgOffer": "In alternativa, salvi il diagramma come SVG. L'SVG mantiene ogni carattere ed è leggero.",
   "diagram.font.onlySvg": "Viene offerto solo SVG, per questo motivo:",
   "diagram.font.shaping": "Questi caratteri appartengono a una scrittura che richiede la composizione del testo, come l'arabo, l'ebraico o una scrittura indiana. Un PDF di SaiLoR colloca un glifo per carattere. Mostrerebbe questi caratteri nella forma o nell'ordine sbagliati.",

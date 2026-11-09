@@ -2265,7 +2265,7 @@
   "diagram.exportHint": "SVG et PDF sont des images vectorielles. PNG contient une image haute résolution. Si le PDF a besoin d'une police pour d'autres écritures, SaiLoR demande d'abord.",
   "diagram.font.title": "Polices du PDF",
   "diagram.font.intro": "Le diagramme contient des caractères absents des polices standard du PDF : {chars}",
-  "diagram.font.embedOffer": "SaiLoR peut intégrer une police installée dans le PDF. Le PDF affiche alors ces caractères. Le fichier de police ajoute environ {size} Mo au PDF.",
+  "diagram.font.embedOffer": "SaiLoR peut intégrer une police installée dans le PDF. Le PDF affiche alors ces caractères. SaiLoR n'intègre que les glyphes utilisés par le diagramme, donc le PDF reste léger.",
   "diagram.font.svgOffer": "Autre possibilité : enregistrez le diagramme en SVG. Le SVG garde tous les caractères et reste léger.",
   "diagram.font.onlySvg": "Seul le SVG est proposé, pour cette raison :",
   "diagram.font.shaping": "Ces caractères appartiennent à une écriture qui demande une mise en forme du texte, comme l'arabe, l'hébreu ou une écriture indienne. Un PDF de SaiLoR place un glyphe par caractère. Il afficherait ces caractères dans une mauvaise forme ou un mauvais ordre.",

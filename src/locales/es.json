@@ -2265,7 +2265,7 @@
   "diagram.exportHint": "SVG y PDF son imágenes vectoriales. PNG contiene una imagen de alta resolución. Si el PDF necesita una fuente para otras escrituras, SaiLoR pregunta antes.",
   "diagram.font.title": "Fuentes del PDF",
   "diagram.font.intro": "El diagrama tiene caracteres que faltan en las fuentes estándar del PDF: {chars}",
-  "diagram.font.embedOffer": "SaiLoR puede incrustar una fuente instalada en el PDF. El PDF muestra entonces estos caracteres. El archivo de la fuente añade unos {size} MB al PDF.",
+  "diagram.font.embedOffer": "SaiLoR puede incrustar una fuente instalada en el PDF. El PDF muestra entonces estos caracteres. SaiLoR incrusta solo los glifos que usa el diagrama, así que el PDF sigue siendo pequeño.",
   "diagram.font.svgOffer": "Como alternativa, guarde el diagrama como SVG. El SVG conserva todos los caracteres y es pequeño.",
   "diagram.font.onlySvg": "Solo se ofrece SVG, por este motivo:",
   "diagram.font.shaping": "Estos caracteres pertenecen a una escritura que necesita composición del texto, como el árabe, el hebreo o una escritura índica. Un PDF de SaiLoR coloca un glifo por carácter. Mostraría estos caracteres con forma u orden incorrectos.",

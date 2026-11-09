@@ -1,6 +1,6 @@
 // [impl->req~ui-320~1]
 import { svgToVectorPdf, type PdfFont } from '../model/vectorPdf'
-import { parseTrueType } from '../model/ttf'
+import { parseTrueType, subsetTrueType } from '../model/ttf'
 
 export type DiagramFormat = 'svg' | 'png' | 'pdf'
 
@@ -67,9 +67,12 @@ async function deflate(bytes: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(await new Response(stream).arrayBuffer())
 }
 
-/** The diagram as a one-page vector PDF. With `font` (a TrueType file), texts the PDF fonts lack are set in it, embedded. */
+/** The diagram as a one-page vector PDF. With `font` (a TrueType file), texts the PDF fonts lack are set in it; only the glyphs used are embedded. */
 export async function svgToPdf(svg: string, font?: Uint8Array): Promise<Uint8Array> {
   const ttf = font && parseTrueType(font)
-  const embed: PdfFont | undefined = font && ttf ? { ttf, file: await deflate(font), length: font.length } : undefined
-  return svgToVectorPdf(svg, measureText, embed).pdf
+  if (!font || !ttf) return svgToVectorPdf(svg, measureText).pdf
+  const probe: PdfFont = { ttf, file: new Uint8Array(), length: 0 }
+  const used = svgToVectorPdf(svg, measureText, probe).glyphs
+  const small = subsetTrueType(font, used) ?? font
+  return svgToVectorPdf(svg, measureText, { ttf, file: await deflate(small), length: small.length }).pdf
 }
