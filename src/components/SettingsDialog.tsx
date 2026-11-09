@@ -162,7 +162,7 @@ export function SettingsDialog() {
         </div>
         <div className="modal-body">
           {SETTINGS_SECTIONS.filter(({ id }) => id !== 'ai' || aiEnabled).map(({ id, title, Body }) => (
-            <section key={id} aria-labelledby={`settings-${id}`}>
+            <section key={id} className="settings-card" aria-labelledby={`settings-${id}`}>
               <h3 id={`settings-${id}`}>{t(title)}</h3>
               <Body />
             </section>

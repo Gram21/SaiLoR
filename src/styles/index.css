@@ -185,17 +185,25 @@ button.primary.danger {
   min-width: 0;
 }
 .app-title {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
   font: inherit;
-  font-weight: 600;
-  color: inherit;
-  background: none;
-  border: 0;
-  border-radius: 4px;
-  padding: 2px 6px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  color: var(--accent);
+  background: var(--accent-weak);
+  border: 1px solid transparent;
+  border-radius: 999px;
+  padding: 3px 10px;
   cursor: pointer;
 }
-.app-title:hover {
-  background: var(--hover, rgba(127, 127, 127, 0.15));
+.app-title .tb-icon {
+  color: inherit;
+}
+.app-title:hover,
+.app-title:focus-visible {
+  border-color: var(--accent);
 }
 .toolbar-actions {
   display: flex;
@@ -2722,6 +2730,40 @@ button.validation-search-case:hover {
 .modal-body ul {
   margin: 0;
   padding-inline-start: 18px;
+}
+.settings-dialog {
+  width: min(520px, 92vw);
+  border-radius: 16px;
+}
+.settings-dialog .modal-head {
+  padding: 16px 20px;
+  font-size: 1.05rem;
+}
+.settings-dialog .modal-body {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  padding: 16px 20px 20px;
+  background: var(--bg);
+}
+.settings-card {
+  padding: 12px 16px;
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  background: var(--panel-bg);
+}
+.settings-dialog .modal-body .settings-card h3 {
+  margin: 0 0 8px;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--muted);
+}
+.settings-card .settings-row:first-of-type {
+  margin-top: 0;
+}
+.settings-card > :last-child {
+  margin-bottom: 0;
 }
 .settings-row {
   display: flex;

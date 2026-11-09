@@ -417,7 +417,9 @@ export function Toolbar() {
           aria-label={t('toolbar.settings.label')}
           onClick={() => setUserSettingsOpen(true)}
         >
+          <Icon name="sliders" size={15} />
           SaiLoR
+          <Icon name="chevron" size={13} />
         </button>
 
         <div className="toolbar-actions">
@@ -693,6 +695,8 @@ const ICON_PATHS = {
   git: 'M6 3v12M18 9a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM6 21a3 3 0 1 0 0-6 3 3 0 0 0 0 6zM18 9a9 9 0 0 1-9 9',
   check: 'M20 6 9 17l-5-5',
   close: 'M18 6 6 18M6 6l12 12',
+  sliders: 'M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6',
+  chevron: 'm6 9 6 6 6-6',
   spark: 'M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9L12 3zM19 16l.8 2.2L22 19l-2.2.8L19 22l-.8-2.2L16 19l2.2-.8L19 16z',
 }
 
