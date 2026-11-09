@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:b550ff8d5457fd6b5d8e3f84a9be69c7628ed6469dd65ad791abc05d6e1959dc",
+  "pageVersion": "sha256:8585dd7f5178c5631358419bcdd0c9f5d528d1198ba0bf31d2361dedf0a9f83e",
   "claims": [
     {
       "id": "claim_eaef87a5f139424fa5f75b41af39d806",
@@ -39,8 +39,8 @@
       "statement": "main.rs registers every command in one invoke_handler(tauri::generate_handler![...]) grouped by module — probe (feature-gated), project, annotations, feedback, pdf/text, paths, webfetch, llm, ollama, localserver, hardware/local, localruntime, git, update, and close — and this registry is the complete, authoritative list of what the renderer can invoke.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/main.rs#L110-L219",
-          "version": "repo-lines-v1:sha256:4fdc4d762b00fb3e6fda514e08dc20d66373b5eadd0932b05401471cfae021c5:eyJzZWxlY3RlZExpbmVDb3VudCI6MTEwLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiYTNiOTVhZTM4MjFiY2ZmYzQ0M2I0MzllMWY2OTc3NTJlMTYwNWQ3ZDU1ZmYwNjhmOGQ5ODcxNjMxYTI0ZGQxIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwMjc2YzFkMWY5Nzg1ZTU1NjBkMGJiNWY3OWMyZTk3OTk5N2I3MGNkZWQxZjNiNjhlZWIwY2QxOTEwYWUyMjdhIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI4NmU5ODZiNzgwMTM0NWUwNWQyNTM1ZWMyNzU2NmMzZWY1YjBjOWUyYWJjYjdmZTI0OTAyYWRiODExN2QyYjNmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJiOGViMzk0MjEwNDEzNjg5YWIzYmI4OTUyY2Y2ZjE1ZmJlYjdiZWNkMzAwZTAwZTk4MjNiMjJlYjJkNTBiZjVjIn0"
+          "resource": "repo://src-tauri/src/main.rs#L110-L220",
+          "version": "repo-lines-v1:sha256:4733b2b859609fe781162a0ab35adbb60b6bb64d29e37603374666d71e3d7746:eyJzZWxlY3RlZExpbmVDb3VudCI6MTExLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiYTNiOTVhZTM4MjFiY2ZmYzQ0M2I0MzllMWY2OTc3NTJlMTYwNWQ3ZDU1ZmYwNjhmOGQ5ODcxNjMxYTI0ZGQxIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIwMjc2YzFkMWY5Nzg1ZTU1NjBkMGJiNWY3OWMyZTk3OTk5N2I3MGNkZWQxZjNiNjhlZWIwY2QxOTEwYWUyMjdhIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiI4NmU5ODZiNzgwMTM0NWUwNWQyNTM1ZWMyNzU2NmMzZWY1YjBjOWUyYWJjYjdmZTI0OTAyYWRiODExN2QyYjNmIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MywiZm9sbG93aW5nQ29udGV4dEhhc2giOiJiOGViMzk0MjEwNDEzNjg5YWIzYmI4OTUyY2Y2ZjE1ZmJlYjdiZWNkMzAwZTAwZTk4MjNiMjJlYjJkNTBiZjVjIn0"
         }
       ]
     },
@@ -50,7 +50,7 @@
       "evidence": [
         {
           "resource": "repo://.github/workflows/ci.yml",
-          "version": "repo-file-v1:sha256:5ed86be023270e9850b5de3c7e98444a201f8d645fc8050120e6a474e79c585f"
+          "version": "repo-file-v1:sha256:a904e0b455a510cd45cb882a47827d7e52d7c9e57b83dead8df2d14638324995"
         },
         {
           "resource": "repo://e2e/probe.test.mjs#L20-L40",
@@ -71,7 +71,7 @@
       "statement": "main() wires the shell: single-instance (refocus existing window), window-state (size/position/maximized), dialog, updater, a custom slr-os plugin injecting window.__SLR_OS__ with Node-style platform/arch names, a deny-all on_permission_request, .manage() of update::State, close::Guard and Mutex<Session>, and the slr-file scheme registered as an asynchronous protocol handler serving each request on a spawned thread; the run() closure intercepts ExitRequested{code:None} and CloseRequested through close::intercept and calls localruntime::stop_all() on RunEvent::Exit so managed llama.cpp servers are killed.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/main.rs#L221-L234",
+          "resource": "repo://src-tauri/src/main.rs#L222-L235",
           "version": "repo-lines-v1:sha256:7c468f22751768e59c364168862f86961cc5df6fb2c1e517e48f50488043c144:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExMjIyNjM2ZjQ4MzVkOTU3ZDExM2IyNDY4N2Y2MDk4YjM5ZjZlYjUwMDZiMjdlN2UwODUwOTZhZjdiMDIzNGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjkyMmY1YzJlY2FmYzBkOTNjYjI0NTYzNDg4OWI0MGJhNjUzZGY0MDExNDA0NzBhOTU3Yjk4NWY3MWFmZWEzMjIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
@@ -112,7 +112,7 @@
         },
         {
           "resource": "repo://src-tauri/src/pdf.rs",
-          "version": "repo-file-v1:sha256:bd49f745e3acec6793a21f636218e89ef60af656230503a811ce774678d60690"
+          "version": "repo-file-v1:sha256:baa8f2b11160a9762a72bc60c5423bab6e842059402630b7ead5d19c0464bb95"
         }
       ]
     },
@@ -199,7 +199,7 @@
           "version": "repo-file-v1:sha256:feb27196025124f141c8828e11d0eca2d2122a7a4832b82dc113dc0eb65cedbe"
         },
         {
-          "resource": "repo://src-tauri/src/main.rs#L211-L224",
+          "resource": "repo://src-tauri/src/main.rs#L212-L225",
           "version": "repo-lines-v1:sha256:584a892f111132656a65b98465e5d90cd8320da26b328b654c71fe4fe69e164b:eyJzZWxlY3RlZExpbmVDb3VudCI6MTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlODdmNGE0MGEwZjEzODA3OWY2MGQ4NjU0NDMzZmUxNTVkNmMxZjQ3MTkwNWNmNjNlYjAxNWRiODAyOWQzNjYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImFmZDg0OGU2YmFmOTY1YjdkNzUxNzA5MjUzMDlhZjcyMmRjYWQxYmVkODJjM2ExMWVlYTBmMmI1MjZlOTcwZmQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjVjMjRhNjI3MTJiMTE2MGQ4MGYxYTQ4OWFhZWY2YzBjZTBkOTU1NTcxYzI5MGRjMWJkMWY5ZDViZGEwNDFhNjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRlZTg5NGYyNjU4NDM5YWM1MGYxOTllNGI2ZDgxN2JmODlkMmVmMTA0NzNkYmM0YzYxYjI2ZTkzNzU2YTQwZTAifQ"
         },
         {
@@ -242,11 +242,11 @@
         },
         {
           "resource": "repo://src-tauri/build.rs",
-          "version": "repo-file-v1:sha256:3715e96bf6eeba1afaa5e48ce4b3126513a1d48e6cfb489bb7e354f217239d07"
+          "version": "repo-file-v1:sha256:af75e83f9bf74e20aaed25df9b0ef7484f2a78a3f3ccc2a17a9162ddb00a610d"
         },
         {
           "resource": "repo://src-tauri/capabilities/default.json",
-          "version": "repo-file-v1:sha256:9dead677363415e11d11e219508e450f32f7ade05ace5ae82e086823ebd89197"
+          "version": "repo-file-v1:sha256:2abd73f712d769f2eaadc28d75b5039386a14d27bd3095d3aab9e6e92e4f68e2"
         }
       ]
     },
@@ -269,19 +269,19 @@
       "statement": "export_write_bytes in pdf.rs writes renderer-built bytes (the graph PNG) only to a path an export dialog returned this session (export_target) and refuses symlink destinations; it is registered in main.rs, listed in COMMANDS in build.rs and granted as allow-export-write-bytes in capabilities/default.json.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/build.rs#L30-L36",
+          "resource": "repo://src-tauri/build.rs#L31-L37",
           "version": "repo-lines-v1:sha256:38dc50c22d3efb09ea5409b2aaa6c5a8776000dd599dcf3231035744d8c9e093:eyJzZWxlY3RlZExpbmVDb3VudCI6NywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNWY2MDNhZGExYzA1MmQ3N2Y1NTdjYTdlZjA5ZjczMjBmNGM1NzNkZTA1YTU4NzFlOTViZGJkNGQ3OWVmYTdmYiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDZlYjBkNTFiZWZmNDYxOWQxNGFiNWQ1MjhmYmM3YjkyZmI0YTI0YzRiNzI3ZjM0NjMyYmVmOGQ5ZTFhM2Q3NCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNzBhYjZlYzBhNGU1OThmMTI0MzA3MTA1ZjM0NWM3ODc1MTRiMDgyMGMyM2Q5M2RkNTk0M2VmOGM4N2E1NWIwNSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMmJjMDU3ZjUxOWEyNzdmMDY2NDZjM2U0N2U2Y2I1Yzk4MGQ2OWI1MTZiODEwODQzNWJmMzY4MDlmNTM1ZGVjOCJ9"
         },
         {
-          "resource": "repo://src-tauri/capabilities/default.json#L34-L38",
+          "resource": "repo://src-tauri/capabilities/default.json#L35-L39",
           "version": "repo-lines-v1:sha256:7880407a6afb7788c4f0c948e4eddd0d221afe448568ae7977d6478b9bf42eb0:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWM1MGM5NTRiNzlhZGZkZDk0NDhjZjBhY2JjMDY4YTU4MzJhOTAyMjQ3ZTkxNTgxOTE3NmI4ZjY3MGM5YTI2NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjRjODZjMmQzYWJjMzUwMzg4OTI5NjU2ZDllYWE0MWRjZmZkNzg4NDlkZDExZTc1MDMxZDE4NDg0YzY4N2RiMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTFiY2I1NzdiMDZmYjY1OWM2YWJkYzQ2NjMzNTk3YTBlODc1OGRlYjgzYmM3MWI5OTkyY2ZkYTEzNjBjNjc1YyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTcwYzkxMzU4NGZjZmJlZjgxNzM4ZDNkNDk2ZjExMDY1YmU2ZmZkYjQ3M2FiYmNhMDY4ZjA5YzZmOTdmNWQwNSJ9"
         },
         {
-          "resource": "repo://src-tauri/src/main.rs#L138-L142",
+          "resource": "repo://src-tauri/src/main.rs#L139-L143",
           "version": "repo-lines-v1:sha256:2476aff4d828203c66e841e7605fe8127b44cb8fb43d07c1ac1f61acc380eee0:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMTJlMWQ4MjY2NGVhZGU0YmQwN2I2ZTdmZmQ1NTc4YTVhMWFmYzQ4MGFhNjAzNTU0ZjBhZjExMTVkYzE1ZTExNiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiODJjYjFjZWZlNjNkMTRjYjJhM2E4YzE5MzQwNWM5MWYxMjY0NjZjMWVjYzJiZTJmZDUzMTFiOGJkOTdkYWQ0MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMmI0ZmQ0NDlmOWUwNzQzMTVlYzU0Yzg0MDE4NmZhYjM2MjI3Y2IwNzQ3NmE4MWMzNGRhYmU1OTg2ODU0NWU2ZSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTMyZDdlZDFiNWVlNzYyOWIwMmE3NmU2OGZmNGU3ZDYwNzY1ODBlNzA5NGQwNDZjZTY3ODlmZmFlNWM5YjJiYiJ9"
         },
         {
-          "resource": "repo://src-tauri/src/pdf.rs#L354-L373",
+          "resource": "repo://src-tauri/src/pdf.rs#L404-L423",
           "version": "repo-lines-v1:sha256:b54850b33340a1f52c0fde737d1cc8d41c1faa255f4f635d8cdfd03f90fc368b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJjNjU5YWIyYjI2MjcxMzBhOWY4Y2FmYTkzNzQ3YTg3NmY3MzQwMTE1OTU3MjlmNGY0NTM3MzU2NzNlYTFhZDMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwOGI1N2RhN2Q4MjU3OGYxNjQ4OTZlZTZkMmJmYzczYjE4OTg5OTE4ZjkwZjkxYmRmZTgyN2U1NWY5MTMyMjYifQ"
         }
       ]
@@ -291,14 +291,32 @@
       "statement": "The text/binary export dialogs in pdf.rs accept only a fixed extension allowlist (txt, jsonld, ttl, graphml, csv, svg, png, pdf); any other extension is rejected.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/pdf.rs#L288-L296",
-          "version": "repo-lines-v1:sha256:57e70e443e99c9d803814fc4ea8a9a3bc6a4d64db97443483a92ddade03842e2:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTc5YTNhZmMzZDQzOTA0ZmMyZDI1OGJiNzk1MGRiYmQ4YmY5NzRmNTJjMmNkYThjZDI0NzcxNzQ0ZjRkMjlhMiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMDFiYTQ3MTljODBiNmZlOTExYjA5MWE3YzA1MTI0YjY0ZWVlY2U5NjRlMDljMDU4ZWY4Zjk4MDVkYWNhNTQ2YiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZTk2ZjhjYjA4M2ZhODAwYTRkY2QyOTY5NzIyZDdiOTI2ODZhZGQ5ZWJlMzY1NTQ5MmZhNjcyYjFhN2NlZDI0MiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNjM0ZGY5Yjg5ZTA3NzljMzNhOWJiNjgxNWU3MDExMGZjMGQ3ZmI3OWEyNTk2OGRiZjc2ZDdkYjljZmZhYzhhNyJ9"
+          "resource": "repo://src-tauri/src/pdf.rs#L337-L345",
+          "version": "repo-lines-v1:sha256:ff7e02d09eea79445531a2158bbee45bee7b88cabb5a2909887fcb65d88007c5:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMjczMjQyMTMwZDYzNzk3NmQwOTMzYzdkM2RhMWIzYzUzZGQ5MThlNTA4NTRiMjdhYmFmMWFmMzI3MDY2N2Y5NiIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiOGE1YzRkZDk1YjZiY2JhZWNhOTQ0ZTA1ZjQyNWQ1MGViNzI2ZWJiMDg4MzIxZGVkZDhkMTE5MjQwY2ZjZWQ2MCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiNzU1YmQxNjU5ZTFhYWVhMmJlNDBkNjlhN2UwNmUzZTNhMGQzOWU1MDU4MDIzYmNmNGJjMGUyZjdhYjIwZTFhZiJ9"
+        }
+      ]
+    },
+    {
+      "id": "claim_9336ddd570dd454397401d02e4937615",
+      "statement": "pdf_system_font(index) in pdf.rs returns the bytes of the index-th readable font from a fixed per-OS candidate list (font_candidates) and an empty body past the end. It accepts no path from the renderer, so it cannot read arbitrary files, and it is registered in main.rs, in COMMANDS in build.rs and in capabilities/default.json.",
+      "evidence": [
+        {
+          "resource": "repo://src-tauri/build.rs",
+          "version": "repo-file-v1:sha256:af75e83f9bf74e20aaed25df9b0ef7484f2a78a3f3ccc2a17a9162ddb00a610d"
+        },
+        {
+          "resource": "repo://src-tauri/capabilities/default.json",
+          "version": "repo-file-v1:sha256:2abd73f712d769f2eaadc28d75b5039386a14d27bd3095d3aab9e6e92e4f68e2"
+        },
+        {
+          "resource": "repo://src-tauri/src/pdf.rs#L230-L276",
+          "version": "repo-lines-v1:sha256:6d3c2a9fce766f5557486187a258f4b0db27da088914e551999c9ce590257fe2:eyJzZWxlY3RlZExpbmVDb3VudCI6NDcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQyOGJlMWU1MTNmMmI4NjYzZWMwNzc3MTI2OWRmNDRjOWQ2MjIyY2I2ODY0Nzc1NTUxMjFlYmM5MDkyOTk5OWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImZlNjdhZjA1NzJmNTFhNDk0ZWI5OWM4OGVkNzI3NzcxODYyZTVjYTBkN2JhNTI0MDAzOWM0ZjlkYjJlYzczMGMiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjA3NTIwOTE1YTM3MTk2YzczMDkwMmJmZmE1MDhlMWM3OTg0ZTRjNjU4ODU3NjdmNWVjYjAyYjgyN2I1NDc1MzMifQ"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-08T19:43:29.846Z"
+    "at": "2026-11-09T14:02:19.724Z"
   }
 }

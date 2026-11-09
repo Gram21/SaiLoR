@@ -26,10 +26,10 @@ sources:
     resource: repo://src/platform/index.ts
   - id: openwiki-source-5e1b077422a94ae165e88e4e
     resource: repo://vite.config.ts
-generated: { by: "claude-code", at: "2026-11-07T12:13:58.722Z" }
+generated: { by: "claude-code", at: "2026-11-09T14:02:19.724Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-07T12:13:58.722Z
+    at: 2026-11-09T14:02:19.724Z
 ---
 
 # Online Demo and Project Site
@@ -76,7 +76,7 @@ contains them, and the file names must match `DEMO_PDF_FILES` in `src/demo/proje
   `_site/demo/`, and runs `scripts/check-site-links.js` on the result. It runs locally as `make ci-pages`;
   `npm run check:site` runs only the link check.
 - `.github/workflows/pages.yml` runs that script and deploys `_site` with the GitHub Actions Pages
-  actions. It triggers on pushes to `main` and `release/2.0.0` and on manual dispatch. A deployment in
+  actions. It triggers on pushes to `main` and on manual dispatch. A deployment in
   progress is never cancelled (`concurrency: pages`).
 - The Pages source must be set to GitHub Actions once in the repository settings, and the
   `github-pages` environment must allow the deploying branch.

@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:14f5e9f77cd5553bcc6e56fa78935af7907317f473d67fc7ddf7a91c6f78ac01",
+  "pageVersion": "sha256:2d5042737d901afbee882b2c2ab500b7b2833f66a8cce9dbda309f479405d9c0",
   "claims": [
     {
       "id": "claim_77c235236a4f499f9da38bd07202a799",
@@ -12,7 +12,7 @@
         },
         {
           "resource": "repo://src/platform/adapter.ts",
-          "version": "repo-file-v1:sha256:5377036bf0f2870106b0bbda752b23cf8699f814147bef97f80ea43811ae1e8a"
+          "version": "repo-file-v1:sha256:a123d29be65566ee1511049419dc2b9123d73fc2436a48043629972aeec8551d"
         }
       ]
     },
@@ -22,10 +22,10 @@
       "evidence": [
         {
           "resource": "repo://src-tauri/src/main.rs",
-          "version": "repo-file-v1:sha256:0f36514f58d53a9957db38d0d2ea642ca294acfc37390fdab554aa79bbf42315"
+          "version": "repo-file-v1:sha256:c36b42af5dbc75fc0bc05e4e93c3bbb37c95be75e893ace822d714ac48df8dde"
         },
         {
-          "resource": "repo://src/platform/bridge.ts#L206-L215",
+          "resource": "repo://src/platform/bridge.ts#L208-L217",
           "version": "repo-lines-v1:sha256:f30fa081c54c33b9bc8e14ff21b396a66bffe94567d82d93db75337af5766ece:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjM2ZjI5ZTUyYzViYTc3ZDcxOWQ0OGFkN2IyMGEwYzlkZDMzNWFmNjUyYWYwNGJmNzA4MmJlYTM4MWEzNjA0NDkiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
@@ -40,7 +40,7 @@
       "evidence": [
         {
           "resource": "repo://src/platform/adapter.ts",
-          "version": "repo-file-v1:sha256:5377036bf0f2870106b0bbda752b23cf8699f814147bef97f80ea43811ae1e8a"
+          "version": "repo-file-v1:sha256:a123d29be65566ee1511049419dc2b9123d73fc2436a48043629972aeec8551d"
         },
         {
           "resource": "repo://src/platform/index.ts#L9-L24",
@@ -86,7 +86,7 @@
         },
         {
           "resource": "repo://src/platform/desktop.ts",
-          "version": "repo-file-v1:sha256:1dc4cd4b412457275f2d60080121efa45ac518d23c7c22db93536978742d4ba3"
+          "version": "repo-file-v1:sha256:2c8df21fe647baab49f0cf0882e13a476bc10c6b6c5c2fd3754895d076ebcdfb"
         }
       ]
     },
@@ -236,7 +236,7 @@
         },
         {
           "resource": "repo://src/platform/desktop.ts",
-          "version": "repo-file-v1:sha256:1dc4cd4b412457275f2d60080121efa45ac518d23c7c22db93536978742d4ba3"
+          "version": "repo-file-v1:sha256:2c8df21fe647baab49f0cf0882e13a476bc10c6b6c5c2fd3754895d076ebcdfb"
         }
       ]
     },
@@ -256,7 +256,7 @@
       "evidence": [
         {
           "resource": "repo://src/platform/adapter.ts",
-          "version": "repo-file-v1:sha256:5377036bf0f2870106b0bbda752b23cf8699f814147bef97f80ea43811ae1e8a"
+          "version": "repo-file-v1:sha256:a123d29be65566ee1511049419dc2b9123d73fc2436a48043629972aeec8551d"
         },
         {
           "resource": "repo://src/platform/index.ts",
@@ -331,6 +331,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-07T12:13:58.722Z"
+    "at": "2026-11-09T14:02:19.724Z"
   }
 }

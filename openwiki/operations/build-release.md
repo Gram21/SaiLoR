@@ -43,10 +43,10 @@ sources:
     resource: repo://vite.config.ts
   - id: openwiki-source-742c2ed7fe09ab88b9fb143a
     resource: repo://vite.probe.config.ts
-generated: { by: "claude-code", at: "2026-11-07T10:50:01.257Z" }
+generated: { by: "claude-code", at: "2026-11-09T14:02:19.724Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-08T19:43:29.846Z
+    at: 2026-11-09T14:02:19.724Z
 ---
 
 
@@ -152,8 +152,11 @@ Installers land in `src-tauri/target/release/bundle/` (`bundle/dmg`,
 
 One workflow for everything that checks code; release and report workflows
 stay separate. Triggers: push to `main` and to `release/**`, every pull
-request, and `workflow_dispatch` — all with `paths-ignore: technical-report/**`
-(report-only changes don't rebuild the app). There is deliberately no
+request, and `workflow_dispatch` — all with a `paths-ignore` list (`technical-report/**`, `openwiki/**`,
+`user-guide/**`, `docs/screenshots/**`, `docs/building.md`, `README.md`), so
+report and documentation changes don't rebuild the app. The light
+`.github/workflows/docs-links.yml` workflow checks the wiki and user-guide
+links for those documentation-only changes. There is deliberately no
 push-on-every-branch trigger: a branch with an open PR would build twice per
 push. A `concurrency` group on `${{ github.workflow }}-${{ github.ref }}` with
 `cancel-in-progress: true` keeps only the newest commit per ref.
@@ -298,8 +301,7 @@ The container's `CMD` can be overridden for other tasks
 ## Pages workflow: `.github/workflows/pages.yml`
 
 Publishes the project website (`site/`) and the online demo under `/demo/` to
-GitHub Pages. It runs on a push to `main` (and on `release/2.0.0` while that
-branch is in flight) and on `workflow_dispatch`. A `concurrency` group named
+GitHub Pages. It runs on a push to `main` and on `workflow_dispatch`. A `concurrency` group named
 `pages` never cancels a deployment in progress. The `build` job runs
 `npm ci` and `scripts/ci/pages.sh`, which runs `npm run build:demo`, copies
 `site/` and `dist-demo/` into `_site/` and checks the links with
@@ -311,9 +313,9 @@ locally.
 
 `.github/workflows/technical-report.yml` builds the PDF (`technical-report/`,
 an `IEEEtran` conference-mode LaTeX report described in
-[technical-report/README.md](../../technical-report/README.md)) on pushes and
-PRs touching `technical-report/**`, `user-guide/screenshots/**`, or the
-workflow itself, plus `workflow_dispatch`. It runs `xu-cheng/latex-action@v3`
+[technical-report/README.md](../../technical-report/README.md)) on pushes to
+`main` and on PRs touching `technical-report/**`, `user-guide/screenshots/**`, or the
+workflow itself, plus `workflow_dispatch`. It runs `xu-cheng/latex-action@v4.1.0`
 with `latexmk`/pdflatex (`-jobname=SaiLoR-technical-report`) on `main.tex` and
 uploads `SaiLoR-technical-report.pdf` as an artifact. Because CI ignores
 `technical-report/**`, this is the only CI that reacts to report edits; `make

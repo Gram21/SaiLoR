@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c5937c18ddba0e139dee760345f68c60d12dc115a318cbb27b901fd779055929",
+  "pageVersion": "sha256:cf5a4a5190444b724900a9b84731aa759081e33d57581fe18ace54368b2dbd48",
   "claims": [
     {
       "id": "claim_b410c03b2c5e4183ab4744569122404e",
@@ -206,7 +206,7 @@
         },
         {
           "resource": "repo://src/platform/tauri.ts",
-          "version": "repo-file-v1:sha256:6e968f505094c7c4a3f10fd135d34f4dd06f4ca6ef99a39b4bf197eeb7f79518"
+          "version": "repo-file-v1:sha256:3959a69c7b4bd7f367ed10de5727d21c717f9dff8f530603ea9ec28ff332487d"
         }
       ]
     },
@@ -320,7 +320,7 @@
       "evidence": [
         {
           "resource": "repo://src-tauri/src/pdf.rs",
-          "version": "repo-file-v1:sha256:bd49f745e3acec6793a21f636218e89ef60af656230503a811ce774678d60690"
+          "version": "repo-file-v1:sha256:baa8f2b11160a9762a72bc60c5423bab6e842059402630b7ead5d19c0464bb95"
         },
         {
           "resource": "repo://src/components/ExportPdfDialog.tsx",
@@ -328,7 +328,7 @@
         },
         {
           "resource": "repo://src/platform/tauri.ts",
-          "version": "repo-file-v1:sha256:6e968f505094c7c4a3f10fd135d34f4dd06f4ca6ef99a39b4bf197eeb7f79518"
+          "version": "repo-file-v1:sha256:3959a69c7b4bd7f367ed10de5727d21c717f9dff8f530603ea9ec28ff332487d"
         }
       ]
     },
@@ -338,7 +338,7 @@
       "evidence": [
         {
           "resource": "repo://src-tauri/src/pdf.rs",
-          "version": "repo-file-v1:sha256:bd49f745e3acec6793a21f636218e89ef60af656230503a811ce774678d60690"
+          "version": "repo-file-v1:sha256:baa8f2b11160a9762a72bc60c5423bab6e842059402630b7ead5d19c0464bb95"
         }
       ]
     },
@@ -370,7 +370,7 @@
       "evidence": [
         {
           "resource": "repo://src-tauri/src/pdf.rs",
-          "version": "repo-file-v1:sha256:bd49f745e3acec6793a21f636218e89ef60af656230503a811ce774678d60690"
+          "version": "repo-file-v1:sha256:baa8f2b11160a9762a72bc60c5423bab6e842059402630b7ead5d19c0464bb95"
         }
       ]
     },
@@ -411,12 +411,12 @@
       "statement": "text_pick_export_path accepts the file types txt, jsonld, ttl, graphml, csv, svg, png and pdf, and the returned path becomes writable for the session, so text_write and export_write_bytes (graph exports, image download and diagram export) write only to dialog-chosen paths.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/pdf.rs#L284-L306",
-          "version": "repo-lines-v1:sha256:186268000bc1f8e816c65cc5b9e932305a701a8437b830e2904475421e12b87c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijg5NGM4YzQ2MzMwNGE0NjY0M2I5ZGFhZDQzNDg2OTg4MWFjNzExMzU4MGQxMTMyMDEzZDJkMzcxNzcyNTE1MjUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5ZjY5NGJjZjdiMGI4OWJhMDYyYmRjNjMyYTgyNDRlMDA3Yjg2ZjA1OTZjOGJlZmU2YTVkYTFmZWEwMzc0NzgiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ5MmY2ZjY3MzAyNGE5YWRiNGU4ZjgwYjE4MjZmZTM5YzAzNzliYjc4NjJjYTc5MDBkZmNiYzAxZmFmYzVhMmIiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImI1NjQ1OWZhMzNmZWE5YmQwMzUyMDQzZTM4MTQxNjkzYzI1ZjRjNmI2YWI3ZWFhZWJiZDlkZDU3YzBjMzA0ZjYifQ"
+          "resource": "repo://src-tauri/src/pdf.rs#L337-L363",
+          "version": "repo-lines-v1:sha256:ac5a96fa6cf767356ea1429d0bb93e838429f95397945843d9e5b2fba2921ff0:eyJzZWxlY3RlZExpbmVDb3VudCI6MjcsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI3MzI0MjEzMGQ2Mzc5NzZkMDkzM2M3ZDNkYTFiM2M1M2RkOTE4ZTUwODU0YjI3YWJhZjFhZjMyNzA2NjdmOTYiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjhhNWM0ZGQ5NWI2YmNiYWVjYTk0NGUwNWY0MjVkNTBlYjcyNmViYjA4ODMyMWRlZGQ4ZDExOTI0MGNmY2VkNjAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIyMDgxYmM0YWI5NTM1MTk4MzQ3NmRlMTg0OGU4YWQ4YTkwMmZmNjc1MTQ2ODAxZjhhMjYxNDhlMWJiMmIwNTAifQ"
         },
         {
-          "resource": "repo://src-tauri/src/pdf.rs#L326-L373",
-          "version": "repo-lines-v1:sha256:d402af8150ed5a728987ab0f2d670f1123c55120935542baa3f2f2c801c0a2c0:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjgxZmZhMGIwOWUxN2E0ODdiOWZhNjA5NDRkYWNhNzNlMzY2OTdmNjkwMDBjZjA3ZjQ2N2Y0YTZiMjYyYmEyYjIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImNkMjMzMjFmMTllNzY3ODM1ZjY3NmIxZGEyZjVmYTBjZDg5MzkwYWJjZmJkM2VmMGQxNGQzZmMzYTc2M2JhMTAiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImQwOGI1N2RhN2Q4MjU3OGYxNjQ4OTZlZTZkMmJmYzczYjE4OTg5OTE4ZjkwZjkxYmRmZTgyN2U1NWY5MTMyMjYifQ"
+          "resource": "repo://src-tauri/src/pdf.rs#L379-L426",
+          "version": "repo-lines-v1:sha256:49d38f534c5fed691170f48d4644e1ff4a969af91c366565c438cd52996c7212:eyJzZWxlY3RlZExpbmVDb3VudCI6NDgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBlMTgxZWMyZmJiZjM5OTZhN2ZmNjRhNTFlMmZmMTM1MmY5NzEwZTA1ODQ4Y2E1MmI1OTQ2NTY5MmVlNTg1MDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6ImQwZmNhY2VhODM2MjE3N2EyNjJkYTk5NjFhMDJiNjVmYjdhYzk1ODY4NDBjNTczNzg3NDIyYzhmOWRiMmM5ZDMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjFjYTE5YjNkZmIwMzg5ZWE0ZWVmYWU1NmU2NTY0MmZlYzE3M2I5NDgyYTgwZjM2OGM2ZGM5ODk0ZWNjMzBhNzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImRjODgzOTgyZDA4NDg4MWFkZDkyMjU4ZWQxNTY1MzYyMmVkZmI4YTYyZmIzZjYwYzBiOTY5NDEzMWZiZDA3YjQifQ"
         }
       ]
     },
@@ -433,6 +433,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-09T08:42:42.469Z"
+    "at": "2026-11-09T14:02:19.724Z"
   }
 }

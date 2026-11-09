@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:a452fd8ae01b8c5b4be06622eecfa8a5a87ff79b183e2e7661a9a84da4b4cddf",
+  "pageVersion": "sha256:2ba05f09d5b67060537badc413018a1ec2c2724f62b3b83f154e1fe293421b31",
   "claims": [
     {
       "id": "claim_963822971b6d42aaad66333527580c8a",
@@ -164,7 +164,7 @@
       "evidence": [
         {
           "resource": "repo://.github/workflows/ci.yml",
-          "version": "repo-file-v1:sha256:5ed86be023270e9850b5de3c7e98444a201f8d645fc8050120e6a474e79c585f"
+          "version": "repo-file-v1:sha256:a904e0b455a510cd45cb882a47827d7e52d7c9e57b83dead8df2d14638324995"
         }
       ]
     },
@@ -292,7 +292,7 @@
       "evidence": [
         {
           "resource": "repo://src/platform/adapter.ts",
-          "version": "repo-file-v1:sha256:5377036bf0f2870106b0bbda752b23cf8699f814147bef97f80ea43811ae1e8a"
+          "version": "repo-file-v1:sha256:a123d29be65566ee1511049419dc2b9123d73fc2436a48043629972aeec8551d"
         },
         {
           "resource": "repo://src/platform/index.ts",
@@ -310,7 +310,7 @@
         },
         {
           "resource": "repo://package.json",
-          "version": "repo-file-v1:sha256:c9bd3f7faa5a295c14c074b19427809e6523971d30999ab0ec5f8cadfc421e74"
+          "version": "repo-file-v1:sha256:bd283c484937e0f6570f24f755e80b2bf54fa65402a941c154f1a10c911c6647"
         },
         {
           "resource": "repo://vite.config.ts",
@@ -364,7 +364,7 @@
       "evidence": [
         {
           "resource": "repo://.github/workflows/ci.yml",
-          "version": "repo-file-v1:sha256:5ed86be023270e9850b5de3c7e98444a201f8d645fc8050120e6a474e79c585f"
+          "version": "repo-file-v1:sha256:a904e0b455a510cd45cb882a47827d7e52d7c9e57b83dead8df2d14638324995"
         },
         {
           "resource": "repo://Makefile",
@@ -432,7 +432,7 @@
       "evidence": [
         {
           "resource": "repo://.github/workflows/ci.yml",
-          "version": "repo-file-v1:sha256:5ed86be023270e9850b5de3c7e98444a201f8d645fc8050120e6a474e79c585f"
+          "version": "repo-file-v1:sha256:a904e0b455a510cd45cb882a47827d7e52d7c9e57b83dead8df2d14638324995"
         },
         {
           "resource": "repo://e2e/probe.test.mjs",
@@ -532,7 +532,7 @@
       "evidence": [
         {
           "resource": "repo://package.json",
-          "version": "repo-file-v1:sha256:c9bd3f7faa5a295c14c074b19427809e6523971d30999ab0ec5f8cadfc421e74"
+          "version": "repo-file-v1:sha256:bd283c484937e0f6570f24f755e80b2bf54fa65402a941c154f1a10c911c6647"
         },
         {
           "resource": "repo://vitest.mutation.config.ts",
@@ -546,23 +546,37 @@
       "evidence": [
         {
           "resource": "repo://src/model/diagram.test.ts",
-          "version": "repo-file-v1:sha256:51891c89ebb1e9e96aab3293989fcafb92fb8f176679980788f24d2c16ce86f2"
+          "version": "repo-file-v1:sha256:10971fddc79fc480a71d74273e7676a0f31facb0a82a24fb6cb9fce4a9390a1a"
         }
       ]
     },
     {
       "id": "claim_da26498eb8df44558ac7ff860626ecf2",
-      "statement": "Vector PDF output is regression-tested by checking that the xref offsets point at the objects, that rotated text and transparency are emitted, and that non-Latin text falls back to null.",
+      "statement": "Vector PDF output is regression-tested by checking that the xref offsets point at the objects, that rotated text and transparency are emitted, that the built-in normal and bold faces set the same WinAnsi characters, and that text outside WinAnsi is set in an embedded font as glyph ids with a ToUnicode map, or drawn as ? and counted when no font is given.",
       "evidence": [
         {
           "resource": "repo://src/model/vectorPdf.test.ts",
-          "version": "repo-file-v1:sha256:3c81c4ebeebe8e5752b1b42774fcf31f03be8ef034f04f991a2da92cf2339283"
+          "version": "repo-file-v1:sha256:fa09320b71767951ad7a02248bda48620c62d7125cb5e24a88c00fbe001ec78c"
+        }
+      ]
+    },
+    {
+      "id": "claim_64da077da60542668da5bd311af40acd",
+      "statement": "The TrueType parser and subsetter used for the diagram PDF are tested on a small hand-built font fixture: cmap lookup through format 4 and 12, metrics, refusal of fonts that are damaged, CFF or licensed against embedding, and subsetting that keeps used glyphs and their composite components while emptying the rest.",
+      "evidence": [
+        {
+          "resource": "repo://src/model/ttf.fixture.ts",
+          "version": "repo-file-v1:sha256:a97fecba2735c42f4ac0a1ec2808d0df0723292f595612cef85d52bc6a9c0ff1"
+        },
+        {
+          "resource": "repo://src/model/ttf.test.ts",
+          "version": "repo-file-v1:sha256:bb8f0776b3d149267b92c93dfcc44e8ca565118f9d67ae7d775ebf8bde6d338e"
         }
       ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-09T08:29:20.744Z"
+    "at": "2026-11-09T14:02:19.724Z"
   }
 }

@@ -1,13 +1,13 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:867b25a020e79bed7b9c2629860742c76ce685b1ddd7125fc972c0d90792435e",
+  "pageVersion": "sha256:af5d064c948289c3388ce2a14b74c30b58d3c83139d531654c36b3837e5fdee0",
   "claims": [
     {
       "id": "claim_adf2e008395d4d31988bab0c9c8d45f7",
       "statement": "DiagramView runs diagram work in a Web Worker, falling back to the same diagramHost inline when Worker is undefined (jsdom).",
       "evidence": [
         {
-          "resource": "repo://src/components/DiagramView.tsx#L66-L78",
+          "resource": "repo://src/components/DiagramView.tsx#L69-L81",
           "version": "repo-lines-v1:sha256:ce36407c2d1b44982eb23ebdd694acf5d642cdbd4cd7cdecd9e60d406abae4ed:eyJzZWxlY3RlZExpbmVDb3VudCI6MTMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5NjZmYmZhODg5OThkYTc0NjU2YzUwMTk0OTU2YzI1ZjA4NDk0NTc2NjBjMDA5ZmU2M2QxZTlmYTlkYzkzMWMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE0ODllYTg2MGZhYjg1YWYzODNmNDE4MzQzMjQ0ZjE3ODMwZTI2ZjBmOTY1NzVlNzEwYjdjMTliNjgzN2QwNDYiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImQ1MmJhNDYyNmMyNWEwOTgzZGFmMzYyOWIzZDk0YTAyMWI0NWUxZTc2YTQ3NWRlYTVjZDJmYTdlOWJlOTI1N2QiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjIxZmIzNWMxZTBkYTk5MThlZjlhOTJlMzI0M2UzZWQ4NzEwMTFhNDI5ZTJjMjZhNDliZDJiODgwYzExZTI4ZmQifQ"
         },
         {
@@ -31,11 +31,11 @@
       "statement": "Render requests are debounced by 120 ms and carry an increasing id; replies with a stale id are ignored.",
       "evidence": [
         {
-          "resource": "repo://src/components/DiagramView.tsx#L66-L68",
+          "resource": "repo://src/components/DiagramView.tsx#L69-L71",
           "version": "repo-lines-v1:sha256:115b59cb9eebbd3047115b137508d0e59701f07e284889ba2c8c87facb343f7c:eyJzZWxlY3RlZExpbmVDb3VudCI6MywiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTk2NmZiZmE4ODk5OGRhNzQ2NTZjNTAxOTQ5NTZjMjVmMDg0OTQ1NzY2MGMwMDlmZTYzZDFlOWZhOWRjOTMxYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiOGEwNDM1MmY1ZDVmYjhiNDg3ZjZhOGQ3YWU3YzU1NjU5ZGQ2NGY1MzYzNGRjNTNjNmQ5YjljZjNjNjk2ZWU2OCIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiZDUyYmE0NjI2YzI1YTA5ODNkYWYzNjI5YjNkOTRhMDIxYjQ1ZTFlNzZhNDc1ZGVhNWNkMmZhN2U5YmU5MjU3ZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjg2MGM1NTM5ODQxMTc4MjdjMTZiYzMzYTM5ZDhjZDhjYmNlOGRmNDAyNzM1ZGVlNjlhYTk4NDQyN2FjNTIzZCJ9"
         },
         {
-          "resource": "repo://src/components/DiagramView.tsx#L91-L95",
+          "resource": "repo://src/components/DiagramView.tsx#L94-L98",
           "version": "repo-lines-v1:sha256:d2b3d21206488fc5a302e7edbb59250f0e55dcdf5a0623263d116ee1482f9b18:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNTk2NmZiZmE4ODk5OGRhNzQ2NTZjNTAxOTQ5NTZjMjVmMDg0OTQ1NzY2MGMwMDlmZTYzZDFlOWZhOWRjOTMxYyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiYWU3Y2ZhYWFhNGRlZDA3NWE3NDg3NmRhMTRjZDZmMDIyNTQ2MzcyNjhhZDIxNzIwMDFjNTE3YzEyNjEzNjhjMiIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNjM3MDZmOWFjMWE3MTQ5Zjc4MmI4ZmU4MTQ4Zjg0MDcyMGEzMThjNDFhMGNkNzdkMjQ2OGQzYmM1ZTU3ODEyMCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTA2YzNkNWQ3MjlhOWJiZTMwODc2ZmM2YmEwNjEyM2ZiZDFiOWNhODcyMmY2NjVjMzE2MWJhZDRkZjhmYzEwYiJ9"
         }
       ]
@@ -66,7 +66,7 @@
       "evidence": [
         {
           "resource": "repo://src/model/diagram.test.ts",
-          "version": "repo-file-v1:sha256:51891c89ebb1e9e96aab3293989fcafb92fb8f176679980788f24d2c16ce86f2"
+          "version": "repo-file-v1:sha256:10971fddc79fc480a71d74273e7676a0f31facb0a82a24fb6cb9fce4a9390a1a"
         },
         {
           "resource": "repo://src/model/diagramSvg.ts#L18-L21",
@@ -76,19 +76,19 @@
     },
     {
       "id": "claim_5f2c3dbd5b2a43bdaa3f3a33973e82f6",
-      "statement": "PDF export first tries svgToVectorPdf, which writes vector shapes and Helvetica text and returns null if a character is outside WinAnsi; then a canvas-rasterised one-page PDF built by imagePdf is the fallback. Both share pdfDocument.",
+      "statement": "PDF export is vector only: svgToPdf calls svgToVectorPdf, which writes shapes and text with the built-in Helvetica and Helvetica-Bold faces (WinAnsi). There is no raster PDF fallback; imagePdf.ts only provides the shared pdfDocument writer.",
       "evidence": [
         {
-          "resource": "repo://src/components/diagramExport.ts",
-          "version": "repo-file-v1:sha256:41a8375a3ce76522b877f6f9a86b7095c27dc52cb6eed2e9e794a6b44a4db765"
+          "resource": "repo://src/components/diagramExport.ts#L70-L78",
+          "version": "repo-lines-v1:sha256:289d9f50783a2193053ca4a874846c7fe2ae40aa01de357de4db478644cb1d8d:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmRiM2FiYWQyM2IxMGVhOTgwNDUyZjA2MjNlNDhmNjgwY2RiODNiZGU3ZWI4N2NiOGQ1ZjcyZjM1Y2MzYTk2MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDE3ZDQ5OTU5NjBmZTc4ZDlhOWFmNTM1NzU3NmRiMzQwNzc0MGI4NDQwMWE3ZTY2ZGZiMWNiNjFiMDg1NDFmOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
         },
         {
           "resource": "repo://src/model/imagePdf.ts",
-          "version": "repo-file-v1:sha256:2b3526efc29a7921a15f49c88e768a8843311da950944a265f81a78b3c905528"
+          "version": "repo-file-v1:sha256:6c817e4fa7d0defbdac2b2d48058bb72c9971e436f89661a8731c79137444560"
         },
         {
           "resource": "repo://src/model/vectorPdf.ts",
-          "version": "repo-file-v1:sha256:26d874137c8126ecc7f2fb2902b9fdb5caa5402f05be7491f35f03219c17c88b"
+          "version": "repo-file-v1:sha256:740f58a6b521ad401f6d0ff36cc53d9c6ec12a446c1c7eb2432204ecf441fbcd"
         }
       ]
     },
@@ -111,10 +111,60 @@
           "version": "repo-file-v1:sha256:4ccb6c2260eae3d41465ba736da8491266018d1466c75b72512258ad00e51899"
         }
       ]
+    },
+    {
+      "id": "claim_ee044befe9234005a4d9dbaf325db19e",
+      "statement": "When a diagram holds characters outside WinAnsi, DiagramView lists them with nonWinAnsiChars, searches installed fonts with findPdfFont through platform.readSystemFont, and always asks through PdfFontDialog. If a covering TrueType font exists, the user can embed it or save SVG. Otherwise only SVG is offered, with the reason: shaping scripts, no readable font, or no font covering all characters.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/DiagramView.tsx#L118-L140",
+          "version": "repo-lines-v1:sha256:78f7bd16689c204dc39dfc75556cfb7fd21ee51d9d126600573446e932891fa7:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjExZGY4N2E0NzMxNmM3MDhjNTUwMjA5OGU5YWY2YzQ0NTM0ZWI4MGJlYWRjZjYwNjMwMjhlZmNhODU5MzdhYmUiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxYjlhNjZmNWU0MDliYmVkZDFjY2Q1ZDdjNDA3YzIyNjU5NDNjZjAwNWY2ZDhlZTdhZjdiMTlkMjVmNjc4YWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjA3MDljOGY0YjJjZDBiMTNhYzNhNWRkYTlkM2YwZGZmNzFlYTgyYTMwMTgzZjAwOWFhMTNiN2JjMjE3MDFkOGYiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjhlYjYyMWI5MTIxMWE0YzJlOTE0NzM2Y2JjYmViZDc3NGI5NTRmNzA0ODdiN2YwYjU0YTZiNTJkOWVlZTgyYzgifQ"
+        },
+        {
+          "resource": "repo://src/components/PdfFontDialog.tsx",
+          "version": "repo-file-v1:sha256:8a0940bac5c99b7b1c92a8256d8d4d70eb402279f4cd7e3766bc2a3041725f91"
+        },
+        {
+          "resource": "repo://src/components/diagramExport.ts#L41-L63",
+          "version": "repo-lines-v1:sha256:cbd2bb391145ed2f5871c7f2e3fcbafc4bc1e572a588bc3b5bddfd4f5562dd86:eyJzZWxlY3RlZExpbmVDb3VudCI6MjMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImRlN2FjZjY1OTAyYWM4YzFjYzY2MzhjZGY3YjRhN2E4ZDU5ODNhODQzOWUwN2VlN2ZjYzYxMjE3OTdjNWRmMDMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJmNGEzZDNiOTJjMmM0YTQ2MWFjM2VkODZjY2UwMjNlNzc4ODMyMjEyMjFmMzI4YWE5ZDQ2YjQ5MDU5Y2JmZjciLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImJlMjM1NjliOTRiNDFhNzMyOWE0ZTdkNGZkZGY5MzE3NWRhMWQzNDVjZGZjZmUyMmI2ODE1ZWZiYjBhNGQxYWIifQ"
+        }
+      ]
+    },
+    {
+      "id": "claim_a2a3d97d4b954ab19ba98bcf102278a5",
+      "statement": "An embedded PDF font is a glyph subset: svgToPdf runs a probe pass to collect the used glyph ids, subsetTrueType keeps those glyphs and their composite components (other glyphs get empty outlines, glyph ids stay the same), the subset is deflated, and a second pass writes a Type0 Identity-H font with a ToUnicode CMap so text stays copyable and searchable. If the font cannot be subset, the whole font is embedded.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/diagramExport.ts#L70-L78",
+          "version": "repo-lines-v1:sha256:289d9f50783a2193053ca4a874846c7fe2ae40aa01de357de4db478644cb1d8d:eyJzZWxlY3RlZExpbmVDb3VudCI6OSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiNmRiM2FiYWQyM2IxMGVhOTgwNDUyZjA2MjNlNDhmNjgwY2RiODNiZGU3ZWI4N2NiOGQ1ZjcyZjM1Y2MzYTk2MyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDEyY2EzNDVjY2Y3NWJmOWMwODA2YmNlNjk1YmU4ZGU4MDhiNzk5ODQyNTFhN2E1NGQyMDJjZjYxMDFkZDQ1MSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMDE3ZDQ5OTU5NjBmZTc4ZDlhOWFmNTM1NzU3NmRiMzQwNzc0MGI4NDQwMWE3ZTY2ZGZiMWNiNjFiMDg1NDFmOSIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjAsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiZTNiMGM0NDI5OGZjMWMxNDlhZmJmNGM4OTk2ZmI5MjQyN2FlNDFlNDY0OWI5MzRjYTQ5NTk5MWI3ODUyYjg1NSJ9"
+        },
+        {
+          "resource": "repo://src/model/ttf.ts",
+          "version": "repo-file-v1:sha256:f21e4be415d760d4c04f339842c700b28c8e2f117d1865f1e2490a44377e2fbc"
+        },
+        {
+          "resource": "repo://src/model/vectorPdf.ts",
+          "version": "repo-file-v1:sha256:740f58a6b521ad401f6d0ff36cc53d9c6ec12a446c1c7eb2432204ecf441fbcd"
+        }
+      ]
+    },
+    {
+      "id": "claim_9d948d815b2b440b890dff420f53f849",
+      "statement": "parseTrueType refuses fonts whose fsType forbids embedding, CFF fonts and TTC collections, and characters of shaping scripts (Hebrew, Arabic, Indic and similar) are never embedded because a PDF cannot set them one glyph per character.",
+      "evidence": [
+        {
+          "resource": "repo://src/components/diagramExport.ts#L41-L42",
+          "version": "repo-lines-v1:sha256:557ea6bbb1d05c5bfe13d391a93e00b9536e9274b4a0083a6a07fa6893bcb645:eyJzZWxlY3RlZExpbmVDb3VudCI6MiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiZGU3YWNmNjU5MDJhYzhjMWNjNjYzOGNkZjdiNGE3YThkNTk4M2E4NDM5ZTA3ZWU3ZmNjNjEyMTc5N2M1ZGYwMyIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNDg4ZjM1ZjFlMDcxMDVkNDkyYjdmMjljOWQ0NjdiY2MxNDM5Mjc2ZDk4ZDI5MmVkNmExNzIxY2U5NjhkZTVjMSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiYmY0YTNkM2I5MmMyYzRhNDYxYWMzZWQ4NmNjZTAyM2U3Nzg4MzIyMTIyMWYzMjhhYTlkNDZiNDkwNTljYmZmNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYTRmMWJkZjE2NGQxMWQ0M2Q3ZDVhYTQ4NTM0NDI0ZGM2ZDUwZGM2ZDRkNmJlYzE0ZjdkMTAzMGEwNWEyYWNlOSJ9"
+        },
+        {
+          "resource": "repo://src/model/ttf.ts",
+          "version": "repo-file-v1:sha256:f21e4be415d760d4c04f339842c700b28c8e2f117d1865f1e2490a44377e2fbc"
+        }
+      ]
     }
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-09T08:29:20.744Z"
+    "at": "2026-11-09T14:02:19.724Z"
   }
 }

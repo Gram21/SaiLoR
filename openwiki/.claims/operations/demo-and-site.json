@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:c86ed5b409a53c5f076e46063dca801382a17c714c05da1d39c9cc29024e9fba",
+  "pageVersion": "sha256:87511d860149ecdb7973476cfaa05827b3acff023e2682c7f21dddac9ab9547d",
   "claims": [
     {
       "id": "claim_a799479f74b040edb4ff5b74a4e0afe3",
@@ -36,7 +36,7 @@
       "evidence": [
         {
           "resource": "repo://src/platform/demoAdapter.ts",
-          "version": "repo-file-v1:sha256:ef2fc7fed4d3ee536f68ea18b38a44590c387ce813d90f48e2d05e43b663bc08"
+          "version": "repo-file-v1:sha256:6a67cf013425e1a543afd51dadf97d70752b7f8443783e8aaf11e9db657753a3"
         },
         {
           "resource": "repo://src/platform/index.ts",
@@ -54,7 +54,7 @@
         },
         {
           "resource": "repo://src/platform/demoAdapter.ts",
-          "version": "repo-file-v1:sha256:ef2fc7fed4d3ee536f68ea18b38a44590c387ce813d90f48e2d05e43b663bc08"
+          "version": "repo-file-v1:sha256:6a67cf013425e1a543afd51dadf97d70752b7f8443783e8aaf11e9db657753a3"
         }
       ]
     },
@@ -95,8 +95,8 @@
           "version": "repo-lines-v1:sha256:4408ba28ddf1cd017b6ef636fcdb530897cbf14d8a9877b3f986da2d5d5f3ea3:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjAxYmE0NzE5YzgwYjZmZTkxMWIwOTFhN2MwNTEyNGI2NGVlZWNlOTY0ZTA5YzA1OGVmOGY5ODA1ZGFjYTU0NmIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg1MmUzOWRmNWJiYTBkMGMzNDVmMGExMjMyNzViNjYzNmE3NzhiOTE1ZDY3MjE3ZDViOTUyZmUwOTVlMWRjNjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
-          "resource": "repo://src/platform/demoAdapter.ts#L97-L101",
-          "version": "repo-lines-v1:sha256:78192ebdf12473e4380e5bf77b9bc05c68238c17322a832241a09a58f9234078:eyJzZWxlY3RlZExpbmVDb3VudCI6NSwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTdmNzg3NTJjYWExNmE1MWExMTZhOTJiNzU2MmE2ZDk1YTBlYWUxMjY5MzM3OTkwMzg5NWEwN2M3NDU0OTQ0NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzBhMTI4NmI0YzgxMjU2ZWI5NmVhOGIwNGEyMjkwMWYzNTlmNDI0NmM0YTczNzg2MzhhOGY0YzlkNTA5NDM5YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTg2MGVhNDJmMzJhMTg1M2M5NThmNGUwNTkyZDE2YjgwYTE3YWVmNmNjMzY0ZDRhNzVmY2VmNTU1ZTNjNzIxNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjY0MjA4YWE5NTE2ODAyOWJmMDE5N2IwOWVlZTc5YTc5NGYyNjk3YzZlNzNhZDY5ODJmNmRiNjU1NGYyZjNlYSJ9"
+          "resource": "repo://src/platform/demoAdapter.ts#L97-L102",
+          "version": "repo-lines-v1:sha256:e26a70ead8e4d2d2b3f8bf3fe4c19c1cfaca9eb4cfc99c43a764f74bdf175599:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTdmNzg3NTJjYWExNmE1MWExMTZhOTJiNzU2MmE2ZDk1YTBlYWUxMjY5MzM3OTkwMzg5NWEwN2M3NDU0OTQ0NSIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiMzBhMTI4NmI0YzgxMjU2ZWI5NmVhOGIwNGEyMjkwMWYzNTlmNDI0NmM0YTczNzg2MzhhOGY0YzlkNTA5NDM5YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiNTg2MGVhNDJmMzJhMTg1M2M5NThmNGUwNTkyZDE2YjgwYTE3YWVmNmNjMzY0ZDRhNzVmY2VmNTU1ZTNjNzIxNyIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiYjY0MjA4YWE5NTE2ODAyOWJmMDE5N2IwOWVlZTc5YTc5NGYyNjk3YzZlNzNhZDY5ODJmNmRiNjU1NGYyZjNlYSJ9"
         }
       ]
     },
@@ -106,10 +106,10 @@
       "evidence": [
         {
           "resource": "repo://CITATION.cff",
-          "version": "repo-file-v1:sha256:4160e7128a2add62df95163c61b7ba7d50327dfe3556b6c6fcc4fb48e2473d2d"
+          "version": "repo-file-v1:sha256:35d4c1abd254409a5e13b85f8238fa66dc457acdaf327999893d5f5dd9f00d7e"
         },
         {
-          "resource": "repo://site/index.html#L280-L303",
+          "resource": "repo://site/index.html#L290-L313",
           "version": "repo-lines-v1:sha256:e81645e001d01c0fef07c800683c186858cf7ae5faf5106f00ac359c4a65934e:eyJzZWxlY3RlZExpbmVDb3VudCI6MjQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjI2MWI5ZDY3Y2U0YmNhZWE2MmUwM2NkYjQxY2I0YjAxNDc3ZDE5NzgwNzAzZjIzZGUzOTE0YzI3MDVhOWU5MWEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjBmNjRiYzRlZGY2ZDQzYTIzNmFlODcwYjU0MTI1NGNmODc1ZWFhZGUxOTgyOGY3NjU4OWRkYjg2OTZjYTQ0MTUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhOGI4Yjg5ZmNlZWY2MmZjOWE4ZDc3NGM2YmE0NzU4Nzc3NTU1YmJkMDFmZmFlNzBhZDQ0NTBhZjQzM2FmZjEiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQ1NjgzMDhkMTBjY2JmMWUzZWY5M2UzMzA1YjU5NDQyYzg5NjA1YTIwYjNlNmU1NTJjMjQ4OTU3NTQ1NWY0M2EifQ"
         }
       ]
@@ -117,6 +117,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-07T12:13:58.722Z"
+    "at": "2026-11-09T14:02:19.724Z"
   }
 }

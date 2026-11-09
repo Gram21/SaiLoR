@@ -51,7 +51,7 @@ sources:
 generated: { by: "claude-code", at: "2026-11-09T08:42:42.469Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-09T08:42:42.469Z
+    at: 2026-11-09T14:02:19.724Z
 ---
 
 # PDF Viewer and Marks

@@ -54,10 +54,10 @@ sources:
     resource: repo://src/platform/desktop.ts
   - id: openwiki-source-6caeef66ec21bf4ae91fe55c
     resource: repo://src/platform/tauri.ts
-generated: { by: "claude-code", at: "2026-11-08T19:43:29.846Z" }
+generated: { by: "claude-code", at: "2026-11-09T14:02:19.724Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-08T19:43:29.846Z
+    at: 2026-11-09T14:02:19.724Z
 ---
 
 # Tauri Shell, IPC and Self-Update
@@ -134,6 +134,13 @@ only the extensions `txt`, `jsonld`, `ttl`, `graphml`, `csv`, `svg`, `png` and `
 refuses a symlink. It is listed in `main.rs`, in `COMMANDS` in `build.rs`, and in
 `capabilities/default.json`.
 
+**System font for the diagram PDF.** `pdf_system_font(index)` (`pdf.rs`) returns the bytes of the
+`index`-th readable font from a fixed per-OS list (`font_candidates()`: Arial Unicode and Arial on
+macOS; `arial.ttf`, `segoeui.ttf` and `ARIALUNI.TTF` under `%WINDIR%\Fonts` on Windows; DejaVu, Liberation and
+Noto paths on Linux). It reads no path the renderer names, and returns an empty body when the index
+is past the end. The renderer uses it to find a font for characters outside WinAnsi (see
+[diagrams](../workflows/diagrams.md)). The Windows and Linux lists are not tested on those systems.
+
 ## The command registry (`main.rs`)
 
 `main()`'s single `invoke_handler(tauri::generate_handler![...])` registers every command,
@@ -145,7 +152,7 @@ grouped by module. The registry is the authoritative list of what the renderer c
 | **project** | `project_open`, `project_open_path`, `project_read_papers`, `project_save`, `project_set_dir`, `project_pick_save_path`, `project_peek`, `project_screening_source`, `reference_pick` (`project.rs`) |
 | **annotations** | `project_annotations_dir_users`, `project_shared_annotations`, `project_move_annotations_dir`, `project_split_annotations` (`annotations.rs`) |
 | **feedback** | `project_write_feedback`, `project_list_feedback` (`feedback.rs`) |
-| **pdf / text** | `pdf_pick`, `pdf_pick_folder`, `pdf_read`, `pdf_check_path`, `pdf_scan_folder`, `pdf_allow_path`, `pdf_pick_export_path`, `pdf_embed_marks`, `text_pick_export_path`, `text_write`, `export_write_bytes` (`pdf.rs`) |
+| **pdf / text** | `pdf_pick`, `pdf_pick_folder`, `pdf_read`, `pdf_check_path`, `pdf_scan_folder`, `pdf_allow_path`, `pdf_pick_export_path`, `pdf_embed_marks`, `text_pick_export_path`, `text_write`, `export_write_bytes`, `pdf_system_font` (`pdf.rs`) |
 | **paths** | `paths_relative`, `paths_rebase`, `paths_absolute`, `paths_sibling` (`paths.rs` — Node-compatible `path` semantics) |
 | **webfetch** | `web_fetch`, `web_abort` (`webfetch.rs`) |
 | **llm** | `llm_configs`, `llm_save_config`, `llm_delete_config`, `llm_call`, `llm_abort` (`llm.rs`) |

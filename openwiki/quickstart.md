@@ -78,10 +78,10 @@ sources:
     resource: repo://vite.config.ts
   - id: openwiki-source-9b13c737ac155b0b0c8d76b9
     resource: repo://vitest.integration.config.ts
-generated: { by: "claude-code", at: "2026-11-08T19:43:29.846Z" }
+generated: { by: "claude-code", at: "2026-11-09T14:02:19.724Z" }
 verified:
   - by: openwiki/0.7.3
-    at: 2026-11-09T08:29:20.744Z
+    at: 2026-11-09T14:02:19.724Z
 ---
 
 # SaiLoR — Quickstart
@@ -348,7 +348,7 @@ Where to start for common change areas (wiki page → source entry points → ke
 | AI screening runs | [AI Screening](workflows/ai-screening.md) | `src/state/aiScreeningStore.ts`, `src/llm/screeningAi.ts`, `src/components/AiScreeningDialog.tsx` | `aiScreeningStore`, screening decision models | `src/state/aiScreeningStore.test.ts` | `npm test -- src/state/aiScreeningStore.test.ts` |
 | Project editor (schema tree + papers) | [Annotation Schema and Validation](concepts/annotation-schema.md) | `src/state/editorStore.ts`, `src/components/ProjectEditor.tsx` | `editorStore`, `buildProjectJson` | `src/state/editorStore.test.ts` (+ siblings) | `npm test -- src/state/editorStore.test.ts` |
 | Knowledge graph view and exports | [Knowledge Graph View](workflows/knowledge-graph.md) | `src/model/graph.ts`, `src/model/graphLayout.ts`, `src/model/graphQuery.ts`, `src/components/GraphView.tsx` | graph build, layout worker, depth and Cypher-subset queries, exports | `src/model/graph.test.ts`, `src/model/graphQuery.test.ts` | `npm test -- src/model/graph` |
-| Result view diagrams (bar, stacked, line, pie, heat map; SVG, PNG, PDF export) | [Result view diagrams](workflows/diagrams.md) | `src/model/diagram.ts`, `src/model/diagramSvg.ts`, `src/model/diagram.worker.ts`, `src/components/DiagramView.tsx`, `src/components/diagramExport.ts` | graph to counts, worker render, well-formed SVG, raster export | `src/model/diagram.test.ts`, `src/components/DiagramView.test.tsx` | `npm test -- src/model/diagram` |
+| Result view diagrams (bar, stacked, line, pie, heat map; SVG, PNG, PDF export) | [Result view diagrams](workflows/diagrams.md) | `src/model/diagram.ts`, `src/model/diagramSvg.ts`, `src/model/diagram.worker.ts`, `src/components/DiagramView.tsx`, `src/components/diagramExport.ts`, `src/model/vectorPdf.ts`, `src/model/ttf.ts` | graph to counts, worker render, well-formed SVG, vector PDF with an optional embedded subset font | `src/model/diagram.test.ts`, `src/model/vectorPdf.test.ts`, `src/model/ttf.test.ts`, `src/components/DiagramView.test.tsx` | `npm test -- src/model/diagram` |
 | Progressive loading of large projects | [Progressive Project Loading](concepts/progressive-loading.md) | `src/state/store.ts`, `src/platform/tauri.ts`, `src/platform/projectJobs.ts` | `loadState`, `projectGeneration`, batch retry, worker jobs | `src/state/progressiveLoad.test.ts` | `npm test -- src/state/progressiveLoad.test.ts` |
 | Online demo and project site | [Online Demo and Project Site](operations/demo-and-site.md) | `src/demo/`, `src/platform/demoAdapter.ts`, `site/`, `.github/workflows/pages.yml` | `DEMO_MODE`, `createDemoAdapter`, `npm run build:demo` | `src/demo/*.test.ts` | `npm test -- src/demo` |
 | Build / CI / release / packaging | [Build, CI, and Release](operations/build-release.md) | `Makefile`, `scripts/ci.sh`, `.github/workflows/release.yml`, `src-tauri/tauri.conf.json` | `make build`, `make docker-linux`, tauri bundle targets | — | `./scripts/ci.sh` |

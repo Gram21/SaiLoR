@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:95e632a96fb6775e7d4a920f31c652e4f084105851201ec5da21cf2e5430043a",
+  "pageVersion": "sha256:4c6f512ff5666948cf660e1a27c7807fa1914a7ccaeb0b718d7e541f73d12cf3",
   "claims": [
     {
       "id": "claim_d512433d8b114757b964025df55ab19f",
@@ -14,11 +14,11 @@
     },
     {
       "id": "claim_51fff641705d42c6874e4ee2297d91eb",
-      "statement": ".github/workflows/ci.yml runs scripts/ci.sh on ubuntu-latest (Node 24) on push to main and release/** and on every pull request, with paths-ignore technical-report/**; it deliberately adds no push-on-every-branch trigger (a PR branch would build twice) and uses concurrency group ${{ github.workflow }}-${{ github.ref }} with cancel-in-progress: true.",
+      "statement": "ci.yml is the single workflow for code checks. It runs on push to main and release/**, on every pull request and on workflow_dispatch. Push and pull_request both use a paths-ignore list (technical-report/**, openwiki/**, user-guide/**, docs/screenshots/**, docs/building.md, README.md) so documentation-only changes skip the app build, and a concurrency group with cancel-in-progress keeps only the newest commit per ref.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/ci.yml#L1-L33",
-          "version": "repo-lines-v1:sha256:19ef58c1c270e445a188cfd1b7f2ef6d853866e3caefdef4c7ffbe0d0b6f5089:eyJzZWxlY3RlZExpbmVDb3VudCI6MzMsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2ZTFiMzJmYTA5MDc5YWUyZjAwMDFmZmYwZWNhMjdiNDk4NTk1N2Q0ZWI0ODU3OTI5YjNjZjA1OGZhYWU1NDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlZTNjNjBkYjI1M2NiY2VhNzI0YWFkZDkxOGViOTQ2NjRmN2M2N2U3ODRmNzk2Zjc4NGNmMTAyMjA3ZDI2YmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEwZTBiNDE0MDQ0OGIxYWRiMTkzNTU5Y2RhNWNlNjVmNmNiZWE4NmUzYjc0OGRhNGMwMjI1YjQ4MDc4NTNkNjgifQ"
+          "resource": "repo://.github/workflows/ci.yml#L1-L34",
+          "version": "repo-lines-v1:sha256:9eb489a7ca1a8278c28bbc6e428e6062d3807eb5c8b721c1b7813a35e3e65e55:eyJzZWxlY3RlZExpbmVDb3VudCI6MzQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjA2ZTFiMzJmYTA5MDc5YWUyZjAwMDFmZmYwZWNhMjdiNDk4NTk1N2Q0ZWI0ODU3OTI5YjNjZjA1OGZhYWU1NDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjdlZTNjNjBkYjI1M2NiY2VhNzI0YWFkZDkxOGViOTQ2NjRmN2M2N2U3ODRmNzk2Zjc4NGNmMTAyMjA3ZDI2YmUiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImEwZTBiNDE0MDQ0OGIxYWRiMTkzNTU5Y2RhNWNlNjVmNmNiZWE4NmUzYjc0OGRhNGMwMjI1YjQ4MDc4NTNkNjgifQ"
         }
       ]
     },
@@ -28,7 +28,7 @@
       "evidence": [
         {
           "resource": "repo://package.json",
-          "version": "repo-file-v1:sha256:c9bd3f7faa5a295c14c074b19427809e6523971d30999ab0ec5f8cadfc421e74"
+          "version": "repo-file-v1:sha256:bd283c484937e0f6570f24f755e80b2bf54fa65402a941c154f1a10c911c6647"
         },
         {
           "resource": "repo://vite.config.ts#L50-L72",
@@ -94,7 +94,7 @@
       "evidence": [
         {
           "resource": "repo://.github/workflows/wiki-publish.yml#L1-L358",
-          "version": "repo-lines-v1:sha256:53d9ba994804c7a67374899f3b45e2bff7728765496a222c71536727fdedaed0:eyJzZWxlY3RlZExpbmVDb3VudCI6MzU4LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI2Y2IxNmRiNGUxNzUyODNlNWU5M2IwYmI2YmE2NDUzZDM1MDE5ZjEzMGFmOWEyYWM4YzdhMzlkMjA3YTEyMTM0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTEwYzY2OThhMjc3YmRjMjAxNWE5OGJmM2ZkNTkwNzM0YmRjMjhmZTZlMjUzODU4ZTQ5OThhYzFlYzc3MjkzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+          "version": "repo-lines-v1:sha256:954228319e3499a62e184bb63244f18f59dd733f0bbbf8b186215895b6f2b4fc:eyJzZWxlY3RlZExpbmVDb3VudCI6MzU4LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiI2Y2IxNmRiNGUxNzUyODNlNWU5M2IwYmI2YmE2NDUzZDM1MDE5ZjEzMGFmOWEyYWM4YzdhMzlkMjA3YTEyMTM0IiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTEwYzY2OThhMjc3YmRjMjAxNWE5OGJmM2ZkNTkwNzM0YmRjMjhmZTZlMjUzODU4ZTQ5OThhYzFlYzc3MjkzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -104,7 +104,7 @@
       "evidence": [
         {
           "resource": "repo://.github/workflows/wiki-import.yml#L1-L255",
-          "version": "repo-lines-v1:sha256:47994e8d87049d5c2d763e2f689666dc077d4719793aadc43fd075e9f462642c:eyJzZWxlY3RlZExpbmVDb3VudCI6MjU1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiZTcxODA3M2NiMDgwNTQ0NDI4YzQ0MzYwYjI0ZTUzZTgzZWE4NTYxM2U3OWU1ZDNlNzk0OTZiODYyMjUyMjlkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTdjNmI1ZmMxYTNmNTg5ZTZiNzEyZTJhYTkzZTk0MTIyMmRkZDQwNDUxNThkMDkxYzRiM2ViMWZjY2I5MDFmIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+          "version": "repo-lines-v1:sha256:60bb94f4c49016652b8985d0e3b124abfafe5220289148a7e754cc2beb0c6ae5:eyJzZWxlY3RlZExpbmVDb3VudCI6MjU1LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJiZTcxODA3M2NiMDgwNTQ0NDI4YzQ0MzYwYjI0ZTUzZTgzZWE4NTYxM2U3OWU1ZDNlNzk0OTZiODYyMjUyMjlkIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiIzZTdjNmI1ZmMxYTNmNTg5ZTZiNzEyZTJhYTkzZTk0MTIyMmRkZDQwNDUxNThkMDkxYzRiM2ViMWZjY2I5MDFmIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MCwicHJlY2VkaW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1IiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
@@ -169,8 +169,8 @@
       "statement": "The CI tauri-build job is a fail-fast: false matrix over macos-15, macos-26, windows-latest, ubuntu-22.04, ubuntu-24.04 and ubuntu-24.04-arm; it runs cargo test, builds the installer bundle, then builds a probe (--no-bundle --features probe) and runs it against samples/project.example.json, asserting the report contains both RENDER OK and the -> 403 traversal check, under xvfb-run -a on Ubuntu. The steps live in scripts/ci/bundle.sh.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/ci.yml#L136-L236",
-          "version": "repo-lines-v1:sha256:96dc0b62a8cd572da85b7fac5769e37566a2f6fcbd40b915be6fea120b995918:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJhNjY4OTdkNDk4NmE5ZWQ4ZTkzYmM5MGVhODY2OTdmYjk0YTc3MjVmZjU2MjQyNzYyMDk5MGJhZWE0YTVjNDIwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1MzM1OWFjNTljZTJhOTJjNDFmOTNmYzg0NzEyOTY1MGUwYTg5OGE2ODQwN2MxZGQxYTBkNWU5NmQwMzk4N2E5IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIzOGNiMzdiMjBkODIxNGQ4OGUzOTg3YmExNDlmYjU4ZDllYzM2ZmYwNTQwOGM0YjIzNTcyNTVkZTIxMTRmZDIyIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI3NTE1MDIwYTJlYjczZjhiNGM3NDk2ZThmOThlYzM4YmEwNTdmNGRhNTcwN2ZhZGI2NDFiMDI1ZjNlNzgzN2VjIn0"
+          "resource": "repo://.github/workflows/ci.yml#L137-L237",
+          "version": "repo-lines-v1:sha256:b7370839225c90ab2799643a4ea29c4719d14156eb70320e8bbef265100dc0dd:eyJzZWxlY3RlZExpbmVDb3VudCI6MTAxLCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiJhNjY4OTdkNDk4NmE5ZWQ4ZTkzYmM5MGVhODY2OTdmYjk0YTc3MjVmZjU2MjQyNzYyMDk5MGJhZWE0YTVjNDIwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiI1MzM1OWFjNTljZTJhOTJjNDFmOTNmYzg0NzEyOTY1MGUwYTg5OGE2ODQwN2MxZGQxYTBkNWU5NmQwMzk4N2E5IiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiIzOGNiMzdiMjBkODIxNGQ4OGUzOTg3YmExNDlmYjU4ZDllYzM2ZmYwNTQwOGM0YjIzNTcyNTVkZTIxMTRmZDIyIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MSwiZm9sbG93aW5nQ29udGV4dEhhc2giOiI3NTE1MDIwYTJlYjczZjhiNGM3NDk2ZThmOThlYzM4YmEwNTdmNGRhNTcwN2ZhZGI2NDFiMDI1ZjNlNzgzN2VjIn0"
         }
       ]
     },
@@ -179,7 +179,7 @@
       "statement": "The CI `tauri-e2e` job runs `node --test e2e/probe.test.mjs` against the probe build via tauri-driver on ubuntu-24.04 and windows-latest only (no macOS support in tauri-driver); Windows installs a msedgedriver matching the installed WebView2 version from the EdgeUpdate registry key and runs the test through gsudo at medium integrity (`sudo --integrity Medium`, with icacls granting Everyone access to the workspace) because WebView2 ignores WEBVIEW2_ADDITIONAL_BROWSER_ARGUMENTS in the elevated runner.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/ci.yml#L184-L237",
+          "resource": "repo://.github/workflows/ci.yml#L185-L238",
           "version": "repo-lines-v1:sha256:f1e257533ef47ddcc6704279fb3f59ad59120953b65cfa5609c072fb0779c609:eyJzZWxlY3RlZExpbmVDb3VudCI6NTQsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjY4MmIzMWRiY2E5MmY1YzQ1NDFiYWI2YmE2MGE5YzkyMDkxOTFhZGNjODBjYmQ4ZTZlOGY3YjViNWIwNTRlOGMiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6Ijc1MTUwMjBhMmViNzNmOGI0Yzc0OTZlOGY5OGVjMzhiYTA1N2Y0ZGE1NzA3ZmFkYjY0MWIwMjVmM2U3ODM3ZWMiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImJhNGQyZThkNmRhMDdlZjc4ODFjMGE4YTEwZTkzNzJjNWMzOWU5Y2MyMjFjNGFhN2MxYjBhZDJlYjgyZmZlZGUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         }
       ]
@@ -220,17 +220,17 @@
       "evidence": [
         {
           "resource": "repo://.github/workflows/release.yml#L193-L311",
-          "version": "repo-lines-v1:sha256:5389272b26ebdb79cabb352f87b7e3ff8d0c86596453931e79aaa8b8285f6660:eyJzZWxlY3RlZExpbmVDb3VudCI6MTE5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIzMzM3MzM0YWVjMGRjYjI0ZTQwZTNjMjBkYzA5ZDU5YWY2NzQzZDAyN2RiZmY1MGMxYWNhMDg5NzQ3MTE3NjcwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJhNTBiM2EzNjEwOTJjOGFkOGEwODlkMDJmYzZiNjYyZDIxNjQ4OTc5MzMwNTA5MzEwOGVlYTZmOWUxN2FiNmYzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJiY2ExYjU4NmY5ZGVhOWExODdmNjliMWY2YzRkOGUxZGU2NzQyMmRjYzk2OGZkMTU1YjA2ODdkYWJlZTNkNWZlIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
+          "version": "repo-lines-v1:sha256:b354a59991c77b261a16c3e6f27b8ebeeeef8c5a0f9109bf3dfb67b457b09b14:eyJzZWxlY3RlZExpbmVDb3VudCI6MTE5LCJmaXJzdFNlbGVjdGVkTGluZUhhc2giOiIzMzM3MzM0YWVjMGRjYjI0ZTQwZTNjMjBkYzA5ZDU5YWY2NzQzZDAyN2RiZmY1MGMxYWNhMDg5NzQ3MTE3NjcwIiwibGFzdFNlbGVjdGVkTGluZUhhc2giOiJhNTBiM2EzNjEwOTJjOGFkOGEwODlkMDJmYzZiNjYyZDIxNjQ4OTc5MzMwNTA5MzEwOGVlYTZmOWUxN2FiNmYzIiwicHJlY2VkaW5nQ29udGV4dExpbmVDb3VudCI6MywicHJlY2VkaW5nQ29udGV4dEhhc2giOiJiY2ExYjU4NmY5ZGVhOWExODdmNjliMWY2YzRkOGUxZGU2NzQyMmRjYzk2OGZkMTU1YjA2ODdkYWJlZTNkNWZlIiwiZm9sbG93aW5nQ29udGV4dExpbmVDb3VudCI6MCwiZm9sbG93aW5nQ29udGV4dEhhc2giOiJlM2IwYzQ0Mjk4ZmMxYzE0OWFmYmY0Yzg5OTZmYjkyNDI3YWU0MWU0NjQ5YjkzNGNhNDk1OTkxYjc4NTJiODU1In0"
         }
       ]
     },
     {
       "id": "claim_debbff6a5a324348bc39b20ac60c0a77",
-      "statement": "`technical-report.yml` is the only CI reacting to `technical-report/**` (code CI uses paths-ignore on it): it builds the IEEEtran report via xu-cheng/latex-action@v3 with latexmk pdflatex (`-jobname=SaiLoR-technical-report`, `main.tex`) on pushes/PRs touching the report, screenshots, or the workflow, and uploads the PDF artifact; `make report` reproduces it locally.",
+      "statement": "technical-report.yml builds the LaTeX technical report PDF with xu-cheng/latex-action on pushes to main and on pull requests that touch technical-report/**, user-guide/screenshots/** or the workflow itself, plus workflow_dispatch. Because ci.yml ignores technical-report/**, it is the only CI that reacts to report edits, and make report reproduces it locally.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/technical-report.yml#L1-L41",
-          "version": "repo-lines-v1:sha256:2bc6f7e52c3e66d33ab06037ae15545d37012f2c5661e5002838d635475ab5fb:eyJzZWxlY3RlZExpbmVDb3VudCI6NDEsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE4NTQyMmJjYTllZTFjOWVlZjEwZjNjYjQ4ZWM0NGQzNzYxOTA2OWFhYmU5NjFiMmY3NDNjODczNGIzNDFhZWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzNGFiNDg5ZDQ4YTk5ZDNiNGEwZWRkZTFmNWFlYjkwYmZjZjg0YmE5NzBjYTE4ZGExMzE4OGZiMDQ3ZDAzOTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
+          "resource": "repo://.github/workflows/technical-report.yml#L1-L42",
+          "version": "repo-lines-v1:sha256:3b2098dd00469800e58acd06f202dbdd4cff5492884bc77c84d27e44ce76aa73:eyJzZWxlY3RlZExpbmVDb3VudCI6NDIsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjE4NTQyMmJjYTllZTFjOWVlZjEwZjNjYjQ4ZWM0NGQzNzYxOTA2OWFhYmU5NjFiMmY3NDNjODczNGIzNDFhZWIiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjIzNGFiNDg5ZDQ4YTk5ZDNiNGEwZWRkZTFmNWFlYjkwYmZjZjg0YmE5NzBjYTE4ZGExMzE4OGZiMDQ3ZDAzOTQiLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjowLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjowLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6ImUzYjBjNDQyOThmYzFjMTQ5YWZiZjRjODk5NmZiOTI0MjdhZTQxZTQ2NDliOTM0Y2E0OTU5OTFiNzg1MmI4NTUifQ"
         },
         {
           "resource": "repo://Makefile#L76-L77",
@@ -271,7 +271,7 @@
       "statement": "The release build matrix has five targets, including ubuntu-22.04-arm for aarch64-unknown-linux-gnu, and the CI tauri-build matrix runs on six OSes including ubuntu-24.04-arm.",
       "evidence": [
         {
-          "resource": "repo://.github/workflows/ci.yml#L136-L141",
+          "resource": "repo://.github/workflows/ci.yml#L137-L142",
           "version": "repo-lines-v1:sha256:51d2ae6050bef703cbfa525e1a8ccc479ce896bdd78342ff7d9303c655f7eee7:eyJzZWxlY3RlZExpbmVDb3VudCI6NiwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiYTY2ODk3ZDQ5ODZhOWVkOGU5M2JjOTBlYTg2Njk3ZmI5NGE3NzI1ZmY1NjI0Mjc2MjA5OTBiYWVhNGE1YzQyMCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNjgyYjMxZGJjYTkyZjVjNDU0MWJhYjZiYTYwYTljOTIwOTE5MWFkY2M4MGNiZDhlNmU4ZjdiNWI1YjA1NGU4YyIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMzhjYjM3YjIwZDgyMTRkODhlMzk4N2JhMTQ5ZmI1OGQ5ZWMzNmZmMDU0MDhjNGIyMzU3MjU1ZGUyMTE0ZmQyMiIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiOTBlYjY1ZjlmMDQ3ODhlNWEwMmRmNGNhYjUyYjNhOTNjNDEwMzZjYjdkNDJjOTI0NmI4OGZkZWNiMzlmNGEwNCJ9"
         },
         {
@@ -283,6 +283,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-08T19:43:29.846Z"
+    "at": "2026-11-09T14:02:19.724Z"
   }
 }

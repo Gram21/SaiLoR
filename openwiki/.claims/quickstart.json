@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:dd258e86340c6fcf398ea9198cd2cdd51dcea1f3d83294c332f7115d1e189b3d",
+  "pageVersion": "sha256:5fd6f6ec6e261d70a5abb43009865c3b20730381bfd3d49df30cccc7afab7a66",
   "claims": [
     {
       "id": "claim_73038aa7de1248059ddba1afcb29f3d4",
@@ -8,7 +8,7 @@
       "evidence": [
         {
           "resource": "repo://README.md",
-          "version": "repo-file-v1:sha256:95e558de53ca669e9b631ff78c656c8403e93ba0e6d0dcb70efb2b0442ac2c6b"
+          "version": "repo-file-v1:sha256:1d3021fa92ca3fe7436698135d21241795af5910861c38c72132b9947111a444"
         },
         {
           "resource": "repo://src/model/project.ts",
@@ -22,7 +22,7 @@
       "evidence": [
         {
           "resource": "repo://README.md",
-          "version": "repo-file-v1:sha256:95e558de53ca669e9b631ff78c656c8403e93ba0e6d0dcb70efb2b0442ac2c6b"
+          "version": "repo-file-v1:sha256:1d3021fa92ca3fe7436698135d21241795af5910861c38c72132b9947111a444"
         },
         {
           "resource": "repo://src-tauri/src/project.rs",
@@ -39,7 +39,7 @@
       "statement": "A screening project names its per-paper files screening-consolidated.json / screening-<n>.json instead of consolidated.json / reviewer-<n>.json, so screening and annotation project files are distinguishable at a glance while sharing the same layout.",
       "evidence": [
         {
-          "resource": "repo://README.md#L173-L176",
+          "resource": "repo://README.md#L181-L184",
           "version": "repo-lines-v1:sha256:b5b9c805001de851b7dc6f552c9119476ac40f3a3c8cecdce1630cc5a0f8ea06:eyJzZWxlY3RlZExpbmVDb3VudCI6NCwiZmlyc3RTZWxlY3RlZExpbmVIYXNoIjoiMWIxZjdmZjIxMTE4MmFmYzE2MDJjZTZjN2VkZDBmM2YzMjIwMDBjMGJhMWY4NTg2YjcxMzNjZTY0Y2Y1ZDMzZCIsImxhc3RTZWxlY3RlZExpbmVIYXNoIjoiNWY1NTU0M2JhOThkMGRhZWIyYTVmMzdkMjFlNmYwYTczZWI0ZDk0MGIzZGVhYjhlMGZmNGM1MTljNTJiZTg0NSIsInByZWNlZGluZ0NvbnRleHRMaW5lQ291bnQiOjMsInByZWNlZGluZ0NvbnRleHRIYXNoIjoiMjQ0MmUxZTA4OWM4NjM5ZWFjZjJmMzE0ZGQwZGQ5MWZhYTg2ZDUwMWQ4OTEzZWVkMWNjNDAxNGViYjQ5MDNkZCIsImZvbGxvd2luZ0NvbnRleHRMaW5lQ291bnQiOjMsImZvbGxvd2luZ0NvbnRleHRIYXNoIjoiMTkxNjdiOTg3MDA1MWIzZjI0NTY0ZmUyYzQwZGI1ODFmMTY3ODdkNjQwOGIyNjExMGY3ZDRmNmUyZGM4YmUwNiJ9"
         },
         {
@@ -66,7 +66,7 @@
         },
         {
           "resource": "repo://src/platform/adapter.ts",
-          "version": "repo-file-v1:sha256:5377036bf0f2870106b0bbda752b23cf8699f814147bef97f80ea43811ae1e8a"
+          "version": "repo-file-v1:sha256:a123d29be65566ee1511049419dc2b9123d73fc2436a48043629972aeec8551d"
         }
       ]
     },
@@ -94,11 +94,11 @@
         },
         {
           "resource": "repo://package.json",
-          "version": "repo-file-v1:sha256:c9bd3f7faa5a295c14c074b19427809e6523971d30999ab0ec5f8cadfc421e74"
+          "version": "repo-file-v1:sha256:bd283c484937e0f6570f24f755e80b2bf54fa65402a941c154f1a10c911c6647"
         },
         {
           "resource": "repo://src-tauri/src/pdf.rs",
-          "version": "repo-file-v1:sha256:bd49f745e3acec6793a21f636218e89ef60af656230503a811ce774678d60690"
+          "version": "repo-file-v1:sha256:baa8f2b11160a9762a72bc60c5423bab6e842059402630b7ead5d19c0464bb95"
         }
       ]
     },
@@ -112,7 +112,7 @@
         },
         {
           "resource": "repo://package.json",
-          "version": "repo-file-v1:sha256:c9bd3f7faa5a295c14c074b19427809e6523971d30999ab0ec5f8cadfc421e74"
+          "version": "repo-file-v1:sha256:bd283c484937e0f6570f24f755e80b2bf54fa65402a941c154f1a10c911c6647"
         }
       ]
     },
@@ -171,11 +171,11 @@
       "statement": "The Tauri shell (src-tauri/src/main.rs) registers the plugins (single-instance with focus_main, window-state SIZE|POSITION|MAXIMIZED, dialog, updater, and an slr-os plugin whose js_init_script sets window.__SLR_OS__ to process.platform-style names), denies webview permission requests, serves PDFs over the async slr-file:// scheme via protocol::serve, and its generate_handler registry is grouped by domain: project_*, annotations_*, feedback, pdf_*/text_*, paths_*, web_fetch, llm_*, ollama_*/localruntime_*/local_probe, ~40 git_* commands, update_*, and close_*.",
       "evidence": [
         {
-          "resource": "repo://src-tauri/src/main.rs#L110-L207",
-          "version": "repo-lines-v1:sha256:319fe11eaf0ba98a34d0a7729af0487f1cc9551ab32eb580b6b9ac59f4e50f78:eyJzZWxlY3RlZExpbmVDb3VudCI6OTgsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhM2I5NWFlMzgyMWJjZmZjNDQzYjQzOWUxZjY5Nzc1MmUxNjA1ZDdkNTVmZjA2OGY4ZDk4NzE2MzFhMjRkZDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmY2QxNWFhYmMxMDcxYmJjZGViNDYzMmNlZTUyYTJmZDVmMzJiZjAyYmQ2ZTc2M2M1MjY5N2FlZGIxYTEwNTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg2ZTk4NmI3ODAxMzQ1ZTA1ZDI1MzVlYzI3NTY2YzNlZjViMGM5ZTJhYmNiN2ZlMjQ5MDJhZGI4MTE3ZDJiM2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjMjRhNjI3MTJiMTE2MGQ4MGYxYTQ4OWFhZWY2YzBjZTBkOTU1NTcxYzI5MGRjMWJkMWY5ZDViZGEwNDFhNjAifQ"
+          "resource": "repo://src-tauri/src/main.rs#L110-L208",
+          "version": "repo-lines-v1:sha256:78da06755a5c149810842a1436a3517d50896913bf115fcfd581368423960b6c:eyJzZWxlY3RlZExpbmVDb3VudCI6OTksImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6ImJhM2I5NWFlMzgyMWJjZmZjNDQzYjQzOWUxZjY5Nzc1MmUxNjA1ZDdkNTVmZjA2OGY4ZDk4NzE2MzFhMjRkZDEiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjJmY2QxNWFhYmMxMDcxYmJjZGViNDYzMmNlZTUyYTJmZDVmMzJiZjAyYmQ2ZTc2M2M1MjY5N2FlZGIxYTEwNTciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6Ijg2ZTk4NmI3ODAxMzQ1ZTA1ZDI1MzVlYzI3NTY2YzNlZjViMGM5ZTJhYmNiN2ZlMjQ5MDJhZGI4MTE3ZDJiM2YiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjozLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjVjMjRhNjI3MTJiMTE2MGQ4MGYxYTQ4OWFhZWY2YzBjZTBkOTU1NTcxYzI5MGRjMWJkMWY5ZDViZGEwNDFhNjAifQ"
         },
         {
-          "resource": "repo://src-tauri/src/main.rs#L208-L233",
+          "resource": "repo://src-tauri/src/main.rs#L209-L234",
           "version": "repo-lines-v1:sha256:0935c71da42322776f577213d464a0d71e8ec99fa7d40ade635558677b2ec61b:eyJzZWxlY3RlZExpbmVDb3VudCI6MjYsImZpcnN0U2VsZWN0ZWRMaW5lSGFzaCI6IjMzNDM3NmNmNDdmNWY4ZDQ3MGMxNGQ4MjIwNzg4YWU5NmZjZmU1NTA0MjA5NzU0ZjJlMjA4YTkzODUwY2QyNTgiLCJsYXN0U2VsZWN0ZWRMaW5lSGFzaCI6IjU5YzEzNTkwNjY1NjMyM2QxYzVlYTQxNjU0ZWU2NmFmYjU4NWFjZGNmYWVhY2ExMjFkNWUzMGJmMTkzZWVkZDciLCJwcmVjZWRpbmdDb250ZXh0TGluZUNvdW50IjozLCJwcmVjZWRpbmdDb250ZXh0SGFzaCI6IjU2MWUxNWZmMjEyNmE1ZTNhZjMxY2NkNzY2MTRmZGE4MjI1ZDQyZDljMGM0NWUwOWU5Mjc1M2I2NmQwYzE3NzUiLCJmb2xsb3dpbmdDb250ZXh0TGluZUNvdW50IjoxLCJmb2xsb3dpbmdDb250ZXh0SGFzaCI6IjQxMmNhMzQ1Y2NmNzViZjljMDgwNmJjZTY5NWJlOGRlODA4Yjc5OTg0MjUxYTdhNTRkMjAyY2Y2MTAxZGQ0NTEifQ"
         },
         {
@@ -190,11 +190,11 @@
       "evidence": [
         {
           "resource": "repo://src/platform/bridge.ts",
-          "version": "repo-file-v1:sha256:5c130bf0496f42cee62ca6d6294e5f1ca93b274921f57b375011d9c63c21c9cc"
+          "version": "repo-file-v1:sha256:2762f6c45ae12f0188390e87600cae0c2998f09f1da0347f6e9382653895bcf2"
         },
         {
           "resource": "repo://src/platform/tauri.ts",
-          "version": "repo-file-v1:sha256:6e968f505094c7c4a3f10fd135d34f4dd06f4ca6ef99a39b4bf197eeb7f79518"
+          "version": "repo-file-v1:sha256:3959a69c7b4bd7f367ed10de5727d21c717f9dff8f530603ea9ec28ff332487d"
         }
       ]
     },
@@ -334,7 +334,7 @@
       "evidence": [
         {
           "resource": "repo://package.json",
-          "version": "repo-file-v1:sha256:c9bd3f7faa5a295c14c074b19427809e6523971d30999ab0ec5f8cadfc421e74"
+          "version": "repo-file-v1:sha256:bd283c484937e0f6570f24f755e80b2bf54fa65402a941c154f1a10c911c6647"
         },
         {
           "resource": "repo://src/App.tsx",
@@ -356,7 +356,7 @@
       "evidence": [
         {
           "resource": "repo://src/components/DiagramView.tsx",
-          "version": "repo-file-v1:sha256:90c1432a44518e6edf5ae282b4a3f1933706b184abee6cdc4547e852094eb925"
+          "version": "repo-file-v1:sha256:352cd6a2eb43ec74fba5727ca7966e91303969d89f2160073e6b77837e0d0da1"
         },
         {
           "resource": "repo://src/model/diagram.ts",
@@ -367,6 +367,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-09T08:29:20.744Z"
+    "at": "2026-11-09T14:02:19.724Z"
   }
 }

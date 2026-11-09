@@ -1,6 +1,6 @@
 {
   "schemaVersion": 1,
-  "pageVersion": "sha256:b5fd343be08162d8025a70b192b653db12ff2fbf8a3d6020ceca86ea501b9f6a",
+  "pageVersion": "sha256:4ef80769b3d225489635820dfe222702a76036cad0e073fec3e02c4258a34cf4",
   "claims": [
     {
       "id": "claim_06b4bbb00bd9439896054b8161b11dd8",
@@ -296,7 +296,7 @@
         },
         {
           "resource": "repo://src/platform/desktop.ts",
-          "version": "repo-file-v1:sha256:1dc4cd4b412457275f2d60080121efa45ac518d23c7c22db93536978742d4ba3"
+          "version": "repo-file-v1:sha256:2c8df21fe647baab49f0cf0882e13a476bc10c6b6c5c2fd3754895d076ebcdfb"
         }
       ]
     },
@@ -429,6 +429,6 @@
   ],
   "verification": {
     "by": "openwiki/0.7.3",
-    "at": "2026-11-07T10:50:01.257Z"
+    "at": "2026-11-09T14:02:19.724Z"
   }
 }
