@@ -542,7 +542,7 @@ export. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-UI-320: Diagram export
-- **Description:** The view shall have the buttons "SVG", "PNG" and "PDF". Each button shall save the shown diagram through the save dialog of the system and show the saved path or the error. SVG shall save the SVG document as text. PNG shall save a raster image at twice the diagram size. PDF shall save one page that has the size of the diagram. The page shall hold vector graphics and text (REQ-UI-370). The system shall write the file only to a path that the save dialog returned (REQ-PLT-260). The system shall make the raster images on the main thread from the SVG.
+- **Description:** The view shall have the buttons "SVG", "PNG" and "PDF". Each button shall save the shown diagram through the save dialog of the system and show the saved path or the error. SVG shall save the SVG document as text. PNG shall save a raster image at twice the diagram size. PDF shall save one page that has the size of the diagram. The page shall hold vector graphics and text (REQ-UI-370). The system shall write the file only to a path that the save dialog returned (REQ-PLT-260). The system shall make the raster images on the main thread from the SVG. The export section shall stay at the bottom of the settings panel, inside a frame with an accent border that sets it apart from the other sections. The buttons "SVG", "PNG" and "PDF" shall be in one row and the button "CSV" (REQ-UI-340) shall be in a second row. All four buttons shall have the same style.
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability)
 - **Evidence:** `src/components/DiagramView.tsx` (`DiagramView`), `src/components/diagramExport.ts` (`svgToPng`, `svgToPdf`), `src/model/imagePdf.ts` (`imagePdf`), `src-tauri/src/pdf.rs` (`text_export_extension`)
 - **Verified by:** `src/components/DiagramView.test.tsx`, `src/model/diagram.test.ts` (`imagePdf`), `src-tauri/src/pdf.rs` (`text_export_extension_allows_known_extensions`)
@@ -577,7 +577,7 @@ export. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-UI-370: Vector PDF export of diagrams
-- **Description:** The PDF button of the diagram view shall save a PDF with vector graphics and text that the user can select and zoom without loss. The system shall draw the SVG shapes (rectangle, line, polyline, circle, path, text) with the PDF fonts Helvetica and Helvetica-Bold. If the diagram has a character that the fonts lack, the system shall save a PDF that holds a raster image (REQ-UI-320).
+- **Description:** The PDF button of the diagram view shall save a PDF with vector graphics and text that the user can select and zoom without loss. The system shall draw the SVG shapes (rectangle, line, polyline, circle, path, text) with the PDF fonts Helvetica and Helvetica-Bold. The PDF shall never hold a raster image. If the diagram has a character that the fonts lack, the system shall draw it as "?" and, after saving, tell the user how many characters it replaced. The user can use SVG to keep such characters (REQ-UI-320).
 - **Type:** Functional (ISO 25010: Functional Suitability, Portability)
 - **Evidence:** `src/model/vectorPdf.ts` (`svgToVectorPdf`), `src/model/imagePdf.ts` (`pdfDocument`), `src/components/diagramExport.ts` (`svgToPdf`)
 - **Verified by:** `src/model/vectorPdf.test.ts`

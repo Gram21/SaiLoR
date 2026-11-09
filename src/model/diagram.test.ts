@@ -5,7 +5,7 @@ import type { Paper } from './project'
 import { buildGraph } from './graph'
 import { aggregate, diagramCsv, diagramHost, schemaDimensions, paperValues, DEFAULT_CONFIG, OTHER, NONE, type DiagramConfig, type DiagramReply } from './diagram'
 import { renderDiagram, niceStep } from './diagramSvg'
-import { imagePdf } from './imagePdf'
+import { svgToVectorPdf } from './vectorPdf'
 
 const SCHEMA = resolveSchema([
   { name: 'Method', type: 'string', options: ['Survey', 'Experiment'] },
@@ -122,10 +122,10 @@ describe('diagramHost', () => {
   })
 })
 
-describe('imagePdf', () => {
+describe('PDF file structure', () => {
   // [utest->req~ui-320~1]
   it('writes a PDF whose xref offsets point at the objects', () => {
-    const bytes = imagePdf(new Uint8Array([1, 2, 3]), 10, 10, 7.5, 7.5)
+    const { pdf: bytes } = svgToVectorPdf('<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect x="0" y="0" width="5" height="5"/></svg>', (s) => s.length)
     const s = new TextDecoder('latin1').decode(bytes)
     expect(s.startsWith('%PDF-1.')).toBe(true)
     expect(s.trimEnd().endsWith('%%EOF')).toBe(true)

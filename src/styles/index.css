@@ -2819,6 +2819,11 @@ button.validation-search-case:hover {
 .diagram-settings > .diagram-section:last-child {
   position: sticky;
   bottom: 0;
+  border: 2px solid var(--accent);
+  box-shadow: 0 -6px 12px -4px rgb(0 0 0 / 0.25);
+}
+.diagram-settings > .diagram-section:last-child legend {
+  color: var(--accent);
 }
 .diagram-settings input:not([type='checkbox'], [type='color']),
 .diagram-settings select {
@@ -2873,10 +2878,20 @@ button.validation-search-case:hover {
   border-radius: 4px;
   background: none;
 }
-.diagram-size,
-.diagram-export {
+.diagram-size {
   display: flex;
   gap: 8px;
+}
+.diagram-export {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+.diagram-export button {
+  min-width: 0;
+}
+.diagram-export button:last-child {
+  grid-column: 1 / -1;
 }
 .diagram-size label {
   flex: 1;

@@ -118,11 +118,17 @@ export function DiagramView({ config, setConfig, onClose }: { config: DiagramCon
       if (!path) return
       const { svg } = shown
       const { width, height } = effective
+      let pdf: { replaced: number } | undefined
       const res =
         format === 'svg' || format === 'csv'
           ? await platform.writeTextFile(path, format === 'csv' ? diagramCsv(shown.data, effective.xLabel, t('diagram.papers')) : svg)
-          : await platform.writeBinaryFile(path, format === 'png' ? await svgToPng(svg, width, height) : await svgToPdf(svg, width, height))
-      setMessage(res.ok ? { ok: true, text: t('app.export.saved', { path: res.path }) } : { ok: false, text: t('app.export.saveFailed', { error: res.error }) })
+          : await platform.writeBinaryFile(path, format === 'png' ? await svgToPng(svg, width, height) : (pdf = svgToPdf(svg)).pdf)
+      const saved = t('app.export.saved', { path: res.ok ? res.path : '' })
+      setMessage(
+        res.ok
+          ? { ok: true, text: pdf && pdf.replaced > 0 ? `${saved} ${t('diagram.pdfReplaced', { count: pdf.replaced })}` : saved }
+          : { ok: false, text: t('app.export.saveFailed', { error: res.error }) },
+      )
     } catch (err) {
       setMessage({ ok: false, text: t('app.export.saveFailed', { error: String(err) }) })
     } finally {
@@ -265,14 +271,11 @@ export function DiagramView({ config, setConfig, onClose }: { config: DiagramCon
         </Section>
         <Section title={t('diagram.section.export')}>
           <div className="diagram-export">
-            {FORMATS.map((f) => (
+            {[...FORMATS, 'csv' as const].map((f) => (
               <button key={f} type="button" className="primary" disabled={!ready || busy} onClick={() => void save(f)}>
                 {t(`diagram.export.${f}` as const)}
               </button>
             ))}
-            <button type="button" disabled={!ready || busy} onClick={() => void save('csv')}>
-              {t('diagram.export.csv')}
-            </button>
           </div>
           <p className="graph-hint">{t('diagram.exportHint')}</p>
           {message && (

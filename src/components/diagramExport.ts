@@ -1,5 +1,4 @@
 // [impl->req~ui-320~1]
-import { imagePdf } from '../model/imagePdf'
 import { svgToVectorPdf } from '../model/vectorPdf'
 
 export type DiagramFormat = 'svg' | 'png' | 'pdf'
@@ -30,11 +29,6 @@ export async function svgToPng(svg: string, width: number, height: number, scale
   return new Uint8Array(await blob.arrayBuffer())
 }
 
-async function deflate(bytes: Uint8Array): Promise<Uint8Array> {
-  const stream = new Blob([bytes as BlobPart]).stream().pipeThrough(new CompressionStream('deflate'))
-  return new Uint8Array(await new Response(stream).arrayBuffer())
-}
-
 /** Text width in pixels in the font the preview uses; a rough estimate where there is no canvas. */
 function measureText(text: string, size: number, bold: boolean): number {
   const ctx = document.createElement('canvas').getContext('2d')
@@ -43,17 +37,7 @@ function measureText(text: string, size: number, bold: boolean): number {
   return ctx.measureText(text).width
 }
 
-/** The diagram as a one-page PDF: vector graphics and text when the built-in fonts cover the text, else a 3x image the browser compresses. */
-export async function svgToPdf(svg: string, width: number, height: number): Promise<Uint8Array> {
-  const vector = svgToVectorPdf(svg, measureText)
-  if (vector) return vector
-  const canvas = await raster(svg, width, height, 3)
-  const rgba = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
-  const rgb = new Uint8Array((rgba.length / 4) * 3)
-  for (let i = 0, o = 0; i < rgba.length; i += 4, o += 3) {
-    rgb[o] = rgba[i]
-    rgb[o + 1] = rgba[i + 1]
-    rgb[o + 2] = rgba[i + 2]
-  }
-  return imagePdf(await deflate(rgb), canvas.width, canvas.height, Math.round(width * 0.75), Math.round(height * 0.75))
+/** The diagram as a one-page vector PDF. `replaced` counts characters the PDF fonts lack, drawn as `?`. */
+export function svgToPdf(svg: string): { pdf: Uint8Array; replaced: number } {
+  return svgToVectorPdf(svg, measureText)
 }

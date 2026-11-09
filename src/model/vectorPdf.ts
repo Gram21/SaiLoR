@@ -77,12 +77,13 @@ function pathOps(d: string): string {
 
 /**
  * A one-page vector PDF of an SVG diagram: rectangles, lines, circles, paths, polylines and text, with the two built-in
- * Helvetica fonts. Returns null if the text needs characters those fonts lack, so the caller can fall back to an image.
+ * Helvetica fonts. A character those fonts lack becomes `?`; `replaced` counts them. Throws if `svg` is not an SVG document.
  * `measure` gives the width of a text in pixels, for the centred and right-aligned labels.
  */
-export function svgToVectorPdf(svg: string, measure: (text: string, size: number, bold: boolean) => number): Uint8Array | null {
+export function svgToVectorPdf(svg: string, measure: (text: string, size: number, bold: boolean) => number): { pdf: Uint8Array; replaced: number } {
   const root = new DOMParser().parseFromString(svg, 'image/svg+xml').documentElement
-  if (root.localName !== 'svg' || root.querySelector('parsererror')) return null
+  if (root.localName !== 'svg' || root.querySelector('parsererror')) throw new Error('Not an SVG document')
+  let replaced = 0
   const W = num(root, 'width')
   const H = num(root, 'height')
   const alphas = new Map<number, string>()
@@ -124,8 +125,7 @@ export function svgToVectorPdf(svg: string, measure: (text: string, size: number
       emit(el, (e) => pathOps(e.getAttribute('d') ?? ''))
     } else {
       const s = el.textContent ?? ''
-      const bytes = [...s].map(winAnsi)
-      if (bytes.some((b) => b === undefined)) return null
+      const bytes = [...s].map((ch) => winAnsi(ch) ?? (replaced++, 0x3f))
       const size = num(el, 'font-size', 12)
       const bold = el.getAttribute('font-weight') === 'bold'
       const anchor = el.getAttribute('text-anchor')
@@ -136,7 +136,7 @@ export function svgToVectorPdf(svg: string, measure: (text: string, size: number
       const turn = rot ? ((Number(rot[1]) * Math.PI) / 180) : 0
       const [c, sn, rx, ry] = rot ? [Math.cos(turn), Math.sin(turn), Number(rot[2]), Number(rot[3])] : [1, 0, 0, 0]
       const matrix = rot ? `${n(c)} ${n(sn)} ${n(-sn)} ${n(c)} ${n(rx - c * rx + sn * ry)} ${n(ry - sn * rx - c * ry)} cm ` : ''
-      const string = `(${String.fromCharCode(...(bytes as number[])).replace(/[\\()]/g, '\\$&')}) Tj`
+      const string = `(${String.fromCharCode(...bytes).replace(/[\\()]/g, '\\$&')}) Tj`
       const fill = colour(el.getAttribute('fill') ?? '#000000')
       const halo = colour(el.getAttribute('stroke'))
       const font = `/${bold ? 'F2' : 'F1'} ${n(size)} Tf 1 0 0 -1 ${n(x)} ${n(y)} Tm`
@@ -150,7 +150,7 @@ export function svgToVectorPdf(svg: string, measure: (text: string, size: number
   const content = latin1(`0.75 0 0 0.75 0 0 cm\n${out.join('\n')}`)
   const w = n(W * 0.75)
   const h = n(H * 0.75)
-  return pdfDocument([
+  const pdf = pdfDocument([
     '<< /Type /Catalog /Pages 2 0 R >>',
     '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
     `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${w} ${h}] /Resources << /Font << /F1 5 0 R /F2 6 0 R >> /ExtGState << ${gs} >> >> /Contents 4 0 R >>`,
@@ -158,4 +158,5 @@ export function svgToVectorPdf(svg: string, measure: (text: string, size: number
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>',
     '<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>',
   ])
+  return { pdf, replaced }
 }

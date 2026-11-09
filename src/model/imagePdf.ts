@@ -35,14 +35,3 @@ export function pdfDocument(objects: PdfObject[]): Uint8Array {
   }
   return out
 }
-
-/** A one-page PDF of `width` x `height` points that shows one RGB image, Flate-compressed, over the whole page. */
-export function imagePdf(deflatedRgb: Uint8Array, pixelWidth: number, pixelHeight: number, width: number, height: number): Uint8Array {
-  return pdfDocument([
-    '<< /Type /Catalog /Pages 2 0 R >>',
-    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
-    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /XObject << /Im0 5 0 R >> >> /Contents 4 0 R >>`,
-    { data: latin1(`q ${width} 0 0 ${height} 0 0 cm /Im0 Do Q`), dict: '' },
-    { data: deflatedRgb, dict: `/Type /XObject /Subtype /Image /Width ${pixelWidth} /Height ${pixelHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode` },
-  ])
-}
