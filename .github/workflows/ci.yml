@@ -14,6 +14,7 @@ name: CI
 on:
   push:
     branches: [main, 'release/**']
+    # docs-links.yml reads this line; keep the one-line quoted format.
     paths-ignore: ['technical-report/**', 'openwiki/**', 'user-guide/**', 'docs/screenshots/**', 'docs/building.md', 'README.md']
   # Every pull request, whatever it targets. Not combined with a push-on-every-branch
   # trigger: a branch with an open PR would build twice per push for no extra signal.
