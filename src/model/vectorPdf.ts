@@ -24,6 +24,17 @@ export interface PdfFont {
   length: number
 }
 
+const hex4 = (v: number) => v.toString(16).padStart(4, '0')
+const utf16 = (cp: number) => (cp > 0xffff ? hex4(0xd800 + ((cp - 0x10000) >> 10)) + hex4(0xdc00 + ((cp - 0x10000) & 0x3ff)) : hex4(cp))
+
+/** A ToUnicode CMap, so that viewers can copy and search the text set in the embedded font. */
+function toUnicodeCMap(map: Map<number, number>): string {
+  const lines = [...map].map(([g, cp]) => `<${hex4(g)}> <${utf16(cp)}>`)
+  const blocks: string[] = []
+  for (let i = 0; i < lines.length; i += 100) blocks.push(`${Math.min(100, lines.length - i)} beginbfchar\n${lines.slice(i, i + 100).join('\n')}\nendbfchar`)
+  return `/CIDInit /ProcSet findresource begin\n12 dict begin\nbegincmap\n/CMapName /Adobe-Identity-UCS def\n/CMapType 2 def\n1 begincodespacerange\n<0000> <ffff>\nendcodespacerange\n${blocks.join('\n')}\nendcmap\nCMapName currentdict /CMap defineresource pop\nend\nend`
+}
+
 const n = (v: number) => String(Math.round(v * 1000) / 1000)
 const num = (el: Element, name: string, fallback = 0) => {
   const v = parseFloat(el.getAttribute(name) ?? '')
@@ -106,6 +117,7 @@ export function svgToVectorPdf(
   if (root.localName !== 'svg' || root.querySelector('parsererror')) throw new Error('Not an SVG document')
   let replaced = 0
   const glyphWidths = new Map<number, number>()
+  const unicode = new Map<number, number>()
   const W = num(root, 'width')
   const H = num(root, 'height')
   const alphas = new Map<number, string>()
@@ -156,6 +168,7 @@ export function svgToVectorPdf(
       if (font && embedded) {
         const glyphs = [...s].map((ch) => font.ttf.glyph(ch.codePointAt(0) ?? 0))
         for (const g of glyphs) glyphWidths.set(g, Math.round((font.ttf.advance(g) * 1000) / font.ttf.unitsPerEm))
+        ;[...s].forEach((ch, i) => glyphs[i] && !unicode.has(glyphs[i]) && unicode.set(glyphs[i], ch.codePointAt(0) ?? 0))
         replaced += glyphs.filter((g) => !g).length
         shown = `<${glyphs.map((g) => g.toString(16).padStart(4, '0')).join('')}>`
         w = (glyphs.reduce((sum, g) => sum + font.ttf.advance(g), 0) * size) / font.ttf.unitsPerEm
@@ -191,10 +204,11 @@ export function svgToVectorPdf(
     const [x0, y0, x1, y1] = font.ttf.bbox.map((v) => Math.round(v * scale))
     const widths = [...glyphWidths].map(([g, width]) => `${g} [${width}]`).join(' ')
     extra.push(
-      '<< /Type /Font /Subtype /Type0 /BaseFont /EmbeddedFont /Encoding /Identity-H /DescendantFonts [8 0 R] >>',
+      '<< /Type /Font /Subtype /Type0 /BaseFont /EmbeddedFont /Encoding /Identity-H /DescendantFonts [8 0 R] /ToUnicode 11 0 R >>',
       `<< /Type /Font /Subtype /CIDFontType2 /BaseFont /EmbeddedFont /CIDSystemInfo << /Registry (Adobe) /Ordering (Identity) /Supplement 0 >> /FontDescriptor 9 0 R /DW 1000 /W [${widths}] /CIDToGIDMap /Identity >>`,
       `<< /Type /FontDescriptor /FontName /EmbeddedFont /Flags 4 /FontBBox [${x0} ${y0} ${x1} ${y1}] /ItalicAngle 0 /Ascent ${Math.round(font.ttf.ascent * scale)} /Descent ${Math.round(font.ttf.descent * scale)} /CapHeight ${Math.round(font.ttf.ascent * scale)} /StemV 80 /FontFile2 10 0 R >>`,
       { data: font.file, dict: `/Filter /FlateDecode /Length1 ${font.length}` },
+      { data: latin1(toUnicodeCMap(unicode)), dict: '' },
     )
   }
   const pdf = pdfDocument([
