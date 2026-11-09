@@ -715,6 +715,20 @@ mod tests {
         assert!(nth_readable_font(&c, 2).is_empty());
     }
 
+    // [utest->req~plt-460~1]
+    #[test]
+    fn this_os_has_a_readable_truetype_system_font() {
+        let font = nth_readable_font(&font_candidates(), 0);
+        assert!(
+            font.len() > 1000,
+            "no system font found in the candidate list"
+        );
+        assert!(
+            matches!(font[..4], [0, 1, 0, 0] | [0x74, 0x72, 0x75, 0x65]),
+            "not a TrueType file"
+        );
+    }
+
     fn ints(v: &[i64]) -> Object {
         Object::Array(v.iter().copied().map(Object::from).collect())
     }
