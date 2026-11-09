@@ -14,11 +14,11 @@ name: CI
 on:
   push:
     branches: [main, 'release/**']
-    paths-ignore: ['technical-report/**']
+    paths-ignore: ['technical-report/**', 'openwiki/**', 'user-guide/**', 'docs/screenshots/**', 'docs/building.md', 'README.md']
   # Every pull request, whatever it targets. Not combined with a push-on-every-branch
   # trigger: a branch with an open PR would build twice per push for no extra signal.
   pull_request:
-    paths-ignore: ['technical-report/**']
+    paths-ignore: ['technical-report/**', 'openwiki/**', 'user-guide/**', 'docs/screenshots/**', 'docs/building.md', 'README.md']
   workflow_dispatch:
 
 # Only the newest commit on a ref is worth checking; cancel the runs it superseded.
