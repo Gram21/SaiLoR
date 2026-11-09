@@ -1,8 +1,11 @@
 // [impl->req~ui-320~1]
-const latin1 = (s: string) => Uint8Array.from(s, (c) => c.charCodeAt(0))
+export const latin1 = (s: string) => Uint8Array.from(s, (c) => c.charCodeAt(0))
 
-/** A one-page PDF of `width` x `height` points that shows one RGB image, Flate-compressed, over the whole page. */
-export function imagePdf(deflatedRgb: Uint8Array, pixelWidth: number, pixelHeight: number, width: number, height: number): Uint8Array {
+/** A PDF object: plain text, or a stream with its dictionary entries (without /Length). */
+export type PdfObject = string | { data: Uint8Array; dict: string }
+
+/** A PDF file. `objects[0]` is object 1, the catalog. */
+export function pdfDocument(objects: PdfObject[]): Uint8Array {
   const chunks: Uint8Array[] = []
   const offsets: number[] = []
   let size = 0
@@ -11,25 +14,19 @@ export function imagePdf(deflatedRgb: Uint8Array, pixelWidth: number, pixelHeigh
     chunks.push(b)
     size += b.length
   }
-  const object = (n: number, body: Uint8Array | string, dict?: string) => {
-    offsets[n] = size
-    if (dict === undefined) put(`${n} 0 obj\n${body}\nendobj\n`)
+  put('%PDF-1.4\n')
+  objects.forEach((o, i) => {
+    offsets.push(size)
+    if (typeof o === 'string') put(`${i + 1} 0 obj\n${o}\nendobj\n`)
     else {
-      put(`${n} 0 obj\n<< ${dict} /Length ${(body as Uint8Array).length} >>\nstream\n`)
-      put(body)
+      put(`${i + 1} 0 obj\n<< ${o.dict} /Length ${o.data.length} >>\nstream\n`)
+      put(o.data)
       put('\nendstream\nendobj\n')
     }
-  }
-  const content = `q ${width} 0 0 ${height} 0 0 cm /Im0 Do Q`
-  put('%PDF-1.4\n')
-  object(1, '<< /Type /Catalog /Pages 2 0 R >>')
-  object(2, '<< /Type /Pages /Kids [3 0 R] /Count 1 >>')
-  object(3, `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /XObject << /Im0 5 0 R >> >> /Contents 4 0 R >>`)
-  object(4, latin1(content), '')
-  object(5, deflatedRgb, `/Type /XObject /Subtype /Image /Width ${pixelWidth} /Height ${pixelHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode`)
+  })
   const xref = size
-  put(`xref\n0 6\n0000000000 65535 f \n${offsets.slice(1).map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`)
-  put(`trailer\n<< /Size 6 /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`)
+  put(`xref\n0 ${objects.length + 1}\n0000000000 65535 f \n${offsets.map((o) => `${String(o).padStart(10, '0')} 00000 n \n`).join('')}`)
+  put(`trailer\n<< /Size ${objects.length + 1} /Root 1 0 R >>\nstartxref\n${xref}\n%%EOF\n`)
   const out = new Uint8Array(size)
   let at = 0
   for (const c of chunks) {
@@ -37,4 +34,15 @@ export function imagePdf(deflatedRgb: Uint8Array, pixelWidth: number, pixelHeigh
     at += c.length
   }
   return out
+}
+
+/** A one-page PDF of `width` x `height` points that shows one RGB image, Flate-compressed, over the whole page. */
+export function imagePdf(deflatedRgb: Uint8Array, pixelWidth: number, pixelHeight: number, width: number, height: number): Uint8Array {
+  return pdfDocument([
+    '<< /Type /Catalog /Pages 2 0 R >>',
+    '<< /Type /Pages /Kids [3 0 R] /Count 1 >>',
+    `<< /Type /Page /Parent 2 0 R /MediaBox [0 0 ${width} ${height}] /Resources << /XObject << /Im0 5 0 R >> >> /Contents 4 0 R >>`,
+    { data: latin1(`q ${width} 0 0 ${height} 0 0 cm /Im0 Do Q`), dict: '' },
+    { data: deflatedRgb, dict: `/Type /XObject /Subtype /Image /Width ${pixelWidth} /Height ${pixelHeight} /ColorSpace /DeviceRGB /BitsPerComponent 8 /Filter /FlateDecode` },
+  ])
 }

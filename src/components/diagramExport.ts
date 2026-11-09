@@ -1,5 +1,6 @@
 // [impl->req~ui-320~1]
 import { imagePdf } from '../model/imagePdf'
+import { svgToVectorPdf } from '../model/vectorPdf'
 
 export type DiagramFormat = 'svg' | 'png' | 'pdf'
 
@@ -34,8 +35,18 @@ async function deflate(bytes: Uint8Array): Promise<Uint8Array> {
   return new Uint8Array(await new Response(stream).arrayBuffer())
 }
 
-/** The diagram as a one-page PDF with a 3x image; the browser compresses it, off the main thread. */
+/** Text width in pixels in the font the preview uses; a rough estimate where there is no canvas. */
+function measureText(text: string, size: number, bold: boolean): number {
+  const ctx = document.createElement('canvas').getContext('2d')
+  if (!ctx) return text.length * size * 0.58
+  ctx.font = `${bold ? 'bold ' : ''}${size}px sans-serif`
+  return ctx.measureText(text).width
+}
+
+/** The diagram as a one-page PDF: vector graphics and text when the built-in fonts cover the text, else a 3x image the browser compresses. */
 export async function svgToPdf(svg: string, width: number, height: number): Promise<Uint8Array> {
+  const vector = svgToVectorPdf(svg, measureText)
+  if (vector) return vector
   const canvas = await raster(svg, width, height, 3)
   const rgba = canvas.getContext('2d')!.getImageData(0, 0, canvas.width, canvas.height).data
   const rgb = new Uint8Array((rgba.length / 4) * 3)
