@@ -3990,9 +3990,9 @@
     "semantic_hash": ""
   },
   "docs/requirements/platform.md": {
-    "mtime": 1794231847.895441,
-    "seen": 1794300602.52849,
-    "ast_hash": "98acbd7206cfe8d911987e522b8c0d9f",
+    "mtime": 1794313036.569172,
+    "seen": 1794313565.101423,
+    "ast_hash": "ce68a0d69960f45e29d66daacc3f7343",
     "semantic_hash": ""
   },
   "docs/requirements/screening.md": {
@@ -4002,9 +4002,9 @@
     "semantic_hash": ""
   },
   "docs/requirements/traceability.md": {
-    "mtime": 1794235020.0922868,
-    "seen": 1794300602.528491,
-    "ast_hash": "1c45b870a4a8b4555e6450971b2f1c5f",
+    "mtime": 1794313036.5697782,
+    "seen": 1794313565.1014242,
+    "ast_hash": "7554a686d87f6605a496e64459f8bcb3",
     "semantic_hash": ""
   },
   "docs/tauri-migration.md": {
@@ -4194,15 +4194,15 @@
     "semantic_hash": ""
   },
   "site/create-project.html": {
-    "mtime": 1794219420.9731166,
-    "seen": 1794300602.528511,
-    "ast_hash": "6e8e9fd160eb2180112cfed62e37081d",
+    "mtime": 1794313005.6222405,
+    "seen": 1794313565.1014478,
+    "ast_hash": "a486b126ef99fe75a2c9bdb85a39b58d",
     "semantic_hash": ""
   },
   "site/index.html": {
-    "mtime": 1794219420.984036,
-    "seen": 1794300602.528512,
-    "ast_hash": "5c6a38cd00308e31576631fd30ece7c8",
+    "mtime": 1794313005.6220458,
+    "seen": 1794313565.101449,
+    "ast_hash": "bf582a2d64449f623c24969b26362756",
     "semantic_hash": ""
   },
   "technical-report/README.md": {
@@ -4593,6 +4593,24 @@
     "mtime": 1794219421.1186948,
     "seen": 1794300602.528558,
     "ast_hash": "8c85bb4c55949abd678cec8ce1b34882",
+    "semantic_hash": ""
+  },
+  "site/assets/architecture-data.js": {
+    "mtime": 1794312940.1408467,
+    "seen": 1794313565.1010282,
+    "ast_hash": "d348cff2aa693cf4a9eb3445fc7bbe1c",
+    "semantic_hash": ""
+  },
+  "site/assets/architecture.js": {
+    "mtime": 1794313533.9807687,
+    "seen": 1794313565.1010292,
+    "ast_hash": "806c0dfc776aed5dabb4144227e1f3d7",
+    "semantic_hash": ""
+  },
+  "site/architecture.html": {
+    "mtime": 1794313533.9811244,
+    "seen": 1794313565.1014478,
+    "ast_hash": "7bdf0f19702275362676d22be6e9a1a7",
     "semantic_hash": ""
   },
   "package-lock.json": {
