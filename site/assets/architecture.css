@@ -1,0 +1,167 @@
+:root {
+  --z-ui: #1f7ac4;
+  --z-bridge: #7a5ad8;
+  --z-shell: #c06a1d;
+  --z-disk: #1a8a5b;
+  --z-ext: #666666;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --z-ui: #7cc4ff;
+    --z-bridge: #b49cff;
+    --z-shell: #f5a66b;
+    --z-disk: #6fd7a8;
+    --z-ext: #a3a3a3;
+  }
+}
+
+.arch-wrap {
+  max-width: 1500px;
+  margin: 0 auto;
+  padding: 0 1.25rem;
+}
+
+.arch-layout {
+  display: grid;
+  gap: 1rem;
+  grid-template-columns: minmax(0, 1fr);
+}
+
+@media (min-width: 1100px) {
+  .arch-layout { grid-template-columns: minmax(0, 1fr) 340px; }
+  .arch-side { position: sticky; top: 1rem; max-height: calc(100vh - 2rem); overflow: auto; }
+}
+
+.arch-toolbar,
+.flow-bar,
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.4rem 0.6rem;
+  align-items: center;
+  margin: 0.6rem 0;
+}
+
+.arch-toolbar .grow { flex: 1; }
+
+.arch-wrap button,
+.arch-wrap input,
+.arch-wrap select {
+  font: inherit;
+  color: var(--text);
+}
+
+.flow-btn,
+#flows,
+.arch-toolbar button,
+.stepper button,
+.chip {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 0.25rem 0.9rem;
+  cursor: pointer;
+}
+
+#play[aria-pressed="true"] {
+  background: var(--accent);
+  color: var(--accent-text);
+  border-color: var(--accent);
+}
+
+.arch-wrap button:disabled { opacity: 0.4; cursor: default; }
+.arch-wrap button:focus-visible,
+.arch-wrap input:focus-visible,
+.arch-wrap select:focus-visible,
+.node:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+
+#search {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 999px;
+  padding: 0.25rem 0.9rem;
+  min-width: 14rem;
+}
+
+.search-box { position: relative; }
+#results {
+  position: absolute;
+  z-index: 3;
+  margin: 0.25rem 0 0;
+  padding: 0.25rem;
+  list-style: none;
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+}
+#results:empty { display: none; }
+#results button { border: 0; background: none; width: 100%; text-align: left; padding: 0.25rem 0.6rem; cursor: pointer; }
+#results button:hover { background: var(--surface); }
+
+.stepper {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 0.75rem 1rem;
+  margin: 0.6rem 0;
+}
+.stepper p { margin: 0.25rem 0 0.5rem; }
+#step-count { font-weight: 600; color: var(--muted); margin: 0; }
+
+.map-scroll {
+  overflow: auto;
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  background: var(--bg);
+}
+
+svg#map { display: block; width: 100%; height: auto; min-width: 900px; font-family: inherit; }
+
+.zone .bg { fill: color-mix(in srgb, var(--zc) 7%, var(--bg)); stroke: color-mix(in srgb, var(--zc) 35%, var(--bg)); }
+.zone.outside .bg { stroke-dasharray: 6 4; }
+.ztitle { font-size: 14px; font-weight: 650; fill: var(--text); }
+.zblurb { font-size: 10.5px; fill: var(--muted); }
+
+.node { cursor: pointer; transition: opacity 0.2s; }
+.node .card { fill: var(--surface); stroke: var(--border); stroke-width: 1; }
+.node .strip { fill: var(--zc); }
+.node:hover .card { stroke: var(--accent); }
+.node.sel .card, .node.now .card { stroke: var(--accent); stroke-width: 2.5; }
+.node.now .card { fill: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+.node.dim { opacity: 0.22; }
+.ntitle { font-size: 12.5px; font-weight: 600; fill: var(--text); pointer-events: none; }
+.ncode { font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: var(--muted); pointer-events: none; }
+
+.edge { fill: none; stroke: var(--muted); stroke-width: 1.2; opacity: 0.35; transition: opacity 0.2s; }
+.edge.ipc { stroke-dasharray: 7 4; }
+.edge.disk { stroke-dasharray: 2 4; stroke-linecap: round; }
+.edge.net { stroke-dasharray: 10 3 2 3; }
+.edge.on { stroke: var(--accent); stroke-width: 2.2; opacity: 1; }
+.edge.done { stroke: var(--accent); opacity: 0.45; }
+.edge.dim { opacity: 0.06; }
+.edge.flowing { stroke-dasharray: 8 6; animation: dash 0.8s linear infinite; }
+@keyframes dash { to { stroke-dashoffset: -14; } }
+.arrow { fill: var(--muted); opacity: 0.6; }
+.arrow-on { fill: var(--accent); }
+
+@media (prefers-reduced-motion: reduce) { .edge.flowing { animation: none; } }
+
+.legend { font-size: 0.875rem; color: var(--muted); }
+.legend svg { vertical-align: middle; margin-right: 0.3rem; }
+.legend line { stroke: var(--muted); stroke-width: 2; }
+
+.arch-side { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; align-self: start; }
+.arch-side h2 { margin: 0 0 0.25rem; font-size: 1.2rem; }
+.arch-side h3 { font-size: 0.9rem; margin: 1rem 0 0.4rem; }
+.arch-side .eyebrow { margin: 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
+.arch-side .code { margin: 0 0 0.5rem; font: 0.8rem ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--muted); }
+.arch-side .muted { color: var(--muted); }
+.chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
+.chip { font-size: 0.8rem; padding: 0.1rem 0.6rem; }
+.files { padding-left: 1.1rem; font-size: 0.85rem; word-break: break-all; }
+
+#glossary dt { font-weight: 600; margin-top: 0.6rem; }
+#glossary dd { margin: 0; color: var(--muted); }
+
+#flows { max-width: 100%; border-radius: var(--radius); }

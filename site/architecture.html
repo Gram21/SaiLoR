@@ -1,0 +1,102 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="description" content="Interactive map of the SaiLoR components, how they interact, and the main flows through the system.">
+  <title>Architecture map - SaiLoR</title>
+  <link rel="icon" href="img/icon.png" type="image/png">
+  <link rel="stylesheet" href="assets/site.css">
+  <link rel="stylesheet" href="assets/architecture.css">
+  <script src="assets/site.js" defer></script>
+  <script src="assets/architecture-data.js" defer></script>
+  <script src="assets/architecture.js" defer></script>
+</head>
+<body>
+  <a class="skip-link" href="#main">Skip to content</a>
+
+  <header class="site-header">
+    <div class="wrap">
+      <a class="brand" href="index.html">
+        <img src="img/icon.png" alt="" width="32" height="32">
+        SaiLoR
+      </a>
+      <nav class="site-nav" aria-label="Main">
+        <ul>
+          <li><a href="index.html#features">Features</a></li>
+          <li><a href="index.html#platforms">Platforms</a></li>
+          <li><a href="index.html#try-online">Try online</a></li>
+          <li><a href="index.html#quickstart">Quickstart</a></li>
+          <li><a href="create-project.html">First project</a></li>
+          <li><a href="architecture.html" aria-current="page">Architecture</a></li>
+          <li><a href="index.html#cite">How to cite</a></li>
+          <li><a href="https://github.com/Gram21/SaiLoR">GitHub</a></li>
+        </ul>
+      </nav>
+    </div>
+  </header>
+
+  <main id="main">
+    <div class="arch-wrap">
+      <h1>SaiLoR architecture map</h1>
+      <p class="lead">Pick a flow to follow one task through the system. Click a component to see what it does. Hover or focus a component to see its connections.</p>
+
+      <div class="arch-toolbar">
+        <label for="flows"><strong>Flow:</strong></label>
+        <select id="flows"></select>
+      </div>
+
+      <div class="stepper" id="stepper" hidden aria-live="polite">
+        <p id="step-count"></p>
+        <p id="step-text"></p>
+        <button type="button" id="prev">Previous</button>
+        <button type="button" id="next">Next</button>
+        <button type="button" id="play" aria-pressed="false">Play</button>
+      </div>
+
+      <div class="arch-toolbar">
+        <div class="search-box">
+          <input id="search" type="search" placeholder="Search components (press /)" aria-label="Search components" autocomplete="off">
+          <ul id="results"></ul>
+        </div>
+        <span class="grow"></span>
+        <button type="button" id="zout" aria-label="Zoom out">&minus;</button>
+        <button type="button" id="zfit">Fit</button>
+        <button type="button" id="zin" aria-label="Zoom in">+</button>
+      </div>
+
+      <div class="legend" aria-label="Legend">
+        <span><svg width="34" height="8" aria-hidden="true"><line x1="0" y1="4" x2="34" y2="4"/></svg>Call inside one process</span>
+        <span><svg width="34" height="8" aria-hidden="true"><line x1="0" y1="4" x2="34" y2="4" stroke-dasharray="7 4"/></svg>IPC between renderer and shell</span>
+        <span><svg width="34" height="8" aria-hidden="true"><line x1="0" y1="4" x2="34" y2="4" stroke-dasharray="2 4" stroke-linecap="round"/></svg>File access</span>
+        <span><svg width="34" height="8" aria-hidden="true"><line x1="0" y1="4" x2="34" y2="4" stroke-dasharray="10 3 2 3"/></svg>Network or outside process</span>
+      </div>
+
+      <div class="arch-layout">
+        <div class="map-scroll"><svg id="map" role="group" aria-label="Component map"></svg></div>
+        <aside class="arch-side" id="detail" aria-live="polite"></aside>
+      </div>
+
+      <section aria-labelledby="gloss-title">
+        <h2 id="gloss-title">Glossary</h2>
+        <dl id="glossary"></dl>
+      </section>
+      <noscript><p>This page needs JavaScript. The <a href="https://github.com/Gram21/SaiLoR/blob/main/openwiki/architecture.md">architecture notes</a> hold the same information as text.</p></noscript>
+    </div>
+  </main>
+
+  <footer class="site-footer">
+    <div class="wrap">
+      <ul>
+        <li><a href="index.html">Home</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR">GitHub</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR/issues">Issues</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR/releases">Releases</a></li>
+        <li><a href="https://github.com/Gram21/SaiLoR/wiki">Wiki</a></li>
+        <li><a href="https://doi.org/10.5281/zenodo.23804729">Zenodo DOI</a></li>
+      </ul>
+      <p>SaiLoR is licensed under GPL-3.0-only.</p>
+    </div>
+  </footer>
+</body>
+</html>

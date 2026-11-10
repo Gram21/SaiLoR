@@ -428,9 +428,9 @@ self-update, and build targets. See the [index](index.md) for the glossary.
 - **Status:** Implemented
 
 ### REQ-PLT-451: Publish the project website and the demo with GitHub Pages
-- **Description:** When a commit reaches `main`, the Pages workflow shall build the online demo, copy it under `demo/` next to the files of `site/`, and check every relative link and image of the site pages. The workflow shall deploy the result to GitHub Pages only after the check passes. The site pages shall use relative links, so that the site works under the project path. The site pages shall load no script, style, font or image from another host. The walkthrough on the site shall contain project files that the project loader accepts.
+- **Description:** When a commit reaches `main`, the Pages workflow shall build the online demo, copy it under `demo/` next to the files of `site/`, and check every relative link and image of the site pages. The workflow shall deploy the result to GitHub Pages only after the check passes. The site pages shall use relative links, so that the site works under the project path. The site pages shall load no script, style, font or image from another host. The site shall contain an interactive architecture map page (`architecture.html`) that shows the components, their connections and the main flows, and that needs no build step. The walkthrough on the site shall contain project files that the project loader accepts.
 - **Type:** Non-functional (ISO 25010: Portability, Reliability)
-- **Evidence:** `.github/workflows/pages.yml`, `scripts/ci/pages.sh` (runs the link check), `site/index.html`, `site/create-project.html`, `Makefile` (`ci-pages`)
+- **Evidence:** `.github/workflows/pages.yml`, `scripts/ci/pages.sh` (runs the link check), `site/index.html`, `site/create-project.html`, `site/architecture.html`, `site/assets/architecture.js`, `site/assets/architecture-data.js`, `Makefile` (`ci-pages`)
 - **Verified by:** `src/model/siteExamples.test.ts` (`the minimal example loads as a SaiLoR project`, `the extended example loads as a SaiLoR project`), `src/ci/ciScripts.test.ts` (`every CI script stops on the first error and works from the repository root`)
 - **Status:** Implemented
 
