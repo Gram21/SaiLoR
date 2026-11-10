@@ -30,6 +30,8 @@ export function loadDiagramConfig(): DiagramConfig {
   if (!CHART_TYPES.includes(c.type)) c.type = DEFAULT_CONFIG.type
   if (!(c.palette in PALETTES)) c.palette = DEFAULT_CONFIG.palette
   if (c.sort !== 'label' && c.sort !== 'count') c.sort = DEFAULT_CONFIG.sort
+  c.xLabelChars = clamp(c.xLabelChars, 0, 1000, 0)
+  c.yLabelChars = clamp(c.yLabelChars, 0, 1000, 0)
   c.limit = clamp(c.limit, 2, 50, DEFAULT_CONFIG.limit)
   c.width = clamp(c.width, 300, 3000, DEFAULT_CONFIG.width)
   c.height = clamp(c.height, 200, 2000, DEFAULT_CONFIG.height)

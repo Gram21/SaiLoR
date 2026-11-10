@@ -70,7 +70,7 @@ describe('diagram data', () => {
 
 describe('renderDiagram', () => {
   // [utest->req~ui-300~1]
-  it.each(['bar', 'stacked', 'line', 'pie', 'heatmap'] as const)('renders %s as standalone svg', (type) => {
+  it.each(['bar', 'stacked', 'line', 'pie', 'heatmap', 'bubble'] as const)('renders %s as standalone svg', (type) => {
     const c = cfg({ type, group: '@venue', title: 'T' })
     const svg = renderDiagram(aggregate(graph, c), c)
     expect(svg.startsWith('<svg xmlns="http://www.w3.org/2000/svg"')).toBe(true)
@@ -79,7 +79,7 @@ describe('renderDiagram', () => {
   })
 
   // [utest->req~ui-300~1]
-  it.each(['bar', 'stacked', 'line', 'pie', 'heatmap'] as const)('makes well-formed XML for %s with values and groups', (type) => {
+  it.each(['bar', 'stacked', 'line', 'pie', 'heatmap', 'bubble'] as const)('makes well-formed XML for %s with values and groups', (type) => {
     for (const group of ['', '@venue']) {
       const c = cfg({ type, group, values: true, title: 'A & B', xLabel: 'x', yLabel: 'y' })
       const doc = new DOMParser().parseFromString(renderDiagram(aggregate(graph, c), c), 'image/svg+xml')
@@ -150,6 +150,25 @@ describe('diagram axis', () => {
     const svg = renderDiagram({ cats: ['a', 'b'], series: [''], counts: [[1], [1]], papers: 2 }, c)
     expect(svg).toContain('>Papers<')
     expect(svg).not.toContain('…<')
+  })
+})
+
+describe('diagram labels and bubbles', () => {
+  const long = 'A very long category name indeed'
+  const data = { cats: [long, 'b'], series: ['x', 'y'], counts: [[1, 3], [2, 2]], papers: 8 }
+  const base = { ...DEFAULT_CONFIG, width: 800, height: 500 }
+
+  it('shows whole labels by default and cuts them to the chosen length', () => {
+    expect(renderDiagram(data, { ...base, type: 'bar' })).toContain(`>${long}<`)
+    const cut = renderDiagram(data, { ...base, type: 'bar', xLabelChars: 8 })
+    expect(cut).toContain('>A very …<')
+    expect(cut).not.toContain(long + '<')
+    expect(renderDiagram(data, { ...base, type: 'bar', horizontal: true, yLabelChars: 5 })).toContain('>A ve…<')
+  })
+
+  it('draws one circle per non-empty cell for bubble', () => {
+    const svg = renderDiagram(data, { ...base, type: 'bubble' })
+    expect(svg.match(/<circle/g)).toHaveLength(4)
   })
 })
 

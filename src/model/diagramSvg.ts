@@ -10,10 +10,9 @@ const num = (n: number) => String(Math.round(n * 100) / 100)
 const attr = (s: string) => xmlText(s).replace(/"/g, '&quot;')
 /** A text width estimate in pixels; the SVG has no font metrics outside a browser. */
 const textWidth = (s: string, size: number) => s.length * size * 0.58
-const clip = (s: string, max: number, size: number) => {
-  const chars = Math.max(3, Math.floor(max / (size * 0.58)))
-  return s.length > chars ? `${s.slice(0, chars - 1)}…` : s
-}
+const clip = (s: string, max: number, size: number) => cut(s, Math.max(3, Math.floor(max / (size * 0.58))))
+/** The label cut to `chars` characters with an ellipsis; 0 keeps it whole. */
+const cut = (s: string, chars: number) => (chars > 0 && s.length > chars ? `${s.slice(0, Math.max(1, chars - 1))}…` : s)
 
 function text(x: number, y: number, s: string, size: number, extra = '') {
   const fill = /\sfill="/.test(` ${extra}`) ? '' : ` fill="${INK}"`
@@ -60,7 +59,7 @@ export function renderDiagram(data: DiagramData, config: DiagramConfig): string 
 
   const legendItems = type === 'pie' ? cats.map((c, i) => ({ label: c, color: seriesColor(config, c, i) })) : grouped ? series.map((s, i) => ({ label: s, color: color(i) })) : []
   const showLegend = config.legend && legendItems.length > 0
-  const legendW = showLegend ? Math.min(220, Math.max(...legendItems.map((l) => textWidth(l.label, 12))) + 36) : 0
+  const legendW = showLegend ? Math.min(W * 0.4, Math.max(...legendItems.map((l) => textWidth(l.label, 12))) + 36) : 0
   const right = W - 20 - legendW
   if (showLegend) {
     legendItems.slice(0, Math.floor((H - top - 20) / 20)).forEach((l, i) => {
@@ -92,21 +91,27 @@ export function renderDiagram(data: DiagramData, config: DiagramConfig): string 
     return out.join('\n') + '\n'
   }
 
-  const rotate = cats.some((c) => textWidth(c, 11) > (right - 70) / cats.length - 4)
-  const longest = rotate ? Math.min(140, Math.max(...cats.map((c) => textWidth(c, 11)))) : 0
+  const horizontalBars = config.horizontal && (type === 'bar' || type === 'stacked')
+  const xCats = cats.map((c) => cut(c, horizontalBars ? 0 : config.xLabelChars))
+  const yCats = cats.map((c) => cut(c, config.yLabelChars))
+  const yRows = series.map((s, j) => cut(s || name(j), config.yLabelChars))
+  const widest = (labels: string[]) => Math.max(0, ...labels.map((l) => textWidth(l, 11)))
+  const grid = type === 'heatmap' || type === 'bubble'
+  const rotate = xCats.some((c) => textWidth(c, 11) > (right - 70) / cats.length - 4)
+  const longest = rotate ? widest(xCats) : 0
   const bottom = H - 20 - (config.xLabel ? 22 : 0) - (rotate ? longest * 0.7 + 8 : 18)
-  const left = 28 + (config.yLabel ? 22 : 0) + (type === 'heatmap' ? Math.min(160, Math.max(...series.map((s, j) => textWidth(s || name(j), 11)))) : 28)
+  const left = 28 + (config.yLabel ? 22 : 0) + (grid ? widest(yRows) + 6 : 28)
   const plotW = Math.max(40, right - left - 10)
   const plotH = Math.max(40, bottom - top)
   const band = plotW / cats.length
 
   const catLabels = () =>
-    cats.forEach((c, i) => {
+    xCats.forEach((c, i) => {
       const x = left + band * (i + 0.5)
       out.push(
         rotate
-          ? text(x, bottom + 14, clip(c, 140, 11), 11, `text-anchor="end" transform="rotate(-40 ${num(x)} ${num(bottom + 14)})"`)
-          : text(x, bottom + 16, clip(c, band - 4, 11), 11, 'text-anchor="middle"'),
+          ? text(x, bottom + 14, c, 11, `text-anchor="end" transform="rotate(-40 ${num(x)} ${num(bottom + 14)})"`)
+          : text(x, bottom + 16, c, 11, 'text-anchor="middle"'),
       )
     })
   const axisTitles = () => {
@@ -114,18 +119,21 @@ export function renderDiagram(data: DiagramData, config: DiagramConfig): string 
     if (config.yLabel) out.push(text(18, (top + bottom) / 2, config.yLabel, 13, `text-anchor="middle" transform="rotate(-90 18 ${num((top + bottom) / 2)})"`))
   }
 
-  if (type === 'heatmap') {
+  if (grid) {
     const rowH = plotH / series.length
     const max = Math.max(1, ...counts.flat())
     const base = color(0)
-    series.forEach((s, j) => out.push(text(left - 6, top + rowH * (j + 0.5) + 4, clip(s || name(j), left - (config.yLabel ? 50 : 28), 11), 11, 'text-anchor="end"')))
+    yRows.forEach((s, j) => out.push(text(left - 6, top + rowH * (j + 0.5) + 4, s, 11, 'text-anchor="end"')))
     cats.forEach((c, i) =>
       series.forEach((s, j) => {
         const v = counts[i][j]
         const x = left + band * i
         const y = top + rowH * j
-        out.push(`<rect x="${num(x + 1)}" y="${num(y + 1)}" width="${num(band - 2)}" height="${num(rowH - 2)}" fill="${attr(v ? base : '#f6f7f9')}" fill-opacity="${v ? num(0.12 + (0.88 * v) / max) : 1}"><title>${xmlText(`${c}${s ? ` / ${s}` : ''}: ${v}`)}</title></rect>`)
-        if (config.values && v) out.push(text(x + band / 2, y + rowH / 2 + 4, String(v), 11, `text-anchor="middle" ${v / max > 0.55 ? 'fill="#ffffff"' : ''}`))
+        const tip = `<title>${xmlText(`${c}${s ? ` / ${s}` : ''}: ${v}`)}</title>`
+        if (type === 'bubble') {
+          if (v) out.push(`<circle cx="${num(x + band / 2)}" cy="${num(y + rowH / 2)}" r="${num(Math.max(2, Math.sqrt(v / max) * (Math.min(band, rowH) / 2 - 2)))}" fill="${attr(color(j))}" fill-opacity="0.75">${tip}</circle>`)
+        } else out.push(`<rect x="${num(x + 1)}" y="${num(y + 1)}" width="${num(band - 2)}" height="${num(rowH - 2)}" fill="${attr(v ? base : '#f6f7f9')}" fill-opacity="${v ? num(0.12 + (0.88 * v) / max) : 1}">${tip}</rect>`)
+        if (config.values && v) out.push(text(x + band / 2, y + rowH / 2 + 4, String(v), 11, `text-anchor="middle" ${type === 'heatmap' && v / max > 0.55 ? 'fill="#ffffff"' : ''}`))
       }),
     )
     catLabels()
@@ -147,8 +155,8 @@ export function renderDiagram(data: DiagramData, config: DiagramConfig): string 
   const yMax = Math.max(step, Math.ceil(Math.max(...rowMax) / step - 1e-9) * step)
   const tick = (v: number) => `${v}${pct ? '%' : ''}`
 
-  if (config.horizontal && (type === 'bar' || stacked)) {
-    const labelW = Math.min(160, Math.max(...cats.map((c) => textWidth(c, 11))))
+  if (horizontalBars) {
+    const labelW = widest(yCats)
     const hLeft = 20 + (config.xLabel ? 22 : 0) + labelW + 8
     const hBottom = H - 20 - (config.yLabel ? 22 : 0) - 18
     const hW = Math.max(40, right - hLeft - 14)
@@ -163,7 +171,7 @@ export function renderDiagram(data: DiagramData, config: DiagramConfig): string 
     const thick = Math.min(hBand * 0.8, 40 * series.length) / (stacked ? 1 : series.length)
     cats.forEach((c, i) => {
       const mid = top + hBand * (i + 0.5)
-      out.push(text(hLeft - 6, mid + 4, clip(c, labelW, 11), 11, 'text-anchor="end"'))
+      out.push(text(hLeft - 6, mid + 4, yCats[i], 11, 'text-anchor="end"'))
       let acc = 0
       series.forEach((_, j) => {
         const v = vals[i][j]

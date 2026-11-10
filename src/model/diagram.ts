@@ -5,8 +5,8 @@ import type { AnnotationValueTree } from './annotations'
 import { buildGraph, csvCell, type Graph, type GraphEdgeType } from './graph'
 import { renderDiagram } from './diagramSvg'
 
-export type ChartType = 'bar' | 'stacked' | 'line' | 'pie' | 'heatmap'
-export const CHART_TYPES: ChartType[] = ['bar', 'stacked', 'line', 'pie', 'heatmap']
+export type ChartType = 'bar' | 'stacked' | 'line' | 'pie' | 'heatmap' | 'bubble'
+export const CHART_TYPES: ChartType[] = ['bar', 'stacked', 'line', 'pie', 'heatmap', 'bubble']
 export type SortOrder = 'count' | 'label'
 
 /** Palettes of colour-blind safe colours (Okabe-Ito first). */
@@ -14,6 +14,13 @@ export const PALETTES = {
   okabe: ['#0072b2', '#e69f00', '#009e73', '#cc79a7', '#d55e00', '#56b4e9', '#f0e442', '#000000'],
   tableau: ['#4e79a7', '#f28e2b', '#e15759', '#76b7b2', '#59a14f', '#edc948', '#b07aa1', '#ff9da7', '#9c755f', '#bab0ac'],
   blues: ['#08306b', '#2171b5', '#4292c6', '#6baed6', '#9ecae1', '#c6dbef'],
+  greens: ['#00441b', '#238b45', '#41ab5d', '#74c476', '#a1d99b', '#c7e9c0'],
+  oranges: ['#7f2704', '#d94801', '#f16913', '#fd8d3c', '#fdae6b', '#fdd0a2'],
+  purples: ['#3f007d', '#6a51a3', '#807dba', '#9e9ac8', '#bcbddc', '#dadaeb'],
+  greys: ['#000000', '#252525', '#525252', '#737373', '#969696', '#bdbdbd'],
+  viridis: ['#440154', '#414487', '#2a788e', '#22a884', '#7ad151', '#fde725'],
+  pastel: ['#a6cee3', '#b2df8a', '#fb9a99', '#fdbf6f', '#cab2d6', '#ffff99', '#b3cde3', '#ccebc5'],
+  bold: ['#e41a1c', '#377eb8', '#4daf4a', '#984ea3', '#ff7f00', '#a65628', '#f781bf', '#999999'],
 } as const
 export type PaletteName = keyof typeof PALETTES
 
@@ -30,6 +37,10 @@ export interface DiagramConfig {
   /** Colours by series name, over the palette. */
   colors: Record<string, string>
   legend: boolean
+  /** The most characters of a label on the horizontal axis; 0 for the full label. */
+  xLabelChars: number
+  /** The most characters of a label on the vertical axis; 0 for the full label. */
+  yLabelChars: number
   values: boolean
   sort: SortOrder
   /** The most categories and series shown; the rest becomes "Other". */
@@ -57,6 +68,8 @@ export const DEFAULT_CONFIG: DiagramConfig = {
   palette: 'okabe',
   colors: {},
   legend: true,
+  xLabelChars: 0,
+  yLabelChars: 0,
   values: true,
   sort: 'label',
   limit: 12,

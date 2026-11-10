@@ -62,7 +62,7 @@ export function DiagramView({ config, setConfig, onClose }: { config: DiagramCon
   const effective: DiagramConfig = {
     ...config,
     xLabel: config.xLabel || labelOf(config.x),
-    yLabel: config.yLabel || (config.type === 'heatmap' && config.group ? labelOf(config.group) : t('diagram.papers')),
+    yLabel: config.yLabel || ((config.type === 'heatmap' || config.type === 'bubble') && config.group ? labelOf(config.group) : t('diagram.papers')),
   }
   const effectiveKey = JSON.stringify(effective)
 
@@ -108,6 +108,19 @@ export function DiagramView({ config, setConfig, onClose }: { config: DiagramCon
   if (!project) return null
   const set = <K extends keyof DiagramConfig>(key: K, value: DiagramConfig[K]) => setConfig((c) => ({ ...c, [key]: value }))
   const ready = shown !== null && 'svg' in shown && shown.papers > 0
+  const horizontalBars = config.horizontal && (config.type === 'bar' || config.type === 'stacked')
+  const grid = config.type === 'heatmap' || config.type === 'bubble'
+  const longest = (labels: string[]) => Math.max(0, ...labels.map((l) => l.length))
+  const data = ready ? shown.data : null
+  const xLongest = data && !horizontalBars ? longest(data.cats) : 0
+  const yLongest = data ? (horizontalBars ? longest(data.cats) : grid ? longest(data.series.map((s) => s || effective.yLabel)) : 0) : 0
+  const charsSlider = (label: string, key: 'xLabelChars' | 'yLabelChars', max: number) =>
+    max > 3 && (
+      <label>
+        {label}: {config[key] > 0 && config[key] < max ? config[key] : t('diagram.chars.full')}
+        <input type="range" min={3} max={max} value={config[key] > 0 ? Math.min(config[key], max) : max} onChange={(e) => set(key, Number(e.target.value) >= max ? 0 : Number(e.target.value))} />
+      </label>
+    )
   const keys = shown && 'keys' in shown ? shown.keys : []
 
   // [impl->req~ui-320~1]
@@ -162,7 +175,7 @@ export function DiagramView({ config, setConfig, onClose }: { config: DiagramCon
         <Section title={t('diagram.section.data')}>
           <div className="diagram-types" role="radiogroup" aria-label={t('diagram.type')}>
             {CHART_TYPES.map((type) => (
-              <button key={type} type="button" role="radio" aria-checked={config.type === type} className={config.type === type ? 'active' : ''} onClick={() => set('type', type)}>
+              <button key={type} type="button" role="radio" aria-checked={config.type === type} className={config.type === type ? 'active' : ''} onClick={() => setConfig((c) => ({ ...c, type, legend: type !== 'heatmap' && type !== 'bubble' }))}>
                 {t(`diagram.type.${type}` as const)}
               </button>
             ))}
@@ -177,13 +190,15 @@ export function DiagramView({ config, setConfig, onClose }: { config: DiagramCon
               {dimensionSelect(config.group, (v) => set('group', v), t('diagram.group.none'))}
             </label>
           )}
-          <label>
-            {t('diagram.sort')}
-            <select value={config.sort} onChange={(e) => set('sort', e.target.value as DiagramConfig['sort'])}>
-              <option value="label">{t('diagram.sort.label')}</option>
-              <option value="count">{t('diagram.sort.count')}</option>
-            </select>
-          </label>
+          {config.type !== 'line' && (
+            <label>
+              {t('diagram.sort')}
+              <select value={config.sort} onChange={(e) => set('sort', e.target.value as DiagramConfig['sort'])}>
+                <option value="label">{t('diagram.sort.label')}</option>
+                <option value="count">{t('diagram.sort.count')}</option>
+              </select>
+            </label>
+          )}
           <label>
             {t('diagram.limit')}
             <input type="number" min={2} max={50} value={config.limit} onChange={(e) => set('limit', Math.min(50, Math.max(2, Math.round(Number(e.target.value)) || DEFAULT_CONFIG.limit)))} />
@@ -218,6 +233,12 @@ export function DiagramView({ config, setConfig, onClose }: { config: DiagramCon
                 {t('diagram.yLabel')}
                 <input type="text" value={config.yLabel} placeholder={effective.yLabel} dir="auto" onChange={(e) => set('yLabel', e.target.value)} />
               </label>
+            </>
+          )}
+          {config.type !== 'pie' && (
+            <>
+              {charsSlider(t('diagram.xChars'), 'xLabelChars', xLongest)}
+              {charsSlider(t('diagram.yChars'), 'yLabelChars', yLongest)}
             </>
           )}
           <label>
@@ -285,7 +306,6 @@ export function DiagramView({ config, setConfig, onClose }: { config: DiagramCon
               </button>
             ))}
           </div>
-          <p className="graph-hint">{t('diagram.exportHint')}</p>
           {message && (
             <p className={message.ok ? 'graph-hint' : 'graph-hint graph-error'} role="status">
               {message.text}
