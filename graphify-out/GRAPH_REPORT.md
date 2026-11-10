@@ -1,17 +1,17 @@
 # Graph Report - slr-helper  (2026-11-10)
 
 ## Corpus Check
-- 693 files · ~1,122,156 words
+- 694 files · ~1,122,275 words
 - Verdict: corpus is large enough that graph structure adds value.
-- Unclassified: 145 file(s) not represented in the graph (top: .toml 107, (none) 12, .tex 11)
+- Unclassified: 147 file(s) not represented in the graph (top: .toml 107, (none) 12, .tex 11)
 
 ## Summary
-- 7516 nodes · 21484 edges · 280 communities (230 shown, 50 thin omitted)
+- 7517 nodes · 21484 edges · 281 communities (230 shown, 51 thin omitted)
 - Extraction: 86% EXTRACTED · 14% INFERRED · 0% AMBIGUOUS · INFERRED: 2911 edges (avg confidence: 0.94)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `bcd818fe`
+- Built from commit: `41e9d688`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -311,7 +311,7 @@
 - 2-file cycle: `src/model/diagram.ts -> src/model/diagramSvg.ts -> src/model/diagram.ts`
 - 2-file cycle: `src/model/metadata.ts -> src/model/project.ts -> src/model/metadata.ts`
 
-## Communities (280 total, 50 thin omitted)
+## Communities (281 total, 51 thin omitted)
 
 ### Community 0 - "git.rs"
 Cohesion: 0.04
@@ -1235,14 +1235,14 @@ Nodes (3): REQ-CON-410: Align repeated entries independent of entry order, REQ-C
 
 ## Knowledge Gaps
 - **24 isolated node(s):** `About`, `CloseWindow`, `Fullscreen`, `Github`, `Minimize` (+19 more)
-  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2803 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
-- **50 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
+  These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2804 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
+- **51 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `jobs` connect `jobs` to `release.yml`, `build`, `checksums`, `release`?**
-  _High betweenness centrality (0.264) - this node is a cross-community bridge._
+  _High betweenness centrality (0.250) - this node is a cross-community bridge._
 - **Are the 5 inferred relationships involving `t()` (e.g. with `REQ-UI-120: Translated user interface` and `REQ-UI-120: Translated user interface`) actually correct?**
   _`t()` has 5 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `About`, `CloseWindow`, `Fullscreen` to the rest of the system?**
@@ -1250,7 +1250,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `git.rs` be split into smaller, more focused modules?**
   _Cohesion score 0.0449438202247191 - nodes in this community are weakly interconnected._
 - **Why does `with` connect `with` to `steps`?**
-  _High betweenness centrality (0.253) - this node is a cross-community bridge._
+  _High betweenness centrality (0.245) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `useT()` (e.g. with `REQ-UI-120: Translated user interface` and `REQ-UI-120: Translated user interface`) actually correct?**
   _`useT()` has 4 INFERRED edges - model-reasoned connections that need verification._
 - **Should `Rust Docs/Builders` be split into smaller, more focused modules?**

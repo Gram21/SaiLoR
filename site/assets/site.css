@@ -1,36 +1,75 @@
-:root {
-  color-scheme: light dark;
-  --bg: #ffffff;
-  --surface: #f6f8fa;
-  --text: #1f2328;
-  --muted: #59636e;
-  --border: #d1d9e0;
-  --link: #0550ae;
-  --focus: #0969da;
-  --accent: #0550ae;
-  --accent-text: #ffffff;
-  --code-bg: #f6f8fa;
-  --warn-bg: #fff8c5;
-  --warn-border: #9a6700;
-  --radius: 8px;
-  --max: 1080px;
+@font-face {
+  font-family: Inter;
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(fonts/inter-latin.woff2) format("woff2");
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --bg: #0d1117;
-    --surface: #161b22;
-    --text: #e6edf3;
-    --muted: #9198a1;
-    --border: #3d444d;
-    --link: #58a6ff;
-    --focus: #58a6ff;
-    --accent: #58a6ff;
-    --accent-text: #0d1117;
-    --code-bg: #161b22;
-      --warn-bg: #2d2400;
-    --warn-border: #d29922;
-  }
+@font-face {
+  font-family: "JetBrains Mono";
+  font-style: normal;
+  font-weight: 100 900;
+  font-display: swap;
+  src: url(fonts/jetbrains-mono-latin.woff2) format("woff2");
+}
+
+:root {
+  color-scheme: dark;
+  --sans: Inter, ui-sans-serif, system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono: "JetBrains Mono", ui-monospace, Menlo, Consolas, monospace;
+  --ease: cubic-bezier(0.2, 0.7, 0.2, 1);
+  --bg: #0f0f0f;
+  --grid: #1f1f1f;
+  --surface: #191919;
+  --raise: #232323;
+  --text: #ececec;
+  --muted: #8b8b8b;
+  --border: rgba(255, 255, 255, 0.1);
+  --link: #7cc4ff;
+  --focus: #7cc4ff;
+  --accent: #ececec;
+  --accent-text: #0f0f0f;
+  --code-bg: #232323;
+  --warn-bg: #2d2400;
+  --warn-border: #d29922;
+  --glass: rgba(15, 15, 15, 0.72);
+  --glow: rgba(255, 255, 255, 0.07);
+  --shadow: 0 1px 0 rgba(255, 255, 255, 0.035) inset, 0 12px 32px -20px #000;
+  --radius: 14px;
+  --radius-sm: 8px;
+  --max: 1080px;
+  --z-ui: #7cc4ff;
+  --z-bridge: #b49cff;
+  --z-shell: #f5a66b;
+  --z-disk: #6fd7a8;
+  --z-ext: #a3a3a3;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --bg: #f3f3f1;
+  --grid: #d2d2ce;
+  --surface: #ffffff;
+  --raise: #ebebe8;
+  --text: #161616;
+  --muted: #595959;
+  --border: rgba(0, 0, 0, 0.15);
+  --link: #0550ae;
+  --focus: #0969da;
+  --accent: #161616;
+  --accent-text: #ffffff;
+  --code-bg: #ebebe8;
+  --warn-bg: #fff8c5;
+  --warn-border: #9a6700;
+  --glass: rgba(243, 243, 241, 0.78);
+  --glow: rgba(0, 0, 0, 0.05);
+  --shadow: 0 0 0 1px rgba(0, 0, 0, 0.1), 0 12px 28px -18px rgba(0, 0, 0, 0.3);
+  --z-ui: #1f7ac4;
+  --z-bridge: #7a5ad8;
+  --z-shell: #c06a1d;
+  --z-disk: #1a8a5b;
+  --z-ext: #666666;
 }
 
 *,
@@ -48,15 +87,24 @@ html {
   html {
     scroll-behavior: auto;
   }
+
+  * {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 body {
   margin: 0;
-  background: var(--bg);
+  background-color: var(--bg);
+  background-image: radial-gradient(60rem 22rem at 20% -4rem, var(--glow), transparent), radial-gradient(var(--grid) 1px, transparent 1px);
+  background-size: auto, 24px 24px;
+  background-attachment: fixed, scroll;
   color: var(--text);
-  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  font-size: 1rem;
+  font-family: var(--sans);
+  font-size: 15px;
   line-height: 1.6;
+  -webkit-font-smoothing: antialiased;
 }
 
 a {
@@ -83,11 +131,19 @@ h3 {
 }
 
 h1 {
-  font-size: 2.5rem;
+  font-size: clamp(2rem, 3.4vw, 2.8rem);
+  font-weight: 700;
+  letter-spacing: -0.035em;
+  line-height: 1.1;
+  background: linear-gradient(100deg, var(--text) 40%, var(--z-bridge));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
 }
 
 h2 {
-  font-size: 1.75rem;
+  font-size: 1.5rem;
+  letter-spacing: -0.02em;
   margin-top: 0;
   padding-bottom: 0.3em;
   border-bottom: 1px solid var(--border);
@@ -110,14 +166,14 @@ li + li {
 
 code,
 pre {
-  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, "Liberation Mono", monospace;
-  font-size: 0.9em;
+  font-family: var(--mono);
+  font-size: 0.85em;
 }
 
 code {
   background: var(--code-bg);
-  border-radius: 4px;
-  padding: 0.1em 0.3em;
+  border-radius: 6px;
+  padding: 0.1em 0.35em;
 }
 
 table {
@@ -153,7 +209,7 @@ th {
   background: var(--accent);
   color: var(--accent-text);
   padding: 0.5rem 0.9rem;
-  border-radius: var(--radius);
+  border-radius: 999px;
   text-decoration: none;
   font-weight: 600;
 }
@@ -163,8 +219,13 @@ th {
 }
 
 .site-header {
+  position: sticky;
+  top: 0;
+  z-index: 6;
   border-bottom: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--glass);
+  backdrop-filter: blur(14px) saturate(1.4);
+  -webkit-backdrop-filter: blur(14px) saturate(1.4);
 }
 
 .site-header .wrap {
@@ -182,7 +243,8 @@ th {
   align-items: center;
   gap: 0.6rem;
   font-weight: 700;
-  font-size: 1.15rem;
+  font-size: 0.95rem;
+  letter-spacing: 0.08em;
   color: var(--text);
   text-decoration: none;
 }
@@ -196,7 +258,8 @@ th {
 .site-nav ul {
   display: flex;
   flex-wrap: wrap;
-  gap: 0.25rem 1rem;
+  align-items: center;
+  gap: 0.25rem 0.25rem;
   list-style: none;
   margin: 0;
   padding: 0;
@@ -207,18 +270,44 @@ th {
 }
 
 .site-nav a {
-  color: var(--text);
+  display: block;
+  color: var(--muted);
   text-decoration: none;
-  padding: 0.2rem 0;
+  font-size: 0.875rem;
+  padding: 0.2rem 0.75rem;
+  border-radius: 999px;
+  transition: background 0.15s, color 0.15s;
 }
 
-.site-nav a:hover,
+.site-nav a:hover {
+  background: var(--raise);
+  color: var(--text);
+}
+
 .site-nav a[aria-current="page"] {
-  text-decoration: underline;
+  background: var(--accent);
+  color: var(--accent-text);
+}
+
+.theme-toggle {
+  font: inherit;
+  font-size: 0.8rem;
+  height: 32px;
+  padding: 0 0.9rem;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--raise);
+  color: var(--text);
+  cursor: pointer;
+  transition: transform 0.15s var(--ease);
+}
+
+.theme-toggle:hover {
+  transform: translateY(-1px);
 }
 
 .hero {
-  padding: 3rem 0 2rem;
+  padding: 3.5rem 0 2rem;
 }
 
 .hero .lead {
@@ -237,13 +326,14 @@ th {
 .button {
   display: inline-block;
   padding: 0.6rem 1.1rem;
-  border-radius: var(--radius);
-  border: 1px solid var(--accent);
-  background: transparent;
-  color: var(--accent);
+  border-radius: 999px;
+  border: 1px solid var(--border);
+  background: var(--raise);
+  color: var(--text);
   font-weight: 600;
   text-decoration: none;
   line-height: 1.2;
+  transition: transform 0.15s var(--ease), background 0.15s;
 }
 
 .button.primary {
@@ -252,7 +342,11 @@ th {
 }
 
 .button:hover {
-  text-decoration: underline;
+  transform: translateY(-1px);
+}
+
+.button.primary {
+  border-color: var(--accent);
 }
 
 figure {
@@ -264,6 +358,7 @@ figure img {
   width: 100%;
   border: 1px solid var(--border);
   border-radius: var(--radius);
+  box-shadow: var(--shadow);
 }
 
 figcaption {
@@ -283,10 +378,10 @@ section {
 }
 
 .card {
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  padding: 1rem 1.1rem;
+  padding: 1rem 1.25rem;
   background: var(--surface);
+  box-shadow: var(--shadow);
 }
 
 .card h3 {
@@ -302,7 +397,7 @@ section {
   border-left: 4px solid var(--warn-border);
   background: var(--warn-bg);
   padding: 0.75rem 1rem;
-  border-radius: 0 var(--radius) var(--radius) 0;
+  border-radius: 0 var(--radius-sm) var(--radius-sm) 0;
   margin: 0 0 1.25rem;
 }
 
@@ -317,8 +412,8 @@ section {
 
 .code-block pre {
   margin: 0;
-  background: var(--code-bg);
-  border: 1px solid var(--border);
+  background: var(--surface);
+  box-shadow: var(--shadow);
   border-radius: var(--radius);
   padding: 2.5rem 1rem 1rem;
   overflow-x: auto;
@@ -339,8 +434,8 @@ section {
   font-weight: 600;
   padding: 0.25rem 0.6rem;
   border: 1px solid var(--border);
-  border-radius: 6px;
-  background: var(--bg);
+  border-radius: 999px;
+  background: var(--raise);
   color: var(--text);
   cursor: pointer;
 }
@@ -365,7 +460,7 @@ section {
 .site-footer {
   margin-top: 3rem;
   border-top: 1px solid var(--border);
-  background: var(--surface);
+  background: var(--glass);
   padding: 1.5rem 0 2rem;
   color: var(--muted);
   font-size: 0.95rem;

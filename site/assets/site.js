@@ -3,6 +3,14 @@
 
   document.documentElement.classList.add('js');
 
+  document.querySelectorAll('.theme-toggle').forEach(function (button) {
+    button.addEventListener('click', function () {
+      var next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
+      document.documentElement.dataset.theme = next;
+      try { localStorage.setItem('theme', next); } catch (err) { /* private mode */ }
+    });
+  });
+
   function copyWithTextarea(text) {
     var area = document.createElement('textarea');
     area.value = text;

@@ -1,23 +1,5 @@
-:root {
-  --z-ui: #1f7ac4;
-  --z-bridge: #7a5ad8;
-  --z-shell: #c06a1d;
-  --z-disk: #1a8a5b;
-  --z-ext: #666666;
-}
-
-@media (prefers-color-scheme: dark) {
-  :root {
-    --z-ui: #7cc4ff;
-    --z-bridge: #b49cff;
-    --z-shell: #f5a66b;
-    --z-disk: #6fd7a8;
-    --z-ext: #a3a3a3;
-  }
-}
-
 .arch-wrap {
-  max-width: 1500px;
+  max-width: 1560px;
   margin: 0 auto;
   padding: 0 1.25rem;
 }
@@ -52,7 +34,7 @@
   color: var(--text);
 }
 
-.flow-btn,
+
 #flows,
 .arch-toolbar button,
 .stepper button,
@@ -81,7 +63,7 @@
   background: var(--surface);
   border-radius: 999px;
   padding: 0.25rem 0.9rem;
-  min-width: 14rem;
+  min-width: 18rem;
 }
 
 .search-box { position: relative; }
@@ -101,7 +83,7 @@
 
 .stepper {
   background: var(--surface);
-  border: 1px solid var(--border);
+  box-shadow: var(--shadow);
   border-radius: var(--radius);
   padding: 0.75rem 1rem;
   margin: 0.6rem 0;
@@ -111,9 +93,9 @@
 
 .map-scroll {
   overflow: auto;
-  border: 1px solid var(--border);
   border-radius: var(--radius);
-  background: var(--bg);
+  background: transparent;
+  box-shadow: var(--shadow);
 }
 
 svg#map { display: block; width: 100%; height: auto; min-width: 900px; font-family: inherit; }
@@ -124,14 +106,14 @@ svg#map { display: block; width: 100%; height: auto; min-width: 900px; font-fami
 .zblurb { font-size: 10.5px; fill: var(--muted); }
 
 .node { cursor: pointer; transition: opacity 0.2s; }
-.node .card { fill: var(--surface); stroke: var(--border); stroke-width: 1; }
+.node .card { fill: var(--surface); stroke: var(--border); stroke-width: 1; transition: stroke 0.15s, fill 0.2s; }
 .node .strip { fill: var(--zc); }
 .node:hover .card { stroke: var(--accent); }
 .node.sel .card, .node.now .card { stroke: var(--accent); stroke-width: 2.5; }
 .node.now .card { fill: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
 .node.dim { opacity: 0.22; }
 .ntitle { font-size: 12.5px; font-weight: 600; fill: var(--text); pointer-events: none; }
-.ncode { font: 10px ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; fill: var(--muted); pointer-events: none; }
+.ncode { font: 10px var(--mono); fill: var(--muted); pointer-events: none; }
 
 .edge { fill: none; stroke: var(--muted); stroke-width: 1.2; opacity: 0.35; transition: opacity 0.2s; }
 .edge.ipc { stroke-dasharray: 7 4; }
@@ -151,11 +133,11 @@ svg#map { display: block; width: 100%; height: auto; min-width: 900px; font-fami
 .legend svg { vertical-align: middle; margin-right: 0.3rem; }
 .legend line { stroke: var(--muted); stroke-width: 2; }
 
-.arch-side { background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; align-self: start; }
+.arch-side { background: var(--surface); box-shadow: var(--shadow); border-radius: var(--radius); padding: 1rem 1.25rem; align-self: start; }
 .arch-side h2 { margin: 0 0 0.25rem; font-size: 1.2rem; }
 .arch-side h3 { font-size: 0.9rem; margin: 1rem 0 0.4rem; }
 .arch-side .eyebrow { margin: 0; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.1em; color: var(--muted); }
-.arch-side .code { margin: 0 0 0.5rem; font: 0.8rem ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; color: var(--muted); }
+.arch-side .code { margin: 0 0 0.5rem; font: 0.8rem var(--mono); color: var(--muted); }
 .arch-side .muted { color: var(--muted); }
 .chips { display: flex; flex-wrap: wrap; gap: 0.3rem; }
 .chip { font-size: 0.8rem; padding: 0.1rem 0.6rem; }
@@ -165,3 +147,5 @@ svg#map { display: block; width: 100%; height: auto; min-width: 900px; font-fami
 #glossary dd { margin: 0; color: var(--muted); }
 
 #flows { max-width: 100%; border-radius: var(--radius); }
+
+.arch-wrap > h1 { margin-top: 2rem; }

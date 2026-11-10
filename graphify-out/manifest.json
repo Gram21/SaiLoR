@@ -3792,9 +3792,9 @@
     "semantic_hash": ""
   },
   "site/assets/site.js": {
-    "mtime": 1794219420.9730446,
-    "seen": 1794300602.528113,
-    "ast_hash": "44db5e900a590cba9dbcd3eeaa377ac8",
+    "mtime": 1794313772.80325,
+    "seen": 1794313887.781169,
+    "ast_hash": "05161d86683e978e0b1e46f485dff8f4",
     "semantic_hash": ""
   },
   "stryker.config.json": {
@@ -3990,9 +3990,9 @@
     "semantic_hash": ""
   },
   "docs/requirements/platform.md": {
-    "mtime": 1794313036.569172,
-    "seen": 1794313565.101423,
-    "ast_hash": "ce68a0d69960f45e29d66daacc3f7343",
+    "mtime": 1794313883.3806243,
+    "seen": 1794313887.781537,
+    "ast_hash": "6b17dd046200740d4fda9fec2e82fdbf",
     "semantic_hash": ""
   },
   "docs/requirements/screening.md": {
@@ -4002,9 +4002,9 @@
     "semantic_hash": ""
   },
   "docs/requirements/traceability.md": {
-    "mtime": 1794313036.5697782,
-    "seen": 1794313565.1014242,
-    "ast_hash": "7554a686d87f6605a496e64459f8bcb3",
+    "mtime": 1794313883.3811796,
+    "seen": 1794313887.781539,
+    "ast_hash": "51ee0495f38ef9eeea3b1e89599ecb3a",
     "semantic_hash": ""
   },
   "docs/tauri-migration.md": {
@@ -4194,15 +4194,15 @@
     "semantic_hash": ""
   },
   "site/create-project.html": {
-    "mtime": 1794313005.6222405,
-    "seen": 1794313565.1014478,
-    "ast_hash": "a486b126ef99fe75a2c9bdb85a39b58d",
+    "mtime": 1794313772.8027894,
+    "seen": 1794313887.781562,
+    "ast_hash": "ea519ddc8173302b9f5273eb5128710a",
     "semantic_hash": ""
   },
   "site/index.html": {
-    "mtime": 1794313005.6220458,
-    "seen": 1794313565.101449,
-    "ast_hash": "bf582a2d64449f623c24969b26362756",
+    "mtime": 1794313772.8025515,
+    "seen": 1794313887.781562,
+    "ast_hash": "e9f6d9c02e741a7d13d5a4adb00b92c8",
     "semantic_hash": ""
   },
   "technical-report/README.md": {
@@ -4608,9 +4608,15 @@
     "semantic_hash": ""
   },
   "site/architecture.html": {
-    "mtime": 1794313533.9811244,
-    "seen": 1794313565.1014478,
-    "ast_hash": "7bdf0f19702275362676d22be6e9a1a7",
+    "mtime": 1794313772.8029697,
+    "seen": 1794313887.7815602,
+    "ast_hash": "9d6d7627c8f53e502ba63a75dd8461f2",
+    "semantic_hash": ""
+  },
+  "site/assets/fonts/README.md": {
+    "mtime": 1794313760.2843935,
+    "seen": 1794313887.7815611,
+    "ast_hash": "130f2f0d56679a2c2278e3cc2a79e279",
     "semantic_hash": ""
   },
   "package-lock.json": {
