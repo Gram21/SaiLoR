@@ -1,7 +1,7 @@
 # Graph Report - slr-helper  (2026-11-10)
 
 ## Corpus Check
-- 691 files · ~1,117,530 words
+- 691 files · ~1,117,331 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 144 file(s) not represented in the graph (top: .toml 107, (none) 12, .tex 11)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `aa21e560`
+- Built from commit: `8ad9e8c3`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -289,16 +289,16 @@
 10. `LLM-assisted annotation ([llm-annotation.md](llm-annotation.md))` - 89 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `REQ-LLM-480: Separate judge model` --references--> `AiDialog()`  [INFERRED]
-  docs/requirements/llm-annotation.md → src/components/AiDialog.tsx
-- `REQ-LLM-480: Separate judge model` --references--> `AiDialog()`  [INFERRED]
-  docs/requirements-oft/llm-annotation.md → src/components/AiDialog.tsx
-- `REQ-LLM-410: Show judge verdicts and default flagged rows unticked` --references--> `JudgeCell()`  [INFERRED]
-  docs/requirements/llm-annotation.md → src/components/AiDialog.tsx
-- `REQ-LLM-410: Show judge verdicts and default flagged rows unticked` --references--> `JudgeCell()`  [INFERRED]
-  docs/requirements-oft/llm-annotation.md → src/components/AiDialog.tsx
-- `REQ-LLM-210: Human review before applying` --references--> `ReviewTable()`  [INFERRED]
-  docs/requirements/llm-annotation.md → src/components/AiDialog.tsx
+- `REQ-ANN-180: Confirm each metadata correction` --references--> `MetadataDialog()`  [INFERRED]
+  docs/requirements/annotation-ui.md → src/components/MetadataDialog.tsx
+- `REQ-ANN-200: Confirm each new PDF file` --references--> `PdfFolderDialog()`  [INFERRED]
+  docs/requirements/annotation-ui.md → src/components/PdfFolderDialog.tsx
+- `REQ-LST-90: Mark a missing PDF file in the paper list` --references--> `missingPaperIds()`  [INFERRED]
+  docs/requirements/annotation-ui.md → src/model/pdfFolder.ts
+- `REQ-PDF-190: Single-page view` --references--> `PdfViewer()`  [INFERRED]
+  docs/requirements/annotation-ui.md → src/components/PdfViewer.tsx
+- `REQ-UI-20: Toolbar project controls` --references--> `Toolbar()`  [INFERRED]
+  docs/requirements/annotation-ui.md → src/components/Toolbar.tsx
 
 ## Import Cycles
 - 2-file cycle: `src/model/diagram.ts -> src/model/diagramSvg.ts -> src/model/diagram.ts`
@@ -1223,7 +1223,7 @@ Cohesion: 0.50
 Nodes (4): runs-on, steps, timeout-minutes, cargo-audit
 
 ## Knowledge Gaps
-- **24 isolated node(s):** `DISPLAY`, `SAILOR_PROBE_PROJECT`, `SAILOR_PROBE_REPORT`, `sailor`, `Save` (+19 more)
+- **24 isolated node(s):** `About`, `CloseWindow`, `Fullscreen`, `Github`, `Minimize` (+19 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2802 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **42 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -1231,15 +1231,15 @@ Nodes (4): runs-on, steps, timeout-minutes, cargo-audit
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `jobs` connect `jobs` to `release.yml`, `build`, `checksums`, `release`?**
-  _High betweenness centrality (0.266) - this node is a cross-community bridge._
+  _High betweenness centrality (0.227) - this node is a cross-community bridge._
 - **Are the 5 inferred relationships involving `t()` (e.g. with `REQ-UI-120: Translated user interface` and `REQ-UI-120: Translated user interface`) actually correct?**
   _`t()` has 5 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `DISPLAY`, `SAILOR_PROBE_PROJECT`, `SAILOR_PROBE_REPORT` to the rest of the system?**
+- **What connects `About`, `CloseWindow`, `Fullscreen` to the rest of the system?**
   _24 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `git.rs` be split into smaller, more focused modules?**
   _Cohesion score 0.04617405582922824 - nodes in this community are weakly interconnected._
 - **Why does `with` connect `with` to `steps`?**
-  _High betweenness centrality (0.239) - this node is a cross-community bridge._
+  _High betweenness centrality (0.213) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `useT()` (e.g. with `REQ-UI-120: Translated user interface` and `REQ-UI-120: Translated user interface`) actually correct?**
   _`useT()` has 4 INFERRED edges - model-reasoned connections that need verification._
 - **Should `Rust Docs/Builders` be split into smaller, more focused modules?**

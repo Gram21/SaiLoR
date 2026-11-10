@@ -169,7 +169,7 @@ export function renderDiagram(data: DiagramData, config: DiagramConfig): string 
     }
     out.push(`<line x1="${hLeft}" y1="${top}" x2="${hLeft}" y2="${num(hBottom)}" stroke="${INK}"/>`)
     const thick = Math.min(hBand * 0.8, 40 * series.length) / (stacked ? 1 : series.length)
-    cats.forEach((c, i) => {
+    cats.forEach((_, i) => {
       const mid = top + hBand * (i + 0.5)
       out.push(text(hLeft - 6, mid + 4, yCats[i], 11, 'text-anchor="end"'))
       let acc = 0
