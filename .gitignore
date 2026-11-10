@@ -6,6 +6,7 @@
 .opencode
 .windsurf
 .serena
+graphify-out/cache
 copilot-instructions.md
 
 CLAUDE-SECURITY-*
