@@ -18,6 +18,7 @@ graphify-out/.graphify_python
 graphify-out/.graphify_build_state.json
 graphify-out/.graphify_labels.json.sig
 graphify-out/.graphify_labels.pending.json
+graphify-out/.rebuild.lock
 
 # Date-based snapshots
 graphify-out/20*/
