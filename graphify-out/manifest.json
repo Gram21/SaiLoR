@@ -3792,9 +3792,9 @@
     "semantic_hash": ""
   },
   "site/assets/site.js": {
-    "mtime": 1794313772.80325,
-    "seen": 1794313887.781169,
-    "ast_hash": "05161d86683e978e0b1e46f485dff8f4",
+    "mtime": 1794314732.7370694,
+    "seen": 1794314815.3472252,
+    "ast_hash": "9ea6fc69f5e2990f69417e3165ec8a9e",
     "semantic_hash": ""
   },
   "stryker.config.json": {
@@ -3912,44 +3912,44 @@
     "semantic_hash": ""
   },
   "docs/requirements-oft/annotation-ui.md": {
-    "mtime": 1794235957.1134284,
-    "seen": 1794300602.528482,
-    "ast_hash": "186e738feff20d89cc48173c54a5b873",
+    "mtime": 1794314801.993368,
+    "seen": 1794314815.34759,
+    "ast_hash": "32f51c53d5659761bc5b451d3728f542",
     "semantic_hash": ""
   },
   "docs/requirements-oft/consolidation.md": {
-    "mtime": 1794235957.2464395,
-    "seen": 1794300602.5284832,
+    "mtime": 1794314802.1198542,
+    "seen": 1794314815.347591,
     "ast_hash": "f095d748538f9b225fad2b856ead7669",
     "semantic_hash": ""
   },
   "docs/requirements-oft/data-model.md": {
-    "mtime": 1794235957.486409,
-    "seen": 1794300602.528484,
+    "mtime": 1794314802.3519804,
+    "seen": 1794314815.347591,
     "ast_hash": "aa57fb45ddb2a34a7c168f3451490f80",
     "semantic_hash": ""
   },
   "docs/requirements-oft/git-integration.md": {
-    "mtime": 1794235957.9810214,
-    "seen": 1794300602.528484,
+    "mtime": 1794314802.8328872,
+    "seen": 1794314815.3475919,
     "ast_hash": "687c0ab2c5b29905cd7ccc0a291fe859",
     "semantic_hash": ""
   },
   "docs/requirements-oft/llm-annotation.md": {
-    "mtime": 1794235958.709396,
-    "seen": 1794300602.528485,
+    "mtime": 1794314803.4912217,
+    "seen": 1794314815.347593,
     "ast_hash": "90beeb33077d8c8e8409a38fab0d4ef9",
     "semantic_hash": ""
   },
   "docs/requirements-oft/platform.md": {
-    "mtime": 1794235959.0987477,
-    "seen": 1794300602.528485,
-    "ast_hash": "13fd50efd3b23c2c8568556fce08143c",
+    "mtime": 1794314803.84509,
+    "seen": 1794314815.347593,
+    "ast_hash": "9a35d759a6baf8e00493e4cd6f3331a5",
     "semantic_hash": ""
   },
   "docs/requirements-oft/screening.md": {
-    "mtime": 1794235959.1126866,
-    "seen": 1794300602.5284858,
+    "mtime": 1794314803.8583264,
+    "seen": 1794314815.347594,
     "ast_hash": "9c76c8f58d276f07467382cc99523ed3",
     "semantic_hash": ""
   },
@@ -3990,9 +3990,9 @@
     "semantic_hash": ""
   },
   "docs/requirements/platform.md": {
-    "mtime": 1794313883.3806243,
-    "seen": 1794313887.781537,
-    "ast_hash": "6b17dd046200740d4fda9fec2e82fdbf",
+    "mtime": 1794314801.652373,
+    "seen": 1794314815.347599,
+    "ast_hash": "ea942854b5de3f67b6c959e5c0774b09",
     "semantic_hash": ""
   },
   "docs/requirements/screening.md": {
@@ -4002,9 +4002,9 @@
     "semantic_hash": ""
   },
   "docs/requirements/traceability.md": {
-    "mtime": 1794313883.3811796,
-    "seen": 1794313887.781539,
-    "ast_hash": "51ee0495f38ef9eeea3b1e89599ecb3a",
+    "mtime": 1794314801.6538038,
+    "seen": 1794314815.3476,
+    "ast_hash": "d6a1e60b68b83c0c191a410aef9126e8",
     "semantic_hash": ""
   },
   "docs/tauri-migration.md": {
@@ -4194,15 +4194,15 @@
     "semantic_hash": ""
   },
   "site/create-project.html": {
-    "mtime": 1794313772.8027894,
-    "seen": 1794313887.781562,
-    "ast_hash": "ea519ddc8173302b9f5273eb5128710a",
+    "mtime": 1794314723.396769,
+    "seen": 1794314815.347628,
+    "ast_hash": "4710a9c8c9cbd0c68e426a3304f0284c",
     "semantic_hash": ""
   },
   "site/index.html": {
-    "mtime": 1794313772.8025515,
-    "seen": 1794313887.781562,
-    "ast_hash": "e9f6d9c02e741a7d13d5a4adb00b92c8",
+    "mtime": 1794314714.0898755,
+    "seen": 1794314815.347629,
+    "ast_hash": "7b29770a93224d1eb177c9b81da02476",
     "semantic_hash": ""
   },
   "technical-report/README.md": {
@@ -4608,9 +4608,9 @@
     "semantic_hash": ""
   },
   "site/architecture.html": {
-    "mtime": 1794313772.8029697,
-    "seen": 1794313887.7815602,
-    "ast_hash": "9d6d7627c8f53e502ba63a75dd8461f2",
+    "mtime": 1794314723.3964906,
+    "seen": 1794314815.347627,
+    "ast_hash": "e3f0e8d3675925c6d03c6d047f118652",
     "semantic_hash": ""
   },
   "site/assets/fonts/README.md": {

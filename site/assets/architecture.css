@@ -149,3 +149,5 @@ svg#map { display: block; width: 100%; height: auto; min-width: 900px; font-fami
 #flows { max-width: 100%; border-radius: var(--radius); }
 
 .arch-wrap > h1 { margin-top: 2rem; }
+
+.arch-wrap > .eyebrow { margin-top: 1.5rem; }

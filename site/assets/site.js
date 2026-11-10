@@ -3,11 +3,17 @@
 
   document.documentElement.classList.add('js');
 
+  function themeLabel(button) {
+    button.textContent = document.documentElement.dataset.theme === 'light' ? '\u263E Dark' : '\u2600 Light';
+  }
+
   document.querySelectorAll('.theme-toggle').forEach(function (button) {
+    themeLabel(button);
     button.addEventListener('click', function () {
       var next = document.documentElement.dataset.theme === 'light' ? 'dark' : 'light';
       document.documentElement.dataset.theme = next;
       try { localStorage.setItem('theme', next); } catch (err) { /* private mode */ }
+      document.querySelectorAll('.theme-toggle').forEach(themeLabel);
     });
   });
 
