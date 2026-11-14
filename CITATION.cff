@@ -10,7 +10,7 @@ repository-code: "https://github.com/Gram21/SaiLoR"
 url: "https://github.com/Gram21/SaiLoR"
 license: GPL-3.0-only
 # Set to the version that you cite, for example 2.0.0.
-version: "2.0.1"
+version: "2.0.2"
 # TODO(before release): This DOI is the Zenodo concept DOI. It always resolves to the latest version.
 # Replace it with the version DOI of the release in the version field above.
 # Find the version DOI on the Zenodo record, in the "Versions" panel.
