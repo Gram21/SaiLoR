@@ -1,4 +1,4 @@
-# Graph Report - slr-helper  (2026-11-10)
+# Graph Report - slr-helper  (2026-11-14)
 
 ## Corpus Check
 - 694 files · ~1,122,420 words
@@ -6,12 +6,12 @@
 - Unclassified: 147 file(s) not represented in the graph (top: .toml 107, (none) 12, .tex 11)
 
 ## Summary
-- 7518 nodes · 21484 edges · 268 communities (224 shown, 44 thin omitted)
-- Extraction: 86% EXTRACTED · 14% INFERRED · 0% AMBIGUOUS · INFERRED: 2910 edges (avg confidence: 0.94)
+- 7518 nodes · 21482 edges · 269 communities (225 shown, 44 thin omitted)
+- Extraction: 86% EXTRACTED · 14% INFERRED · 0% AMBIGUOUS · INFERRED: 2909 edges (avg confidence: 0.94)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `49717328`
+- Built from commit: `e053f54a`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -241,6 +241,7 @@
 - fileStamps.ts
 - store.finished.test.ts
 - Translations
+- Knowledge Graph View
 - git-scenarios/README.md
 - DemoBanner
 - bundle.sh
@@ -283,22 +284,22 @@
 10. `LLM-assisted annotation ([llm-annotation.md](llm-annotation.md))` - 89 edges
 
 ## Surprising Connections (you probably didn't know these)
-- ``slr-file://` serving (`protocol.rs`)` --references--> `DesktopAdapter`  [INFERRED]
-  openwiki/operations/tauri-shell.md → src/platform/desktop.ts
-- `Hardware probing and backend choice` --references--> `HardwareInfo`  [INFERRED]
-  openwiki/workflows/local-models.md → src/platform/localRuntime.ts
-- `Zod validation of the raw JSON` --references--> `ScreeningConfig`  [INFERRED]
-  openwiki/concepts/annotation-schema.md → src/model/schema.ts
-- `Phase 1 — Bridge abstraction (about 1 week)` --references--> `TauriAdapter`  [INFERRED]
-  docs/tauri-migration.md → src/platform/tauri.ts
-- `Architecture` --references--> `PlatformAdapter`  [INFERRED]
-  README.md → src/platform/adapter.ts
+- `REQ-LLM-480: Separate judge model` --references--> `AiDialog()`  [INFERRED]
+  docs/requirements/llm-annotation.md → src/components/AiDialog.tsx
+- `REQ-LLM-480: Separate judge model` --references--> `AiDialog()`  [INFERRED]
+  docs/requirements-oft/llm-annotation.md → src/components/AiDialog.tsx
+- `REQ-LLM-410: Show judge verdicts and default flagged rows unticked` --references--> `JudgeCell()`  [INFERRED]
+  docs/requirements/llm-annotation.md → src/components/AiDialog.tsx
+- `REQ-LLM-410: Show judge verdicts and default flagged rows unticked` --references--> `JudgeCell()`  [INFERRED]
+  docs/requirements-oft/llm-annotation.md → src/components/AiDialog.tsx
+- `REQ-LLM-210: Human review before applying` --references--> `ReviewTable()`  [INFERRED]
+  docs/requirements/llm-annotation.md → src/components/AiDialog.tsx
 
 ## Import Cycles
 - 2-file cycle: `src/model/diagram.ts -> src/model/diagramSvg.ts -> src/model/diagram.ts`
 - 2-file cycle: `src/model/metadata.ts -> src/model/project.ts -> src/model/metadata.ts`
 
-## Communities (268 total, 44 thin omitted)
+## Communities (269 total, 44 thin omitted)
 
 ### Community 0 - "git.rs"
 Cohesion: 0.05
@@ -477,8 +478,8 @@ Cohesion: 0.06
 Nodes (57): REQ-LLM-610: Re-check already-filled fields, REQ-LLM-610: Re-check already-filled fields, Unanimous adoption, Paths and field selection, Two pending-unanimous counts, walk(), agreedValue(), tidy() (+49 more)
 
 ### Community 44 - "graph.ts"
-Cohesion: 0.06
-Nodes (53): REQ-UI-230: Knowledge graph Cypher query, Knowledge graph export, REQ-DAT-480: Build the knowledge graph, REQ-DAT-490: Source of the graph data, REQ-DAT-510: Escape values in the graph export, REQ-UI-230: Knowledge graph Cypher query, Knowledge graph export, REQ-DAT-480: Build the knowledge graph (+45 more)
+Cohesion: 0.07
+Nodes (44): Knowledge graph export, REQ-DAT-480: Build the knowledge graph, REQ-DAT-490: Source of the graph data, REQ-DAT-510: Escape values in the graph export, Knowledge graph export, REQ-DAT-480: Build the knowledge graph, REQ-DAT-490: Source of the graph data, REQ-DAT-510: Escape values in the graph export (+36 more)
 
 ### Community 45 - "editorStore.ts"
 Cohesion: 0.05
@@ -557,8 +558,8 @@ Cohesion: 0.13
 Nodes (33): REQ-DAT-360: Parse BibTeX, RIS, and CSL-JSON, REQ-DAT-360: Parse BibTeX, RIS, and CSL-JSON, Reference-file parsing (`src/model/references.ts`), appendRis(), cleanBibPathSegment(), cleanBibValue(), collapseSpace(), detectFormat() (+25 more)
 
 ### Community 65 - "Annotation form, paper list & PDF ([annotation-ui.md](annotation-ui.md))"
-Cohesion: 0.15
-Nodes (17): REQ-UI-210: Knowledge graph sub-graph and performance, REQ-UI-210: Knowledge graph sub-graph and performance, Cypher subset, Knowledge Graph View, Layout and drawing, Nodes drawer, Tests and requirements, cull() (+9 more)
+Cohesion: 0.20
+Nodes (13): REQ-UI-210: Knowledge graph sub-graph and performance, REQ-UI-210: Knowledge graph sub-graph and performance, Layout and drawing, cull(), hitTest(), cooled(), createLayout(), LayoutFrame (+5 more)
 
 ### Community 66 - "agreement.property.test.ts"
 Cohesion: 0.20
@@ -910,7 +911,7 @@ Nodes (20): Annotation form, REQ-ANN-100: Link PDF marks to fields as evidence, 
 
 ### Community 157 - "GraphView"
 Cohesion: 0.05
-Nodes (59): REQ-PDF-185: Show the screeners' highlights, REQ-PDF-190: Single-page view, REQ-UI-100: Open the Settings dialog, REQ-UI-130: Complete language files, REQ-UI-150: Open the Settings dialog from the help, REQ-UI-160: Show project entries only with a project, REQ-UI-180: Keep focus inside open dialogs, REQ-UI-190: Knowledge graph view (+51 more)
+Nodes (58): REQ-PDF-185: Show the screeners' highlights, REQ-PDF-190: Single-page view, REQ-UI-100: Open the Settings dialog, REQ-UI-130: Complete language files, REQ-UI-150: Open the Settings dialog from the help, REQ-UI-160: Show project entries only with a project, REQ-UI-180: Keep focus inside open dialogs, REQ-UI-190: Knowledge graph view (+50 more)
 
 ### Community 158 - "compilerOptions"
 Cohesion: 0.10
@@ -1156,6 +1157,10 @@ Nodes (3): mark, mockPlatform, SCREENING
 Cohesion: 0.33
 Nodes (5): Add a language, Add a text, Checks, Translations, What stays in English
 
+### Community 234 - "Knowledge Graph View"
+Cohesion: 0.20
+Nodes (14): REQ-UI-230: Knowledge graph Cypher query, REQ-UI-230: Knowledge graph Cypher query, Cypher subset, Knowledge Graph View, Node-type filter, statistics and saved filters, Nodes drawer, Tests and requirements, Cypher query (+6 more)
+
 ### Community 235 - "git-scenarios/README.md"
 Cohesion: 0.40
 Nodes (3): Git scenarios, One annotations folder, two projects, Samples
@@ -1197,7 +1202,7 @@ Cohesion: 0.40
 Nodes (3): corruptFiles, mockPlatform, PROJECT
 
 ## Knowledge Gaps
-- **24 isolated node(s):** `About`, `CloseWindow`, `Fullscreen`, `Github`, `Minimize` (+19 more)
+- **24 isolated node(s):** `DISPLAY`, `SAILOR_PROBE_PROJECT`, `SAILOR_PROBE_REPORT`, `sailor`, `Save` (+19 more)
   These have ≤1 connection - possible missing edges or undocumented components. (Counts symbols only; 2805 node(s) total have ≤1 connection when file, concept and rationale nodes are included.)
 - **44 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
@@ -1205,15 +1210,15 @@ Nodes (3): corruptFiles, mockPlatform, PROJECT
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `jobs` connect `jobs` to `release.yml`, `build`, `checksums`, `release`?**
-  _High betweenness centrality (0.280) - this node is a cross-community bridge._
+  _High betweenness centrality (0.271) - this node is a cross-community bridge._
 - **Are the 5 inferred relationships involving `t()` (e.g. with `REQ-UI-120: Translated user interface` and `REQ-UI-120: Translated user interface`) actually correct?**
   _`t()` has 5 INFERRED edges - model-reasoned connections that need verification._
-- **What connects `About`, `CloseWindow`, `Fullscreen` to the rest of the system?**
+- **What connects `DISPLAY`, `SAILOR_PROBE_PROJECT`, `SAILOR_PROBE_REPORT` to the rest of the system?**
   _24 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `git.rs` be split into smaller, more focused modules?**
   _Cohesion score 0.045070780168856725 - nodes in this community are weakly interconnected._
 - **Why does `with` connect `with` to `steps`?**
-  _High betweenness centrality (0.263) - this node is a cross-community bridge._
+  _High betweenness centrality (0.245) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `useT()` (e.g. with `REQ-UI-120: Translated user interface` and `REQ-UI-120: Translated user interface`) actually correct?**
   _`useT()` has 4 INFERRED edges - model-reasoned connections that need verification._
 - **Should `Rust Docs/Builders` be split into smaller, more focused modules?**
