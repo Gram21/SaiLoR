@@ -10,7 +10,6 @@
   "13": "Ollama & Base URLs",
   "14": "Rust LLM HTTP",
   "15": "Merge Logic",
-  "17": "Hostile-input Tests",
   "18": "Chat Response Parsing",
   "20": "Diagram View",
   "22": "Cypher Worker",
@@ -22,6 +21,5 @@
   "33": "Diagram Export",
   "34": "Tauri Menu",
   "35": "IP/Host Validation",
-  "36": "Dialog Close (Rust)",
-  "39": "Legacy Project Split"
+  "36": "Dialog Close (Rust)"
 }

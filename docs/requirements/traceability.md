@@ -241,6 +241,7 @@ inspection only.
 | REQ-UI-380 | Result view settings kept across sessions | Functional · Usability | `src/state/resultSettings.ts`<br>`src/components/ResultView.tsx` | `src/state/resultSettings.test.ts` | — | — |
 | REQ-UI-390 | Knowledge graph node-type filter | Functional · Functional Suitability, Usability | `src/components/GraphView.tsx` (`GraphView`)<br>`src/model/graph.ts` (`NODE_TYPES`) | `src/components/GraphView.test.tsx` | — | — |
 | REQ-UI-400 | Knowledge graph query box | Functional · Usability | `src/components/GraphQueryBox.tsx` (`GraphQueryBox`)<br>`src/model/graphSuggest.ts` (`suggest`)<br>`src/components/GraphView.tsx` (`GraphView`) | `src/model/graphSuggest.test.ts`<br>`src/components/GraphView.test.tsx` | — | — |
+| REQ-UI-410 | Undo and redo buttons in the toolbar | Functional · Usability | `src/components/Toolbar.tsx` (`Toolbar`) | `src/components/Toolbar.test.tsx` | — | — |
 
 ## Screening ([screening.md](screening.md))
 

@@ -1339,3 +1339,18 @@ Comment:
 Needs: impl, utest
 
 Tags: Functional, Usability
+
+### REQ-UI-410: Undo and redo buttons in the toolbar
+`req~ui-410~1`
+
+The toolbar shall show an undo button (↶) and a redo button (↷) while a project is open. Each button shall have a mouse-over text that names the action and the Ctrl/Cmd shortcut. While the project editor is open, the buttons shall act on the draft of the editor. Otherwise they shall act on the annotation history. A button shall be disabled when its history is empty or the application is busy.
+
+Comment:
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/Toolbar.tsx` (`Toolbar`), `src/locales/en.json` (`toolbar.undo.*`, `toolbar.redo.*`)
+- **Verified by:** `src/components/Toolbar.test.tsx`
+- **Status:** Implemented
+
+Needs: impl, utest
+
+Tags: Functional, Usability

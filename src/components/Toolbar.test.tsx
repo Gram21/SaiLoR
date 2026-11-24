@@ -383,3 +383,24 @@ describe('features over the whole project wait while it loads', () => {
     expect(screen.getByRole('button', { name: 'AI' })).not.toBeDisabled()
   })
 })
+
+// [utest->req~ui-410~1]
+describe('the undo and redo buttons in the toolbar', () => {
+  it('are disabled with no history, and step through the annotation history', async () => {
+    st().loadFromText(annotationProjectJson(), null, 'test.json')
+    render(<Toolbar />)
+    const undo = screen.getByRole('button', { name: 'Undo' })
+    const redo = screen.getByRole('button', { name: 'Redo' })
+    expect(undo).toHaveAttribute('title', expect.stringContaining('Z'))
+    expect(undo).toBeDisabled()
+    expect(redo).toBeDisabled()
+    act(() => st().selectPaper('p1'))
+    act(() => st().setFieldValue([], 'Field', 0, 'x'))
+    expect(undo).not.toBeDisabled()
+    await userEvent.click(undo)
+    expect(undo).toBeDisabled()
+    expect(redo).not.toBeDisabled()
+    await userEvent.click(redo)
+    expect(undo).not.toBeDisabled()
+  })
+})

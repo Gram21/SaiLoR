@@ -603,3 +603,10 @@ export. See the [index](index.md) for the glossary.
 - **Evidence:** `src/components/GraphQueryBox.tsx` (`GraphQueryBox`), `src/components/GraphQueryHelp.tsx` (`GraphQueryHelp`), `src/model/graphSuggest.ts` (`suggest`), `src/components/GraphView.tsx` (`GraphView`), `src/locales/en.json` (`graphView.lang`, `graphView.suggestions`)
 - **Verified by:** `src/model/graphSuggest.test.ts`, `src/components/GraphView.test.tsx`
 - **Status:** Implemented
+
+### REQ-UI-410: Undo and redo buttons in the toolbar
+- **Description:** The toolbar shall show an undo button (↶) and a redo button (↷) while a project is open. Each button shall have a mouse-over text that names the action and the Ctrl/Cmd shortcut. While the project editor is open, the buttons shall act on the draft of the editor. Otherwise they shall act on the annotation history. A button shall be disabled when its history is empty or the application is busy.
+- **Type:** Functional (ISO 25010: Usability)
+- **Evidence:** `src/components/Toolbar.tsx` (`Toolbar`), `src/locales/en.json` (`toolbar.undo.*`, `toolbar.redo.*`)
+- **Verified by:** `src/components/Toolbar.test.tsx`
+- **Status:** Implemented
