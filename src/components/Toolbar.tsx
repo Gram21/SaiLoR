@@ -641,7 +641,7 @@ export function Toolbar() {
         {pdfDialogOpen && !editorOpen && <PdfFolderDialog />}
 
         <div className="toolbar-view">
-          {project && !editorOpen && <UndoRedoButtons disabled={busy} />}
+          {(project || editorOpen) && <UndoRedoButtons disabled={busy} />}
           <div className="font-controls" role="group" aria-label={t('toolbar.font.group')}>
             <button
               type="button"

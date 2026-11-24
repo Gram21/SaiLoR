@@ -36,6 +36,7 @@ vi.mock('../platform', () => ({ getPlatform: () => mockPlatform }))
 const { useStore } = await import('../state/store')
 const { Toolbar } = await import('./Toolbar')
 const { useGitStore } = await import('../state/gitStore')
+const { useEditorStore } = await import('../state/editorStore')
 
 const st = () => useStore.getState()
 
@@ -402,5 +403,21 @@ describe('the undo and redo buttons in the toolbar', () => {
     expect(redo).not.toBeDisabled()
     await userEvent.click(redo)
     expect(undo).not.toBeDisabled()
+  })
+})
+
+// [utest->req~ui-410~1]
+describe('the undo and redo buttons while the project editor is open', () => {
+  it('stay in the toolbar and act on the draft', async () => {
+    useEditorStore.setState({ open: true })
+    render(<Toolbar />)
+    const undo = screen.getByRole('button', { name: 'Undo' })
+    expect(undo).toBeDisabled()
+    act(() => useEditorStore.getState().setFinishCheckbox(false))
+    expect(undo).not.toBeDisabled()
+    await userEvent.click(undo)
+    expect(useEditorStore.getState().finishCheckbox).toBe(true)
+    expect(screen.getByRole('button', { name: 'Redo' })).not.toBeDisabled()
+    useEditorStore.setState({ open: false })
   })
 })

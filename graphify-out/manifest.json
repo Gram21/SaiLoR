@@ -816,15 +816,15 @@
     "semantic_hash": "ce33094147f04e5f85ce3e697d2a372e"
   },
   "src/components/ProjectEditor.test.tsx": {
-    "mtime": 1795555253.843679,
-    "seen": 1795555281.517408,
-    "ast_hash": "4701521b73c3712a2ebf87a3f9cd6570",
+    "mtime": 1795555591.8998957,
+    "seen": 1795555622.966201,
+    "ast_hash": "d6055789823e24b5e84e95b760cd2714",
     "semantic_hash": ""
   },
   "src/components/ProjectEditor.tsx": {
-    "mtime": 1795555214.8030322,
-    "seen": 1795555281.517409,
-    "ast_hash": "0496a72b4f85e0fa03ecd17638d7e567",
+    "mtime": 1795555591.8997073,
+    "seen": 1795555622.966202,
+    "ast_hash": "bfccdaf04c4410561d945ee3c207c97c",
     "semantic_hash": ""
   },
   "src/components/PromptOverridesEditor.test.tsx": {
@@ -1086,15 +1086,15 @@
     "semantic_hash": "e58fefac2dff38a7c587c64b5e26140d"
   },
   "src/components/Toolbar.test.tsx": {
-    "mtime": 1795554680.3073914,
-    "seen": 1795554715.124342,
-    "ast_hash": "ee28caeb17d441a0edb4b94eb76be8ba",
+    "mtime": 1795555591.9000971,
+    "seen": 1795555622.966231,
+    "ast_hash": "7f3c44e4ca1f499a308055754b7d5f88",
     "semantic_hash": ""
   },
   "src/components/Toolbar.tsx": {
-    "mtime": 1795555225.8414774,
-    "seen": 1795555281.51744,
-    "ast_hash": "6ad967dba3ef856808f1461beff5767c",
+    "mtime": 1795555591.899464,
+    "seen": 1795555622.966232,
+    "ast_hash": "e1b0628a830e9d29a7f44707fa7c5236",
     "semantic_hash": ""
   },
   "src/components/ValidationDialog.tsx": {
@@ -3912,9 +3912,9 @@
     "semantic_hash": ""
   },
   "docs/requirements-oft/annotation-ui.md": {
-    "mtime": 1795555221.4261775,
-    "seen": 1795555281.5177028,
-    "ast_hash": "17c9983a78f58b58576a7546787e02f9",
+    "mtime": 1795555591.900454,
+    "seen": 1795555622.966496,
+    "ast_hash": "d71c010233a2078f2997e9450ad27796",
     "semantic_hash": ""
   },
   "docs/requirements-oft/consolidation.md": {
@@ -3954,9 +3954,9 @@
     "semantic_hash": ""
   },
   "docs/requirements/annotation-ui.md": {
-    "mtime": 1795555221.4267256,
-    "seen": 1795555281.517708,
-    "ast_hash": "d5fcffc184a8ac63a11fde7aa25e8714",
+    "mtime": 1795555591.9007823,
+    "seen": 1795555622.9665012,
+    "ast_hash": "4ef595690e6b998e2d9ab64f47363a41",
     "semantic_hash": ""
   },
   "docs/requirements/consolidation.md": {
