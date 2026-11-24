@@ -11,6 +11,7 @@ import { annotationsDirProblem, DEFAULT_ANNOTATIONS_DIR } from '../model/annotat
 import { pdfFolderProblem } from '../model/pdfFolder'
 import { getPlatform } from '../platform'
 import { getLanguage, rich, tp, useT, type MessageKey } from '../i18n'
+import { UndoRedoButtons } from './UndoRedoButtons'
 import { SchemaTreeEditor } from './SchemaTreeEditor'
 import { ScreeningReasonsEditor } from './ScreeningReasonsEditor'
 import { ProtocolEditor } from './ProtocolEditor'
@@ -161,6 +162,7 @@ export function ProjectEditor() {
           )}
         </div>
         <div className="editor-actions">
+          <UndoRedoButtons />
           <button type="button" onClick={onClose} disabled={busy} title={t('editor.project.cancelTitle')}>
             {t('common.cancel')}
           </button>

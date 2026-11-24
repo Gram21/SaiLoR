@@ -260,6 +260,7 @@
   "toolbar.undo.label": "بازگشت",
   "toolbar.redo.title": "انجام مجدد ({mod}+Shift+Z)",
   "toolbar.redo.label": "انجام مجدد",
+  "toolbar.history.group": "بازگشت و انجام مجدد",
   "toolbar.font.increase": "بزرگ کردن اندازهٔ قلم برنامه ({mod}+Shift++)",
   "toolbar.theme.toLight": "رفتن به حالت روشن",
   "toolbar.theme.toDark": "رفتن به حالت تیره",

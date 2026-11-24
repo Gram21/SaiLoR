@@ -260,6 +260,7 @@
   "toolbar.undo.label": "Desfazer",
   "toolbar.redo.title": "Refazer ({mod}+Shift+Z)",
   "toolbar.redo.label": "Refazer",
+  "toolbar.history.group": "Desfazer e refazer",
   "toolbar.font.increase": "Aumentar o tamanho da fonte do app ({mod}+Shift++)",
   "toolbar.theme.toLight": "Mudar para o modo claro",
   "toolbar.theme.toDark": "Mudar para o modo escuro",

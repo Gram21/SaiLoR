@@ -1,7 +1,7 @@
 // [utest->req~llm-650~1]
 import '@testing-library/jest-dom/vitest'
 import { describe, it, expect, beforeEach, vi } from 'vitest'
-import { fireEvent, render, screen } from '@testing-library/react'
+import { act, fireEvent, render, screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import type { SaveHandle } from '../platform/adapter'
 
@@ -284,5 +284,22 @@ describe('ProjectEditor: tabs', () => {
     useEditorStore.setState({ screening: { reasons: ['Wrong topic'] } })
     render(<ProjectEditor />)
     expect(screen.getAllByRole('tab').map((t) => t.textContent)).toEqual(['Schema', 'Papers', 'Settings'])
+  })
+})
+
+// [utest->req~ui-410~1]
+describe('the undo and redo buttons in the project editor', () => {
+  it('undo and redo a draft edit', async () => {
+    reset()
+    render(<ProjectEditor />)
+    const undo = screen.getByRole('button', { name: 'Undo' })
+    const redo = screen.getByRole('button', { name: 'Redo' })
+    expect(undo).toBeDisabled()
+    act(() => useEditorStore.getState().setFinishCheckbox(false))
+    expect(undo).not.toBeDisabled()
+    await userEvent.click(undo)
+    expect(useEditorStore.getState().finishCheckbox).toBe(true)
+    await userEvent.click(redo)
+    expect(useEditorStore.getState().finishCheckbox).toBe(false)
   })
 })

@@ -816,16 +816,16 @@
     "semantic_hash": "ce33094147f04e5f85ce3e697d2a372e"
   },
   "src/components/ProjectEditor.test.tsx": {
-    "mtime": 1794219421.0161414,
-    "seen": 1794300020.6690052,
-    "ast_hash": "d6055789823e24b5e84e95b760cd2714",
-    "semantic_hash": "d6055789823e24b5e84e95b760cd2714"
+    "mtime": 1795555253.843679,
+    "seen": 1795555281.517408,
+    "ast_hash": "4701521b73c3712a2ebf87a3f9cd6570",
+    "semantic_hash": ""
   },
   "src/components/ProjectEditor.tsx": {
-    "mtime": 1794219421.0162656,
-    "seen": 1794300020.669006,
-    "ast_hash": "bfccdaf04c4410561d945ee3c207c97c",
-    "semantic_hash": "bfccdaf04c4410561d945ee3c207c97c"
+    "mtime": 1795555214.8030322,
+    "seen": 1795555281.517409,
+    "ast_hash": "0496a72b4f85e0fa03ecd17638d7e567",
+    "semantic_hash": ""
   },
   "src/components/PromptOverridesEditor.test.tsx": {
     "mtime": 1794219421.0163548,
@@ -1092,9 +1092,9 @@
     "semantic_hash": ""
   },
   "src/components/Toolbar.tsx": {
-    "mtime": 1795554651.6401107,
-    "seen": 1795554715.1243432,
-    "ast_hash": "4ab3f373550d58c0266bb171fc83d69c",
+    "mtime": 1795555225.8414774,
+    "seen": 1795555281.51744,
+    "ast_hash": "6ad967dba3ef856808f1461beff5767c",
     "semantic_hash": ""
   },
   "src/components/ValidationDialog.tsx": {
@@ -2010,57 +2010,57 @@
     "semantic_hash": "231189aac6fb5835ac5aa4836f1b45d0"
   },
   "src/locales/de.json": {
-    "mtime": 1795554651.6413343,
-    "seen": 1795554715.124445,
-    "ast_hash": "4116b87a72fd34808b4f65c6fc6fb3a6",
+    "mtime": 1795555214.8044019,
+    "seen": 1795555281.517545,
+    "ast_hash": "2e8027f76ff8cc191b8ea73cbaa84c81",
     "semantic_hash": ""
   },
   "src/locales/en.json": {
-    "mtime": 1795554651.6407566,
-    "seen": 1795554715.124446,
-    "ast_hash": "43e5cb31abd9c291921c89853c8c878b",
+    "mtime": 1795555214.8037288,
+    "seen": 1795555281.517545,
+    "ast_hash": "066f79120b3ea056cd0d88fafead2c48",
     "semantic_hash": ""
   },
   "src/locales/es.json": {
-    "mtime": 1795554651.641703,
-    "seen": 1795554715.1244469,
-    "ast_hash": "410b67da09a86fa1cdb50a80b742762e",
+    "mtime": 1795555214.8051164,
+    "seen": 1795555281.517546,
+    "ast_hash": "36c77e6deb5a123f6b92131cf1341e85",
     "semantic_hash": ""
   },
   "src/locales/fa.json": {
-    "mtime": 1795554651.645052,
-    "seen": 1795554715.1244469,
-    "ast_hash": "4c54f3b40a82aa75d62c1c647be73f5b",
+    "mtime": 1795555214.810565,
+    "seen": 1795555281.517547,
+    "ast_hash": "2d1de687e659810d22bf16bdb60bc391",
     "semantic_hash": ""
   },
   "src/locales/fr.json": {
-    "mtime": 1795554651.642345,
-    "seen": 1795554715.124448,
-    "ast_hash": "3fe124f60cd22690531cb571d02a540b",
+    "mtime": 1795555214.8058827,
+    "seen": 1795555281.517547,
+    "ast_hash": "7a63e7f2eff41ee8fa746007bded293c",
     "semantic_hash": ""
   },
   "src/locales/it.json": {
-    "mtime": 1795554651.6427395,
-    "seen": 1795554715.124449,
-    "ast_hash": "efc5cedea8eb0a224717d14916c68a9e",
+    "mtime": 1795555214.8064787,
+    "seen": 1795555281.517548,
+    "ast_hash": "fd81161b6875c3b2beec70a6299d774f",
     "semantic_hash": ""
   },
   "src/locales/ja.json": {
-    "mtime": 1795554651.6435983,
-    "seen": 1795554715.124449,
-    "ast_hash": "72a11c9a02a49be4ba6852cdd1d15a78",
+    "mtime": 1795555214.8078196,
+    "seen": 1795555281.517548,
+    "ast_hash": "e27d76661c0127440d3b17b9446a5edc",
     "semantic_hash": ""
   },
   "src/locales/pt.json": {
-    "mtime": 1795554651.643115,
-    "seen": 1795554715.12445,
-    "ast_hash": "c7e5bc5f2558bcbc45556c181697b634",
+    "mtime": 1795555214.8070772,
+    "seen": 1795555281.517549,
+    "ast_hash": "e643294afabf94ee35e770b5fb2455c7",
     "semantic_hash": ""
   },
   "src/locales/zh.json": {
-    "mtime": 1795554651.644033,
-    "seen": 1795554715.12445,
-    "ast_hash": "ad683ad390a44b87920381cf3c24942b",
+    "mtime": 1795555214.8095284,
+    "seen": 1795555281.51755,
+    "ast_hash": "bf7357d14d067dd6f3a8403f73426bd5",
     "semantic_hash": ""
   },
   "src/main.tsx": {
@@ -3912,9 +3912,9 @@
     "semantic_hash": ""
   },
   "docs/requirements-oft/annotation-ui.md": {
-    "mtime": 1795554687.841251,
-    "seen": 1795554715.124604,
-    "ast_hash": "66a0693b71ac37a0757d197aaf9be7f4",
+    "mtime": 1795555221.4261775,
+    "seen": 1795555281.5177028,
+    "ast_hash": "17c9983a78f58b58576a7546787e02f9",
     "semantic_hash": ""
   },
   "docs/requirements-oft/consolidation.md": {
@@ -3954,9 +3954,9 @@
     "semantic_hash": ""
   },
   "docs/requirements/annotation-ui.md": {
-    "mtime": 1795554687.8414783,
-    "seen": 1795554715.124609,
-    "ast_hash": "3baf617946fd6dc91a865178ce9aae51",
+    "mtime": 1795555221.4267256,
+    "seen": 1795555281.517708,
+    "ast_hash": "d5fcffc184a8ac63a11fde7aa25e8714",
     "semantic_hash": ""
   },
   "docs/requirements/consolidation.md": {
@@ -4617,6 +4617,12 @@
     "mtime": 1794313760.2843935,
     "seen": 1794313887.7815611,
     "ast_hash": "130f2f0d56679a2c2278e3cc2a79e279",
+    "semantic_hash": ""
+  },
+  "src/components/UndoRedoButtons.tsx": {
+    "mtime": 1795555214.7882364,
+    "seen": 1795555281.517441,
+    "ast_hash": "b0969f513b7d792459f0038ca0d9edaa",
     "semantic_hash": ""
   },
   "package-lock.json": {

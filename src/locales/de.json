@@ -260,6 +260,7 @@
   "toolbar.undo.label": "Rückgängig",
   "toolbar.redo.title": "Wiederholen ({mod}+Umschalt+Z)",
   "toolbar.redo.label": "Wiederholen",
+  "toolbar.history.group": "Rückgängig und Wiederholen",
   "toolbar.font.increase": "Schrift der App vergrößern ({mod}+Umschalt++)",
   "toolbar.theme.toLight": "Zum hellen Modus wechseln",
   "toolbar.theme.toDark": "Zum dunklen Modus wechseln",

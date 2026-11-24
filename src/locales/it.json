@@ -260,6 +260,7 @@
   "toolbar.undo.label": "Annulla",
   "toolbar.redo.title": "Ripeti ({mod}+Maiusc+Z)",
   "toolbar.redo.label": "Ripeti",
+  "toolbar.history.group": "Annulla e ripeti",
   "toolbar.font.increase": "Ingrandisci il testo dell'app ({mod}+Shift++)",
   "toolbar.theme.toLight": "Passa alla modalità chiara",
   "toolbar.theme.toDark": "Passa alla modalità scura",

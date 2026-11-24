@@ -260,6 +260,7 @@
   "toolbar.undo.label": "撤销",
   "toolbar.redo.title": "重做 ({mod}+Shift+Z)",
   "toolbar.redo.label": "重做",
+  "toolbar.history.group": "撤销和重做",
   "toolbar.font.increase": "增大应用字体（{mod}+Shift++）",
   "toolbar.theme.toLight": "切换到浅色模式",
   "toolbar.theme.toDark": "切换到深色模式",

@@ -1343,11 +1343,11 @@ Tags: Functional, Usability
 ### REQ-UI-410: Undo and redo buttons in the toolbar
 `req~ui-410~1`
 
-The toolbar shall show an undo button (↶) and a redo button (↷) while a project is open. Each button shall have a mouse-over text that names the action and the Ctrl/Cmd shortcut. While the project editor is open, the buttons shall act on the draft of the editor. Otherwise they shall act on the annotation history. A button shall be disabled when its history is empty or the application is busy.
+The toolbar shall show an undo button and a redo button with curved-arrow icons, next to the font-size buttons, while a project is open. The header of the project editor shall show the same two buttons and the toolbar shall hide its pair while the editor is open. Each button shall have a mouse-over text that names the action and the Ctrl/Cmd shortcut. The editor buttons shall act on the draft of the editor. The toolbar buttons shall act on the annotation history. A button shall be disabled when its history is empty or the application is busy.
 
 Comment:
 - **Type:** Functional (ISO 25010: Usability)
-- **Evidence:** `src/components/Toolbar.tsx` (`Toolbar`), `src/locales/en.json` (`toolbar.undo.*`, `toolbar.redo.*`)
+- **Evidence:** `src/components/UndoRedoButtons.tsx`, `src/components/Toolbar.tsx`, `src/components/ProjectEditor.tsx`, `src/locales/en.json` (`toolbar.undo.*`, `toolbar.redo.*`)
 - **Verified by:** `src/components/Toolbar.test.tsx`
 - **Status:** Implemented
 

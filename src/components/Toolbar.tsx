@@ -13,6 +13,7 @@ import { activePerson, useStore } from '../state/store'
 import { useAiStore } from '../state/aiStore'
 import { useAiScreeningStore } from '../state/aiScreeningStore'
 import { useEditorStore } from '../state/editorStore'
+import { UndoRedoButtons } from './UndoRedoButtons'
 import { useGitStore } from '../state/gitStore'
 import { CONSOLIDATION_SEAT } from '../git/seatOwner'
 import { getPlatform } from '../platform'
@@ -161,13 +162,6 @@ export function Toolbar() {
   // [impl->req~ui-20~1]
   const requestCloseProject = useStore((s) => s.requestCloseProject)
   const editorOpen = useEditorStore((s) => s.open)
-  const canUndo = useStore((s) => s.past.length > 0)
-  const canRedo = useStore((s) => s.future.length > 0)
-  const editorCanUndo = useEditorStore((s) => s.past.length > 0)
-  const editorCanRedo = useEditorStore((s) => s.future.length > 0)
-  const undoable = editorOpen ? editorCanUndo : canUndo
-  const redoable = editorOpen ? editorCanRedo : canRedo
-  const history = () => (editorOpen ? useEditorStore.getState() : useStore.getState())
   const personMode = useStore((s) => activePerson(s) !== null)
   const project = useStore((s) => s.project)
   const busy = useStore((s) => s.busy)
@@ -434,26 +428,6 @@ export function Toolbar() {
             <>
               <Dropdown label={t('common.save')} title={t('toolbar.save.title')} disabled={busy} items={saveItems} />
               <Dropdown label={t('toolbar.graphMenu')} disabled={busy || editorOpen} items={graphItems} />
-              <button
-                type="button"
-                className="icon-btn"
-                title={t('toolbar.undo.title', { mod: modKey })}
-                aria-label={t('toolbar.undo.label')}
-                onClick={() => history().undo()}
-                disabled={busy || !undoable}
-              >
-                ↶
-              </button>
-              <button
-                type="button"
-                className="icon-btn"
-                title={t('toolbar.redo.title', { mod: modKey })}
-                aria-label={t('toolbar.redo.label')}
-                onClick={() => history().redo()}
-                disabled={busy || !redoable}
-              >
-                ↷
-              </button>
               <span className="toolbar-sep" aria-hidden="true" />
               {/* Disabled with an honest reason when the browser has no local git,
                   the desktop has no git binary, or the project is outside a work
@@ -667,6 +641,7 @@ export function Toolbar() {
         {pdfDialogOpen && !editorOpen && <PdfFolderDialog />}
 
         <div className="toolbar-view">
+          {project && !editorOpen && <UndoRedoButtons disabled={busy} />}
           <div className="font-controls" role="group" aria-label={t('toolbar.font.group')}>
             <button
               type="button"

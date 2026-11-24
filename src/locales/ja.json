@@ -260,6 +260,7 @@
   "toolbar.undo.label": "元に戻す",
   "toolbar.redo.title": "やり直し ({mod}+Shift+Z)",
   "toolbar.redo.label": "やり直し",
+  "toolbar.history.group": "元に戻す・やり直し",
   "toolbar.font.increase": "アプリのフォントサイズを大きくする（{mod}+Shift++）",
   "toolbar.theme.toLight": "ライトモードに切り替え",
   "toolbar.theme.toDark": "ダークモードに切り替え",

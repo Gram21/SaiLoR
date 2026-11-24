@@ -260,6 +260,7 @@
   "toolbar.undo.label": "Annuler",
   "toolbar.redo.title": "Rétablir ({mod}+Maj+Z)",
   "toolbar.redo.label": "Rétablir",
+  "toolbar.history.group": "Annuler et rétablir",
   "toolbar.font.increase": "Augmenter la taille de police de l’application ({mod}+Maj++)",
   "toolbar.theme.toLight": "Passer en mode clair",
   "toolbar.theme.toDark": "Passer en mode sombre",

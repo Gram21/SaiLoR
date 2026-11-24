@@ -260,6 +260,7 @@
   "toolbar.undo.label": "Deshacer",
   "toolbar.redo.title": "Rehacer ({mod}+Mayús+Z)",
   "toolbar.redo.label": "Rehacer",
+  "toolbar.history.group": "Deshacer y rehacer",
   "toolbar.font.increase": "Aumentar el tamaño de letra de la app ({mod}+Mayús++)",
   "toolbar.theme.toLight": "Cambiar al modo claro",
   "toolbar.theme.toDark": "Cambiar al modo oscuro",

@@ -260,6 +260,7 @@
   "toolbar.undo.label": "Undo",
   "toolbar.redo.title": "Redo ({mod}+Shift+Z)",
   "toolbar.redo.label": "Redo",
+  "toolbar.history.group": "Undo and redo",
   "toolbar.font.increase": "Increase app font size ({mod}+Shift++)",
   "toolbar.theme.toLight": "Switch to light mode",
   "toolbar.theme.toDark": "Switch to dark mode",
