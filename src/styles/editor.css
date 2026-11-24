@@ -193,11 +193,6 @@
   border-radius: 6px;
   background: var(--panel-bg);
 }
-.editor-preview-paper {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
 .editor-preview-form {
   border: 1px solid var(--border);
   border-radius: 8px;

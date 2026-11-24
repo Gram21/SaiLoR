@@ -12,10 +12,12 @@ import {
   isConditionGroup,
   type AnnotationDef,
   type FieldType,
+  type VisibleCondition,
   type VisibleIfEntry,
   type VisibleIfSpec,
   type ScreeningConfig,
 } from '../model/schema'
+import { instanceHoldsAnswer } from '../model/annotations'
 import { extractPdfMeta } from '../model/pdfMeta'
 import { parseReferences, pdfHintFileName, type RefEntry } from '../model/references'
 import {
@@ -321,6 +323,90 @@ export function parentUidOf(nodes: EditorNode[], uid: string, parent: string | n
     if (below !== undefined) return below
   }
   return undefined
+}
+
+/**
+ * The field a gate condition on `node` resolves to, by `resolveVisibleIf`'s
+ * lookup order: a sibling, then an ancestor (both by bare name), then an
+ * absolute path outside the node's own subtree. `bare` tells which kind of
+ * reference it was.
+ */
+function gateTarget(
+  nodes: EditorNode[],
+  node: EditorNode,
+  siblings: EditorNode[],
+  chain: EditorNode[],
+  field: string,
+): { target: EditorNode; bare: boolean } | undefined {
+  if (field === node.name) return undefined
+  const sib = siblings.find((x) => x.uid !== node.uid && x.name === field && x.kind !== 'group')
+  if (sib) return { target: sib, bare: true }
+  const anc = chain.find((a) => a.name === field && a.kind !== 'group')
+  if (anc) return { target: anc, bare: true }
+  const own = [...chain.map((a) => a.name), node.name].join('/')
+  if (field === own || field.startsWith(`${own}/`)) return undefined
+  let level = nodes
+  let found: EditorNode | undefined
+  for (const seg of field.split('/')) {
+    found = level.find((x) => x.name === seg)
+    if (!found) return undefined
+    level = found.children
+  }
+  return found !== undefined && found.kind !== 'group' ? { target: found, bare: false } : undefined
+}
+
+/** Every leaf condition of every gate in the tree, with how it resolves. */
+function gateConditions(
+  nodes: EditorNode[],
+): { owner: EditorNode; cond: VisibleCondition; hit: ReturnType<typeof gateTarget> }[] {
+  const out: ReturnType<typeof gateConditions> = []
+  const leaves = (spec: VisibleIfSpec): VisibleCondition[] =>
+    spec.conditions.flatMap((e) => (isConditionGroup(e) ? leaves(e) : [e]))
+  const walk = (level: EditorNode[], chain: EditorNode[]) => {
+    for (const node of level) {
+      if (node.visibleIf) {
+        for (const cond of leaves(node.visibleIf)) {
+          out.push({ owner: node, cond, hit: gateTarget(nodes, node, level, chain, cond.field) })
+        }
+      }
+      walk(node.children, [...chain, node])
+    }
+  }
+  walk(nodes, [])
+  return out
+}
+
+/**
+ * Visibility conditions that name a field the node can no longer watch — the
+ * field was removed, or moved out of reach. Maps the gated node's uid to the
+ * offending `field` strings; absent when all of its conditions still resolve.
+ */
+export function brokenGateFields(nodes: EditorNode[]): Map<string, string[]> {
+  const out = new Map<string, string[]>()
+  for (const { owner, cond, hit } of gateConditions(nodes)) {
+    if (!hit) out.set(owner.uid, [...(out.get(owner.uid) ?? []), cond.field])
+  }
+  return out
+}
+
+/**
+ * After `uid` was renamed from `from`, point every gate condition that watched
+ * it — or a field beneath it, by absolute path — at the new name. Resolution
+ * runs against the old name, so a condition that was already broken stays so.
+ */
+function renameGateRefs(nodes: EditorNode[], uid: string, from: string): void {
+  const node = findNode(nodes, uid)
+  if (!node || node.name === from || !node.name.trim()) return
+  const to = node.name
+  node.name = from
+  const hits = gateConditions(nodes).filter(
+    ({ hit }) => hit && (hit.bare ? hit.target.uid === uid : isSelfOrDescendant(nodes, uid, hit.target.uid)),
+  )
+  const targets = hits.map(({ hit }) => hit!)
+  node.name = to
+  hits.forEach(({ cond }, i) => {
+    cond.field = targets[i].bare ? to : (nodePathNames(nodes, targets[i].target.uid) ?? [to]).join('/')
+  })
 }
 
 /** True if `uid` is `ancestorUid` or lives underneath it (guards illegal moves). */
@@ -713,6 +799,18 @@ async function nextSchemaVersion(
   const id = newSchemaVersionId()
   const entry: SchemaHistoryEntry = { id, parents: st.schemaVersion ? [st.schemaVersion] : [], at, moves }
   return { schemaVersion: id, schemaHistory: [...st.schemaHistory, entry] }
+}
+
+/** Does any paper hold a recorded answer, consolidated or from a reviewer? */
+function anyPaperAnnotated(papers: EditorPaper[]): boolean {
+  const holds = (tree: unknown) =>
+    !!tree &&
+    typeof tree === 'object' &&
+    Object.values(tree).some((list) => Array.isArray(list) && list.some(instanceHoldsAnswer))
+  return papers.some((p) => {
+    const reviews = (p.extra as { reviews?: unknown } | undefined)?.reviews
+    return holds(p.annotations) || (!!reviews && typeof reviews === 'object' && Object.values(reviews).some(holds))
+  })
 }
 
 /** The schema as a save would write it, to tell whether it changed. */
@@ -1185,6 +1283,8 @@ interface EditorState {
   addNode: (parentUid: string | null) => void
   updateNode: (uid: string, patch: Partial<EditorNode>) => void
   removeNode: (uid: string) => void
+  /** Follow a committed rename in every gate condition that watched the node. */
+  renameGateRefs: (uid: string, from: string) => void
   moveNode: (dragUid: string, targetUid: string, position: DropPosition) => void
   toggleCollapsed: (uid: string) => void
 
@@ -2150,6 +2250,11 @@ export const useEditorStore = create<EditorState>()(
       })
     },
 
+    renameGateRefs: (uid, from) =>
+      set((s) => {
+        renameGateRefs(s.nodes, uid, from)
+      }),
+
     removeNode: (uid) => {
       const snap = snapshotOf(get())
       lastEditKey = null
@@ -2674,6 +2779,14 @@ export const useEditorStore = create<EditorState>()(
         })
         return false
       }
+      const broken = brokenGateFields(st.nodes)
+      if (broken.size > 0) {
+        const list = [...broken].map(([uid, fields]) => {
+          const name = (nodePathNames(st.nodes, uid) ?? [uid]).join(' / ')
+          return `• ${name}: ${fields.map((f) => `"${f}"`).join(', ')}`
+        })
+        if (!window.confirm(t('editor.store.brokenGatesConfirm', { list: list.join('\n') }))) return false
+      }
       set((s) => {
         s.busy = true
         s.issues = []
@@ -2684,7 +2797,10 @@ export const useEditorStore = create<EditorState>()(
         // whose answers should follow. Only kept in state once written, so a
         // failed save does not leave a version behind that no file has.
         const schemaJson = savedSchemaJsonOf(st)
-        const versioned = schemaJson === st.savedSchemaJson ? st : { ...st, ...(await nextSchemaVersion(st)) }
+        // The first version is only recorded once an answer exists to protect;
+        // before that, edits to a brand-new schema leave no history behind.
+        const unversioned = !st.schemaVersion && !anyPaperAnnotated(st.papers)
+        const versioned = schemaJson === st.savedSchemaJson || unversioned ? st : { ...st, ...(await nextSchemaVersion(st)) }
         // An existing project's folder moves before the project file says so;
         // the move records the new name itself, and is refused rather than
         // half-done.

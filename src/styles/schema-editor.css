@@ -222,6 +222,16 @@
   text-overflow: ellipsis;
 }
 
+.schema-visible-if.invalid,
+.visible-if-row.invalid {
+  border-color: var(--danger, #c62828);
+  color: var(--danger, #c62828);
+  background: color-mix(in srgb, var(--danger, #c62828) 10%, transparent);
+}
+.visible-if-row.invalid .schema-hint {
+  color: var(--danger, #c62828);
+}
+
 .visible-if-mode {
   display: flex;
   align-items: center;

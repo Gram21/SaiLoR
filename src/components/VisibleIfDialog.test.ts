@@ -6,6 +6,7 @@ import {
   canMoveEntry,
   describeVisibleIf,
   describeVisibleIfFull,
+  hasEmptyValueCondition,
   kindLabel,
   moveEntryAt,
   moveEntryTo,
@@ -484,5 +485,15 @@ describe('pruneEmptyGroups', () => {
       conditions: [{ field: 'a' }, { mode: 'all', conditions: [{ field: 'b' }] }],
     }
     expect(pruneEmptyGroups(spec)).toEqual(spec)
+  })
+})
+
+describe('hasEmptyValueCondition', () => {
+  it('flags a specific-value condition with nothing chosen, at any depth', () => {
+    const ok: VisibleIfSpec = { mode: 'all', conditions: [{ field: 'A' }, { field: 'B', equals: ['x'] }] }
+    const nested: VisibleIfSpec = { mode: 'all', conditions: [{ mode: 'any', conditions: [{ field: 'B', equals: [] }] }] }
+    expect(hasEmptyValueCondition(ok)).toBe(false)
+    expect(hasEmptyValueCondition(nested)).toBe(true)
+    expect(hasEmptyValueCondition(null)).toBe(false)
   })
 })

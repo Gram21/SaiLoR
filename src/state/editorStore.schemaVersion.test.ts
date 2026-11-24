@@ -8,6 +8,7 @@ import { loadProject } from '../model/project'
  * this machine, further edits fold into it instead of piling up versions.
  */
 let saved: string[] = []
+let projectText = ''
 let headText: string | null | undefined = undefined // undefined: not a repository
 const mockPlatform = {
   kind: 'electron' as const,
@@ -17,7 +18,7 @@ const mockPlatform = {
   forgetRecent: () => [],
   checkRecents: async (e: unknown[]) => e,
   openProject: async () => ({
-    text: PROJECT,
+    text: projectText,
     handle: { kind: 'electron' as const, path: '/r/review.json' },
     name: 'review.json',
   }),
@@ -68,6 +69,7 @@ const lastSaved = () => JSON.parse(saved[saved.length - 1])
 
 beforeEach(async () => {
   saved = []
+  projectText = PROJECT
   headText = undefined
   await es().startEdit()
 })
@@ -167,5 +169,26 @@ describe('saving a changed schema', () => {
     const json = lastSaved()
     expect(json.schemaHistory).toHaveLength(2)
     expect(json.schemaHistory[1].parents).toEqual([json.schemaHistory[0].id])
+  })
+})
+
+describe('the first schema version', () => {
+  it('is not recorded while no paper has an answer, and is once one has', async () => {
+    const empty = JSON.parse(PROJECT)
+    empty.papers[0].reviews = {}
+    projectText = JSON.stringify(empty)
+    await es().startEdit()
+    es().updateNode(uidOf('Kind'), { name: 'Design' })
+    expect(await es().save()).toBe(true)
+    expect(lastSaved().schemaVersion).toBeUndefined()
+    expect(lastSaved().schemaHistory).toBeUndefined()
+
+    useEditorStore.setState((st) => ({
+      papers: st.papers.map((p) => ({ ...p, extra: { reviews: { 1: { Design: [{ value: 'RCT' }] } } } })),
+    }))
+    es().updateNode(uidOf('Design'), { name: 'Study design' })
+    expect(await es().save()).toBe(true)
+    expect(lastSaved().schemaHistory).toHaveLength(1)
+    expect(lastSaved().schemaHistory[0].moves).toEqual([{ from: ['Design'], to: ['Study design'] }])
   })
 })

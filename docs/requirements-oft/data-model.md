@@ -1062,7 +1062,7 @@ Tags: Functional, Functional_Suitability
 ### REQ-EDT-42: Fold unpublished schema changes into one version
 `req~edt-42~1`
 
-When the schema is saved with changes while the current schema version is not yet in the repository HEAD: or, outside a repository, was created less than six minutes ago: the system shall fold the changes into that version under a new identifier that records the folded one, instead of adding a history entry; otherwise it shall add a new version descending from the current one.
+When the schema is saved with changes while the current schema version is not yet in the repository HEAD: or, outside a repository, was created less than six minutes ago: the system shall fold the changes into that version under a new identifier that records the folded one, instead of adding a history entry; otherwise it shall add a new version descending from the current one. While the project has no schema version and no paper holds a recorded answer, the system shall not record a version.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
@@ -1121,7 +1121,7 @@ Tags: Functional, Functional_Suitability
 ### REQ-EDT-60: Edit schema tree graphically
 `req~edt-60~1`
 
-The system shall provide a drag-and-drop schema tree editor offering group, text, number, year, and yes/no nodes, inline enum options, cardinality inputs with an unbounded toggle, descriptions, a required checkbox for eligible fields, a visibility-gate button that summarizes the node's `visibleIf` and opens a dialog for editing it (the gated node's tree path and type, conditions restricted to legal targets and labelled with each target's level and value kind, an explicit any-answer/specific-value choice per condition, values offered only for yes/no and option-list fields, arbitrarily nested AND/OR groups that can be extended after creation, targets listed same-level first then ancestors then the rest of the schema in document order, per-entry reordering and removal, and drag-and-drop of a condition or a whole group into another group), and refusal of drops into a node's own subtree.
+The system shall provide a drag-and-drop schema tree editor offering group, text, number, year, and yes/no nodes, inline enum options, cardinality inputs with an unbounded toggle, descriptions, a required checkbox for eligible fields, a visibility-gate button that summarizes the node's `visibleIf` and opens a dialog for editing it (the gated node's tree path and type, conditions restricted to legal targets and labelled with each target's level and value kind, an explicit any-answer/specific-value choice per condition (choosing specific value preselects nothing, and saving is blocked while a condition has no value chosen), values offered only for yes/no and option-list fields, arbitrarily nested AND/OR groups that can be extended after creation, targets listed same-level first then ancestors then the rest of the schema in document order, per-entry reordering and removal, and drag-and-drop of a condition or a whole group into another group), refusal of drops into a node's own subtree, a drag handle that is the only draggable part of a row, move-up and move-down buttons that shift a node within its level, and automatic update of visibility conditions that name a renamed field (including conditions that reach it or a field beneath it by path), red highlighting of a visibility condition whose field was removed or moved out of reach, with a confirmation before saving a schema that still holds one.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability)
@@ -1335,7 +1335,7 @@ Tags: Functional, Usability
 ### REQ-EDT-310: Preview the draft schema as an annotation form
 `req~edt-310~1`
 
-The Preview tab shall show the annotation form for the draft schema. It shall use the same annotation components as the annotation panel. The form shall show the first paper of the draft, and the user shall be able to select a different paper. `visibleIf` conditions, adding and removing instances and validation hints shall work as in the annotation panel. The tab shall show a banner that says nothing is saved. The answers shall be kept in local state only. They shall be discarded when the user leaves the tab or closes the editor. The preview shall not change the project store, the undo history, the annotation files, the dirty flag, the autosave or Git.
+The Preview tab shall show the annotation form for the draft schema. It shall use the same annotation components as the annotation panel. The form shall show the first paper of the draft. It shall not offer a paper selection. `visibleIf` conditions, adding and removing instances and validation hints shall work as in the annotation panel. The tab shall show a banner that says nothing is saved. The answers shall be kept in local state only. They shall be discarded when the user leaves the tab or closes the editor. The preview shall not change the project store, the undo history, the annotation files, the dirty flag, the autosave or Git.
 
 Comment:
 - **Type:** Functional (ISO 25010: Functional Suitability, Usability)

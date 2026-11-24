@@ -191,3 +191,77 @@ describe('SchemaTreeEditor: unique option', () => {
     expect(toAnnotationDefs(fromAnnotationDefs(defs))).toEqual(defs)
   })
 })
+
+describe('SchemaTreeEditor: moving fields', () => {
+  it('moves a field one step up or down within its level', async () => {
+    const { fromAnnotationDefs } = await import('../state/editorStore')
+    useEditorStore.setState({
+      nodes: fromAnnotationDefs([
+        { name: 'A', type: 'string' },
+        { name: 'B', type: 'string' },
+      ]),
+    })
+    render(<SchemaTreeEditor />)
+    const names = () => useEditorStore.getState().nodes.map((n) => n.name)
+    const ups = screen.getAllByRole('button', { name: 'Move up within this level' })
+    const downs = screen.getAllByRole('button', { name: 'Move down within this level' })
+    expect(ups[0]).toBeDisabled()
+    expect(downs[1]).toBeDisabled()
+    await userEvent.click(downs[0])
+    expect(names()).toEqual(['B', 'A'])
+    await userEvent.click(screen.getAllByRole('button', { name: 'Move up within this level' })[1])
+    expect(names()).toEqual(['A', 'B'])
+  })
+
+  it('makes only the handle draggable', () => {
+    render(<SchemaTreeEditor />)
+    expect(document.querySelector('.schema-handle')).toHaveAttribute('draggable', 'true')
+    expect(document.querySelector('.schema-row')).not.toHaveAttribute('draggable')
+  })
+})
+
+describe('brokenGateFields', () => {
+  it('flags a condition whose field was removed, and marks the gate red', async () => {
+    const { fromAnnotationDefs, brokenGateFields } = await import('../state/editorStore')
+    const nodes = fromAnnotationDefs([
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Reason', type: 'string', visibleIf: 'Relevant' },
+      { name: 'Other', type: 'string', visibleIf: { mode: 'any', conditions: [{ field: 'Relevant' }] } },
+    ])
+    expect(brokenGateFields(nodes).size).toBe(0)
+    useEditorStore.setState({ nodes })
+    const uid = useEditorStore.getState().nodes[0].uid
+    useEditorStore.getState().removeNode(uid)
+    const broken = brokenGateFields(useEditorStore.getState().nodes)
+    expect([...broken.values()]).toEqual([['Relevant'], ['Relevant']])
+    render(<SchemaTreeEditor />)
+    expect(document.querySelectorAll('.schema-visible-if.invalid')).toHaveLength(2)
+  })
+
+  it('follows a rename in sibling, nested and path conditions', async () => {
+    const { fromAnnotationDefs, brokenGateFields } = await import('../state/editorStore')
+    const nodes = fromAnnotationDefs([
+      { name: 'Relevant', type: 'boolean' },
+      { name: 'Reason', type: 'string', visibleIf: 'Relevant' },
+      { name: 'Other', type: 'string', visibleIf: { mode: 'any', conditions: [{ field: 'Relevant' }] } },
+      { name: 'Grp', children: [{ name: 'Inner', type: 'string' }] },
+      { name: 'Far', type: 'string', visibleIf: 'Grp/Inner' },
+    ])
+    useEditorStore.setState({ nodes })
+    const es = useEditorStore.getState()
+    const uid = (n: string) => useEditorStore.getState().nodes.find((x) => x.name === n)!.uid
+    es.updateNode(uid('Relevant'), { name: 'Eligible' })
+    es.renameGateRefs(uid('Eligible'), 'Relevant')
+    es.updateNode(uid('Grp'), { name: 'Section' })
+    es.renameGateRefs(uid('Section'), 'Grp')
+    const after = useEditorStore.getState().nodes
+    const field = (n: string) => {
+      const v = after.find((x) => x.name === n)!.visibleIf!
+      return (v.conditions[0] as { field: string }).field
+    }
+    expect(field('Reason')).toBe('Eligible')
+    expect(field('Other')).toBe('Eligible')
+    expect(field('Far')).toBe('Section/Inner')
+    expect(brokenGateFields(after).size).toBe(0)
+  })
+})

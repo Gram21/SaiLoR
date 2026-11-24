@@ -350,6 +350,13 @@ export function setModeAt(spec: VisibleIfSpec, path: number[], mode: 'all' | 'an
 /** Drop empty groups, and the whole gate once nothing is left. The store does
  *  this too (`cleanVisibleIf`, on save), but doing it here keeps an abandoned
  *  "+ Add group" click out of the editor state from the start. */
+/** True while some condition is set to "specific value" with none chosen. */
+export function hasEmptyValueCondition(spec: VisibleIfSpec | null): boolean {
+  return (
+    spec?.conditions.some((e) => (isConditionGroup(e) ? hasEmptyValueCondition(e) : e.equals?.length === 0)) ?? false
+  )
+}
+
 export function pruneEmptyGroups(spec: VisibleIfSpec | null): VisibleIfSpec | null {
   if (!spec) return null
   const conditions: VisibleIfEntry[] = []
@@ -586,13 +593,15 @@ function ConditionRow({
   // Only a boolean or an option list has a closed set of values to match; on
   // anything else `resolveEquals` would drop an `equals` anyway.
   const canMatchValues = isBoolean || values.length > 0
-  const valueMode = (cond.equals?.length ?? 0) > 0
+  // `equals: []` is "specific value, none chosen yet": a draft state that
+  // blocks saving, not the same statement as "has any answer".
+  const valueMode = cond.equals !== undefined
   const name = `visible-if-match-${path.join('-')}`
   // A condition holds nothing, so it is only ever a before/after target.
   const { handle, box, dragClass } = useEntryDrag(path, drag, actions, false)
 
   return (
-    <div className={`visible-if-row ${dragClass}`.trimEnd()} {...box}>
+    <div className={`visible-if-row ${dragClass} ${target ? '' : 'invalid'}`.trim()} {...box}>
       <span {...handle}>⠿</span>
 
       <div className="visible-if-target">
@@ -641,7 +650,7 @@ function ConditionRow({
             onChange={() =>
               actions.setEntry(path, {
                 field: cond.field,
-                equals: isBoolean ? [true] : [values[0]],
+                equals: [],
               })
             }
           />
@@ -651,14 +660,17 @@ function ConditionRow({
         {valueMode && isBoolean && (
           <select
             className="schema-input"
-            value={cond.equals?.[0] === false ? 'no' : 'yes'}
+            value={cond.equals?.length ? (cond.equals[0] === false ? 'no' : 'yes') : ''}
             onChange={(e) =>
               actions.setEntry(path, {
                 field: cond.field,
-                equals: [e.target.value === 'yes'],
+                equals: e.target.value === '' ? [] : [e.target.value === 'yes'],
               })
             }
           >
+            <option value="" disabled>
+              {t('editor.visibleIf.pickValue')}
+            </option>
             <option value="yes">{t('editor.visibleIf.yes')}</option>
             <option value="no">{t('editor.visibleIf.no')}</option>
           </select>
@@ -677,19 +689,16 @@ function ConditionRow({
                       const next = checked
                         ? (cond.equals ?? []).filter((v) => v !== value)
                         : [...(cond.equals ?? []), value]
-                      // Unticking the last value is the same statement as
-                      // "has any answer", so it falls back to that mode.
-                      actions.setEntry(path, {
-                        field: cond.field,
-                        ...(next.length > 0 ? { equals: next } : {}),
-                      })
+                      actions.setEntry(path, { field: cond.field, equals: next })
                     }}
                   />
                   <span>{value}</span>
                 </label>
               )
             })}
-            <span className="schema-hint">{t('editor.visibleIf.anyTicked')}</span>
+            <span className="schema-hint">
+              {(cond.equals?.length ?? 0) === 0 ? t('editor.visibleIf.noValueChosen') : t('editor.visibleIf.anyTicked')}
+            </span>
           </div>
         )}
 
@@ -889,7 +898,9 @@ export function VisibleIfDialog({
     moveTo: (from, to, position) => setDraft(moveEntryTo(root, from, to, position)),
   }
 
+  const incomplete = hasEmptyValueCondition(draft)
   const save = () => {
+    if (incomplete) return
     updateNode(node.uid, { visibleIf: pruneEmptyGroups(draft) })
     onClose()
   }
@@ -954,7 +965,9 @@ export function VisibleIfDialog({
         <button type="button" onClick={onClose} title={t('editor.visibleIf.cancelTitle')}>
           {t('common.cancel')}
         </button>
-        <button type="button" className="primary" onClick={save} title={t('editor.visibleIf.saveTitle')}>
+        <button type="button" className="primary" onClick={save}
+          disabled={incomplete}
+          title={incomplete ? t('editor.visibleIf.noValueChosen') : t('editor.visibleIf.saveTitle')}>
           {t('common.save')}
         </button>
       </div>

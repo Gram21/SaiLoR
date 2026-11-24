@@ -49,12 +49,11 @@ beforeEach(() => {
 })
 
 describe('SchemaPreview: the draft schema as a throwaway annotation form', () => {
-  it('shows the banner and renders against the first paper, with a picker', async () => {
+  it('shows the banner and renders against the first paper', async () => {
     render(<SchemaPreview />)
     expect(screen.getByRole('status')).toHaveTextContent('Preview: nothing you enter here is saved.')
     expect(screen.getByText('First Paper', { selector: '.annotations-paper-title' })).toBeInTheDocument()
-    await userEvent.selectOptions(screen.getByRole('combobox', { name: 'Sample paper' }), 'b')
-    expect(screen.getByText('Second Paper', { selector: '.annotations-paper-title' })).toBeInTheDocument()
+    expect(screen.queryByRole('combobox', { name: 'Sample paper' })).not.toBeInTheDocument()
   })
 
   it('reacts to visibleIf, adds and removes instances and shows validation hints', async () => {

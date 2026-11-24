@@ -20,8 +20,7 @@ export function SchemaPreview() {
   const t = useT()
   const nodes = useEditorStore((s) => s.nodes)
   const papers = useEditorStore((s) => s.papers)
-  const [paperUid, setPaperUid] = useState<string | null>(null)
-  const paper = papers.find((p) => p.uid === paperUid) ?? papers[0]
+  const paper = papers[0]
 
   const { schema, problems } = useMemo(() => {
     const st = useEditorStore.getState()
@@ -34,20 +33,7 @@ export function SchemaPreview() {
       <p className="editor-preview-banner" role="status">
         {t('editor.preview.banner')}
       </p>
-      {papers.length > 0 ? (
-        <label className="editor-preview-paper">
-          <span>{t('editor.preview.paper')}</span>
-          <select value={paper?.uid} onChange={(e) => setPaperUid(e.target.value)}>
-            {papers.map((p, i) => (
-              <option key={p.uid} value={p.uid}>
-                {p.title.trim() || p.id.trim() || t('editor.preview.untitled', { n: i + 1 })}
-              </option>
-            ))}
-          </select>
-        </label>
-      ) : (
-        <p className="editor-hint">{t('editor.preview.noPapers')}</p>
-      )}
+      {papers.length === 0 && <p className="editor-hint">{t('editor.preview.noPapers')}</p>}
       {schema ? (
         <PreviewForm
           key={`${paper?.uid ?? ''}|${JSON.stringify(toAnnotationDefs(nodes))}`}

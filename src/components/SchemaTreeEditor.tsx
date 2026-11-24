@@ -7,6 +7,7 @@ import {
   pendingSchemaMoves,
   moveNodeIn,
   findNode,
+  brokenGateFields,
   type DropPosition,
   type EditorNode,
   type EditorNodeKind,
@@ -125,6 +126,7 @@ function SchemaNodeRow({
   const updateNode = useEditorStore((s) => s.updateNode)
   const removeNode = useEditorStore((s) => s.removeNode)
   const moveNode = useEditorStore((s) => s.moveNode)
+  const renameGateRefs = useEditorStore((s) => s.renameGateRefs)
   const toggleCollapsed = useEditorStore((s) => s.toggleCollapsed)
   const papers = useEditorStore((s) => s.papers)
   const behind = useGitStore((s) => s.behind)
@@ -209,16 +211,17 @@ function SchemaNodeRow({
     const from = nameOnFocus.current
     nameOnFocus.current = null
     if (from === null || from === node.name) return
-    if (answersFollow(useEditorStore.getState().nodes, node.uid)) return
+    if (answersFollow(useEditorStore.getState().nodes, node.uid)) {
+      renameGateRefs(node.uid, from)
+      return
+    }
     if (!confirmDestructive('rename', from)) {
       // Put the old name back — the reviewer declined to lose the answers.
       updateNode(node.uid, { name: from })
+      return
     }
+    renameGateRefs(node.uid, from)
   }
-
-  // The row itself carries the drag, but only once the handle is pressed:
-  // a permanently draggable row would break text selection inside its inputs.
-  const [armed, setArmed] = useState(false)
 
   // The visibility-gate dialog, mounted only while open so its draft starts
   // from the node's current gate without an effect to resync it.
@@ -244,16 +247,16 @@ function SchemaNodeRow({
   const unbounded = node.max === null
   const hasChildren = node.children.length > 0
 
-  const handleDragStart = (e: DragEvent<HTMLDivElement>) => {
+  // Only the handle is draggable, never the row: a draggable row breaks text
+  // selection inside its inputs, and arming it on pointer-down is too late for
+  // WebKit, which decides draggability when the press starts.
+  const handleDragStart = (e: DragEvent<HTMLSpanElement>) => {
     e.dataTransfer.setData('text/plain', node.uid)
     e.dataTransfer.effectAllowed = 'move'
+    const row = e.currentTarget.closest('.schema-row')
+    if (row) e.dataTransfer.setDragImage(row, 0, 0)
     e.stopPropagation()
     onDragStart(node.uid)
-  }
-
-  const handleDragEnd = () => {
-    setArmed(false)
-    onDragEnd()
   }
 
   const handleDragOver = (e: DragEvent<HTMLDivElement>) => {
@@ -330,6 +333,8 @@ function SchemaNodeRow({
   const allNodes = useEditorStore((s) => s.nodes)
   const parentUid = parentUidOf(allNodes, node.uid)
   const siblings = parentUid ? (findNode(allNodes, parentUid)?.children ?? []) : allNodes
+  const broken = brokenGateFields(allNodes).get(node.uid)
+  const index = siblings.findIndex((s) => s.uid === node.uid)
   const siblingFieldOptions = siblings.filter((s) => s.uid !== node.uid && s.kind !== 'group')
 
   // Ancestors this node can also be gated on — the parent, its parent, and so
@@ -354,9 +359,6 @@ function SchemaNodeRow({
     <div className="schema-node">
       <div
         className={rowClass}
-        draggable={armed}
-        onDragStart={handleDragStart}
-        onDragEnd={handleDragEnd}
         onDragOver={handleDragOver}
         onDragLeave={handleDragLeave}
         onDrop={handleDrop}
@@ -365,8 +367,9 @@ function SchemaNodeRow({
           className="schema-handle"
           title={t('editor.schema.dragTitle')}
           aria-hidden="true"
-          onPointerDown={() => setArmed(true)}
-          onPointerUp={() => setArmed(false)}
+          draggable
+          onDragStart={handleDragStart}
+          onDragEnd={onDragEnd}
         >
           ⠿
         </span>
@@ -483,13 +486,37 @@ function SchemaNodeRow({
             editing happens in a dialog. */}
         <button
           type="button"
-          className="schema-visible-if"
-          title={describeVisibleIfFull(node.visibleIf)}
+          className={broken ? 'schema-visible-if invalid' : 'schema-visible-if'}
+          title={
+            broken
+              ? `${t('editor.schema.gateBrokenTitle', { fields: broken.join(', ') })}\n${describeVisibleIfFull(node.visibleIf)}`
+              : describeVisibleIfFull(node.visibleIf)
+          }
           onClick={() => setGateOpen(true)}
         >
           {describeVisibleIf(node.visibleIf)}
         </button>
 
+        <button
+          type="button"
+          className="icon-btn"
+          title={t('editor.schema.moveUpTitle')}
+          aria-label={t('editor.schema.moveUpTitle')}
+          disabled={index <= 0}
+          onClick={() => moveNode(node.uid, siblings[index - 1].uid, 'before')}
+        >
+          ↑
+        </button>
+        <button
+          type="button"
+          className="icon-btn"
+          title={t('editor.schema.moveDownTitle')}
+          aria-label={t('editor.schema.moveDownTitle')}
+          disabled={index < 0 || index >= siblings.length - 1}
+          onClick={() => moveNode(node.uid, siblings[index + 1].uid, 'after')}
+        >
+          ↓
+        </button>
         <button
           type="button"
           className="add-btn schema-add-child"

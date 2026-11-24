@@ -28,7 +28,7 @@ If an issue names a paper, click the issue to open the **Papers** tab at that pa
 
 Use the **Preview** tab to try the schema before you save it:
 
-1. Select a sample paper in **Sample paper**. The preview starts with the first paper.
+1. Read the form. The preview uses the first paper.
 2. Fill in the form. Conditions, added entries and validation hints work as in the annotation panel.
 3. Leave the tab to discard your answers.
 
@@ -82,7 +82,7 @@ Each row is one field or group:
     plain "the reviewer filled this in" test: a ticked box on a *Yes/No* field, any non-empty value
     on every other kind — and it stays available for every field, whatever its type. The second
     offers *Yes* / *No* on a *Yes/No* field, and the option list on a *Text* field with fixed
-    choices (tick several and any one of them counts). Free text, *Number* and *Year* have no fixed
+    choices (tick several and any one of them counts). No value is ticked at first, and *Save* stays off until you pick at least one. Free text, *Number* and *Year* have no fixed
     set of answers to pick from, so *has any answer* is the only test there, and the dialog says so.
 
   Every field in the picker is labelled with **where it lives** (same level, or how far up the tree
@@ -123,6 +123,10 @@ Each row is one field or group:
   inside it at once, rather than each field individually.
 - **Drag a row's ⠿ handle** to reorder or nest it: drop near a row's top or bottom edge to place it
   before or after; drop in the middle of a row to nest it inside.
+- **Click ↑ or ↓** to move a row one place up or down within its level.
+- **Rename a field** and SaiLoR updates every visibility condition that watches it.
+- **A red visibility button** means a condition watches a field that was removed or moved out of
+  reach. SaiLoR asks you to confirm before it saves, and drops that condition.
 
 A field that can hold *several* values at once (say, "which of these techniques does the paper use")
 is modeled as a repeatable Text field with fixed options (**max: ∞**) rather than a single dropdown —
