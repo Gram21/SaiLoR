@@ -1,7 +1,7 @@
 # Graph Report - slr-helper  (2026-11-24)
 
 ## Corpus Check
-- 695 files · ~1,124,997 words
+- 695 files · ~1,124,999 words
 - Verdict: corpus is large enough that graph structure adds value.
 - Unclassified: 147 file(s) not represented in the graph (top: .toml 107, (none) 12, .tex 11)
 
@@ -11,7 +11,7 @@
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `dd0bfa98`
+- Built from commit: `9ccea142`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -281,16 +281,16 @@
 10. `useEditorStore` - 93 edges
 
 ## Surprising Connections (you probably didn't know these)
-- `REQ-ANN-180: Confirm each metadata correction` --references--> `MetadataDialog()`  [INFERRED]
-  docs/requirements-oft/annotation-ui.md → src/components/MetadataDialog.tsx
-- `REQ-ANN-200: Confirm each new PDF file` --references--> `PdfFolderDialog()`  [INFERRED]
-  docs/requirements-oft/annotation-ui.md → src/components/PdfFolderDialog.tsx
-- `REQ-LST-90: Mark a missing PDF file in the paper list` --references--> `missingPaperIds()`  [INFERRED]
-  docs/requirements-oft/annotation-ui.md → src/model/pdfFolder.ts
-- `REQ-PDF-190: Single-page view` --references--> `PdfViewer()`  [INFERRED]
-  docs/requirements-oft/annotation-ui.md → src/components/PdfViewer.tsx
-- `REQ-UI-20: Toolbar project controls` --references--> `Toolbar()`  [INFERRED]
-  docs/requirements-oft/annotation-ui.md → src/components/Toolbar.tsx
+- ``slr-file://` serving (`protocol.rs`)` --references--> `DesktopAdapter`  [INFERRED]
+  openwiki/operations/tauri-shell.md → src/platform/desktop.ts
+- `Hardware probing and backend choice` --references--> `HardwareInfo`  [INFERRED]
+  openwiki/workflows/local-models.md → src/platform/localRuntime.ts
+- `Phase 1 — Bridge abstraction (about 1 week)` --references--> `TauriAdapter`  [INFERRED]
+  docs/tauri-migration.md → src/platform/tauri.ts
+- `How a call crosses the seam` --references--> `PlatformAdapter`  [INFERRED]
+  openwiki/quickstart.md → src/platform/adapter.ts
+- `Architecture` --references--> `PlatformAdapter`  [INFERRED]
+  README.md → src/platform/adapter.ts
 
 ## Import Cycles
 - 2-file cycle: `src/model/diagram.ts -> src/model/diagramSvg.ts -> src/model/diagram.ts`
@@ -1211,7 +1211,7 @@ Nodes (6): Files, Audience and scope, Layout, Phases, Section plan, Technical re
 _Questions this graph is uniquely positioned to answer:_
 
 - **Why does `jobs` connect `jobs` to `release.yml`, `build`, `checksums`, `release`?**
-  _High betweenness centrality (0.223) - this node is a cross-community bridge._
+  _High betweenness centrality (0.284) - this node is a cross-community bridge._
 - **Are the 5 inferred relationships involving `t()` (e.g. with `REQ-UI-120: Translated user interface` and `REQ-UI-120: Translated user interface`) actually correct?**
   _`t()` has 5 INFERRED edges - model-reasoned connections that need verification._
 - **What connects `About`, `CloseWindow`, `Fullscreen` to the rest of the system?**
@@ -1219,7 +1219,7 @@ _Questions this graph is uniquely positioned to answer:_
 - **Should `git.rs` be split into smaller, more focused modules?**
   _Cohesion score 0.04306698002350176 - nodes in this community are weakly interconnected._
 - **Why does `with` connect `with` to `steps`?**
-  _High betweenness centrality (0.218) - this node is a cross-community bridge._
+  _High betweenness centrality (0.273) - this node is a cross-community bridge._
 - **Are the 4 inferred relationships involving `useT()` (e.g. with `REQ-UI-120: Translated user interface` and `REQ-UI-120: Translated user interface`) actually correct?**
   _`useT()` has 4 INFERRED edges - model-reasoned connections that need verification._
 - **Should `Rust Docs/Builders` be split into smaller, more focused modules?**
