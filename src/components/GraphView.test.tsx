@@ -127,9 +127,7 @@ function submit(text: string) {
 }
 
 async function query(text: string) {
-  const box = screen.getByRole('textbox', { name: 'Graph query' })
-  await userEvent.clear(box)
-  await userEvent.type(box, `${text}{Enter}`)
+  submit(text)
 }
 
 beforeEach(() => {

@@ -1,7 +1,6 @@
 {
   "1": "Rust Docs/Builders",
   "2": "Test Fixtures & Libs",
-  "4": "Agent Deps & LLM Plan",
   "6": "Chat Requests & Models",
   "7": "Git Repo Setup",
   "10": "Rust Project Model",
@@ -11,7 +10,6 @@
   "15": "Merge Logic",
   "20": "Diagram View",
   "22": "Cypher Worker",
-  "25": "Token Budget",
   "32": "Git Branch/Pull Ops",
   "33": "Diagram Export",
   "34": "Tauri Menu",
